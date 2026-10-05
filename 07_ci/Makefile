@@ -22,6 +22,7 @@
 # make mbist      : March C- MBIST on an ECC bank (standalone) -- the tile-level version is M11 in run_tiles.py
 # make two_layer  : M10: two layers back to back on the mesh with INT8 handoff through the bank
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
+# make verilator  : Verilator: streaming core T1-T3, neo_core C1, then tile_mesh M1 through the register bus (drop 0.18)
 # make perf2      : 64-core event model with mesh and bank contention (compiler/neo_perf_v2.py)
 # make regress    : everything above that is self-checking (model, RTL v0.1/v0.2/core/NoC, compiler)
 # make xrun_core  : Cadence Xcelium replay of the C1 convolution on neo_core (vectors_core from --dump)
@@ -36,7 +37,7 @@ RTL := rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
        rtl/act_feeder.sv rtl/acc_bank.sv rtl/neo_mac_core_v02.sv \
        rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv
 NOC := rtl/noc_router.sv rtl/noc_mesh.sv
-TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/esm.sv rtl/neo_tile.sv rtl/tile_mesh.sv
+TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/neo_tile.sv rtl/tile_mesh.sv
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
@@ -152,12 +153,16 @@ verilator: vectors vectors_core
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_core +incdir+vectors_core --top-module tb_neo_core \
 	          $(RTL) $(TBC) -o sim_core
 	./obj_core/sim_core +VECDIR=vectors_core
+	python3 sim/gen_tile_vectors.py
+	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD -Wno-WIDTHTRUNC --Mdir obj_tiles --top-module tb_tile_mesh \
+	          $(TILE) tb/tb_tile_mesh.sv -o sim_tiles
+	./obj_tiles/sim_tiles
 
 LINTW := -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-WIDTHEXPAND -Wno-UNSIGNED -Wno-TIMESCALEMOD
 lint:
 	verilator --lint-only $(LINTW) --top-module neo_core $(RTL)
 	verilator --lint-only $(LINTW) --top-module noc_mesh $(NOC)
-	verilator --lint-only $(LINTW) --top-module neo_tile_axil $(TILE) rtl/host_axil.sv rtl/neo_tile_axil.sv
+	verilator --lint-only $(LINTW) -Wno-WIDTHTRUNC --top-module neo_tile_axil $(TILE) rtl/host_axil.sv rtl/neo_tile_axil.sv
 	verilator --lint-only -Wall --top-module tile_mesh $(TILE)
 
 clean:
