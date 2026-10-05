@@ -98,6 +98,28 @@ module tb_neo_mac_core;
     end
   end
 
+  // ---------------- PE(0,0) monitor: the first data cycles, to localise a zero/X datapath on a real simulator ----------------
+  int cyc = 0, mon_left = 0;
+  bit mon_started = 0;
+  always @(negedge clk) begin
+    cyc++;
+    if (rst_n && !mon_started && valid_in === 1'b1) begin mon_started = 1; mon_left = 6; end
+    if (mon_left > 0) begin
+      mon_left--;
+      $display("PEMON cycle %0d: tb valid_in=%b swap_in=%b x_in[0]=%0d | PE(0,0) s_in=%b v_in=%b x_in=%0d w_q=%0d w_sh=%0d prod_q=%0d p_out=%0d | PE(1,0) s_in=%b v_in=%b x_in=%0d w_q=%0d | skew s_row[1]=%b",
+               cyc, valid_in, swap_in, x_in[0],
+               dut.u_array.g_row[0].g_col[0].g_data.u_pe.s_in, dut.u_array.g_row[0].g_col[0].g_data.u_pe.v_in,
+               dut.u_array.g_row[0].g_col[0].g_data.u_pe.x_in, dut.u_array.g_row[0].g_col[0].g_data.u_pe.w_q,
+               dut.u_array.g_row[0].g_col[0].g_data.u_pe.w_sh, dut.u_array.g_row[0].g_col[0].g_data.u_pe.prod_q,
+               dut.u_array.g_row[0].g_col[0].g_data.u_pe.p_out,
+               dut.u_array.g_row[1].g_col[0].g_data.u_pe.s_in, dut.u_array.g_row[1].g_col[0].g_data.u_pe.v_in,
+               dut.u_array.g_row[1].g_col[0].g_data.u_pe.x_in, dut.u_array.g_row[1].g_col[0].g_data.u_pe.w_q,
+               dut.u_skew.s_row[1]);
+    end
+    if (rst_n && valid_out === 1'b1 && out_row < 2)
+      $display("PEMON cycle %0d: valid_out row %0d y[0]=%0d y[1]=%0d y_chk=%0d expected y[0]=%0d", cyc, out_row, y[0], y[1], y_chk, $signed(y_mem[out_row*COLS]));
+  end
+
   // ---------------- drivers ----------------
   task automatic idle_inputs();
     w_load = 1'b0; wc_in = '0; valid_in = 1'b0; swap_in = 1'b0; fault_inject = 1'b0; abft_clear = 1'b0;

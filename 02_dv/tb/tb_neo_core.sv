@@ -29,7 +29,8 @@ module tb_neo_core;
   logic signed [WCW-1:0] wcbuf_wdata;
   logic signed [15:0]    cfg_h, cfg_w, cfg_ho, cfg_wo, cfg_s, cfg_p, cfg_k, cfg_ct_n, cfg_tile_pixels;
   logic signed [15:0]    cfg_ct0, cfg_ky0, cfg_kx0, cfg_rn, cfg_contrib_n, cfg_regions_m1, tiles_ready, cfg_oy0, cfg_oy_n, cfg_iy0;
-  logic                  seq_err_sticky, rq_err_sticky, seq_fault_inject, rq_fault_inject;
+  logic                  seq_err_sticky, rq_err_sticky, seq_fault_inject, rq_fault_inject, rq_tbl_fault_inject;
+  logic                  wbuf_ce_sticky, wbuf_ue_sticky, rq_tbl_perr_sticky;
   logic                  ext_valid, ext_ready, reduce_ready, ct_free;
   logic [IDXW-1:0]       ext_idx;
   logic signed [PW-1:0]  ext_y [COLS];
@@ -70,7 +71,8 @@ module tb_neo_core;
     .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky),
     .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject),
-    .seq_fault_inject(seq_fault_inject), .rq_fault_inject(rq_fault_inject));
+    .seq_fault_inject(seq_fault_inject), .rq_fault_inject(rq_fault_inject), .rq_tbl_fault_inject(rq_tbl_fault_inject),
+    .wbuf_ce_sticky(wbuf_ce_sticky), .wbuf_ue_sticky(wbuf_ue_sticky), .rq_tbl_perr_sticky(rq_tbl_perr_sticky));
 
   // vectors
   logic [8*ROWS-1:0]       abuf_mem [0:`CORE_N_ABUF-1];
@@ -81,6 +83,24 @@ module tb_neo_core;
   int out_row = 0;
   int mismatches = 0;
   int acc_flags = 0;
+
+  // X monitor: report the first cycle each key signal is unknown (which is where a real simulator
+  // disagrees with the zero-initialised Python simulator)
+  int cyc = 0;
+  bit seen_x_xvec = 0, seen_x_y = 0, seen_x_wr = 0, seen_x_seq = 0;
+  always @(negedge clk) begin
+    cyc++;
+    if (rst_n) begin
+      if (!seen_x_xvec && dut.u_dp.f_valid === 1'b1 && $isunknown(dut.u_dp.x_vec[0])) begin
+        seen_x_xvec = 1; $display("XMON cycle %0d: feeder x_vec[0] is X while f_valid=1 (seq state %0d, addr %0d)", cyc, dut.u_seq.state, dut.u_dp.u_feeder.addr); end
+      if (!seen_x_y && dut.u_dp.valid_out === 1'b1 && $isunknown(dut.u_dp.y[0])) begin
+        seen_x_y = 1; $display("XMON cycle %0d: array y[0] is X while valid_out=1", cyc); end
+      if (!seen_x_wr && dut.u_dp.valid_out === 1'b1 && ($isunknown(dut.u_dp.idx_d) || $isunknown(dut.u_dp.first_d))) begin
+        seen_x_wr = 1; $display("XMON cycle %0d: accumulator write index/first is X (idx_d=%b first_d=%b)", cyc, dut.u_dp.idx_d, dut.u_dp.first_d); end
+      if (!seen_x_seq && ($isunknown(dut.u_seq.state) || $isunknown(dut.u_dp.f_valid))) begin
+        seen_x_seq = 1; $display("XMON cycle %0d: sequencer state or feeder valid is X (state=%b f_valid=%b)", cyc, dut.u_seq.state, dut.u_dp.f_valid); end
+    end
+  end
 
   always @(negedge clk) begin
     if (rst_n && rd_valid) begin
@@ -118,7 +138,7 @@ module tb_neo_core;
     cfg_h = `CORE_H; cfg_w = `CORE_W; cfg_ho = `CORE_HO; cfg_wo = `CORE_WO; cfg_s = `CORE_S; cfg_p = `CORE_P;
     cfg_k = `CORE_K; cfg_ct_n = `CORE_CT_N; cfg_tile_pixels = `CORE_TILE_PIXELS; cfg_m = M;
     cfg_ct0 = 0; cfg_ky0 = 0; cfg_kx0 = 0; cfg_rn = `CORE_RN; cfg_contrib_n = 0;
-    cfg_regions_m1 = 16'h7FFF; tiles_ready = 16'h7FFF; seq_fault_inject = 0; rq_fault_inject = 0;
+    cfg_regions_m1 = 16'h7FFF; tiles_ready = 16'h7FFF; seq_fault_inject = 0; rq_fault_inject = 0; rq_tbl_fault_inject = 0;
     cfg_oy0 = 0; cfg_oy_n = `CORE_HO; cfg_iy0 = 0;
     repeat (3) @(negedge clk);
     rst_n = 1'b1;
