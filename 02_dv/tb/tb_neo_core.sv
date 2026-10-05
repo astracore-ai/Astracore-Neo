@@ -87,6 +87,7 @@ module tb_neo_core;
   // X monitor: report the first cycle each key signal is unknown (which is where a real simulator
   // disagrees with the zero-initialised Python simulator)
   int cyc = 0;
+  int timeout_n = 0;
   bit seen_x_xvec = 0, seen_x_y = 0, seen_x_wr = 0, seen_x_seq = 0;
   always @(negedge clk) begin
     cyc++;
@@ -163,17 +164,15 @@ module tb_neo_core;
     // go
     @(negedge clk); go = 1'b1;
     @(negedge clk); go = 1'b0;
-    fork
-      begin
-        wait (done);
-      end
-      begin
-        repeat (200000) @(negedge clk);
-        $display("ERROR: timeout waiting for done");
-        $finish;
-      end
-    join_any
-    disable fork;
+    timeout_n = 0;
+    while (!done && timeout_n < 200000) begin
+      @(negedge clk);
+      timeout_n++;
+    end
+    if (!done) begin
+      $display("ERROR: timeout waiting for done");
+      $finish;
+    end
     repeat (3) @(negedge clk);
 
     if (out_row == M && mismatches == 0 && acc_flags == 0 && !array_abft_sticky && !acc_abft_sticky && !ctrl_err_sticky

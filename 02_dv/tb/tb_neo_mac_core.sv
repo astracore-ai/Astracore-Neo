@@ -78,20 +78,16 @@ module tb_neo_mac_core;
             mismatches++;
             if (mismatches <= 8)
               $display("  MM row %0d col %0d: got %0d expected %0d (abft_err=%b)", out_row, j, y[j], $signed(y_mem[out_row*COLS + j]), abft_err);
-            if (first_mm_row < 0) begin
-              first_mm_row = out_row; first_mm_col = j;
-              first_mm_delta = longint'(y[j]) - longint'($signed(y_mem[out_row*COLS + j]));
-            end
+            first_mm_row = out_row; first_mm_col = j;            // last mismatch (the only one in T2)
+            first_mm_delta = longint'(y[j]) - longint'($signed(y_mem[out_row*COLS + j]));
           end
         end
         if (y_chk !== $signed(yc_mem[out_row])) begin
           mismatches++;
           if (mismatches <= 8)
             $display("  MM row %0d check column: got %0d expected %0d (abft_err=%b)", out_row, y_chk, $signed(yc_mem[out_row]), abft_err);
-          if (first_mm_row < 0) begin
-            first_mm_row = out_row; first_mm_col = COLS;
-            first_mm_delta = longint'(y_chk) - longint'($signed(yc_mem[out_row]));
-          end
+          first_mm_row = out_row; first_mm_col = COLS;
+          first_mm_delta = longint'(y_chk) - longint'($signed(yc_mem[out_row]));
         end
         if (abft_err) begin err_rows++; err_at_row[out_row] = 1'b1; end
       end else begin
