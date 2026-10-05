@@ -1,0 +1,101 @@
+# Neo regression on GitHub Actions (drop 0.16, repository layout = handoff package).
+# Step 1 of every job rebuilds the flat layout from the numbered folders with make_repo.sh, so nothing has
+# to be rearranged by hand. The last step of every job commits the logs to the ci-logs branch, so results
+# can be read from the repository itself (ci_logs/<job>/*.txt) without opening the Actions UI.
+name: regress
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  python-regress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy openpyxl
+      - name: flat layout
+        run: bash make_repo.sh . && ls rtl sim tb dv model compiler sw | head -40
+      - name: regress
+        run: |
+          mkdir -p ci_logs/python-regress
+          set -o pipefail
+          make regress 2>&1 | tee ci_logs/python-regress/regress.txt
+      - name: tool qualification kit
+        if: always()
+        run: python3 compiler/tool_qual.py 2>&1 | tee ci_logs/python-regress/tool_qual.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          git fetch origin ci-logs || true
+          git checkout -B ci-logs origin/ci-logs 2>/dev/null || git checkout --orphan ci-logs
+          git rm -rfq --cached . 2>/dev/null || true
+          mkdir -p ci_logs && git add -f ci_logs
+          git commit -m "python-regress logs $(date -u +%FT%TZ) run ${{ github.run_number }}" || true
+          git push origin ci-logs --force
+  hdl-sim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy
+      - name: install simulators
+        run: sudo apt-get update && sudo apt-get install -y iverilog verilator && verilator --version && iverilog -V | head -1
+      - name: flat layout
+        run: bash make_repo.sh .
+      - name: lint
+        run: |
+          mkdir -p ci_logs/hdl-sim
+          set -o pipefail
+          make lint 2>&1 | tee ci_logs/hdl-sim/lint.txt
+      - name: iverilog streaming core
+        if: always()
+        run: set -o pipefail; make iverilog 2>&1 | tee ci_logs/hdl-sim/iverilog.txt
+      - name: iverilog neo_core
+        if: always()
+        run: set -o pipefail; make iverilog_core 2>&1 | tee ci_logs/hdl-sim/iverilog_core.txt
+      - name: verilator streaming core
+        if: always()
+        run: set -o pipefail; make verilator 2>&1 | tee ci_logs/hdl-sim/verilator.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          git fetch origin ci-logs || true
+          git checkout -B ci-logs origin/ci-logs 2>/dev/null || git checkout --orphan ci-logs
+          git rm -rfq --cached . 2>/dev/null || true
+          mkdir -p ci_logs && git add -f ci_logs
+          git commit -m "hdl-sim logs $(date -u +%FT%TZ) run ${{ github.run_number }}" || true
+          git push origin ci-logs --force
+  tiles:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy
+      - run: bash make_repo.sh .
+      - run: |
+          mkdir -p ci_logs/tiles
+          for t in M3 M9 M12 M13 M11 M8 M1 M2 M4 M5 M6 M7; do python3 sim/run_tile_test.py $t 2>&1 | tee ci_logs/tiles/$t.txt; done
+          python3 sim/run_two_layer.py 2>&1 | tee ci_logs/tiles/M10.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          git fetch origin ci-logs || true
+          git checkout -B ci-logs origin/ci-logs 2>/dev/null || git checkout --orphan ci-logs
+          git rm -rfq --cached . 2>/dev/null || true
+          mkdir -p ci_logs && git add -f ci_logs
+          git commit -m "tiles logs $(date -u +%FT%TZ) run ${{ github.run_number }}" || true
+          git push origin ci-logs --force
