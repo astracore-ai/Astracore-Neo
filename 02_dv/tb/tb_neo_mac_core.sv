@@ -60,34 +60,41 @@ module tb_neo_mac_core;
   int out_row;                 // index of the next expected output row
   int mismatches;              // total mismatching outputs (data + check column)
   int err_rows;                // rows with abft_err asserted
-  int first_mm_row, first_mm_col;
-  longint first_mm_delta;
+  // mismatch record: flops written by the scoreboard process only (non-blocking), cleared by sb_clear
+  logic signed [31:0] first_mm_row, first_mm_col;
+  logic signed [63:0] first_mm_delta;
+  logic               sb_clear;
   bit err_at_row [0:M-1];
 
   task automatic clear_scoreboard();
+    sb_clear = 1'b1;
+    @(negedge clk); @(negedge clk);
+    sb_clear = 1'b0;
     out_row = 0; mismatches = 0; err_rows = 0;
-    first_mm_row = -1; first_mm_col = -1; first_mm_delta = 0;
     for (int m = 0; m < M; m++) err_at_row[m] = 1'b0;
   endtask
 
   always @(negedge clk) begin
-    if (rst_n && valid_out) begin
+    if (sb_clear) begin
+      first_mm_row <= -1; first_mm_col <= -1; first_mm_delta <= 0;
+    end
+    if (rst_n && valid_out && !sb_clear) begin
       if (out_row < M) begin
         for (int j = 0; j < COLS; j++) begin
           if (y[j] !== $signed(y_mem[out_row*COLS + j])) begin
             mismatches++;
             if (mismatches <= 8)
               $display("  MM row %0d col %0d: got %0d expected %0d (abft_err=%b)", out_row, j, y[j], $signed(y_mem[out_row*COLS + j]), abft_err);
-            first_mm_row = out_row; first_mm_col = j;            // last mismatch (the only one in T2)
-            first_mm_delta = longint'(y[j]) - longint'($signed(y_mem[out_row*COLS + j]));
+            first_mm_row <= out_row; first_mm_col <= j;          // last mismatch (the only one in T2)
+            first_mm_delta <= longint'(y[j]) - longint'($signed(y_mem[out_row*COLS + j]));
           end
         end
         if (y_chk !== $signed(yc_mem[out_row])) begin
           mismatches++;
           if (mismatches <= 8)
             $display("  MM row %0d check column: got %0d expected %0d (abft_err=%b)", out_row, y_chk, $signed(yc_mem[out_row]), abft_err);
-          first_mm_row = out_row; first_mm_col = COLS;
-          first_mm_delta = longint'(y_chk) - longint'($signed(yc_mem[out_row]));
+          first_mm_row <= out_row; first_mm_col <= COLS;
+          first_mm_delta <= longint'(y_chk) - longint'($signed(yc_mem[out_row]));
         end
         if (abft_err) begin err_rows++; err_at_row[out_row] = 1'b1; end
       end else begin
@@ -167,9 +174,10 @@ module tb_neo_mac_core;
              ROWS, COLS, M, LAT, vecdir);
 
     idle_inputs();
-    clear_scoreboard();
+    sb_clear = 1'b0;
     repeat (3) @(negedge clk);
     rst_n = 1'b1;
+    clear_scoreboard();
     repeat (2) @(negedge clk);
 
     load_weights();
