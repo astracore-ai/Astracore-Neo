@@ -1,0 +1,47 @@
+python3 model/systolic_ref.py --rows 32 --cols 32 --m 64 --seed 1 --out vectors
+neo_mac_core reference model: ROWS=32 COLS=32 (+1 ABFT column), M=64 rows, seed=1
+  T1 dataflow  : Y == X@W for 64x32 outputs and check column -> PASS
+  T1 latency   : first valid output at step 97 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS+1 = 97 -> PASS
+  T1 ABFT      : 0 rows flagged on clean data (expect 0) -> PASS
+  T2 data-PE fault at PE(5,7), cycle 28: output (10,7) off by +1 only -> PASS; ABFT flags exactly row 10 -> PASS
+  T3 check-column fault: data untouched, ABFT flags exactly row 10 -> PASS
+  T4 weight bit-flip at W[3][4]: ABFT flags 64/64 rows (expect 64) -> PASS
+  T5 double-buffer: tile A (130 rows, W) then tile B (64 rows, W2 loaded during A) back to back, no drain -> PASS
+  vectors written to /home/runner/work/Astracore-Neo/Astracore-Neo/vectors (x.hex, w.hex, wc.hex, y_exp.hex, yc_exp.hex, params.vh)
+RESULT: ALL PASS
+python3 model/systolic_ref.py --rows 8 --cols 16 --m 20 --seed 7 --fault-row 2 --fault-col 9 --out build/v816
+neo_mac_core reference model: ROWS=8 COLS=16 (+1 ABFT column), M=20 rows, seed=7
+  T1 dataflow  : Y == X@W for 20x16 outputs and check column -> PASS
+  T1 latency   : first valid output at step 33 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS+1 = 33 -> PASS
+  T1 ABFT      : 0 rows flagged on clean data (expect 0) -> PASS
+  T2 data-PE fault at PE(2,9), cycle 24: output (10,9) off by +1 only -> PASS; ABFT flags exactly row 10 -> PASS
+  T3 check-column fault: data untouched, ABFT flags exactly row 10 -> PASS
+  T4 weight bit-flip at W[3][4]: ABFT flags 20/20 rows (expect 20) -> PASS
+  T5 double-buffer: tile A (42 rows, W) then tile B (20 rows, W2 loaded during A) back to back, no drain -> PASS
+  vectors written to /home/runner/work/Astracore-Neo/Astracore-Neo/build/v816 (x.hex, w.hex, wc.hex, y_exp.hex, yc_exp.hex, params.vh)
+RESULT: ALL PASS
+python3 sim/run_mac_core.py --vectors build/v816
+neosim: elaborated neo_mac_core ROWS=8 COLS=16 (+1 ABFT column) M=20: 5078 cells, 343 comb nodes, 442 always_ff blocks, 0.1 s
+  T1 dataflow  : 20 rows x 16 outputs + check column vs golden, 0 mismatches, 0 ABFT flags, sticky=0 -> PASS
+  T1 latency   : first valid_out after tick 32 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS = 32 -> PASS
+  T2 MAC fault : PE(2,9) fault at stream cycle 24: mismatches=[(10, 9, 1)], flags on rows [10], sticky=1 -> PASS
+  T3 clear     : abft_err_sticky after clear = 0 -> PASS
+  T4 double-buf: tile A (42 rows, W) with W2 loading from tick 32, tile B (20 rows, W2) with no drain: 62 rows out, A ok, B ok, flags 0 -> PASS
+  simulated 227 clocks in 0.3 s
+RESULT: ALL PASS
+python3 sim/run_mac_core.py --vectors vectors
+neosim: elaborated neo_mac_core ROWS=32 COLS=32 (+1 ABFT column) M=64: 38502 cells, 2335 comb nodes, 4562 always_ff blocks, 1.3 s
+  T1 dataflow  : 64 rows x 32 outputs + check column vs golden, 0 mismatches, 0 ABFT flags, sticky=0 -> PASS
+  T1 latency   : first valid_out after tick 96 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS = 96 -> PASS
+  T2 MAC fault : PE(5,7) fault at stream cycle 28: mismatches=[(10, 7, 1)], flags on rows [10], sticky=1 -> PASS
+  T3 clear     : abft_err_sticky after clear = 0 -> PASS
+  T4 double-buf: tile A (130 rows, W) with W2 loading from tick 96, tile B (64 rows, W2) with no drain: 194 rows out, A ok, B ok, flags 0 -> PASS
+  simulated 663 clocks in 18.7 s
+RESULT: ALL PASS
+python3 compiler/neo_compile.py --verify
+Lowering verification (accumulated tile outputs vs direct numpy convolution):
+  lowering on cycle model, 32x32 core     : conv 5x6x6 -> 7x6x6 k3 = GEMM M=36 K=45 N=7, 2x1 tiles of 32x32, 2 passes -> PASS
+  lowering on cycle model, 16x8 core      : conv 5x6x6 -> 7x6x6 k3 = GEMM M=36 K=45 N=7, 3x1 tiles of 16x8, 3 passes -> PASS
+  lowering on RTL under neosim, 16x8 core : conv 5x6x6 -> 7x6x6 k3 = GEMM M=36 K=45 N=7, 3x1 tiles of 16x8, 3 passes -> PASS
+RESULT: ALL PASS
+python3 sim/run_conv_v02.py
