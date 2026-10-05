@@ -76,6 +76,8 @@ module tb_neo_mac_core;
         for (int j = 0; j < COLS; j++) begin
           if (y[j] !== $signed(y_mem[out_row*COLS + j])) begin
             mismatches++;
+            if (mismatches <= 8)
+              $display("  MM row %0d col %0d: got %0d expected %0d (abft_err=%b)", out_row, j, y[j], $signed(y_mem[out_row*COLS + j]), abft_err);
             if (first_mm_row < 0) begin
               first_mm_row = out_row; first_mm_col = j;
               first_mm_delta = longint'(y[j]) - longint'($signed(y_mem[out_row*COLS + j]));
@@ -84,6 +86,8 @@ module tb_neo_mac_core;
         end
         if (y_chk !== $signed(yc_mem[out_row])) begin
           mismatches++;
+          if (mismatches <= 8)
+            $display("  MM row %0d check column: got %0d expected %0d (abft_err=%b)", out_row, y_chk, $signed(yc_mem[out_row]), abft_err);
           if (first_mm_row < 0) begin
             first_mm_row = out_row; first_mm_col = COLS;
             first_mm_delta = longint'(y_chk) - longint'($signed(yc_mem[out_row]));
@@ -117,7 +121,7 @@ module tb_neo_mac_core;
                dut.u_skew.s_row[1]);
     end
     if (rst_n && valid_out === 1'b1 && out_row < 2)
-      $display("PEMON cycle %0d: valid_out row %0d y[0]=%0d y[1]=%0d y_chk=%0d expected y[0]=%0d", cyc, out_row, y[0], y[1], y_chk, $signed(y_mem[out_row*COLS]));
+      $display("PEMON cycle %0d: valid_out row %0d y[0]=%0d y[1]=%0d y_chk=%0d expected y[0]=%0d yc=%0d", cyc, out_row, y[0], y[1], y_chk, $signed(y_mem[out_row*COLS]), $signed(yc_mem[out_row]));
   end
 
   // ---------------- drivers ----------------
