@@ -150,9 +150,11 @@ verilator: vectors
 	          $(RTL) $(TB) -o sim
 	./obj_dir/sim +VECDIR=$(VECDIR)
 
+LINTW := -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-WIDTHEXPAND
 lint:
-	verilator --lint-only -Wall --top-module neo_core $(RTL)
-	verilator --lint-only -Wall --top-module noc_mesh $(NOC)
+	verilator --lint-only $(LINTW) --top-module neo_core $(RTL)
+	verilator --lint-only $(LINTW) --top-module noc_mesh $(NOC)
+	verilator --lint-only $(LINTW) --top-module neo_tile_axil $(TILE) rtl/host_axil.sv rtl/neo_tile_axil.sv
 	verilator --lint-only -Wall --top-module tile_mesh $(TILE)
 
 clean:
