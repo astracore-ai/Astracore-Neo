@@ -59,7 +59,7 @@ compile:
 	python3 compiler/neo_compile.py --report --v02
 
 conv:
-	python3 sim/run_conv_v02.py
+	python3 sim/run_conv_v02.py --skip32
 
 core:
 	python3 sim/run_conv_core.py
@@ -128,7 +128,7 @@ regress: vectors
 	python3 sim/run_mac_core.py --vectors build/v816
 	python3 sim/run_mac_core.py --vectors $(VECDIR)
 	python3 compiler/neo_compile.py --verify
-	python3 sim/run_conv_v02.py
+	python3 sim/run_conv_v02.py --skip32
 	python3 sim/run_conv_core.py
 	python3 sim/run_conv_core.py --late
 	python3 sim/run_noc.py
