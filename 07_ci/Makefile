@@ -161,7 +161,7 @@ verilator: vectors vectors_core
 
 # cocotb on Verilator: the mesh suite M1-M13 (installs cocotb into the current Python if missing)
 cocotb_tiles:
-	python3 -c "import cocotb" 2>/dev/null || pip install cocotb cocotb-coverage
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"   # cocotb 2.x needs Verilator >= 5.036; Ubuntu ships 5.020
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
 	$(MAKE) -C dv/cocotb tile
 
