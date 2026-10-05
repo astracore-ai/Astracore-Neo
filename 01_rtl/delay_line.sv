@@ -14,12 +14,17 @@ module delay_line #(
       assign q = d;
     end else begin : g_delay
       logic signed [W-1:0] pipe [DEPTH];
-      always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-          for (int k = 0; k < DEPTH; k++) pipe[k] <= '0;
-        end else begin
-          pipe[0] <= d;
-          for (int k = 1; k < DEPTH; k++) pipe[k] <= pipe[k-1];
+      for (genvar k = 0; k < DEPTH; k++) begin : g_st        // one stage per always block (Verilator-clean)
+        if (k == 0) begin : g_first
+          always_ff @(posedge clk or negedge rst_n) begin
+            if (!rst_n) pipe[k] <= '0;
+            else        pipe[k] <= d;
+          end
+        end else begin : g_next
+          always_ff @(posedge clk or negedge rst_n) begin
+            if (!rst_n) pipe[k] <= '0;
+            else        pipe[k] <= pipe[k-1];
+          end
         end
       end
       assign q = pipe[DEPTH-1];

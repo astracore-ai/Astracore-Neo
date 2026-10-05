@@ -83,14 +83,10 @@ module neo_mac_core #(
   assign y_chk = p_algn[COLS];
 
   // valid travels the same LATENCY as the data
-  logic valid_pipe [LATENCY];
+  logic [LATENCY-1:0] valid_pipe;                          // packed shift register: bit 0 newest
   always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      for (int k = 0; k < LATENCY; k++) valid_pipe[k] <= 1'b0;
-    end else begin
-      valid_pipe[0] <= valid_in;
-      for (int k = 1; k < LATENCY; k++) valid_pipe[k] <= valid_pipe[k-1];
-    end
+    if (!rst_n) valid_pipe <= '0;
+    else        valid_pipe <= {valid_pipe[LATENCY-2:0], valid_in};
   end
   assign valid_out = valid_pipe[LATENCY-1];
 

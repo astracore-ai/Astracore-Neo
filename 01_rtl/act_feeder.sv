@@ -71,10 +71,10 @@ module act_feeder #(
   logic [AW-1:0]        addr_raw;
   logic [AW-1:0]        addr;
 
-  assign iy       = oy * cfg_s + cfg_ky - cfg_p;
-  assign ix       = ox * cfg_s + cfg_kx - cfg_p;
-  assign inb      = (iy >= 0) && (iy < cfg_h) && (ix >= 0) && (ix < cfg_w);
-  assign addr_raw = inb ? ((cfg_ct & cfg_regions_m1) * cfg_tile_pixels + (iy - cfg_iy0) * cfg_w + ix) : '0;
+  assign iy       = 18'(oy) * 18'(cfg_s) + 18'(cfg_ky) - 18'(cfg_p);
+  assign ix       = 18'(ox) * 18'(cfg_s) + 18'(cfg_kx) - 18'(cfg_p);
+  assign inb      = (iy >= 0) && (iy < 18'(cfg_h)) && (ix >= 0) && (ix < 18'(cfg_w));
+  assign addr_raw = inb ? AW'((18'(cfg_ct) & 18'(cfg_regions_m1)) * 18'(cfg_tile_pixels) + (iy - 18'(cfg_iy0)) * 18'(cfg_w) + ix) : '0;
   assign addr     = addr_raw ^ {{(AW-1){1'b0}}, ctrl_fault_inject};
 
   assign busy    = running;
@@ -137,10 +137,10 @@ module act_feeder #(
   logic [AW-1:0]        addr_d;
   logic                 valid_d;
 
-  assign iy_d    = oy_d * cfg_s + cfg_ky - cfg_p;
-  assign ix_d    = ox_d * cfg_s + cfg_kx - cfg_p;
-  assign inb_d   = (iy_d >= 0) && (iy_d < cfg_h) && (ix_d >= 0) && (ix_d < cfg_w);
-  assign addr_d  = inb_d ? ((cfg_ct & cfg_regions_m1) * cfg_tile_pixels + (iy_d - cfg_iy0) * cfg_w + ix_d) : '0;
+  assign iy_d    = 18'(oy_d) * 18'(cfg_s) + 18'(cfg_ky) - 18'(cfg_p);
+  assign ix_d    = 18'(ox_d) * 18'(cfg_s) + 18'(cfg_kx) - 18'(cfg_p);
+  assign inb_d   = (iy_d >= 0) && (iy_d < 18'(cfg_h)) && (ix_d >= 0) && (ix_d < 18'(cfg_w));
+  assign addr_d  = inb_d ? AW'((18'(cfg_ct) & 18'(cfg_regions_m1)) * 18'(cfg_tile_pixels) + (iy_d - 18'(cfg_iy0)) * 18'(cfg_w) + ix_d) : '0;
   assign valid_d = running_d && !tok_d;
 
   always_ff @(posedge clk or negedge rst_n) begin
