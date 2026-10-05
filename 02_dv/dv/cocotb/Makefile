@@ -7,8 +7,9 @@ RTL := $(abspath ../../rtl)
 CORE_SRCS := $(addprefix $(RTL)/, delay_line.sv mac_pe.sv skew_in.sv deskew_out.sv systolic_array.sv abft_checker.sv neo_mac_core.sv \
   act_feeder.sv acc_bank.sv neo_mac_core_v02.sv core_seq.sv ecc39.sv wbuf_mem.sv requant.sv neo_core.sv)
 TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv tile_nic.sv tile_dma.sv \
-  host_if.sv esm.sv neo_tile.sv tile_mesh.sv)
-EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT
+  prog_mem.sv host_if.sv esm.sv neo_tile.sv tile_mesh.sv)
+export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH)
+EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD --public-flat-rw
 # coverage: COVERAGE=1 adds Verilator line/toggle coverage (coverage.dat -> verilator_coverage --annotate),
 # and the tests sample functional covergroups through cocotb-coverage (pip install cocotb-coverage)
 ifeq ($(COVERAGE),1)
@@ -19,7 +20,7 @@ ifeq ($(TARGET),tile)
   VERILOG_SOURCES = $(TILE_SRCS)
   TOPLEVEL = tile_mesh
   MODULE = test_tile_mesh
-  EXTRA_ARGS += -GNX=2 -GNY=2 -GROWS=16 -GCOLS=8 -GACC_ROWS=64 -GABUF_DEPTH=256 -GWBUF_DEPTH=512 -GBANK_DEPTH=4096
+  EXTRA_ARGS += -GNX=2 -GNY=2 -GROWS=16 -GCOLS=8 -GACC_ROWS=64 -GABUF_DEPTH=256 -GWBUF_DEPTH=512 -GBANK_DEPTH=4096 -GFETCH_TIMEOUT=600 -GBIST_WORDS=16
 else
   VERILOG_SOURCES = $(CORE_SRCS)
   TOPLEVEL = neo_core
