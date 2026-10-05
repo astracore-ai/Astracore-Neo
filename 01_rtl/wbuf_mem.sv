@@ -36,16 +36,20 @@ module wbuf_mem #(
   logic            ue   [LANES];
   logic            any_ce, any_ue;
 
-  generate
-    for (genvar j = 0; j < COLS; j++) begin : g_pack
-      assign wflat[j*WW +: WW] = wdata[j];
-      assign rdata[j] = rflat[j*WW +: WW];
-    end
-    if (PW_ > EW) begin : g_pad
-      assign wflat[PW_-1:EW] = '0;
-    end
-  endgenerate
-  assign wflat[COLS*WW +: WCW] = wcdata;
+  // pack / unpack with exactly one driver per variable (several continuous assignments to slices
+  // of one variable are resolved differently by different simulators)
+  always_comb begin
+    wflat = '0;
+    for (int j = 0; j < COLS; j++) wflat[j*WW +: WW] = wdata[j];
+    wflat[COLS*WW +: WCW] = wcdata;
+  end
+  always_comb begin
+    rflat = '0;
+    for (int l = 0; l < LANES; l++) rflat[l*32 +: 32] = rfix[l];
+  end
+  always_comb begin
+    for (int j = 0; j < COLS; j++) rdata[j] = rflat[j*WW +: WW];
+  end
   assign rcdata = rflat[COLS*WW +: WCW];
 
   generate
@@ -53,7 +57,6 @@ module wbuf_mem #(
       ecc39_enc u_enc (.d(wflat[l*32 +: 32]), .p(wp[l]), .op(wop[l]));
       ecc39_dec u_dec (.d(rcw[l][31:0]), .p(rcw[l][37:32]), .op(rcw[l][38]), .d_out(rfix[l]), .ce(ce[l]), .ue(ue[l]));
       assign rcw[l] = mem[raddr][l];
-      assign rflat[l*32 +: 32] = rfix[l];
     end
   endgenerate
 
