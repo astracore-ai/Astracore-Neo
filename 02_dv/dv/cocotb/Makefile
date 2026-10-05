@@ -17,8 +17,8 @@ ifeq ($(COVERAGE),1)
   export NEO_FUNCOV=1
 endif
 ifeq ($(TARGET),tile)
-  VERILOG_SOURCES = $(TILE_SRCS)
-  TOPLEVEL = tile_mesh
+  VERILOG_SOURCES = $(TILE_SRCS) $(abspath ../../tb/tile_mesh_cocotb.sv)
+  TOPLEVEL = tile_mesh_cocotb
   MODULE = test_tile_mesh
   EXTRA_ARGS += -GNX=2 -GNY=2 -GROWS=16 -GCOLS=8 -GACC_ROWS=64 -GABUF_DEPTH=256 -GWBUF_DEPTH=512 -GBANK_DEPTH=4096 -GFETCH_TIMEOUT=600 -GBIST_WORDS=16
 else

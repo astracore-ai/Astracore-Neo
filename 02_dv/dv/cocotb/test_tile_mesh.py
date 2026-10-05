@@ -16,7 +16,7 @@ host register bus (program, descriptor, start, status, causes), banks loaded and
   M11 bank MBIST through the registers: clean pass, then a stuck bit found by the ECC with its address
   M12 control path: program-memory SECDED, duplicated descriptor registers, lockstep DMA engines
   M13 spatial partitions: a cross-partition fetch is dropped and flagged; inside one partition it is clean
-Run: make -C dv/cocotb tile   (tile_mesh 2x2, 16x8 cores, FETCH_TIMEOUT=600, BIST_WORDS=16)
+Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=600, BIST_WORDS=16)
 """
 import os
 import cocotb
@@ -45,23 +45,59 @@ def xy(n):
     return n % NX, n // NX
 
 
+def bit_get(sig, i):
+    """Read bit i of a 1-bit-element array that Verilator may expose either as an indexable array or as a packed vector."""
+    try:
+        return int(sig[i].value)
+    except (IndexError, TypeError, AttributeError):
+        return (int(sig.value) >> i) & 1
+
+
+def bit_set(sig, i, v):
+    try:
+        sig[i].value = v
+    except (IndexError, TypeError, AttributeError):
+        cur = int(sig.value)
+        sig.value = (cur | (1 << i)) if v else (cur & ~(1 << i))
+
+
+def scope(obj, name):
+    """Generate-block scope access: dut.g_y[1] in cocotb, or the literal 'g_y[1]' name where the array form is absent."""
+    try:
+        base, idx = name[:name.index('[')], int(name[name.index('[') + 1:-1])
+        return getattr(obj, base)[idx]
+    except Exception:
+        return getattr(obj, name)
+
+
 class Mesh:
-    """Host-side view of the mesh: registers, programs, bank backdoor, causes."""
+    """Host-side view of the mesh through the packed-port wrapper tile_mesh_cocotb: registers, programs,
+    bank backdoor, causes. Per-tile inputs are kept as shadow values and written as packed vectors."""
 
     def __init__(self, dut):
         self.dut = dut
         self.N = NX * NY
+        self.we = [0] * self.N
+        self.re = [0] * self.N
+        self.addr = [0] * self.N
+        self.wdata = [0] * self.N
 
     def tile(self, n):
         x, y = xy(n)
-        return getattr(getattr(getattr(self.dut, f"g_y[{y}]"), f"g_x[{x}]"), "u_t")
+        return getattr(scope(scope(self.dut.u_mesh, f"g_y[{y}]"), f"g_x[{x}]"), "u_t")
+
+    def _drive(self):
+        self.dut.h_we.value = sum(v << n for n, v in enumerate(self.we))
+        self.dut.h_re.value = sum(v << n for n, v in enumerate(self.re))
+        self.dut.h_addr.value = sum((v & 0xFF) << (8 * n) for n, v in enumerate(self.addr))
+        self.dut.h_wdata.value = sum((v & 0xFFFFFFFF) << (32 * n) for n, v in enumerate(self.wdata))
+
+    def status(self, name, n):
+        return (int(getattr(self.dut, name).value) >> n) & 1
 
     async def reset(self):
-        for n in range(self.N):
-            self.dut.h_we[n].value = 0
-            self.dut.h_re[n].value = 0
-            self.dut.h_addr[n].value = 0
-            self.dut.h_wdata[n].value = 0
+        self.we = [0] * self.N; self.re = [0] * self.N; self.addr = [0] * self.N; self.wdata = [0] * self.N
+        self._drive()
         self.dut.rst_n.value = 0
         await ClockCycles(self.dut.clk, 4)
         self.dut.rst_n.value = 1
@@ -71,19 +107,20 @@ class Mesh:
         await ClockCycles(self.dut.clk, n)
 
     async def reg_write(self, node, addr, val):
-        self.dut.h_we[node].value = 1
-        self.dut.h_addr[node].value = addr
-        self.dut.h_wdata[node].value = val & 0xFFFFFFFF
+        self.we[node] = 1; self.addr[node] = addr; self.wdata[node] = val & 0xFFFFFFFF
+        self._drive()
         await RisingEdge(self.dut.clk)
-        self.dut.h_we[node].value = 0
+        self.we[node] = 0
+        self._drive()
 
     async def reg_read(self, node, addr):
-        self.dut.h_re[node].value = 1
-        self.dut.h_addr[node].value = addr
+        self.re[node] = 1; self.addr[node] = addr
+        self._drive()
         await RisingEdge(self.dut.clk)
-        self.dut.h_re[node].value = 0
+        self.re[node] = 0
+        self._drive()
         await ReadOnly()
-        v = int(self.dut.h_rdata[node].value)
+        v = (int(self.dut.h_rdata.value) >> (32 * node)) & 0xFFFFFFFF
         await RisingEdge(self.dut.clk)
         return v
 
@@ -143,12 +180,18 @@ class Mesh:
                 out[m, j] = sbits(self.bank_read(node, addr + m * (COLS + 1) + j), 32)
         return out
 
+    def prog_done(self, node):
+        return self.status("prog_done", node)
+
+    def drain_busy(self, node):
+        return self.status("drain_busy", node)
+
     async def wait_prog(self, node, limit=60000):
         n = 0
         while True:
             await RisingEdge(self.dut.clk)
             await ReadOnly()
-            if int(self.dut.prog_done[node].value) and not int(self.dut.drain_busy[node].value):
+            if self.prog_done(node) and not self.drain_busy(node):
                 break
             n += 1
             assert n < limit, f"tile {node}: program did not finish within {limit} clocks"
@@ -159,7 +202,7 @@ class Mesh:
         return [await self.reg_read(n, REG_ERR_CAUSE) for n in range(self.N)]
 
     def pins(self):
-        return [int(self.dut.err_pin[n].value) for n in range(self.N)]
+        return [self.status("err_pin", n) for n in range(self.N)]
 
 
 def conv_data(seed=17, cin=40, cout=7):
@@ -249,9 +292,9 @@ async def m3_end_to_end_crc(dut):
     while True:
         await RisingEdge(dut.clk)
         await ReadOnly()
-        if int(dut.prog_done[0].value):
+        if mesh.prog_done(0):
             break
-        if not corrupted and int(router.out_valid[4].value) and ((int(router.out_flit[4].value) >> 61) & 7) == T_RDRSP and n > 40:
+        if not corrupted and bit_get(router.out_valid, 4) and ((int(router.out_flit[4].value) >> 61) & 7) == T_RDRSP and n > 40:
             await RisingEdge(dut.clk)
             router.out_flit[4].value = int(router.out_flit[4].value) ^ (1 << 5)   # past the last link parity check
             corrupted = True
@@ -379,7 +422,7 @@ async def m8_registers_selftest_watchdog(dut):
     while True:
         await RisingEdge(dut.clk)
         await ReadOnly()
-        if int(dut.prog_done[0].value):
+        if mesh.prog_done(0):
             break
         n += 1
         if n % 400 == 0:
@@ -406,7 +449,7 @@ async def m8_registers_selftest_watchdog(dut):
     while True:
         await RisingEdge(dut.clk)
         await ReadOnly()
-        if int(dut.prog_done[0].value) and not int(dut.drain_busy[0].value):
+        if mesh.prog_done(0) and not mesh.drain_busy(0):
             break
         n += 1
         if n % 400 == 0:
@@ -438,11 +481,11 @@ async def m9_lost_flit_and_timeout(dut):
     while True:
         await RisingEdge(dut.clk)
         await ReadOnly()
-        if int(dut.prog_done[0].value):
+        if mesh.prog_done(0):
             break
-        if not dropped and int(router.out_valid[4].value) and ((int(router.out_flit[4].value) >> 61) & 7) == T_RDRSP and n > 40:
+        if not dropped and bit_get(router.out_valid, 4) and ((int(router.out_flit[4].value) >> 61) & 7) == T_RDRSP and n > 40:
             await RisingEdge(dut.clk)
-            router.out_valid[4].value = 0                     # the flit vanishes at the owner's port
+            bit_set(router.out_valid, 4, 0)                     # the flit vanishes at the owner's port
             dropped = True
             continue
         n += 1
@@ -461,7 +504,7 @@ async def m9_lost_flit_and_timeout(dut):
         sb.value = 1
         await RisingEdge(dut.clk)
         await ReadOnly()
-        if int(dut.prog_done[0].value):
+        if mesh.prog_done(0):
             break
         n += 1
         assert n < 3000, "timeout did not fire"
@@ -539,7 +582,7 @@ async def m13_partitions(dut):
     while True:
         await RisingEdge(dut.clk)
         await ReadOnly()
-        if int(dut.prog_done[0].value):
+        if mesh.prog_done(0):
             break
         n += 1
         assert n < 3000
