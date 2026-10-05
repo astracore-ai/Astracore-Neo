@@ -145,12 +145,15 @@ xrun: vectors
 	xrun -64bit -sv -timescale 1ns/1ps +incdir+$(VECDIR) -top tb_neo_mac_core -access +rwc \
 	     $(RTL) $(TB) +VECDIR=$(VECDIR)
 
-verilator: vectors
-	verilator --binary --timing -Wno-fatal +incdir+$(VECDIR) --top-module tb_neo_mac_core \
+verilator: vectors vectors_core
+	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD +incdir+$(VECDIR) --top-module tb_neo_mac_core \
 	          $(RTL) $(TB) -o sim
 	./obj_dir/sim +VECDIR=$(VECDIR)
+	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_core +incdir+vectors_core --top-module tb_neo_core \
+	          $(RTL) $(TBC) -o sim_core
+	./obj_core/sim_core +VECDIR=vectors_core
 
-LINTW := -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-WIDTHEXPAND
+LINTW := -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-WIDTHEXPAND -Wno-UNSIGNED -Wno-TIMESCALEMOD
 lint:
 	verilator --lint-only $(LINTW) --top-module neo_core $(RTL)
 	verilator --lint-only $(LINTW) --top-module noc_mesh $(NOC)
