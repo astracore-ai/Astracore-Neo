@@ -103,6 +103,42 @@ module tb_neo_core;
     end
   end
 
+  // value monitor (2-state simulators): weights in PE row 0 after the first swap, the first activation
+  // vector, the first array output row with its check column, and the first accumulator write
+  bit vm_w = 0, vm_x = 0, vm_y = 0, vm_acc = 0;
+  always @(negedge clk) begin
+    if (rst_n) begin
+      if (!vm_w && dut.u_dp.u_core.u_array.g_row[0].g_col[0].g_data.u_pe.w_q !== 0) begin
+        vm_w = 1;
+        $display("VMON cycle %0d: PE row 0 active weights w_q[0..7] = %0d %0d %0d %0d %0d %0d %0d %0d, check PE wc_q = %0d; expected from wbuf entry 0: %0d %0d %0d %0d %0d %0d %0d %0d chk %0d",
+                 cyc,
+                 dut.u_dp.u_core.u_array.g_row[0].g_col[0].g_data.u_pe.w_q, dut.u_dp.u_core.u_array.g_row[0].g_col[1].g_data.u_pe.w_q,
+                 dut.u_dp.u_core.u_array.g_row[0].g_col[2].g_data.u_pe.w_q, dut.u_dp.u_core.u_array.g_row[0].g_col[3].g_data.u_pe.w_q,
+                 dut.u_dp.u_core.u_array.g_row[0].g_col[4].g_data.u_pe.w_q, dut.u_dp.u_core.u_array.g_row[0].g_col[5].g_data.u_pe.w_q,
+                 dut.u_dp.u_core.u_array.g_row[0].g_col[6].g_data.u_pe.w_q, dut.u_dp.u_core.u_array.g_row[0].g_col[7].g_data.u_pe.w_q,
+                 dut.u_dp.u_core.u_array.g_row[0].g_col[8].g_check.u_pe.w_q,
+                 $signed(wbuf_mem[0][7:0]), $signed(wbuf_mem[0][15:8]), $signed(wbuf_mem[0][23:16]), $signed(wbuf_mem[0][31:24]),
+                 $signed(wbuf_mem[0][39:32]), $signed(wbuf_mem[0][47:40]), $signed(wbuf_mem[0][55:48]), $signed(wbuf_mem[0][63:56]),
+                 $signed(wbuf_mem[0][8*COLS +: WCW]));
+        $display("VMON: wbuf read data at entry 0 as the sequencer sees it: w_in[0..3] = %0d %0d %0d %0d wc_in = %0d (w_raddr=%0d)",
+                 dut.w_in[0], dut.w_in[1], dut.w_in[2], dut.w_in[3], dut.wc_in, dut.w_raddr);
+      end
+      if (!vm_x && dut.u_dp.f_valid === 1'b1) begin
+        vm_x = 1;
+        $display("VMON cycle %0d: first feeder vector x_vec[0..3] = %0d %0d %0d %0d (seq state %0d, ct %0d ky %0d kx %0d); abuf entry 0 bytes 0..3 = %0d %0d %0d %0d",
+                 cyc, dut.u_dp.x_vec[0], dut.u_dp.x_vec[1], dut.u_dp.x_vec[2], dut.u_dp.x_vec[3], dut.u_seq.state, dut.u_seq.ct, dut.u_seq.ky, dut.u_seq.kx,
+                 $signed(abuf_mem[0][7:0]), $signed(abuf_mem[0][15:8]), $signed(abuf_mem[0][23:16]), $signed(abuf_mem[0][31:24]));
+      end
+      if (!vm_y && dut.u_dp.valid_out === 1'b1) begin
+        vm_y = 1;
+        $display("VMON cycle %0d: first array output y[0..7] = %0d %0d %0d %0d %0d %0d %0d %0d y_chk = %0d (sum of y = %0d), idx_d=%0d first_d=%b",
+                 cyc, dut.u_dp.y[0], dut.u_dp.y[1], dut.u_dp.y[2], dut.u_dp.y[3], dut.u_dp.y[4], dut.u_dp.y[5], dut.u_dp.y[6], dut.u_dp.y[7], dut.u_dp.y_chk,
+                 dut.u_dp.y[0] + dut.u_dp.y[1] + dut.u_dp.y[2] + dut.u_dp.y[3] + dut.u_dp.y[4] + dut.u_dp.y[5] + dut.u_dp.y[6] + dut.u_dp.y[7],
+                 dut.u_dp.idx_d, dut.u_dp.first_d);
+      end
+    end
+  end
+
   always @(negedge clk) begin
     if (rst_n && rd_valid) begin
       if (out_row < M) begin
