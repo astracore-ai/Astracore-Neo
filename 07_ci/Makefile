@@ -22,7 +22,7 @@
 # make mbist      : March C- MBIST on an ECC bank (standalone) -- the tile-level version is M11 in run_tiles.py
 # make two_layer  : M10: two layers back to back on the mesh with INT8 handoff through the bank
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
-# make verilator  : Verilator: streaming core T1-T3, neo_core C1, then tile_mesh M1 through the register bus (drop 0.18)
+# make verilator  : Verilator: streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then the cocotb mesh suite M1-M13 (drop 0.19)
 # make perf2      : 64-core event model with mesh and bank contention (compiler/neo_perf_v2.py)
 # make regress    : everything above that is self-checking (model, RTL v0.1/v0.2/core/NoC, compiler)
 # make xrun_core  : Cadence Xcelium replay of the C1 convolution on neo_core (vectors_core from --dump)
@@ -157,6 +157,13 @@ verilator: vectors vectors_core
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD -Wno-WIDTHTRUNC --Mdir obj_tiles --top-module tb_tile_mesh \
 	          $(TILE) tb/tb_tile_mesh.sv -o sim_tiles
 	./obj_tiles/sim_tiles
+	$(MAKE) cocotb_tiles
+
+# cocotb on Verilator: the mesh suite M1-M13 (installs cocotb into the current Python if missing)
+cocotb_tiles:
+	python3 -c "import cocotb" 2>/dev/null || pip install cocotb cocotb-coverage
+	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
+	$(MAKE) -C dv/cocotb tile
 
 LINTW := -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-WIDTHEXPAND -Wno-UNSIGNED -Wno-TIMESCALEMOD
 lint:
