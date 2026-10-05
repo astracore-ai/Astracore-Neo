@@ -1,0 +1,10 @@
+Convolutions executed on neo_core RTL (hardware sequencer) under neosim: (C1-C8)
+  C1: conv 40x6x6 -> 7x6x6 k3 s1 p1 on 16x8 core, hardware sequencer: 27 runs x 1 output tiles, 1696 sequencer cycles, 2243 clocks total, 46.3 s; abft/ctrl sticky 0/0/0 -> PASS
+  C2: conv 20x7x7 -> 10x4x4 k3 s2 p1 on 16x8 core, hardware sequencer: 18 runs x 2 output tiles, 2232 sequencer cycles, 2917 clocks total, 51.4 s; abft/ctrl sticky 0/0/0 -> PASS
+  C3: conv 35x5x5 -> 33x5x5 k3 s1 p1 on 32x32 core, hardware sequencer: 18 runs x 2 output tiles, 4860 sequencer cycles, 6073 clocks total, 455.0 s; abft/ctrl sticky 0/0/0 -> PASS
+  C4: acc[3][4] bit flipped while the sequencer waited for the drain: rows flagged [3] (expect [3]), outputs wrong [[4, 0, 3]] (expect [[4, 0, 3]]), acc sticky=1 -> PASS
+  C5: feeder address bit 0 corrupted on the 5th valid row: ctrl_err_sticky=1 (expect 1), array ABFT sticky=0 (expect 0: a wrong input is invisible to ABFT) -> PASS
+  C6: requantized INT8 output (per-channel mult/shift/zp, ReLU) on C1: 16/16 rows, MISMATCH -> FAIL
+  C7: primary sequencer's drain index corrupted (R10): seq_err_sticky=1 (expect 1), acc ABFT sticky=0 (expect 0: rows are consistent, just in the wrong order), output wrong -> PASS
+  C8: primary requant input corrupted (R10): rq_err_sticky=1 (expect 1), INT32 drain still bit-exact, ABFT silent -> PASS
+RESULT: 1 FAILURES

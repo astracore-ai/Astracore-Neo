@@ -1,0 +1,4 @@
+Convolutions executed on neo_core RTL (hardware sequencer) under neosim: (C9-C10)
+  C9: weight-buffer ECC: a data bit and a check bit flipped in stored codewords: result bit-exact, wbuf ce=1 ue=0, ABFT silent=True -> PASS
+  C10: requant table multiplier bit 0 flipped: tbl_perr_sticky=1 (expect 1); the output comparator stays silent (0) because a 1-LSB multiplier change is masked by quantization, which is why the table needs its own parity; INT32 drain bit-exact -> PASS
+RESULT: ALL PASS

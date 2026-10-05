@@ -1,0 +1,3 @@
+neo_tile 2x2 mesh under neosim (router + NIC + bank + core per tile):
+  M12: program-memory bit flip corrected on fetch (cause 0x08000: prog_ce set, program completed) -> PASS; descriptor register corrupted in one copy -> cause 0x10000 and error pin 1, clean after rewrite+clear (0x00000) -> PASS; DMA engine pc corrupted -> lockstep comparator cause 0x10000 -> PASS (6 s)
+RESULT: ALL PASS

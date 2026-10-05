@@ -1,0 +1,83 @@
+
+================================================================================================
+1. Rev 1.3 headline claims vs arithmetic (config A: 24,576 MACs at 3.2 GHz)
+================================================================================================
+Dense INT8 peak        :   157.3 TOPS   (24,576 MAC x 2 ops x 3.2 GHz)
+2:4-sparse peak        :   314.6 TOPS   (industry-comparable number)
+Claimed 1258 TOPS      : needs a sparsity factor of 8.00x  -> this is the 8:1 number
+Claimed 2516 TOPS INT4 : dense INT4 is   314.6 TOPS; 2516 again needs 8:1
+DRAM 512-bit x 6400 MT/s =  409.6 GB/s raw  (claim 400 GB/s: consistent)
+Dense efficiency @3.2 GHz, 100% util, Tj 105 C : 2.09 TOPS/W (claim 15-30 TOPS/W needs 7.2-14.3x -> sparse units again)
+Power at 3.2 GHz, 100% util, Tj 105 C          :  75.2 W  (claim: 40-50 W typical, 70-90 W peak)
+Leakage of an un-gated die at Tj 125 C          :  14.5 W  (claim: 1-5 W always-on mode)
+
+================================================================================================
+2. Thermal: maximum dissipation for Tj_max = 125 C by cooling method and ambient
+================================================================================================
+Cooling (R_theta_ja, C/W)                Ta=65 C   Ta=85 C  Ta=105 C  Ta=125 C
+Passive, sealed ECU (2.5)                  24.0W     16.0W      8.0W      0.0W
+Passive, large finned housing (1.2)        50.0W     33.3W     16.7W      0.0W
+Forced air (0.6)                          100.0W     66.7W     33.3W      0.0W
+Cold plate / liquid (0.25)                240.0W    160.0W     80.0W      0.0W
+Verdict: 70-90 W (or 40-50 W) 'passive cooling' is impossible above ~65 C ambient; at 125 C nothing dissipates.
+
+================================================================================================
+3. Configuration comparison at the worst-case automotive corner
+================================================================================================
+Config                                                           Dense     2:4    INT4    DRAM   P@60%  P@100%  TOPS/W
+                                                                  TOPS    TOPS     2:4    GB/s       W       W   dense
+A: Rev 1.3 as written (24,576 MAC @ 3.2 GHz)                       157     315     629     410    53.4    75.2    1.77
+B: Rev 1.3 at an achievable clock (24,576 MAC @ 2.0 GHz)            98     197     393     410    34.0    42.9    1.73
+C: v2.0 baseline (65,536 MAC @ 2.0 GHz, 384-bit LPDDR5X)           262     524    1049     410    56.1    79.7    2.80
+D: v2.0 two-die package (2 x C over UCIe)                          524    1049    2097     819   112.3   159.5    2.80
+P@60% = typical ADAS duty (60% MAC utilization), Tj 105 C. Config A's clock is not reachable at this corner.
+
+================================================================================================
+4. Per-workload latency and duty (first-order roofline), config C = v2.0 baseline
+================================================================================================
+Workload                                              GMAC  compute   memory  latency   rate   duty  ASIL
+                                                                 ms       ms       ms     Hz      %      
+DMS: BlazeFace + alertness head, 640x480               0.2     0.01     0.00     0.01   30.0    0.0   yes
+YOLOv8-m, 1280x736, one camera                        91.0     1.07     0.00     1.07   30.0    3.2   yes
+YOLOv8-m, 1280x736, six cameras                      546.0     6.41     0.00     6.41   30.0   19.2   yes
+BEV fusion, 6 cameras (BEVFormer-base class)         650.0    12.40     0.78    12.40   10.0   12.4   yes
+Radar+lidar occupancy net (PointPillars class)        60.0     1.31     0.00     1.31   20.0    2.6   yes
+LLM 8B INT4 decode, batch 1 (per token)                8.0     0.10    13.02    13.02   30.0   39.1    no
+LLM 8B INT4 prefill, 512 tokens                     4096.0    52.08    14.32    52.08    1.0    5.2    no
+Image generation, SD1.5 class, 20 steps             8000.0   122.07     4.88   122.07    0.1    1.2    no
+Safety-path duty if all ASIL workloads run concurrently:  37.5% of config C (needs < 70% to leave margin for redundant inference and LBIST).
+LLM decode:  76.8 tokens/s ceiling, MAC utilization  0.8% (claim: '<0.5 ms' and '>90% utilization for LLMs')
+
+================================================================================================
+5. Same workloads on config A (Rev 1.3 as written, if 3.2 GHz were achievable)
+================================================================================================
+DMS: BlazeFace + alertness head, 640x480           latency     0.02 ms   (claim: < 0.5 ms)
+YOLOv8-m, 1280x736, one camera                     latency     1.78 ms   (claim: < 0.5 ms)
+YOLOv8-m, 1280x736, six cameras                    latency    10.68 ms   (claim: < 0.5 ms)
+BEV fusion, 6 cameras (BEVFormer-base class)       latency    20.66 ms   (claim: < 0.5 ms)
+Radar+lidar occupancy net (PointPillars class)     latency     2.18 ms   (claim: < 0.5 ms)
+LLM 8B INT4 decode, batch 1 (per token)            latency    13.02 ms   (claim: < 0.5 ms)
+LLM 8B INT4 prefill, 512 tokens                    latency    86.81 ms   (claim: < 0.5 ms)
+Image generation, SD1.5 class, 20 steps            latency   203.45 ms   (claim: < 0.5 ms)
+
+================================================================================================
+6. v2.0 baseline summary (config C)
+================================================================================================
+Compute   : 65,536 INT8 MACs = 64 cores x 1024 (32x32 systolic), 2.0 GHz worst-case
+Peak      : 262 TOPS dense INT8/FP8, 524 TOPS 2:4-sparse, 1049 TOPS INT4 2:4-sparse
+Memory    : 128 MB SRAM, 384-bit LPDDR5X-8533 = 410 GB/s raw
+Power     : 56 W typical (60% util, Tj 105 C), 80 W at 100% util; TDP class 65 W
+Efficiency: 2.8 TOPS/W dense at typical duty, 5.6 TOPS/W in 2:4-sparse units
+Two-die D : 524 TOPS dense, 1049 TOPS 2:4-sparse, 112 W typical
+
+================================================================================================
+7. SKU family from one die (cores fused off at test; gated cores leak ~20% of their share)
+================================================================================================
+SKU                          cores    MACs  Dense    2:4      DRAM  P typ   TDP Segment
+                                             TOPS   TOPS bits/GB/s      W     W
+Neo 262 (full die)              64  65,536    262    524 384/ 410   56.1    65 Premium L2+/L3 central-compute companion
+Neo 196                         48  49,152    197    393 384/ 410   44.3    45 L2+ surround ADAS, hands-off highway
+Neo 131                         32  32,768    131    262 256/ 273   31.5    30 L2+ front + surround, forced-air ECU
+Neo 65 (yield recovery)         16  16,384     66    131 256/ 273   20.7    25 L2 front camera + DMS; still ~21 W: not a passive part
+Same package, same software, one qualification; price tiers by cores enabled. The 16-core bin is still ~21 W (uncore + die leakage), so the passive-cooled mandate segment needs a small die, not a bin.
+Gen 2 small die for the mandate segment (AEBS/LDWS/DDAWS): 16 cores, 2 x 64-bit LPDDR5X, ~75 mm2, ~12 W, reusing the core, NoC, island and compiler.

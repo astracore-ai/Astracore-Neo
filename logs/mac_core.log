@@ -1,0 +1,8 @@
+neosim: elaborated neo_mac_core ROWS=32 COLS=32 (+1 ABFT column) M=64: 38578 cells, 2178 comb nodes, 1183 always_ff blocks, 0.8 s
+  T1 dataflow  : 64 rows x 32 outputs + check column vs golden, 0 mismatches, 0 ABFT flags, sticky=0 -> PASS
+  T1 latency   : first valid_out after tick 96 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS = 96 -> PASS
+  T2 MAC fault : PE(5,7) fault at stream cycle 28: mismatches=[(10, 7, 1)], flags on rows [10], sticky=1 -> PASS
+  T3 clear     : abft_err_sticky after clear = 0 -> PASS
+  T4 double-buf: tile A (130 rows, W) with W2 loading from tick 96, tile B (64 rows, W2) with no drain: 194 rows out, A ok, B ok, flags 0 -> PASS
+  simulated 663 clocks in 23.2 s
+RESULT: ALL PASS

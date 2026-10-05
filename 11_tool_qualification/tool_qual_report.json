@@ -1,0 +1,2067 @@
+{
+ "tool": "neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)",
+ "version": "drop 0.16",
+ "date": "2026-10-05",
+ "cases": 122,
+ "passed": 122,
+ "seconds": 1.4,
+ "tcl_argument": "TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model (lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool error cannot reach silicon undetected; the compiler itself therefore needs no further qualification beyond this kit and the project's configuration management (ISO 26262-8 11.4.5).",
+ "results": [
+  {
+   "id": "TQ1-000",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 9,
+    "w": 11,
+    "cin": 3,
+    "cout": 6,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=30 K=27 N=6 tiles 1x1 of 32x32"
+  },
+  {
+   "id": "TQ1-001",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 11,
+    "w": 4,
+    "cin": 55,
+    "cout": 14,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=44 K=1375 N=14 tiles 43x1 of 32x16"
+  },
+  {
+   "id": "TQ1-002",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 11,
+    "w": 3,
+    "cin": 31,
+    "cout": 39,
+    "k": 3,
+    "s": 1,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=33 K=279 N=39 tiles 9x2 of 32x32"
+  },
+  {
+   "id": "TQ1-003",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 4,
+    "w": 5,
+    "cin": 6,
+    "cout": 25,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=6 K=150 N=25 tiles 10x1 of 16x32"
+  },
+  {
+   "id": "TQ1-004",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 11,
+    "w": 10,
+    "cin": 43,
+    "cout": 21,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=110 K=1075 N=21 tiles 135x1 of 8x32"
+  },
+  {
+   "id": "TQ1-005",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 10,
+    "cin": 55,
+    "cout": 29,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=60 K=1375 N=29 tiles 43x2 of 32x16"
+  },
+  {
+   "id": "TQ1-006",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 10,
+    "w": 8,
+    "cin": 48,
+    "cout": 29,
+    "k": 3,
+    "s": 1,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=80 K=432 N=29 tiles 27x4 of 16x8"
+  },
+  {
+   "id": "TQ1-007",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 8,
+    "cin": 55,
+    "cout": 31,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=16 K=1375 N=31 tiles 172x1 of 8x32"
+  },
+  {
+   "id": "TQ1-008",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 4,
+    "w": 3,
+    "cin": 32,
+    "cout": 1,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=4 K=800 N=1 tiles 50x1 of 16x8"
+  },
+  {
+   "id": "TQ1-009",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 8,
+    "w": 6,
+    "cin": 44,
+    "cout": 33,
+    "k": 3,
+    "s": 1,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=48 K=396 N=33 tiles 25x2 of 16x32"
+  },
+  {
+   "id": "TQ1-010",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 10,
+    "cin": 16,
+    "cout": 12,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=10 K=16 N=12 tiles 1x2 of 32x8"
+  },
+  {
+   "id": "TQ1-011",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 4,
+    "cin": 2,
+    "cout": 16,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=6 K=50 N=16 tiles 4x1 of 16x32"
+  },
+  {
+   "id": "TQ1-012",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 8,
+    "cin": 22,
+    "cout": 32,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=16 K=550 N=32 tiles 18x4 of 32x8"
+  },
+  {
+   "id": "TQ1-013",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 7,
+    "cin": 33,
+    "cout": 29,
+    "k": 1,
+    "s": 1,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=49 K=33 N=29 tiles 3x2 of 16x16"
+  },
+  {
+   "id": "TQ1-014",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 5,
+    "cin": 1,
+    "cout": 16,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=9 K=1 N=16 tiles 1x1 of 8x32"
+  },
+  {
+   "id": "TQ1-015",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 9,
+    "w": 7,
+    "cin": 32,
+    "cout": 8,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=63 K=800 N=8 tiles 25x1 of 32x32"
+  },
+  {
+   "id": "TQ1-016",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 9,
+    "w": 7,
+    "cin": 9,
+    "cout": 2,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=63 K=225 N=2 tiles 29x1 of 8x16"
+  },
+  {
+   "id": "TQ1-017",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 10,
+    "w": 11,
+    "cin": 44,
+    "cout": 26,
+    "k": 1,
+    "s": 1,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=110 K=44 N=26 tiles 2x4 of 32x8"
+  },
+  {
+   "id": "TQ1-018",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 8,
+    "w": 5,
+    "cin": 40,
+    "cout": 5,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=12 K=360 N=5 tiles 23x1 of 16x8"
+  },
+  {
+   "id": "TQ1-019",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 4,
+    "cin": 45,
+    "cout": 21,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=6 K=405 N=21 tiles 51x2 of 8x16"
+  },
+  {
+   "id": "TQ1-020",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 6,
+    "cin": 5,
+    "cout": 8,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=12 K=125 N=8 tiles 16x1 of 8x16"
+  },
+  {
+   "id": "TQ1-021",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 6,
+    "cin": 55,
+    "cout": 4,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=36 K=1375 N=4 tiles 172x1 of 8x8"
+  },
+  {
+   "id": "TQ1-022",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 8,
+    "cin": 20,
+    "cout": 29,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=8 K=20 N=29 tiles 1x4 of 32x8"
+  },
+  {
+   "id": "TQ1-023",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 8,
+    "cin": 18,
+    "cout": 39,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=8 K=18 N=39 tiles 1x5 of 32x8"
+  },
+  {
+   "id": "TQ1-024",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 6,
+    "cin": 37,
+    "cout": 5,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=9 K=333 N=5 tiles 21x1 of 16x32"
+  },
+  {
+   "id": "TQ1-025",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 10,
+    "cin": 26,
+    "cout": 29,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=15 K=26 N=29 tiles 2x2 of 16x16"
+  },
+  {
+   "id": "TQ1-026",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 11,
+    "w": 6,
+    "cin": 50,
+    "cout": 26,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=66 K=1250 N=26 tiles 40x1 of 32x32"
+  },
+  {
+   "id": "TQ1-027",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 10,
+    "w": 9,
+    "cin": 26,
+    "cout": 29,
+    "k": 1,
+    "s": 1,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=90 K=26 N=29 tiles 1x4 of 32x8"
+  },
+  {
+   "id": "TQ1-028",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 3,
+    "cin": 18,
+    "cout": 10,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=6 K=162 N=10 tiles 21x1 of 8x16"
+  },
+  {
+   "id": "TQ1-029",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 10,
+    "w": 7,
+    "cin": 8,
+    "cout": 9,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=20 K=8 N=9 tiles 1x1 of 32x16"
+  },
+  {
+   "id": "TQ1-030",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 4,
+    "w": 5,
+    "cin": 6,
+    "cout": 27,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=20 K=150 N=27 tiles 5x4 of 32x8"
+  },
+  {
+   "id": "TQ1-031",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 8,
+    "w": 11,
+    "cin": 12,
+    "cout": 17,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=24 K=108 N=17 tiles 14x1 of 8x32"
+  },
+  {
+   "id": "TQ1-032",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 11,
+    "w": 4,
+    "cin": 50,
+    "cout": 27,
+    "k": 3,
+    "s": 1,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=44 K=450 N=27 tiles 15x2 of 32x16"
+  },
+  {
+   "id": "TQ1-033",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 7,
+    "cin": 47,
+    "cout": 8,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=8 K=47 N=8 tiles 6x1 of 8x32"
+  },
+  {
+   "id": "TQ1-034",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 5,
+    "cin": 49,
+    "cout": 23,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=35 K=1225 N=23 tiles 39x1 of 32x32"
+  },
+  {
+   "id": "TQ1-035",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 5,
+    "w": 6,
+    "cin": 65,
+    "cout": 3,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=9 K=585 N=3 tiles 74x1 of 8x8"
+  },
+  {
+   "id": "TQ1-036",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 7,
+    "cin": 48,
+    "cout": 29,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=42 K=1200 N=29 tiles 150x4 of 8x8"
+  },
+  {
+   "id": "TQ1-037",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 8,
+    "cin": 62,
+    "cout": 15,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=12 K=1550 N=15 tiles 49x1 of 32x32"
+  },
+  {
+   "id": "TQ1-038",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 11,
+    "w": 7,
+    "cin": 43,
+    "cout": 22,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=24 K=1075 N=22 tiles 135x3 of 8x8"
+  },
+  {
+   "id": "TQ1-039",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 8,
+    "w": 7,
+    "cin": 7,
+    "cout": 26,
+    "k": 1,
+    "s": 1,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=56 K=7 N=26 tiles 1x4 of 16x8"
+  },
+  {
+   "id": "TQ1-040",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 10,
+    "w": 7,
+    "cin": 19,
+    "cout": 32,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=20 K=475 N=32 tiles 60x4 of 8x8"
+  },
+  {
+   "id": "TQ1-041",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 7,
+    "cin": 19,
+    "cout": 12,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=8 K=475 N=12 tiles 60x1 of 8x16"
+  },
+  {
+   "id": "TQ1-042",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 10,
+    "cin": 60,
+    "cout": 34,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=10 K=60 N=34 tiles 8x3 of 8x16"
+  },
+  {
+   "id": "TQ1-043",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 5,
+    "cin": 50,
+    "cout": 31,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=12 K=50 N=31 tiles 2x4 of 32x8"
+  },
+  {
+   "id": "TQ1-044",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 4,
+    "w": 4,
+    "cin": 26,
+    "cout": 23,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=4 K=650 N=23 tiles 82x2 of 8x16"
+  },
+  {
+   "id": "TQ1-045",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 6,
+    "w": 6,
+    "cin": 26,
+    "cout": 24,
+    "k": 3,
+    "s": 1,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=36 K=234 N=24 tiles 30x3 of 8x8"
+  },
+  {
+   "id": "TQ1-046",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 8,
+    "w": 9,
+    "cin": 63,
+    "cout": 32,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=20 K=567 N=32 tiles 71x4 of 8x8"
+  },
+  {
+   "id": "TQ1-047",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 5,
+    "cin": 10,
+    "cout": 5,
+    "k": 3,
+    "s": 2,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=12 K=90 N=5 tiles 12x1 of 8x8"
+  },
+  {
+   "id": "TQ1-048",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 5,
+    "w": 7,
+    "cin": 68,
+    "cout": 7,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=12 K=1700 N=7 tiles 213x1 of 8x32"
+  },
+  {
+   "id": "TQ1-049",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 5,
+    "w": 10,
+    "cin": 48,
+    "cout": 6,
+    "k": 5,
+    "s": 2,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=15 K=1200 N=6 tiles 38x1 of 32x16"
+  },
+  {
+   "id": "TQ1-050",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 10,
+    "w": 11,
+    "cin": 10,
+    "cout": 6,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=30 K=10 N=6 tiles 2x1 of 8x16"
+  },
+  {
+   "id": "TQ1-051",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 5,
+    "cin": 16,
+    "cout": 39,
+    "k": 1,
+    "s": 2,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=6 K=16 N=39 tiles 2x3 of 8x16"
+  },
+  {
+   "id": "TQ1-052",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 10,
+    "cin": 46,
+    "cout": 38,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=70 K=1150 N=38 tiles 72x2 of 16x32"
+  },
+  {
+   "id": "TQ1-053",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 7,
+    "w": 9,
+    "cin": 29,
+    "cout": 38,
+    "k": 3,
+    "s": 1,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=63 K=261 N=38 tiles 17x5 of 16x8"
+  },
+  {
+   "id": "TQ1-054",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 10,
+    "w": 5,
+    "cin": 58,
+    "cout": 10,
+    "k": 3,
+    "s": 1,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=50 K=522 N=10 tiles 17x1 of 32x16"
+  },
+  {
+   "id": "TQ1-055",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 8,
+    "w": 3,
+    "cin": 65,
+    "cout": 27,
+    "k": 1,
+    "s": 1,
+    "p": 0
+   },
+   "ok": true,
+   "detail": "M=24 K=65 N=27 tiles 9x2 of 8x16"
+  },
+  {
+   "id": "TQ1-056",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 7,
+    "cin": 20,
+    "cout": 29,
+    "k": 3,
+    "s": 1,
+    "p": 1
+   },
+   "ok": true,
+   "detail": "M=21 K=180 N=29 tiles 23x2 of 8x16"
+  },
+  {
+   "id": "TQ1-057",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 5,
+    "w": 5,
+    "cin": 51,
+    "cout": 10,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=25 K=1275 N=10 tiles 80x2 of 16x8"
+  },
+  {
+   "id": "TQ1-058",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 3,
+    "w": 7,
+    "cin": 6,
+    "cout": 25,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=21 K=150 N=25 tiles 5x4 of 32x8"
+  },
+  {
+   "id": "TQ1-059",
+   "kind": "lowering value-exact",
+   "shape": {
+    "h": 5,
+    "w": 6,
+    "cin": 37,
+    "cout": 20,
+    "k": 5,
+    "s": 1,
+    "p": 2
+   },
+   "ok": true,
+   "detail": "M=30 K=925 N=20 tiles 58x2 of 16x16"
+  },
+  {
+   "id": "TQ2-000",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 39,
+    "w": 23,
+    "cin": 179,
+    "cout": 42,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 9,
+    "oy_n": 23
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-001",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 21,
+    "w": 38,
+    "cin": 109,
+    "cout": 17,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 2,
+    "shares": 2,
+    "oy0": 2,
+    "oy_n": 19
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-002",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 28,
+    "w": 39,
+    "cin": 105,
+    "cout": 41,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 1,
+    "oy0": 8,
+    "oy_n": 5
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-003",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 12,
+    "w": 30,
+    "cin": 96,
+    "cout": 63,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 2,
+    "oy0": 0,
+    "oy_n": 12
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-004",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 7,
+    "w": 35,
+    "cin": 29,
+    "cout": 42,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 2,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 6
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-005",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 7,
+    "w": 8,
+    "cin": 171,
+    "cout": 1,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 1,
+    "oy0": 1,
+    "oy_n": 4
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-006",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 28,
+    "w": 4,
+    "cin": 131,
+    "cout": 40,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 8,
+    "shares": 1,
+    "oy0": 5,
+    "oy_n": 6
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-007",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 9,
+    "w": 10,
+    "cin": 190,
+    "cout": 36,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 4,
+    "oy0": 0,
+    "oy_n": 6
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-008",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 35,
+    "w": 11,
+    "cin": 81,
+    "cout": 23,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 1,
+    "oy0": 2,
+    "oy_n": 15
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-009",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 14,
+    "w": 33,
+    "cin": 49,
+    "cout": 59,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 2,
+    "shares": 1,
+    "oy0": 4,
+    "oy_n": 2
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-010",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 39,
+    "w": 37,
+    "cin": 194,
+    "cout": 17,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 8,
+    "shares": 1,
+    "oy0": 4,
+    "oy_n": 27
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-011",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 12,
+    "w": 38,
+    "cin": 5,
+    "cout": 54,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 2,
+    "shares": 2,
+    "oy0": 5,
+    "oy_n": 4
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-012",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 5,
+    "w": 22,
+    "cin": 196,
+    "cout": 24,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 4,
+    "oy0": 0,
+    "oy_n": 2
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-013",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 26,
+    "w": 5,
+    "cin": 52,
+    "cout": 10,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 2,
+    "shares": 1,
+    "oy0": 4,
+    "oy_n": 8
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-014",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 28,
+    "w": 31,
+    "cin": 162,
+    "cout": 22,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 6,
+    "oy_n": 20
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-015",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 36,
+    "w": 19,
+    "cin": 60,
+    "cout": 8,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 12,
+    "oy_n": 10
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-016",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 39,
+    "w": 34,
+    "cin": 149,
+    "cout": 41,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 2,
+    "oy0": 10,
+    "oy_n": 10
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-017",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 10,
+    "w": 36,
+    "cin": 57,
+    "cout": 62,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 4
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-018",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 26,
+    "w": 34,
+    "cin": 152,
+    "cout": 18,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 4,
+    "oy0": 9,
+    "oy_n": 15
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-019",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 26,
+    "w": 10,
+    "cin": 113,
+    "cout": 4,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 6,
+    "oy_n": 3
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-020",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 15,
+    "w": 16,
+    "cin": 194,
+    "cout": 48,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 8
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-021",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 9,
+    "w": 7,
+    "cin": 185,
+    "cout": 19,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 3,
+    "oy0": 1,
+    "oy_n": 4
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-022",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 29,
+    "w": 23,
+    "cin": 46,
+    "cout": 40,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 2,
+    "shares": 1,
+    "oy0": 9,
+    "oy_n": 4
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-023",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 22,
+    "w": 16,
+    "cin": 63,
+    "cout": 24,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 2,
+    "shares": 3,
+    "oy0": 7,
+    "oy_n": 10
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-024",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 18,
+    "w": 30,
+    "cin": 58,
+    "cout": 7,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 4,
+    "oy0": 6,
+    "oy_n": 2
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-025",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 31,
+    "w": 18,
+    "cin": 31,
+    "cout": 56,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 2,
+    "oy0": 3,
+    "oy_n": 1
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-026",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 16,
+    "w": 20,
+    "cin": 31,
+    "cout": 60,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 8
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-027",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 26,
+    "w": 35,
+    "cin": 189,
+    "cout": 5,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 2,
+    "shares": 4,
+    "oy0": 10,
+    "oy_n": 1
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-028",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 35,
+    "w": 23,
+    "cin": 46,
+    "cout": 42,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 2,
+    "oy0": 5,
+    "oy_n": 4
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-029",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 11,
+    "w": 9,
+    "cin": 188,
+    "cout": 32,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 6
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-030",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 19,
+    "w": 20,
+    "cin": 113,
+    "cout": 20,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 12
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-031",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 24,
+    "w": 15,
+    "cin": 127,
+    "cout": 51,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 8,
+    "shares": 4,
+    "oy0": 2,
+    "oy_n": 1
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-032",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 30,
+    "w": 18,
+    "cin": 66,
+    "cout": 37,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 4,
+    "oy0": 20,
+    "oy_n": 8
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-033",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 34,
+    "w": 35,
+    "cin": 48,
+    "cout": 45,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 3,
+    "oy0": 4,
+    "oy_n": 6
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-034",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 28,
+    "w": 38,
+    "cin": 53,
+    "cout": 30,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 1,
+    "oy0": 8,
+    "oy_n": 3
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-035",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 34,
+    "w": 20,
+    "cin": 18,
+    "cout": 60,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 3,
+    "oy0": 2,
+    "oy_n": 7
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-036",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 4,
+    "w": 33,
+    "cin": 160,
+    "cout": 46,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 2,
+    "shares": 1,
+    "oy0": 0,
+    "oy_n": 2
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-037",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 27,
+    "w": 37,
+    "cin": 188,
+    "cout": 6,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 4,
+    "oy0": 4,
+    "oy_n": 5
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-038",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 30,
+    "w": 12,
+    "cin": 23,
+    "cout": 63,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 2,
+    "oy0": 0,
+    "oy_n": 7
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-039",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 29,
+    "w": 36,
+    "cin": 60,
+    "cout": 37,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 2,
+    "oy_n": 1
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-040",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 29,
+    "w": 12,
+    "cin": 149,
+    "cout": 26,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 8,
+    "shares": 4,
+    "oy0": 13,
+    "oy_n": 6
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-041",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 27,
+    "w": 28,
+    "cin": 144,
+    "cout": 22,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 2,
+    "shares": 1,
+    "oy0": 0,
+    "oy_n": 14
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-042",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 30,
+    "w": 17,
+    "cin": 68,
+    "cout": 16,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 4,
+    "oy0": 0,
+    "oy_n": 26
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-043",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 17,
+    "w": 15,
+    "cin": 132,
+    "cout": 40,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 4,
+    "oy0": 1,
+    "oy_n": 7
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-044",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 31,
+    "w": 14,
+    "cin": 72,
+    "cout": 13,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 14
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-045",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 4,
+    "w": 30,
+    "cin": 25,
+    "cout": 48,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 1
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-046",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 25,
+    "w": 8,
+    "cin": 84,
+    "cout": 53,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 1,
+    "oy0": 2,
+    "oy_n": 11
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-047",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 4,
+    "w": 31,
+    "cin": 34,
+    "cout": 32,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 8,
+    "shares": 1,
+    "oy0": 0,
+    "oy_n": 4
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-048",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 4,
+    "w": 14,
+    "cin": 55,
+    "cout": 20,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 8,
+    "shares": 2,
+    "oy0": 0,
+    "oy_n": 2
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-049",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 9,
+    "w": 15,
+    "cin": 196,
+    "cout": 25,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 2,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 1
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-050",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 13,
+    "w": 19,
+    "cin": 147,
+    "cout": 2,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 2,
+    "shares": 3,
+    "oy0": 0,
+    "oy_n": 7
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-051",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 32,
+    "w": 11,
+    "cin": 101,
+    "cout": 50,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 8,
+    "shares": 2,
+    "oy0": 4,
+    "oy_n": 12
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-052",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 38,
+    "w": 38,
+    "cin": 71,
+    "cout": 46,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 2,
+    "oy_n": 14
+   },
+   "ok": true,
+   "detail": "3 tile programs"
+  },
+  {
+   "id": "TQ2-053",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 12,
+    "w": 23,
+    "cin": 184,
+    "cout": 46,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 2,
+    "shares": 2,
+    "oy0": 0,
+    "oy_n": 9
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-054",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 35,
+    "w": 22,
+    "cin": 53,
+    "cout": 47,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 8,
+    "shares": 2,
+    "oy0": 1,
+    "oy_n": 13
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-055",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 22,
+    "w": 13,
+    "cin": 153,
+    "cout": 61,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 8,
+    "shares": 2,
+    "oy0": 1,
+    "oy_n": 14
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-056",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 33,
+    "w": 28,
+    "cin": 6,
+    "cout": 37,
+    "k": 3,
+    "s": 2,
+    "p": 1,
+    "mesh": 8,
+    "shares": 4,
+    "oy0": 5,
+    "oy_n": 3
+   },
+   "ok": true,
+   "detail": "4 tile programs"
+  },
+  {
+   "id": "TQ2-057",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 19,
+    "w": 9,
+    "cin": 26,
+    "cout": 17,
+    "k": 1,
+    "s": 1,
+    "p": 0,
+    "mesh": 8,
+    "shares": 3,
+    "oy0": 5,
+    "oy_n": 7
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ2-058",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 15,
+    "w": 22,
+    "cin": 177,
+    "cout": 16,
+    "k": 3,
+    "s": 1,
+    "p": 1,
+    "mesh": 2,
+    "shares": 2,
+    "oy0": 3,
+    "oy_n": 12
+   },
+   "ok": true,
+   "detail": "2 tile programs"
+  },
+  {
+   "id": "TQ2-059",
+   "kind": "program emission structure",
+   "shape": {
+    "h": 11,
+    "w": 34,
+    "cin": 4,
+    "cout": 12,
+    "k": 1,
+    "s": 2,
+    "p": 0,
+    "mesh": 2,
+    "shares": 4,
+    "oy0": 1,
+    "oy_n": 5
+   },
+   "ok": true,
+   "detail": "1 tile programs"
+  },
+  {
+   "id": "TQ3-000",
+   "kind": "C driver vs Python backend",
+   "shape": {},
+   "ok": true,
+   "detail": "C host driver vs Python backend: 4 tile programs compared (descriptors, cfg_m, every program word) -> ALL PASS"
+  },
+  {
+   "id": "TQ4-000",
+   "kind": "requant model vs RTL arithmetic",
+   "shape": {
+    "samples": 20000
+   },
+   "ok": true,
+   "detail": "0 mismatches"
+  }
+ ]
+}

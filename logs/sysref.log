@@ -1,0 +1,10 @@
+neo_mac_core reference model: ROWS=32 COLS=32 (+1 ABFT column), M=64 rows, seed=1
+  T1 dataflow  : Y == X@W for 64x32 outputs and check column -> PASS
+  T1 latency   : first valid output at step 97 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS+1 = 97 -> PASS
+  T1 ABFT      : 0 rows flagged on clean data (expect 0) -> PASS
+  T2 data-PE fault at PE(5,7), cycle 28: output (10,7) off by +1 only -> PASS; ABFT flags exactly row 10 -> PASS
+  T3 check-column fault: data untouched, ABFT flags exactly row 10 -> PASS
+  T4 weight bit-flip at W[3][4]: ABFT flags 64/64 rows (expect 64) -> PASS
+  T5 double-buffer: tile A (130 rows, W) then tile B (64 rows, W2 loaded during A) back to back, no drain -> PASS
+  vectors written to /home/claude/neo/vectors (x.hex, w.hex, wc.hex, y_exp.hex, yc_exp.hex, params.vh)
+RESULT: ALL PASS

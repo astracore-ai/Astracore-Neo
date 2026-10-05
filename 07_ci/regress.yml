@@ -1,0 +1,40 @@
+# Continuous regression from the first commit (drop 0.11).
+# python-regress: the executable-spec regression (golden models, neosim, compiler, C driver check).
+# hdl-sim: the directed testbenches on Icarus Verilog and Verilator; this is where neosim meets a real
+# simulator, so a failure here is information, not noise: fix the RTL or the testbench, never neosim.
+name: regress
+on: [push, pull_request]
+jobs:
+  python-regress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy openpyxl
+      - run: make regress
+      - run: gcc -std=c99 -Wall -O2 -o build/test_backend sw/neo_host.c sw/test_backend.c && mkdir -p build && ./build/test_backend > build/c_backend.txt && python3 sim/check_c_backend.py
+      - run: python3 compiler/neo_compile.py --report --ksplit && python3 compiler/neo_backend.py
+  hdl-sim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy
+      - run: sudo apt-get update && sudo apt-get install -y iverilog verilator
+      - run: make lint
+      - run: make iverilog
+      - run: make iverilog_core
+      - run: make verilator
+  tiles-nightly:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy
+      - run: make tiles
+      - run: make ecc
