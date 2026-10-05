@@ -1,0 +1,167 @@
+// tb_neo_core.sv -- replay of the C1 convolution on neo_core for Xcelium / Verilator / Icarus.
+//   Vectors come from `python3 sim/run_conv_core.py --dump vectors_core` (abuf.hex, wbuf.hex,
+//   y_exp.hex, desc.vh). The testbench is the host side: load the activation buffer and the weight
+//   buffer through the DMA ports, write the layer descriptor, pulse go, collect rd_data while
+//   rd_valid until done, compare with the numpy reference, and check that no error flag rose.
+//   Run: make xrun_core | make verilator_core | make iverilog_core
+`timescale 1ns/1ps
+`include "desc.vh"
+
+module tb_neo_core;
+  localparam int ROWS = `CORE_ROWS;
+  localparam int COLS = `CORE_COLS;
+  localparam int XW = 8, WW = 8, PW = 32;
+  localparam int WCW = WW + $clog2(ROWS) + 1;
+  localparam int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512;
+  localparam int IDXW = $clog2(ACC_ROWS), AW = $clog2(ABUF_DEPTH), WAW = $clog2(WBUF_DEPTH);
+  localparam int M = `CORE_M;
+
+  logic clk = 1'b0;
+  logic rst_n = 1'b0;
+  always #0.5 clk = ~clk;
+
+  logic                  abuf_we;
+  logic [AW-1:0]         abuf_waddr;
+  logic signed [XW-1:0]  abuf_wdata [ROWS];
+  logic                  wbuf_we;
+  logic [WAW-1:0]        wbuf_waddr;
+  logic signed [WW-1:0]  wbuf_wdata [COLS];
+  logic signed [WCW-1:0] wcbuf_wdata;
+  logic signed [15:0]    cfg_h, cfg_w, cfg_ho, cfg_wo, cfg_s, cfg_p, cfg_k, cfg_ct_n, cfg_tile_pixels;
+  logic signed [15:0]    cfg_ct0, cfg_ky0, cfg_kx0, cfg_rn, cfg_contrib_n, cfg_regions_m1, tiles_ready, cfg_oy0, cfg_oy_n, cfg_iy0;
+  logic                  seq_err_sticky, rq_err_sticky, seq_fault_inject, rq_fault_inject;
+  logic                  ext_valid, ext_ready, reduce_ready, ct_free;
+  logic [IDXW-1:0]       ext_idx;
+  logic signed [PW-1:0]  ext_y [COLS];
+  logic signed [PW-1:0]  ext_chk;
+  logic signed [15:0]    ct_free_idx;
+  logic signed [7:0]     rq_q [COLS];
+  logic                  rq_valid, rq_tbl_we, rq_relu;
+  logic [$clog2(COLS)-1:0] rq_tbl_addr;
+  logic [15:0]           rq_tbl_mult;
+  logic [4:0]            rq_tbl_shift;
+  logic signed [7:0]     rq_tbl_zp;
+  logic [IDXW-1:0]       cfg_m;
+  logic                  go, done, busy;
+  logic [2:0]            state_dbg;
+  logic signed [PW-1:0]  rd_data [COLS];
+  logic signed [PW-1:0]  rd_chk;
+  logic                  rd_valid;
+  logic                  err_clear, array_abft_sticky, acc_abft_err, acc_abft_sticky, ctrl_err_sticky;
+  logic                  fault_inject, ctrl_fault_inject;
+
+  neo_core #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .ACC_ROWS(ACC_ROWS),
+             .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH)) dut (
+    .clk(clk), .rst_n(rst_n),
+    .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata),
+    .wbuf_we(wbuf_we), .wbuf_waddr(wbuf_waddr), .wbuf_wdata(wbuf_wdata), .wcbuf_wdata(wcbuf_wdata),
+    .cfg_h(cfg_h), .cfg_w(cfg_w), .cfg_ho(cfg_ho), .cfg_wo(cfg_wo), .cfg_oy0(cfg_oy0), .cfg_oy_n(cfg_oy_n), .cfg_iy0(cfg_iy0),
+    .cfg_s(cfg_s), .cfg_p(cfg_p),
+    .cfg_k(cfg_k), .cfg_ct_n(cfg_ct_n), .cfg_ct0(cfg_ct0), .cfg_ky0(cfg_ky0), .cfg_kx0(cfg_kx0), .cfg_rn(cfg_rn),
+    .cfg_contrib_n(cfg_contrib_n), .cfg_tile_pixels(cfg_tile_pixels), .cfg_regions_m1(cfg_regions_m1),
+    .tiles_ready(tiles_ready), .cfg_m(cfg_m),
+    .go(go), .done(done), .busy(busy), .state_dbg(state_dbg), .ct_free(ct_free), .ct_free_idx(ct_free_idx),
+    .ext_valid(ext_valid), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(ext_ready),
+    .reduce_ready(reduce_ready),
+    .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid), .rq_q(rq_q), .rq_valid(rq_valid),
+    .rq_tbl_we(rq_tbl_we), .rq_tbl_addr(rq_tbl_addr), .rq_tbl_mult(rq_tbl_mult), .rq_tbl_shift(rq_tbl_shift),
+    .rq_tbl_zp(rq_tbl_zp), .rq_relu(rq_relu),
+    .err_clear(err_clear), .array_abft_sticky(array_abft_sticky), .acc_abft_err(acc_abft_err),
+    .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
+    .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky),
+    .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject),
+    .seq_fault_inject(seq_fault_inject), .rq_fault_inject(rq_fault_inject));
+
+  // vectors
+  logic [8*ROWS-1:0]       abuf_mem [0:`CORE_N_ABUF-1];
+  logic [8*COLS+WCW-1:0]   wbuf_mem [0:`CORE_N_WBUF-1];
+  logic [31:0]             y_mem    [0:M*COLS-1];
+  string vecdir;
+
+  int out_row = 0;
+  int mismatches = 0;
+  int acc_flags = 0;
+
+  always @(negedge clk) begin
+    if (rst_n && rd_valid) begin
+      if (out_row < M) begin
+        for (int j = 0; j < COLS; j++) begin
+          if (rd_data[j] !== $signed(y_mem[out_row*COLS + j])) begin
+            mismatches++;
+            if (mismatches <= 5)
+              $display("  mismatch row %0d col %0d: got %0d expected %0d", out_row, j, rd_data[j], $signed(y_mem[out_row*COLS + j]));
+          end
+        end
+        if (acc_abft_err) acc_flags++;
+      end else begin
+        $display("ERROR: more than M=%0d rows drained", M);
+        mismatches++;
+      end
+      out_row++;
+    end
+  end
+
+  initial begin
+    if (!$value$plusargs("VECDIR=%s", vecdir)) vecdir = "vectors_core";
+    $readmemh({vecdir, "/abuf.hex"},  abuf_mem);
+    $readmemh({vecdir, "/wbuf.hex"},  wbuf_mem);
+    $readmemh({vecdir, "/y_exp.hex"}, y_mem);
+    $display("tb_neo_core: ROWS=%0d COLS=%0d conv %0dx%0dx%0d k%0d s%0d p%0d -> M=%0d rows, %0d channel tiles",
+             ROWS, COLS, `CORE_CT_N * ROWS, `CORE_H, `CORE_W, `CORE_K, `CORE_S, `CORE_P, M, `CORE_CT_N);
+
+    abuf_we = 0; abuf_waddr = '0; wbuf_we = 0; wbuf_waddr = '0; wcbuf_wdata = '0;
+    for (int c = 0; c < ROWS; c++) abuf_wdata[c] = '0;
+    for (int j = 0; j < COLS; j++) wbuf_wdata[j] = '0;
+    go = 0; err_clear = 0; fault_inject = 0; ctrl_fault_inject = 0;
+    ext_valid = 0; ext_idx = '0; ext_chk = '0; for (int j = 0; j < COLS; j++) ext_y[j] = '0;
+    rq_tbl_we = 0; rq_tbl_addr = '0; rq_tbl_mult = '0; rq_tbl_shift = '0; rq_tbl_zp = '0; rq_relu = 0;
+    cfg_h = `CORE_H; cfg_w = `CORE_W; cfg_ho = `CORE_HO; cfg_wo = `CORE_WO; cfg_s = `CORE_S; cfg_p = `CORE_P;
+    cfg_k = `CORE_K; cfg_ct_n = `CORE_CT_N; cfg_tile_pixels = `CORE_TILE_PIXELS; cfg_m = M;
+    cfg_ct0 = 0; cfg_ky0 = 0; cfg_kx0 = 0; cfg_rn = `CORE_RN; cfg_contrib_n = 0;
+    cfg_regions_m1 = 16'h7FFF; tiles_ready = 16'h7FFF; seq_fault_inject = 0; rq_fault_inject = 0;
+    cfg_oy0 = 0; cfg_oy_n = `CORE_HO; cfg_iy0 = 0;
+    repeat (3) @(negedge clk);
+    rst_n = 1'b1;
+    repeat (2) @(negedge clk);
+
+    // DMA: activation channel tiles
+    for (int a = 0; a < `CORE_N_ABUF; a++) begin
+      @(negedge clk);
+      abuf_we = 1'b1; abuf_waddr = a;
+      for (int c = 0; c < ROWS; c++) abuf_wdata[c] = $signed(abuf_mem[a][8*c +: 8]);
+    end
+    @(negedge clk); abuf_we = 1'b0;
+    // DMA: weight tiles
+    for (int a = 0; a < `CORE_N_WBUF; a++) begin
+      @(negedge clk);
+      wbuf_we = 1'b1; wbuf_waddr = a;
+      for (int j = 0; j < COLS; j++) wbuf_wdata[j] = $signed(wbuf_mem[a][8*j +: 8]);
+      wcbuf_wdata = $signed(wbuf_mem[a][8*COLS +: WCW]);
+    end
+    @(negedge clk); wbuf_we = 1'b0;
+
+    // go
+    @(negedge clk); go = 1'b1;
+    @(negedge clk); go = 1'b0;
+    fork
+      begin
+        wait (done);
+      end
+      begin
+        repeat (200000) @(negedge clk);
+        $display("ERROR: timeout waiting for done");
+        $finish;
+      end
+    join_any
+    disable fork;
+    repeat (3) @(negedge clk);
+
+    if (out_row == M && mismatches == 0 && acc_flags == 0 && !array_abft_sticky && !acc_abft_sticky && !ctrl_err_sticky
+        && !seq_err_sticky && !rq_err_sticky)
+      $display("RESULT: ALL PASS (%0d rows drained, no mismatches, no error flags)", out_row);
+    else
+      $display("RESULT: FAIL (rows=%0d/%0d mismatches=%0d acc_flags=%0d sticky array/acc/ctrl=%0b/%0b/%0b)",
+               out_row, M, mismatches, acc_flags, array_abft_sticky, acc_abft_sticky, ctrl_err_sticky);
+    $finish;
+  end
+endmodule

@@ -1,0 +1,14 @@
+`define CORE_ROWS 16
+`define CORE_COLS 8
+`define CORE_H 6
+`define CORE_W 6
+`define CORE_HO 6
+`define CORE_WO 6
+`define CORE_S 1
+`define CORE_P 1
+`define CORE_K 3
+`define CORE_CT_N 3
+`define CORE_TILE_PIXELS 36
+`define CORE_M 36
+`define CORE_N_ABUF 108
+`define CORE_N_WBUF 432
