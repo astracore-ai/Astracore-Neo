@@ -26,9 +26,10 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p build_logs
-          # Run Verilator lint on all SystemVerilog files in the root and subdirectories
-          verilator --lint-only -Wall $(find . -name "*.sv" -o -name "*.v") 2>&1 | tee build_logs/verilator_lint.log || exit 1
-
+          # Find all directories containing header files (.vh / .svh) to pass to Verilator via -I flags INCDIRS=$(find . -type f \( -name "*.vh" -o -name "*.svh" \) -exec dirname {} + | sort -u | sed 's/^/-I/')
+          
+          # Run Verilator with inclusion flags and all SystemVerilog files verilator --lint-only -Wall $INCDIRS $(find . -name "*.sv" -o -name "*.v") 2>&1 | tee build_logs/verilator_lint.log || exit 1
+          
       - name: Upload Logs on Failure
         if: steps.run_tests.outcome == 'failure'
         uses: actions/upload-artifact@v4
