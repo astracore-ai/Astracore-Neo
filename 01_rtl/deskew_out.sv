@@ -11,7 +11,11 @@ module deskew_out #(
 );
   generate
     for (genvar j = 0; j < CT; j++) begin : g_col
-      delay_line #(.W(PW), .DEPTH(CT-1-j)) u_dl (.clk(clk), .rst_n(rst_n), .d(p_in[j]), .q(p_out[j]));
+      if (j == CT-1) begin : g_last
+        assign p_out[j] = p_in[j];
+      end else begin : g_dl
+        delay_line #(.W(PW), .DEPTH(CT-1-j)) u_dl (.clk(clk), .rst_n(rst_n), .d(p_in[j]), .q(p_out[j]));
+      end
     end
   endgenerate
 endmodule

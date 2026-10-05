@@ -15,8 +15,15 @@ module skew_in #(
 );
   generate
     for (genvar i = 0; i < ROWS; i++) begin : g_row
-      delay_line #(.W(XW), .DEPTH(i*PE_LAT)) u_dl (.clk(clk), .rst_n(rst_n), .d(x_vec[i]), .q(x_row[i]));
-      delay_line #(.W(1),  .DEPTH(i*PE_LAT)) u_ds (.clk(clk), .rst_n(rst_n), .d(s_in),     .q(s_row[i]));
+      if (i == 0) begin : g_r0
+        assign x_row[i] = x_vec[i];
+        assign s_row[i] = s_in;
+      end else begin : g_rn
+        logic signed [0:0] sq;
+        delay_line #(.W(XW), .DEPTH(i*PE_LAT)) u_dl (.clk(clk), .rst_n(rst_n), .d(x_vec[i]), .q(x_row[i]));
+        delay_line #(.W(1),  .DEPTH(i*PE_LAT)) u_ds (.clk(clk), .rst_n(rst_n), .d(s_in),     .q(sq));
+        assign s_row[i] = sq[0];
+      end
     end
   endgenerate
 endmodule
