@@ -228,10 +228,13 @@ def main():
     wgt = rng.integers(-128, 128, size=(10, 20, 3, 3), dtype=np.int64)
     fails += not check("C2", core, x, wgt, 2, 1)
 
-    core = CoreV02(32, 32, acc_rows=32, abuf_depth=32)
-    x = rng.integers(-128, 128, size=(35, 5, 5), dtype=np.int64)
-    wgt = rng.integers(-128, 128, size=(33, 35, 3, 3), dtype=np.int64)
-    fails += not check("C3", core, x, wgt, 1, 1)
+    if "--skip32" in sys.argv:          # the 32x32 case takes hours under neosim; Verilator covers 32x32 in CI
+        print("  C3: 32x32 datapath case skipped (--skip32); covered by the Verilator run of tb_neo_mac_core")
+    else:
+        core = CoreV02(32, 32, acc_rows=32, abuf_depth=32)
+        x = rng.integers(-128, 128, size=(35, 5, 5), dtype=np.int64)
+        wgt = rng.integers(-128, 128, size=(33, 35, 3, 3), dtype=np.int64)
+        fails += not check("C3", core, x, wgt, 1, 1)
 
     # C4: accumulator memory fault -> caught at drain
     core = CoreV02(16, 8, acc_rows=64, abuf_depth=64)
