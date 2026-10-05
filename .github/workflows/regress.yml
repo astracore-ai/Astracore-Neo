@@ -1,9 +1,7 @@
 # Neo regression on GitHub Actions (drop 0.18, repository layout = handoff package).
-# Each job publishes its logs to its own branch (ci-logs-python-regress, ci-logs-hdl-sim, ci-logs-tiles), so jobs
-# never overwrite each other's results.
-# Place at .github/workflows/regress.yml. Step 1 of every job rebuilds the flat layout from the numbered
-# folders with make_repo.sh, so nothing has to be rearranged by hand. The last step of every job commits the
-# logs to the ci-logs-${{ github.job }} branch, so results can be read from the repository itself (ci_logs/<job>/*.txt).
+# Every job builds the flat layout from the numbered folders with plain copies, then writes its logs to its own
+# branch ci-logs-<job> (ci_logs/<job>/*.txt), so results can be read from the repository and jobs never
+# overwrite each other's results.
 name: regress
 on:
   push:
@@ -22,10 +20,15 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install numpy openpyxl
       - name: flat layout
-        run: bash make_repo.sh . && ls rtl sim tb dv model compiler sw | head -40
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/python-regress && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/python-regress/RUN.txt
+          ls
       - name: regress
         run: |
-          mkdir -p ci_logs/python-regress
           set -o pipefail
           make regress 2>&1 | tee ci_logs/python-regress/regress.txt
       - name: tool qualification kit
@@ -35,12 +38,12 @@ jobs:
         if: always()
         run: |
           git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
-          git fetch origin ci-logs-${{ github.job }} || true
-          git checkout -B ci-logs-${{ github.job }} origin/ci-logs-${{ github.job }} 2>/dev/null || git checkout --orphan ci-logs-${{ github.job }}
+          mkdir -p ci_logs/python-regress && echo "finished $(date -u)" >> ci_logs/python-regress/RUN.txt
+          git checkout --orphan ci-logs-python-regress
           git rm -rfq --cached . 2>/dev/null || true
-          mkdir -p ci_logs && git add -f ci_logs
-          git commit -m "python-regress logs $(date -u +%FT%TZ) run ${{ github.run_number }}" || true
-          git push origin ci-logs-${{ github.job }} --force
+          git add -f ci_logs
+          git commit -m "python-regress logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-python-regress --force
   hdl-sim:
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -52,31 +55,33 @@ jobs:
       - name: install simulators
         run: sudo apt-get update && sudo apt-get install -y iverilog verilator && verilator --version && iverilog -V | head -1
       - name: flat layout
-        run: bash make_repo.sh .
-      - name: lint
         run: |
-          mkdir -p ci_logs/hdl-sim
-          set -o pipefail
-          make lint 2>&1 | tee ci_logs/hdl-sim/lint.txt
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/hdl-sim && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-sim/RUN.txt
+      - name: lint
+        run: set -o pipefail; make lint 2>&1 | tee ci_logs/hdl-sim/lint.txt
       - name: iverilog streaming core
         if: always()
         run: set -o pipefail; make iverilog 2>&1 | tee ci_logs/hdl-sim/iverilog.txt
       - name: iverilog neo_core
         if: always()
         run: set -o pipefail; make iverilog_core 2>&1 | tee ci_logs/hdl-sim/iverilog_core.txt
-      - name: verilator streaming core
+      - name: verilator streaming core, neo_core, tile mesh
         if: always()
         run: set -o pipefail; make verilator 2>&1 | tee ci_logs/hdl-sim/verilator.txt
       - name: publish logs
         if: always()
         run: |
           git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
-          git fetch origin ci-logs-${{ github.job }} || true
-          git checkout -B ci-logs-${{ github.job }} origin/ci-logs-${{ github.job }} 2>/dev/null || git checkout --orphan ci-logs-${{ github.job }}
+          mkdir -p ci_logs/hdl-sim && echo "finished $(date -u)" >> ci_logs/hdl-sim/RUN.txt
+          git checkout --orphan ci-logs-hdl-sim
           git rm -rfq --cached . 2>/dev/null || true
-          mkdir -p ci_logs && git add -f ci_logs
-          git commit -m "hdl-sim logs $(date -u +%FT%TZ) run ${{ github.run_number }}" || true
-          git push origin ci-logs-${{ github.job }} --force
+          git add -f ci_logs
+          git commit -m "hdl-sim logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-hdl-sim --force
   tiles:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -86,18 +91,22 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install numpy
-      - run: bash make_repo.sh .
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/tiles && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/tiles/RUN.txt
       - run: |
-          mkdir -p ci_logs/tiles
           for t in M3 M9 M12 M13 M11 M8 M1 M2 M4 M5 M6 M7; do python3 sim/run_tile_test.py $t 2>&1 | tee ci_logs/tiles/$t.txt; done
           python3 sim/run_two_layer.py 2>&1 | tee ci_logs/tiles/M10.txt
       - name: publish logs
         if: always()
         run: |
           git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
-          git fetch origin ci-logs-${{ github.job }} || true
-          git checkout -B ci-logs-${{ github.job }} origin/ci-logs-${{ github.job }} 2>/dev/null || git checkout --orphan ci-logs-${{ github.job }}
+          git checkout --orphan ci-logs-tiles
           git rm -rfq --cached . 2>/dev/null || true
-          mkdir -p ci_logs && git add -f ci_logs
-          git commit -m "tiles logs $(date -u +%FT%TZ) run ${{ github.run_number }}" || true
-          git push origin ci-logs-${{ github.job }} --force
+          git add -f ci_logs
+          git commit -m "tiles logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-tiles --force
