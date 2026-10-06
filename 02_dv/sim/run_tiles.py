@@ -29,7 +29,9 @@ from neo_compile import direct_conv  # noqa: E402
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv",
        "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "wbuf_mem.sv", "requant.sv",
        "neo_core.sv", "noc_router.sv", "ecc39.sv", "sram_bank.sv", "crc16_word.sv", "tile_nic.sv", "tile_dma.sv",
-       "mbist.sv", "bank_bist_wrap.sv", "prog_mem.sv", "host_if.sv", "esm.sv", "neo_tile.sv", "tile_mesh.sv"]
+       "mbist.sv", "bank_bist_wrap.sv", "prog_mem.sv", "host_if.sv", "esm.sv", "link_pack.sv", "neo_tile.sv", "tile_mesh.sv"]
+WPF = int(os.environ.get("NEO_WPF", "1"))   # words per link flit (drop 0.25): 1 as before, 32 = the 1024-bit links
+TYPE_SHIFT = 32 + 32 * WPF - 3                # the flit type sits at the top of the link payload (bit 61 with one word per flit)
 REG_PARTITION = 0x0B
 CAUSE_PROG_CE, CAUSE_CTRL_PATH, CAUSE_ISO = 15, 16, 17
 REG_MBIST = 0x0A
@@ -81,7 +83,7 @@ class Mesh:
         self.rows, self.cols = rows, cols
         self.d.elaborate("tile_mesh", {"NX": NX, "NY": NY, "ROWS": rows, "COLS": cols, "ACC_ROWS": 64,
                                        "ABUF_DEPTH": 256, "WBUF_DEPTH": 512, "BANK_DEPTH": 4096,
-                                       "FETCH_TIMEOUT": fetch_timeout, "BIST_WORDS": bist_words})
+                                       "FETCH_TIMEOUT": fetch_timeout, "BIST_WORDS": bist_words, "WPF": WPF})
         d = self.d
         self.N = NX * NY
         arr = lambda n: d.array_of(n)  # noqa: E731
@@ -320,7 +322,7 @@ def main():
     mesh.start([0])
     corrupted, n = False, 0
     while not mesh.prog_done[0].v:
-        if not corrupted and valid_cell.v and ((flit_cell.v >> 61) & 7) == T_RDRSP and n > 30:
+        if not corrupted and valid_cell.v and ((flit_cell.v >> TYPE_SHIFT) & 7) == T_RDRSP and n > 30:
             flit_cell.v ^= 1 << 9                     # payload bit, after the ingress router's parity check
             mesh.d.settle()
             corrupted = True
@@ -487,7 +489,7 @@ def main():
     mesh.start([0])
     dropped, n = False, 0
     while not mesh.prog_done[0].v:
-        if not dropped and vcell.v and ((fcell.v >> 61) & 7) == T_RDRSP and n > 40:
+        if not dropped and vcell.v and ((fcell.v >> TYPE_SHIFT) & 7) == T_RDRSP and n > 40:
             vcell.v = 0                                     # the flit at the owner's local port vanishes
             mesh.d.settle()
             dropped = True
