@@ -1,9 +1,10 @@
-// tile_nic.sv -- tile network interface (drop 0.7): the core's DMA and the bank's server.
+// tile_nic.sv -- tile network interface (drop 0.7; widths for the silicon configuration in drop 0.21): the core's DMA
+//   and the bank's server.
 //   Flit payload (DW = 64): [63:61] type, [60:52] tag, [51:0] data. Message types:
 //     RDREQ  data = {req_y[3:0], req_x[3:0], len[11:0] words, addr[19:0]}   one flit, parity-protected
 //     RDRSP  data[31:0] = word, in order; the requester knows where they go  (+ CRC flit)
 //     WRHDR  data[19:0] = bank address, then WRDATA data[31:0] words         (+ CRC flit)
-//     PSUM   tag = accumulator row, data[35:32] = column (COLS = check), data[31:0] = value (+ CRC)
+//     PSUM   tag = accumulator row, data[39:32] = column (COLS = check), data[31:0] = value (+ CRC)
 //     CRC    data[15:0] = CRC-16 over the message's data words, data[31:16] = number of data words
 //            sent (drop 0.12): a receiver that counted a different number flags a lost or duplicated flit
 //     RDY    one flit, owner -> contributor: "my reduce port is open" (flow control for PSUM, so a
@@ -136,7 +137,8 @@ module tile_nic #(
   logic [7:0]           fetch_src;                        // node serving our fetch
   logic [15:0]          fetch_base;
   logic [11:0]          fetch_cnt;                        // words received
-  logic [31:0]          stage [4];                        // words of the entry under assembly
+  localparam int EW = (WPA > WPW) ? WPA : WPW;             // words of the largest entry (4 at 16x8, 9 at 32x32; drop 0.21)
+  logic [31:0]          stage [EW];                       // words of the entry under assembly
 
   // ext FIFO (reduced rows), depth 2
   logic                 efifo_valid [2];
@@ -156,8 +158,10 @@ module tile_nic #(
   logic [BAW-1:0]       serve_addr;
   logic [11:0]          serve_len;
 
+  logic [7:0] rx_col;                                     // PSUM column (COLS = the check value); 8 bits for COLS up to 255 (drop 0.21)
+  assign rx_col = rx_data[39:32];
   logic rx_is_psum_last;
-  assign rx_is_psum_last = (rx_type == T_PSUM) && (rx_data[35:32] == COLS);
+  assign rx_is_psum_last = (rx_type == T_PSUM) && (rx_col == COLS);
   logic rx_foreign;
   assign rx_foreign = rx_valid && (rx_flit[SEQ_LO +: 4] != partition);
   assign rx_ready = rx_foreign || (!((rx_type == T_RDREQ) && serve_busy) && !(rx_is_psum_last && efifo_full));
@@ -180,9 +184,9 @@ module tile_nic #(
   assign fetch_last_word = (fetch_word_in_entry == fetch_wpe - 1);
 
   // entry assembly: the last word arrives on the wire, earlier words sit in stage[]
-  logic [31:0] ent [4];
+  logic [31:0] ent [EW];
   always_comb begin
-    for (int w = 0; w < 4; w++) ent[w] = (w == fetch_word_in_entry) ? rx_data[31:0] : stage[w];
+    for (int w = 0; w < EW; w++) ent[w] = (w == fetch_word_in_entry) ? rx_data[31:0] : stage[w];
   end
   generate
     for (genvar c = 0; c < ROWS; c++) begin : g_a
@@ -211,7 +215,7 @@ module tile_nic #(
       end
       lost_err_sticky <= 1'b0; fetch_timeout_sticky <= 1'b0; fetch_timer <= '0; iso_err_sticky <= 1'b0;
       fetch_busy <= 1'b0; fetch_is_w <= 1'b0; fetch_base <= '0; fetch_cnt <= '0; fetch_src <= '0;
-      for (int w = 0; w < 4; w++) stage[w] <= '0;
+      for (int w = 0; w < EW; w++) stage[w] <= '0;
       efifo_valid[0] <= 1'b0; efifo_valid[1] <= 1'b0; efifo_wr <= 1'b0; efifo_rd <= 1'b0;
       efifo_idx[0] <= '0; efifo_idx[1] <= '0; efifo_chk[0] <= '0; efifo_chk[1] <= '0;
       for (int j = 0; j < COLS; j++) begin efifo_y[0][j] <= '0; efifo_y[1][j] <= '0; end
@@ -264,8 +268,8 @@ module tile_nic #(
             rx_cnt[rx_src]  <= rx_cnt[rx_src] + 1;
           end
           T_PSUM: begin
-            if (rx_data[35:32] < COLS) begin
-              prow[rx_src][rx_data[35:32]] <= rx_data[31:0];
+            if (rx_col < COLS) begin
+              prow[rx_src][rx_col] <= rx_data[31:0];
             end else begin
               efifo_valid[efifo_wr] <= 1'b1;
               efifo_idx[efifo_wr]   <= rx_tag[IDXW-1:0];
@@ -305,9 +309,10 @@ module tile_nic #(
   logic [IDXW-1:0]      dfifo_idx [DFD];
   logic signed [PW-1:0] dfifo_y   [DFD][COLS];
   logic signed [PW-1:0] dfifo_chk [DFD];
-  logic [7:0]           dfifo_wr;
-  logic [7:0]           dfifo_rd;
-  logic [7:0]           dfifo_cnt;
+  localparam int DFW = $clog2(DFD);                       // pointer width from the depth (drop 0.21)
+  logic [DFW-1:0]       dfifo_wr;
+  logic [DFW-1:0]       dfifo_rd;
+  logic [DFW:0]         dfifo_cnt;
   logic                 drain_mode_psum;
   logic [XW-1:0]        drain_x;
   logic [YW-1:0]        drain_y;
@@ -330,15 +335,16 @@ module tile_nic #(
   logic [31:0] serve_word;
   logic [31:0] serve_cur;
   assign serve_cur = b_rvalid ? b_rdata : serve_word;
-  logic [3:0]  dword;                                     // word within the drain row (0..COLS = check; INT8: 0..COLS/4-1)
+  localparam int DWW = $clog2(COLS + 1);                 // row word index width: 0..COLS (drop 0.21)
+  logic [DWW-1:0] dword;                                  // word within the drain row (0..COLS = check; INT8: 0..COLS/4-1)
   logic        drain_int8;
-  logic [3:0]  last_word;
+  logic [DWW-1:0] last_word;
   logic        drain_push;
   logic [31:0] int8_word;
-  assign last_word  = drain_int8 ? 4'(COLS / 4 - 1) : 4'(COLS);
+  assign last_word  = drain_int8 ? DWW'(COLS / 4 - 1) : DWW'(COLS);
   assign drain_push = drain_int8 ? rq_valid : rd_valid;
-  logic [3:0]  dw8;                                       // word index kept inside the row for the INT8 pack
-  assign dw8        = dword % 4'(COLS / 4);
+  logic [DWW-1:0] dw8;                                    // word index kept inside the row for the INT8 pack
+  assign dw8        = dword % DWW'(COLS / 4);
   assign int8_word  = {dfifo_y[dfifo_rd][dw8 * 4 + 3][7:0], dfifo_y[dfifo_rd][dw8 * 4 + 2][7:0],
                        dfifo_y[dfifo_rd][dw8 * 4 + 1][7:0], dfifo_y[dfifo_rd][dw8 * 4][7:0]};
   logic [15:0] tx_crc;
@@ -389,7 +395,7 @@ module tile_nic #(
       X_DRAIN_WORD: begin
         tx_dx = drain_x; tx_dy = drain_y; tx_valid = 1'b1;
         if (drain_mode_psum) begin
-          tx_type = T_PSUM; tx_tag = {3'd0, dfifo_idx[dfifo_rd]}; tx_data = {16'd0, dword, drow_word};
+          tx_type = T_PSUM; tx_tag = 9'(dfifo_idx[dfifo_rd]); tx_data = {12'd0, 8'(dword), drow_word};
         end else begin
           tx_type = T_WRDATA; tx_data = {20'd0, drow_word};
         end
@@ -443,7 +449,7 @@ module tile_nic #(
         dfifo_idx[dfifo_wr] <= drain_sent + dfifo_cnt;    // rows arrive in order 0..M-1
         for (int j = 0; j < COLS; j++) dfifo_y[dfifo_wr][j] <= drain_int8 ? PW'(rq_q[j]) : rd_data[j];
         dfifo_chk[dfifo_wr] <= rd_chk;
-        dfifo_wr <= (dfifo_wr == DFD - 1) ? 8'd0 : dfifo_wr + 1;
+        dfifo_wr <= (dfifo_wr == DFD - 1) ? '0 : dfifo_wr + 1;
       end
       if (drain_push && !(tx_state == X_DRAIN_WORD && tx_fire && dword == last_word))      dfifo_cnt <= dfifo_cnt + 1;
       else if (!drain_push && (tx_state == X_DRAIN_WORD && tx_fire && dword == last_word)) dfifo_cnt <= dfifo_cnt - 1;
@@ -493,7 +499,7 @@ module tile_nic #(
             tx_cnt <= tx_cnt + 1;
             if (dword == last_word) begin
               dword <= '0;
-              dfifo_rd <= (dfifo_rd == DFD - 1) ? 8'd0 : dfifo_rd + 1;
+              dfifo_rd <= (dfifo_rd == DFD - 1) ? '0 : dfifo_rd + 1;
               drain_sent <= drain_sent + 1;
               if (drain_sent + 1 == drain_rows) tx_state <= X_DRAIN_CRC;
               else if (dfifo_cnt == 1) tx_state <= X_IDLE;   // wait for more rows (message stays open)
