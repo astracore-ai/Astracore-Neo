@@ -1,4 +1,4 @@
-"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.25.
+"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.27.
 
 Ports of sim/run_tiles.py's M-tests, driven the way the island's firmware drives a tile: everything through the
 host register bus (program, descriptor, start, status, causes), banks loaded and read through the wrapper's
@@ -51,6 +51,7 @@ FETCH_TIMEOUT = int(os.environ.get("NEO_FETCH_TIMEOUT", "8192"))     # cycles; m
 WPF = int(os.environ.get("NEO_WPF", "1"))                            # words per link flit (drop 0.25); must match -GWPF
 DWL = 32 + 32 * WPF                                                  # link payload: {type[2:0], tag[8:0], hdr[19:0], words}
 TYPE_SHIFT = DWL - 3                                                 # the flit type at the top of the payload (bit 61 with one word)
+CNT_SHIFT = TYPE_SHIFT - 21                                          # hdr[13:8] = words carried - 1 (0 with one word per flit)
 WCW = 8 + (ROWS - 1).bit_length() + 1
 WPA, WPW = ROWS * 8 // 32, (COLS * 8 + WCW + 31) // 32
 REG_CTRL, REG_STATUS, REG_PROG_ADDR, REG_PROG_LO, REG_PROG_HI, REG_ERR_MASK, REG_ERR_CAUSE = 0, 1, 2, 3, 4, 5, 6
@@ -394,6 +395,11 @@ async def corrupt_local_response(mesh, dut, sel, mask, tag):
         if mesh.prog_done(0):
             break
         if not applied and n > 40 and mesh.router_valid(4) and ((mesh.router_flit4() >> TYPE_SHIFT) & 7) == T_RDRSP:
+            if sel == FI_FLIT_XOR:
+                # a packed flit stays in the register for WPF cycles and the unpacker has taken word 0 by the time the fault
+                # lands: aim the mask at the flit's last word, which is still to be consumed (word 0 with one word per flit)
+                last = (mesh.router_flit4() >> CNT_SHIFT) & 0x3F
+                dut.fi_mask.value = mask << (32 * last)
             dut.fi_en.value = 1
             applied = True
         n += 1
@@ -409,7 +415,7 @@ async def m3_end_to_end_crc(dut):
     await mesh.load_bank(N11, act, wts)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_END)])
     await mesh.start([0])
-    await corrupt_local_response(mesh, dut, FI_FLIT_XOR, 1 << 5, "M3")   # payload bit, past the last link parity check
+    await corrupt_local_response(mesh, dut, FI_FLIT_XOR, 1 << 5, "M3")   # a data word's bit, past the last link parity check
     await mesh.tick(5)
     c = await mesh.causes()
     assert (c[0] >> 1) & 1 == 1 and all((v & 1) == 0 for v in c), f"M3 causes {causes_str(c)}"

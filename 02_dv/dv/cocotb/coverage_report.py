@@ -129,6 +129,7 @@ def main():
         if yaml is None:
             out.append("pyyaml is not installed: the functional-coverage files could not be read.")
         else:
+            merged_fc = {}                      # covergroup -> {bin: hit}  (union over the files: a bin counts when any build hit it)
             out.append("| File | Covergroup | Coverage | Bins hit / bins | Empty bins |")
             out.append("| --- | --- | ---: | ---: | --- |")
             for fp in fcs:
@@ -143,8 +144,27 @@ def main():
                         continue
                     hits = info.get("bins:_hits") or info.get("bins_hits") or {}
                     empty = [str(b) for b, h in hits.items() if not h] if isinstance(hits, dict) else []
+                    if isinstance(hits, dict) and hits:
+                        m = merged_fc.setdefault(name, {})
+                        for b, h in hits.items():
+                            m[str(b)] = m.get(str(b), 0) + (h or 0)
                     out.append(f"| {os.path.basename(fp)} | {name} | {float(info['cover_percentage']):.1f} % | "
                                f"{info.get('coverage', '?')} / {info.get('size', '?')} | {', '.join(empty) if empty else '—'} |")
+            leaves = {n: b for n, b in merged_fc.items() if not any(o != n and o.startswith(n + ".") for o in merged_fc)}
+            if leaves:
+                out.append("")
+                out.append("### Merged over all files (a bin counts when any build hit it)")
+                out.append("")
+                out.append("| Covergroup | Coverage | Bins hit / bins | Empty bins |")
+                out.append("| --- | ---: | ---: | --- |")
+                tot_hit = tot_bins = 0
+                for name in sorted(leaves):
+                    b = leaves[name]
+                    hit = sum(1 for h in b.values() if h)
+                    tot_hit += hit; tot_bins += len(b)
+                    empty = [k for k, h in b.items() if not h]
+                    out.append(f"| {name} | {100.0 * hit / len(b):.1f} % | {hit} / {len(b)} | {', '.join(empty) if empty else '—'} |")
+                out.append(f"| **all leaf covergroups** | {100.0 * tot_hit / tot_bins:.1f} % | {tot_hit} / {tot_bins} | |")
     else:
         out.append("No functional-coverage files found (the tests export them when NEO_FUNCOV=1 and cocotb-coverage is installed).")
     out.append("")

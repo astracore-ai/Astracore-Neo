@@ -1,4 +1,4 @@
-# cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.25). Requires: pip install cocotb numpy; verilator >= 5.0.
+# cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.27). Requires: pip install cocotb numpy; verilator >= 5.0.
 #   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core (16x8), bit-exact vs the golden model
 #   make -C dv/cocotb core32    # the same on the silicon core: 32x32, ACC_ROWS 512, ABUF 2048, WBUF 1024
 #   make -C dv/cocotb tile      # test_tile_mesh.py: M1-M13 through the register bus on tile_mesh (2x2, 16x8 cores)
@@ -17,8 +17,10 @@ CORE_SRCS := $(addprefix $(RTL)/, delay_line.sv mac_pe.sv skew_in.sv deskew_out.
 TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv tile_nic.sv tile_dma.sv \
   prog_mem.sv host_if.sv esm.sv link_pack.sv neo_tile.sv tile_mesh.sv)
 export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH)
-# the wrapper writes design state at the falling edge for fault injection, hence MULTIDRIVEN is expected
-EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN --public-flat-rw
+# the wrapper writes design state at the falling edge for fault injection, hence MULTIDRIVEN is expected.
+# --unroll-count: the NIC resets its per-source state in a loop over the NX*NY sources; with 64 tiles that exceeds the
+# default unroll limit (64), and a delayed array assignment inside a loop Verilator leaves rolled is unsupported (drop 0.27)
+EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN --public-flat-rw --unroll-count 1024
 # geometry, depths and fetch watchdog; the tests read the geometry from the environment
 NX ?= 2
 NY ?= 2
@@ -39,7 +41,8 @@ export NEO_FETCH_TIMEOUT := $(FETCH_TIMEOUT)
 export NEO_WPF := $(WPF)
 # coverage: COVERAGE=1 adds Verilator line/toggle coverage (coverage.dat -> verilator_coverage --annotate),
 # and the tests sample functional covergroups through cocotb-coverage (pip install cocotb-coverage)
-ifeq ($(COVERAGE),1)
+# VCOV=1: Verilator line/toggle coverage plus the functional covergroups (not COVERAGE, which cocotb reads as Python coverage)
+ifeq ($(VCOV),1)
   EXTRA_ARGS += --coverage --coverage-line --coverage-toggle
   export NEO_FUNCOV=1
 endif
@@ -77,13 +80,13 @@ define keep_cov
 	@for f in coverage.dat $(1)/coverage.dat; do if [ -f $$f ]; then mv -f $$f $(2); fi; done
 endef
 core_cov:
-	$(MAKE) TARGET=core COVERAGE=1 SIM_BUILD=sim_build_cov_core COCOTB_RESULTS_FILE=results_cov_core.xml
+	$(MAKE) TARGET=core VCOV=1 SIM_BUILD=sim_build_cov_core COCOTB_RESULTS_FILE=results_cov_core.xml
 	$(call keep_cov,sim_build_cov_core,coverage_core.dat)
 tile_cov:
-	$(MAKE) TARGET=tile COVERAGE=1 SIM_BUILD=sim_build_cov_tile COCOTB_RESULTS_FILE=results_cov_tile.xml
+	$(MAKE) TARGET=tile VCOV=1 SIM_BUILD=sim_build_cov_tile COCOTB_RESULTS_FILE=results_cov_tile.xml
 	$(call keep_cov,sim_build_cov_tile,coverage_tile.dat)
 tile8_cov:
-	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer COVERAGE=1 SIM_BUILD=sim_build_cov_tile8 COCOTB_RESULTS_FILE=results_cov_tile8.xml
+	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer VCOV=1 SIM_BUILD=sim_build_cov_tile8 COCOTB_RESULTS_FILE=results_cov_tile8.xml
 	$(call keep_cov,sim_build_cov_tile8,coverage_tile8.dat)
 coverage: core_cov tile_cov tile8_cov
 	python3 coverage_report.py --dat "coverage_*.dat" --funcov "funcov_*.yml" --out coverage_report.md
