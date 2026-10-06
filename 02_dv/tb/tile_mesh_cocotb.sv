@@ -1,5 +1,5 @@
 // tile_mesh_cocotb.sv -- tile_mesh with packed host-bus and status ports, a bank backdoor, cycle-exact fault
-//   injection and router observation for cocotb (drop 0.25).
+//   injection and router observation for cocotb (drop 0.27).
 //   Ports: the simulator presents unpacked arrays of 1-bit ports to VPI as one packed register, so a Python
 //   testbench cannot index them; every per-tile port is packed into a vector: tile n occupies bit n (1-bit ports)
 //   or bits [n*W +: W] (W-bit ports).
@@ -51,14 +51,14 @@ module tile_mesh_cocotb #(
   //          2  program memory word fi_idx lane 0 XOR fi_mask[38:0]
   //          3  descriptor register cfg[fi_idx] XOR fi_mask[15:0]   (the primary copy only)
   //          4  primary DMA engine pc XOR fi_mask[3:0]
-  //          5  router output register out_flit[fi_idx] XOR fi_mask  (payload bits; fi_idx = port, 4 = local)
+  //          5  router output register out_flit[fi_idx] XOR fi_mask  (payload bits, any of the WPF words; fi_idx = port, 4 = local)
   //          6  router output register out_valid[fi_idx] cleared     (the flit vanishes)
   //          7  NIC serve_busy held at 1                            (requests are never served; hold fi_en)
   input  logic [NW-1:0] fi_node,
   input  logic [2:0]    fi_sel,
   input  logic          fi_en,
   input  logic [19:0]   fi_idx,
-  input  logic [63:0]   fi_mask,
+  input  logic [DWL-1:0] fi_mask,                 // as wide as the link payload (drop 0.27): a flit fault can hit any word
   // observation of node fi_node's router output stage: valid of port k in bit k, and the local-port (4) flit
   output logic [4:0]    ob_out_valid,
   output logic [FW-1:0] ob_out_flit4
