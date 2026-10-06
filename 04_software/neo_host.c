@@ -12,21 +12,26 @@ static int ceil_div(int a, int b) { return (a + b - 1) / b; }
 /* FETCH_A/FETCH_W instructions covering `words` bank words from `addr` into local entries from `base_entries`: one
  * instruction per NEO_MAX_FETCH words, cut at entry boundaries (`wpe` words per entry) because the NIC assembles an
  * entry from the words of one instruction. Mirrors fetch() in neo_backend.py. Returns 0, or -1 if the program is full. */
+/* one instruction, with the program-memory bound checked and the word validated: a FETCH_A / FETCH_W of zero words is
+ * refused (-2), as neo_backend.ins() refuses it (drop 0.29) -- the server would answer it with a bare CRC flit, but no
+ * program has a use for it. Mirrors the Python encoder's field check for the length field too (neo_ins masks fields). */
+static int emit(neo_tile_prog_t *tp, uint64_t word) {
+    int op = (int)((word >> 60) & 0xF);
+    uint32_t len = (uint32_t)((word >> 20) & 0xFFF);
+    if ((op == NEO_OP_FETCH_A || op == NEO_OP_FETCH_W) && len == 0) return -2;
+    if (tp->nprog >= NEO_MAX_PROG) return -1;
+    tp->prog[tp->nprog++] = word;
+    return 0;
+}
+
 static int emit_fetch(neo_tile_prog_t *tp, int op, neo_tile_t bank, uint32_t addr, uint32_t words, uint32_t base_entries, int wpe) {
     uint32_t per = (uint32_t)(NEO_MAX_FETCH / wpe) * (uint32_t)wpe;
     for (uint32_t off = 0; off < words; ) {
         uint32_t n = (words - off < per) ? words - off : per;
-        if (tp->nprog >= NEO_MAX_PROG) return -1;
-        tp->prog[tp->nprog++] = neo_ins(op, bank.x, bank.y, addr + off, n, base_entries + off / (uint32_t)wpe, 0);
+        int r = emit(tp, neo_ins(op, bank.x, bank.y, addr + off, n, base_entries + off / (uint32_t)wpe, 0));
+        if (r < 0) return r;
         off += n;
     }
-    return 0;
-}
-
-/* one instruction, with the program-memory bound checked */
-static int emit(neo_tile_prog_t *tp, uint64_t word) {
-    if (tp->nprog >= NEO_MAX_PROG) return -1;
-    tp->prog[tp->nprog++] = word;
     return 0;
 }
 static int ilog2_floor(int v) { int r = 0; while (v > 1) { v >>= 1; r++; } return r; }
@@ -81,11 +86,15 @@ int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *
         c[D_RSV1] = 0; c[D_RSV2] = 0;
         tp->cfg_m = M;
         tp->nprog = 0;
-        for (int ct = ct_lo; ct <= ct_hi; ct++)
-            if (emit_fetch(tp, NEO_OP_FETCH_A, g->act_bank, g->act_base + ct * apt + iy_lo * g->w * wpa,
-                           region_pixels * wpa, ct * region_pixels, wpa) < 0) return -1;
-        if (emit_fetch(tp, NEO_OP_FETCH_W, g->w_bank, g->w_base + (g->nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0, wpw) < 0)
-            return -1;
+        for (int ct = ct_lo; ct <= ct_hi; ct++) {
+            int r = emit_fetch(tp, NEO_OP_FETCH_A, g->act_bank, g->act_base + ct * apt + iy_lo * g->w * wpa,
+                               region_pixels * wpa, ct * region_pixels, wpa);
+            if (r < 0) return r;
+        }
+        {
+            int r = emit_fetch(tp, NEO_OP_FETCH_W, g->w_bank, g->w_base + (g->nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0, wpw);
+            if (r < 0) return r;
+        }
         if (i != 0) {
             if (emit(tp, neo_ins(NEO_OP_GO, 0, 0, 0, 0, 0, 0)) < 0) return -1;
             if (emit(tp, neo_ins(NEO_OP_WAIT_RDY, 0, 0, 0, 0, 0, 0)) < 0) return -1;

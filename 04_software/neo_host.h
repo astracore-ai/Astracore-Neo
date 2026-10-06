@@ -67,7 +67,8 @@ uint64_t neo_ins(int op, int x, int y, uint32_t addr, uint32_t len, uint32_t bas
 
 /* Compile one group over `shares` tiles: owner first, contributors on the nearest free tiles.
  * free[] lists candidate tiles (excluding the owner); nfree their count. Returns the number of tile
- * programs written to out[] (<= shares), or -1 on error. */
+ * programs written to out[] (<= shares), -1 on error (no free tile, program memory full), or -2 if an emitted
+ * instruction is invalid (a zero-length fetch, drop 0.29). */
 int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *free, int nfree, int shares,
                       neo_tile_prog_t *out);
 
