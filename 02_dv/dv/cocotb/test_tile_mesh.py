@@ -1,4 +1,4 @@
-"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.22.
+"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.23.
 
 Ports of sim/run_tiles.py's M-tests, driven the way the island's firmware drives a tile: everything through the
 host register bus (program, descriptor, start, status, causes), banks loaded and read through the wrapper's
@@ -18,7 +18,8 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
   M12 control path: program-memory SECDED, duplicated descriptor registers, lockstep DMA engines
   M13 spatial partitions: a cross-partition fetch is dropped and flagged; inside one partition it is clean
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
-     make -C dv/cocotb tile32 (the silicon core and depths: 32x32 cores, ACC_ROWS 512, ABUF 2048, WBUF 1024, 2 MB banks)
+     make -C dv/cocotb tile32 (the silicon core and depths: 32x32 cores, ACC_ROWS 512, ABUF 2048, WBUF 1024, 2 MB banks,
+                              FETCH_TIMEOUT 65535: two 4,095-word fetches queued at one bank take more than 8,192 cycles)
 The geometry and the fetch timeout come from the environment (NEO_NX, NEO_NY, NEO_ROWS, NEO_COLS,
 NEO_FETCH_TIMEOUT), exported by the Makefile to match its -G parameters; test_two_layer.py (M10) reuses the
 harness on the 8x8-core build. The convolution keeps three channel tiles at any core size (CIN = 2.5*ROWS, the
@@ -556,13 +557,17 @@ async def m8_registers_selftest_watchdog(dut):
     await RisingEdge(dut.clk)
     await mesh.tick(40)
     await mesh.reg_write(0, REG_WD_KICK, 0)
-    got = to_image(await mesh.read_rows(1, R0, 36), ref16, 36)
     status = await mesh.reg_read(0, REG_STATUS)
     c_run = await mesh.reg_read(0, REG_ERR_CAUSE)
-    await check_result(mesh, got, ref16, "M8 real run")
     assert c_run == 0, f"M8 real run cause 0x{c_run:05x}"
     assert mesh.pins()[0] == 0, "M8 error pin raised after the real run"
     assert (status & 1) == 1, f"M8 status 0x{status:08x} (done expected)"
+    # reading the result rows takes 36 x COLS backdoor clocks (1,152 at 32 columns), longer than the 600-cycle window:
+    # watchdog off for the read-out, then re-enabled and left un-kicked for the expiry check
+    await mesh.reg_write(0, REG_WD_CTRL, 0)
+    got = to_image(await mesh.read_rows(1, R0, 36), ref16, 36)
+    await check_result(mesh, got, ref16, "M8 real run")
+    await mesh.reg_write(0, REG_WD_CTRL, (600 << 8) | 1)
     await mesh.tick(650)
     c_wd = await mesh.reg_read(0, REG_ERR_CAUSE)
     assert (c_wd >> 18) & 1 == 1 and mesh.pins()[0] == 1, f"M8 watchdog cause 0x{c_wd:05x} pin {mesh.pins()[0]}"

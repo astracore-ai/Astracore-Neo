@@ -1,9 +1,10 @@
-# cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.21). Requires: pip install cocotb numpy; verilator >= 5.0.
+# cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.23). Requires: pip install cocotb numpy; verilator >= 5.0.
 #   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core (16x8), bit-exact vs the golden model
 #   make -C dv/cocotb core32    # the same on the silicon core: 32x32, ACC_ROWS 512, ABUF 2048, WBUF 1024
 #   make -C dv/cocotb tile      # test_tile_mesh.py: M1-M13 through the register bus on tile_mesh (2x2, 16x8 cores)
 #   make -C dv/cocotb tile8     # test_two_layer.py: M10, two-layer INT8 handoff on 8x8 cores (own build directory)
-#   make -C dv/cocotb tile32    # M1-M13 on the silicon core and depths: 2x2 mesh of 32x32 cores, 2 MB (512K-word) banks
+#   make -C dv/cocotb tile32    # M1-M13 on the silicon core and depths: 2x2 mesh of 32x32 cores, 2 MB (512K-word) banks,
+#                               # FETCH_TIMEOUT 65535 (the 16-bit timer's maximum: two 4,095-word fetches queued at one bank exceed 8,192)
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -59,7 +60,7 @@ tile:
 tile8:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer SIM_BUILD=sim_build_tile8 COCOTB_RESULTS_FILE=results_tile8.xml
 tile32:
-	$(MAKE) TARGET=tile $(SILICON) BANK_DEPTH=524288 SIM_BUILD=sim_build_tile32 COCOTB_RESULTS_FILE=results_tile32.xml
+	$(MAKE) TARGET=tile $(SILICON) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 SIM_BUILD=sim_build_tile32 COCOTB_RESULTS_FILE=results_tile32.xml
 coverage:
 	$(MAKE) TARGET=core COVERAGE=1
 	$(MAKE) TARGET=tile COVERAGE=1
