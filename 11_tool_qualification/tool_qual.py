@@ -18,7 +18,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import neo_compile as nc
 from neo_backend import (compile_layer, compile_group, geometry, OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR, OP_DRAIN_PSUM, OP_GO, OP_WAIT_DONE, OP_END,
-                         OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE, MAX_FETCH, PROG_DEPTH)
+                         OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE, MAX_FETCH, PROG_DEPTH, ins)
 
 ROWS, COLS = 32, 32
 
@@ -82,6 +82,7 @@ def check_programs(lp, h, w, cin, cout, k, s, p):
         assert all(x >> 64 == 0 for x in t.program), "instruction wider than 64 bits"
         # hardware limits (drop 0.21): the DMA length field and the program memory
         assert all(((x >> 20) & 0xFFF) <= MAX_FETCH for x in t.program if ((x >> 60) & 0xF) in (OP_FETCH_A, OP_FETCH_W)), "fetch longer than the length field"
+        assert all(((x >> 20) & 0xFFF) >= 1 for x in t.program if ((x >> 60) & 0xF) in (OP_FETCH_A, OP_FETCH_W)), "fetch of zero words"
         assert len(t.program) <= PROG_DEPTH, f"program of {len(t.program)} words exceeds the {PROG_DEPTH}-word program memory"
         if t.role == "contributor":
             assert ops.index(OP_WAIT_RDY) < ops.index(OP_DRAIN_PSUM), "contributor drains before RDY"
@@ -131,6 +132,21 @@ def main():
     # ---- TQ3: C driver == Python backend (the existing word-for-word check) ----
     r = subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "..", "sim", "check_c_backend.py")], capture_output=True, text=True)
     results.append(dict(id="TQ3-000", kind="C driver vs Python backend", shape={}, ok="ALL PASS" in r.stdout, detail=r.stdout.strip()[-120:]))
+    # ---- TQ5: the instruction encoder refuses what the hardware cannot take (drop 0.21 field ranges, drop 0.29 empty fetch) ----
+    rejected, accepted = [], []
+    for name, kw in (("len 0 FETCH_A", dict(op=OP_FETCH_A, x=1, y=1, addr=0, length=0, base=0)),
+                     ("len 0 FETCH_W", dict(op=OP_FETCH_W, x=1, y=1, addr=0, length=0, base=0)),
+                     ("len 4096", dict(op=OP_FETCH_A, x=1, y=1, addr=0, length=MAX_FETCH + 1, base=0)),
+                     ("addr 2^20", dict(op=OP_FETCH_A, x=1, y=1, addr=1 << 20, length=1, base=0)),
+                     ("base 2^16", dict(op=OP_FETCH_W, x=1, y=1, addr=0, length=1, base=1 << 16))):
+        try:
+            ins(**kw); accepted.append(name)
+        except ValueError:
+            rejected.append(name)
+    ok5 = not accepted and ins(OP_FETCH_A, 1, 1, 0, 1, 0) == (OP_FETCH_A << 60) | (1 << 56) | (1 << 52) | (1 << 20) \
+          and ins(OP_FETCH_W, 1, 1, 5, MAX_FETCH, 7) >> 60 == OP_FETCH_W
+    results.append(dict(id="TQ5-000", kind="encoder rejects invalid fetches", shape=dict(cases=5), ok=ok5,
+                        detail=f"rejected {len(rejected)}/5" + (f", accepted {accepted}" if accepted else "") + "; len 1 and MAX_FETCH accepted"))
     # ---- TQ4: requantization model vs the RTL arithmetic ----
     bad = 0
     for i in range(20000):
@@ -139,7 +155,7 @@ def main():
             bad += 1
     results.append(dict(id="TQ4-000", kind="requant model vs RTL arithmetic", shape=dict(samples=20000), ok=bad == 0, detail=f"{bad} mismatches"))
     passed = sum(r["ok"] for r in results)
-    report = dict(tool="neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)", version="drop 0.21",
+    report = dict(tool="neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)", version="drop 0.29",
                   date=time.strftime("%Y-%m-%d"), cases=len(results), passed=passed, seconds=round(time.time() - t0, 1),
                   tcl_argument="TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model "
                                "(lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool "

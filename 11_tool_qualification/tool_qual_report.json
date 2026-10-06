@@ -1,10 +1,10 @@
 {
  "tool": "neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)",
- "version": "drop 0.21",
+ "version": "drop 0.29",
  "date": "2026-10-06",
- "cases": 122,
- "passed": 122,
- "seconds": 0.5,
+ "cases": 123,
+ "passed": 123,
+ "seconds": 2.2,
  "tcl_argument": "TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model (lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool error cannot reach silicon undetected; the compiler itself therefore needs no further qualification beyond this kit and the project's configuration management (ISO 26262-8 11.4.5).",
  "results": [
   {
@@ -2053,6 +2053,15 @@
    "shape": {},
    "ok": true,
    "detail": "C host driver vs Python backend: 4 tile programs compared (descriptors, cfg_m, every program word) -> ALL PASS"
+  },
+  {
+   "id": "TQ5-000",
+   "kind": "encoder rejects invalid fetches",
+   "shape": {
+    "cases": 5
+   },
+   "ok": true,
+   "detail": "rejected 5/5; len 1 and MAX_FETCH accepted"
   },
   {
    "id": "TQ4-000",

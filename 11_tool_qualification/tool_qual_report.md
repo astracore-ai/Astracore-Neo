@@ -1,6 +1,6 @@
-# Compiler tool-qualification kit report (2026-10-06, drop 0.21)
+# Compiler tool-qualification kit report (2026-10-06, drop 0.29)
 
-122/122 cases passed in 0.5 s.
+123/123 cases passed in 2.2 s.
 
 **Tool confidence argument.** TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model (lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool error cannot reach silicon undetected; the compiler itself therefore needs no further qualification beyond this kit and the project's configuration management (ISO 26262-8 11.4.5).
 
@@ -127,4 +127,5 @@
 | TQ2-058 | program emission structure | h=15 w=22 cin=177 cout=16 k=3 s=1 p=1 mesh=2 shares=2 oy0=3 oy_n=12 | PASS | 2 tile programs |
 | TQ2-059 | program emission structure | h=11 w=34 cin=4 cout=12 k=1 s=2 p=0 mesh=2 shares=4 oy0=1 oy_n=5 | PASS | 1 tile programs |
 | TQ3-000 | C driver vs Python backend |  | PASS | C host driver vs Python backend: 4 tile programs compared (descriptors, cfg_m, e |
+| TQ5-000 | encoder rejects invalid fetches | cases=5 | PASS | rejected 5/5; len 1 and MAX_FETCH accepted |
 | TQ4-000 | requant model vs RTL arithmetic | samples=20000 | PASS | 0 mismatches |
