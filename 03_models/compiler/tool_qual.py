@@ -17,7 +17,8 @@ import argparse, json, os, subprocess, sys, time
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import neo_compile as nc
-from neo_backend import compile_layer, compile_group, geometry, OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR, OP_DRAIN_PSUM, OP_GO, OP_WAIT_DONE, OP_END, OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE
+from neo_backend import (compile_layer, compile_group, geometry, OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR, OP_DRAIN_PSUM, OP_GO, OP_WAIT_DONE, OP_END,
+                         OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE, MAX_FETCH, PROG_DEPTH)
 
 ROWS, COLS = 32, 32
 
@@ -79,6 +80,9 @@ def check_programs(lp, h, w, cin, cout, k, s, p):
         ops = [(x >> 60) & 0xF for x in t.program]
         assert ops[-1] == OP_END and OP_GO in ops and OP_WAIT_DONE in ops, "program skeleton"
         assert all(x >> 64 == 0 for x in t.program), "instruction wider than 64 bits"
+        # hardware limits (drop 0.21): the DMA length field and the program memory
+        assert all(((x >> 20) & 0xFFF) <= MAX_FETCH for x in t.program if ((x >> 60) & 0xF) in (OP_FETCH_A, OP_FETCH_W)), "fetch longer than the length field"
+        assert len(t.program) <= PROG_DEPTH, f"program of {len(t.program)} words exceeds the {PROG_DEPTH}-word program memory"
         if t.role == "contributor":
             assert ops.index(OP_WAIT_RDY) < ops.index(OP_DRAIN_PSUM), "contributor drains before RDY"
         if t.role == "owner":
@@ -86,7 +90,7 @@ def check_programs(lp, h, w, cin, cout, k, s, p):
             assert ops.count(OP_NOTIFY) == len(lp.tiles) - 1, "one NOTIFY per contributor"
         fa = [x for x in t.program if (x >> 60) & 0xF == OP_FETCH_A]
         cts = sorted({(x >> 32) & 0xFFFFF for x in fa})
-        assert len(fa) == d["cfg_ct0"] * 0 + len(cts), "duplicate activation fetches"
+        assert len(fa) == len(cts), "duplicate activation fetches"
     covered.sort()
     assert covered[0][0] == 0 and covered[-1][1] == runs and all(covered[i][1] == covered[i + 1][0] for i in range(len(covered) - 1)), \
         "run ranges do not tile the layer exactly once"
@@ -135,7 +139,7 @@ def main():
             bad += 1
     results.append(dict(id="TQ4-000", kind="requant model vs RTL arithmetic", shape=dict(samples=20000), ok=bad == 0, detail=f"{bad} mismatches"))
     passed = sum(r["ok"] for r in results)
-    report = dict(tool="neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)", version="drop 0.16",
+    report = dict(tool="neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)", version="drop 0.21",
                   date=time.strftime("%Y-%m-%d"), cases=len(results), passed=passed, seconds=round(time.time() - t0, 1),
                   tcl_argument="TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model "
                                "(lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool "

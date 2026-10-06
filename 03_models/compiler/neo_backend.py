@@ -27,8 +27,31 @@ OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR, OP_DRAIN_PSUM, OP_GO, OP_WAIT_FREE, OP_WAIT
 OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE = 9, 10, 11
 
 
+MAX_FETCH = 4095        # the DMA instruction's length field is 12 bits (drop 0.21: a fetch longer than that is split)
+PROG_DEPTH = 16         # program memory per tile (prog_mem DEPTH)
+
+
 def ins(op, x=0, y=0, addr=0, length=0, base=0, arg=0):
+    """64-bit DMA instruction: op[63:60] x[59:56] y[55:52] addr[51:32] len[31:20] base[19:4] arg[3:0].
+    A field that does not fit is an error, never a silent overflow into the neighbouring field (drop 0.21)."""
+    if not (0 <= op < 16 and 0 <= x < 16 and 0 <= y < 16 and 0 <= addr < (1 << 20) and 0 <= length <= MAX_FETCH
+            and 0 <= base < (1 << 16) and 0 <= arg < 16):
+        raise ValueError(f"DMA instruction field out of range: op {op} x {x} y {y} addr {addr} len {length} base {base} arg {arg}")
     return (op << 60) | (x << 56) | (y << 52) | (addr << 32) | (length << 20) | (base << 4) | arg
+
+
+def fetch(op, bank, addr, words, base_entries, wpe):
+    """FETCH_A/FETCH_W instructions covering `words` bank words from `addr` into local entries from `base_entries`:
+    one instruction per MAX_FETCH words, cut at entry boundaries (`wpe` words per entry) because the NIC assembles
+    an entry from the words of one instruction. One instruction at 16x8 for every test shape; a 32x32 weight tile
+    (2,592 words) is one instruction, three tiles (7,776) are two."""
+    per = (MAX_FETCH // wpe) * wpe
+    out, off = [], 0
+    while off < words:
+        n = min(per, words - off)
+        out.append(ins(op, bank[0], bank[1], addr + off, n, base_entries + off // wpe))
+        off += n
+    return out
 
 
 @dataclass
@@ -97,9 +120,10 @@ def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank,
                     cfg_k=k, cfg_ct_n=cin_tiles, cfg_ct0=ct0, cfg_ky0=ky0, cfg_kx0=kx0, cfg_rn=r1 - r0,
                     cfg_contrib_n=(shares - 1) if i == 0 else 0, cfg_tile_pixels=region_pixels, cfg_regions_m1=0xFFFF, cfg_m=M)
         # activations: only rows iy_lo..iy_hi of each channel tile, contiguous in the row-major source layout
-        prog = [ins(OP_FETCH_A, act_bank[0], act_bank[1], act_base + ct * apt + iy_lo * w * wpa, region_pixels * wpa,
-                    ct * region_pixels) for ct in range(ct_lo, ct_hi + 1)]
-        prog.append(ins(OP_FETCH_W, w_bank[0], w_bank[1], w_base + (nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0))
+        prog = []
+        for ct in range(ct_lo, ct_hi + 1):
+            prog += fetch(OP_FETCH_A, act_bank, act_base + ct * apt + iy_lo * w * wpa, region_pixels * wpa, ct * region_pixels, wpa)
+        prog += fetch(OP_FETCH_W, w_bank, w_base + (nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0, wpw)
         fetch_words = (ct_hi - ct_lo + 1) * region_pixels * wpa + (r1 - r0) * wpt_run
         if i == 0:
             tp = TileProgram(tile, "owner" if shares > 1 else "solo", desc, [], fetch_words=fetch_words, out_words=M * (cols + 1))
@@ -146,7 +170,7 @@ def compile_network(h=640, w=640, nx=8, ny=8, rows=32, cols=32):
         shares = nc.choose_split(groups, plan.k_tiles, csize)
         # output rows per chunk, in output-row units
         rows_per_chunk = max(1, csize // L.wo)
-        n_prog, fetch, psum, out, progs = 0, 0, 0, 0, 0
+        n_prog, fetch_w, psum, out, progs, too_long, longest, bad_groups = 0, 0, 0, 0, 0, 0, 0, 0
         free_all = [(x, y) for y in range(ny) for x in range(nx)]
         load = {t: 0 for t in free_all}
         # groups in LPT order: the heaviest first, each to the lightest tile (contributors nearest the owner)
@@ -164,18 +188,26 @@ def compile_network(h=640, w=640, nx=8, ny=8, rows=32, cols=32):
             act_bank = free_all[bank_rr % len(free_all)]
             w_bank = free_all[(bank_rr + 1) % len(free_all)]
             bank_rr += 2
-            tiles, _, _ = compile_group(L.h, L.w, L.cin, L.cout, L.k, L.s, L.p, rows, cols, nt, oy0, oy_n,
-                                        act_bank, 0, w_bank, 0, owner, free, nx, shares, int8_out=(li < len(layers) - 1))
+            try:
+                tiles, _, _ = compile_group(L.h, L.w, L.cin, L.cout, L.k, L.s, L.p, rows, cols, nt, oy0, oy_n,
+                                            act_bank, 0, w_bank, 0, owner, free, nx, shares, int8_out=(li < len(layers) - 1))
+            except ValueError:
+                # a bank address beyond the 20-bit field: the static compile places a whole channel tile at ct * h * w * wpa
+                # in one bank, which the early 640x640 layers exceed; a bank allocator (regions per row window) is needed
+                bad_groups += 1
+                continue
             for t in tiles:
                 load[t.tile] += t.descriptor["cfg_rn"] * t.descriptor["cfg_m"]
             n_prog += len(tiles)
             progs += sum(len(t.program) for t in tiles)
-            fetch += sum(t.fetch_words for t in tiles)
+            too_long += sum(len(t.program) > PROG_DEPTH for t in tiles)
+            longest = max([longest] + [len(t.program) for t in tiles])
+            fetch_w += sum(t.fetch_words for t in tiles)
             psum += sum(t.psum_words for t in tiles)
             out += sum(t.out_words for t in tiles)
         mean = sum(load.values()) / len(load)
         balance = max(load.values()) / mean if mean else 1.0
-        stats.append((L.name, groups, shares, n_prog, progs, fetch * 4, psum * 4, out * 4, balance))
+        stats.append((L.name, groups, shares, n_prog, progs, fetch_w * 4, psum * 4, out * 4, balance, too_long, longest, bad_groups))
     return stats
 
 
@@ -190,6 +222,10 @@ def main():
     print(f"  {len(stats)} layers, {sum(s[1] for s in stats)} groups, {tot_prog} tile programs, {tot_words} program words "
           f"({tot_words * 8 / 1e3:.0f} KB of descriptors), K-split shares per layer: min {min(s[2] for s in stats)}, max {max(s[2] for s in stats)}")
     print(f"  DMA traffic per frame: fetch {tot_fetch / 1e6:.0f} MB, partial sums {tot_psum / 1e6:.0f} MB, outputs {tot_out / 1e6:.0f} MB")
+    too_long, longest, bad = sum(s[9] for s in stats), max(s[10] for s in stats), sum(s[11] for s in stats)
+    print(f"  hardware limits (drop 0.21): {too_long} of {tot_prog} tile programs exceed the {PROG_DEPTH}-word program memory (longest {longest} words); "
+          f"{bad} groups in {sum(1 for s in stats if s[11])} layers not emitted because a channel tile placed whole exceeds the 20-bit bank address "
+          f"(the static compile has no bank allocator); fetches are split at the 12-bit length field")
     worst = max(s[8] for s in stats)
     print(f"  per-layer balance (max tile load / mean): worst {worst:.2f}, mean {sum(s[8] for s in stats) / len(stats):.2f}; "
           f"every layer but the last drains INT8 for the next")

@@ -1,10 +1,11 @@
 YOLOv8-m class at 640x640 compiled for an 8x8 mesh of 32x32 cores:
-  83 layers, 6263 groups, 24549 tile programs, 226459 program words (1812 KB of descriptors), K-split shares per layer: min 1, max 9
-  DMA traffic per frame: fetch 828 MB, partial sums 414 MB, outputs 187 MB
-  per-layer balance (max tile load / mean): worst 2.46, mean 1.16; every layer but the last drains INT8 for the next
+  83 layers, 6263 groups, 23885 tile programs, 233893 program words (1871 KB of descriptors), K-split shares per layer: min 1, max 9
+  DMA traffic per frame: fetch 784 MB, partial sums 400 MB, outputs 164 MB
+  hardware limits (drop 0.21): 588 of 23885 tile programs exceed the 16-word program memory (longest 24 words); 430 groups in 3 layers not emitted because a channel tile placed whole exceeds the 20-bit bank address (the static compile has no bank allocator); fetches are split at the 12-bit length field
+  per-layer balance (max tile load / mean): worst 2.46, mean 1.17; every layer but the last drains INT8 for the next
   layer                groups shares programs  fetch MB  psum MB  balance
-  b0.conv                 400      1      400     28.68     0.00     1.12
-  b1.conv                 150      2      300     24.55     9.50     1.07
+  b0.conv                 400      1      204     14.61     0.00     1.25
+  b1.conv                 150      2       90      7.32     2.85     1.42
   b2.c2f.cv1              150      1      150      7.43     0.00     1.28
   b2.c2f.m0.cv1           100      3      300     12.27    12.67     1.07
   b2.c2f.m0.cv2           100      3      300     12.27    12.67     1.07
