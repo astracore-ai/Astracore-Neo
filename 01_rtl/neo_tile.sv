@@ -8,7 +8,9 @@ module neo_tile #(
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
   parameter int IDXW = $clog2(ACC_ROWS), AW = $clog2(ABUF_DEPTH), WAW = $clog2(WBUF_DEPTH), BAW = $clog2(BANK_DEPTH),
   parameter int FETCH_TIMEOUT = 8192,
-  parameter int BIST_WORDS = BANK_DEPTH
+  parameter int BIST_WORDS = BANK_DEPTH,
+  parameter int PDEPTH = 32,                 // DMA program memory entries (drop 0.22: 32, was 16)
+  parameter int PAW = $clog2(PDEPTH)
 )(
   input  logic          clk,
   input  logic          rst_n,
@@ -47,7 +49,7 @@ module neo_tile #(
 );
   // host interface and error signaling
   logic                  prog_we, prog_start, err_clear, rq_tbl_we, rq_relu, wd_enable, wd_kick, selftest_inject;
-  logic [3:0]            prog_waddr;
+  logic [PAW-1:0]        prog_waddr;
   logic [63:0]           prog_wdata;
   logic signed [15:0]    cfg [20];
   logic [IDXW-1:0]       cfg_m;
@@ -126,12 +128,12 @@ module neo_tile #(
   logic                  rdy_seen, rdy_clear, ntf_busy;
 
   // program memory with SECDED, shared by the lockstep pair of DMA engines (drop 0.16)
-  logic [3:0]  dma_pc, dma_pc_d;
+  logic [PAW-1:0] dma_pc, dma_pc_d;
   logic [63:0] dma_ins;
   logic        prog_ce, prog_ue, dma_fsm_err, dma_fsm_err_d;
-  prog_mem u_prog (.clk(clk), .rst_n(rst_n), .we(prog_we), .waddr(prog_waddr), .wdata(prog_wdata), .raddr(dma_pc), .rdata(dma_ins),
+  prog_mem #(.DEPTH(PDEPTH), .AW(PAW)) u_prog (.clk(clk), .rst_n(rst_n), .we(prog_we), .waddr(prog_waddr), .wdata(prog_wdata), .raddr(dma_pc), .rdata(dma_ins),
                    .err_clear(err_clear), .prog_ce_sticky(prog_ce), .prog_ue_sticky(prog_ue));
-  tile_dma #(.XW(XW), .YW(YW)) u_dma (
+  tile_dma #(.XW(XW), .YW(YW), .PDEPTH(PDEPTH), .PAW(PAW)) u_dma (
     .clk(clk), .rst_n(rst_n),
     .pc_out(dma_pc), .ins_in(dma_ins), .prog_start(prog_start), .fsm_err(dma_fsm_err),
     .prog_done(prog_done), .prog_busy(prog_busy),
@@ -144,7 +146,7 @@ module neo_tile #(
   logic [2:0]  d_cmd_op; logic [XW-1:0] d_cmd_x; logic [YW-1:0] d_cmd_y; logic [19:0] d_cmd_addr; logic [11:0] d_cmd_len;
   logic [15:0] d_cmd_base; logic signed [15:0] d_tiles_ready;
   logic        dma_err, dma_err_sticky, cfg_err, cfg_err_sticky, ctrl_path_err, iso_err;
-  tile_dma #(.XW(XW), .YW(YW)) u_dma_dup (
+  tile_dma #(.XW(XW), .YW(YW), .PDEPTH(PDEPTH), .PAW(PAW)) u_dma_dup (
     .clk(clk), .rst_n(rst_n),
     .pc_out(dma_pc_d), .ins_in(dma_ins), .prog_start(prog_start), .fsm_err(dma_fsm_err_d),
     .prog_done(d_prog_done), .prog_busy(d_prog_busy),
@@ -181,7 +183,7 @@ module neo_tile #(
     .crc_err_sticky(crc_err), .err_clear(err_clear), .rdy_seen(rdy_seen), .rdy_clear(rdy_clear), .ntf_busy(ntf_busy),
     .partition(partition), .iso_err_sticky(iso_err), .lost_err_sticky(lost_err), .fetch_timeout_sticky(fetch_timeout));
 
-  host_if #(.IDXW(IDXW)) u_host (
+  host_if #(.IDXW(IDXW), .PAW(PAW)) u_host (
     .clk(clk), .rst_n(rst_n), .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata),
     .prog_we(prog_we), .prog_waddr(prog_waddr), .prog_wdata(prog_wdata), .prog_start(prog_start), .err_clear(err_clear),
     .cfg(cfg), .cfg_m(cfg_m),
@@ -190,7 +192,7 @@ module neo_tile #(
     .err_mask(err_mask), .err_cause(err_cause), .wd_enable(wd_enable), .wd_window(wd_window), .wd_kick(wd_kick),
     .selftest_inject(selftest_inject), .partition(partition), .cfg_err(cfg_err),
     .bist_start(bist_start), .bist_active(bist_active), .bist_done(bist_done), .bist_fail(bist_fail), .bist_fail_ce(bist_fail_ce),
-    .bist_fail_addr({{(16-BAW){1'b0}}, bist_fail_addr}),
+    .bist_fail_addr(20'(bist_fail_addr)),        // 20-bit field: a 512K-word bank needs 19 (drop 0.22; the 16-bit field went negative at BAW = 19)
     .prog_done(prog_done), .drain_busy(drain_busy), .core_done(done),
     .flags({ecc_ce, ecc_ue, rq_err_sticky, seq_err_sticky, ctrl_err_sticky, acc_abft_sticky, array_abft_sticky, crc_err, parity_err}));
 

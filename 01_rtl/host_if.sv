@@ -5,7 +5,7 @@
 //     0x01 STATUS    r: bit0 prog_done, bit1 drain_busy, bit2 core done (latched since last start),
 //                       bit8 parity, bit9 crc, bit10 array_abft, bit11 acc_abft, bit12 ctrl, bit13 seq,
 //                       bit14 rq, bit15 ecc_ue, bit16 ecc_ce
-//     0x02 PROG_ADDR w: program entry index (0..15)
+//     0x02 PROG_ADDR w: program entry index (0..31; 32 entries since drop 0.22)
 //     0x03 PROG_LO   w: low 32 bits of the entry
 //     0x04 PROG_HI   w: high 32 bits; writing it commits the 64-bit entry at PROG_ADDR
 //     0x10..0x23     w: descriptor registers in the order of neo_tile's cfg_* ports (20 x 16-bit)
@@ -17,7 +17,7 @@
 //     0x08 WD_KICK   w: any write kicks the watchdog
 //     0x09 SELFTEST  w: bit0 asserts the core's fault-injection hook (checker self-test on a dummy run)
 //     0x0A MBIST     w: any write starts the bank MBIST (March C-); r: bit0 active, bit1 done, bit2 fail,
-//                       bit3 fail found by ECC correction, [31:16] failing address
+//                       bit3 fail found by ECC correction, [31:12] failing address (20 bits since drop 0.22)
 //     0x0B PARTITION w/r: [3:0] this tile's spatial partition; flits from another partition are dropped and flagged
 //   The descriptor registers are kept twice and compared every cycle (cfg_err): a corrupted descriptor is a
 //   control-path fault the datapath checks cannot see. Causes: bits 0-17 (see neo_tile), bit 18 = watchdog.
@@ -26,7 +26,8 @@
 //   engine leaves its done state two cycles later (poll STATUS.prog_done low, then high); the same holds
 //   for MBIST.done after a write to 0x0A.
 module host_if #(
-  parameter int IDXW = 6
+  parameter int IDXW = 6,
+  parameter int PAW = 5                      // program entry index width (drop 0.22: 32 entries)
 )(
   input  logic        clk,
   input  logic        rst_n,
@@ -38,7 +39,7 @@ module host_if #(
   output logic [31:0] h_rdata,
   // to the tile
   output logic        prog_we,
-  output logic [3:0]  prog_waddr,
+  output logic [PAW-1:0] prog_waddr,
   output logic [63:0] prog_wdata,
   output logic        prog_start,
   output logic        err_clear,
@@ -64,7 +65,7 @@ module host_if #(
   input  logic        bist_done,
   input  logic        bist_fail,
   input  logic        bist_fail_ce,
-  input  logic [15:0] bist_fail_addr,
+  input  logic [19:0] bist_fail_addr,
   // from the tile
   input  logic        prog_done,
   input  logic        drain_busy,
@@ -90,7 +91,7 @@ module host_if #(
       if (h_we) begin
         case (h_addr)
           8'h00: begin prog_start <= h_wdata[0]; err_clear <= h_wdata[1]; if (h_wdata[0]) done_latched <= 1'b0; end
-          8'h02: prog_waddr <= h_wdata[3:0];
+          8'h02: prog_waddr <= h_wdata[PAW-1:0];
           8'h03: prog_lo <= h_wdata;
           8'h04: begin prog_wdata <= {h_wdata, prog_lo}; prog_we <= 1'b1; end
           8'h05: err_mask <= h_wdata[18:0];
@@ -111,11 +112,11 @@ module host_if #(
       if (h_re) begin
         case (h_addr)
           8'h01: h_rdata <= {15'd0, flags[8], flags[7:0], 5'd0, done_latched, drain_busy, prog_done};
-          8'h02: h_rdata <= {28'd0, prog_waddr};
+          8'h02: h_rdata <= 32'(prog_waddr);
           8'h05: h_rdata <= {13'd0, err_mask};
           8'h06: h_rdata <= {13'd0, err_cause};
           8'h0B: h_rdata <= {28'd0, partition};
-          8'h0A: h_rdata <= {bist_fail_addr, 12'd0, bist_fail_ce, bist_fail, bist_done, bist_active};
+          8'h0A: h_rdata <= {bist_fail_addr, 8'd0, bist_fail_ce, bist_fail, bist_done, bist_active};
           8'h03: h_rdata <= prog_lo;
           8'h24: h_rdata <= {{(32-IDXW){1'b0}}, cfg_m};
           default: h_rdata <= (h_addr >= 8'h10 && h_addr < 8'h24) ? {16'd0, cfg[h_addr - 8'h10]} : 32'd0;

@@ -1,7 +1,7 @@
-// prog_mem.sv -- the DMA program memory with SECDED (drop 0.16): 16 x 64-bit instructions stored as two
+// prog_mem.sv -- the DMA program memory with SECDED (drop 0.16; 32 entries since drop 0.22): DEPTH x 64-bit instructions stored as two
 //   (39,32) lanes; every fetch is corrected (prog_ce) or flagged uncorrectable (prog_ue), both sticky.
 //   Shared by the lockstep pair of DMA engines in neo_tile.
-module prog_mem #(parameter int DEPTH = 16, AW = 4) (
+module prog_mem #(parameter int DEPTH = 32, AW = $clog2(DEPTH)) (
   input  logic          clk,
   input  logic          rst_n,
   input  logic          we,

@@ -21,12 +21,13 @@
 module tile_dma #(
   parameter int XW = 2,
   parameter int YW = 2,
-  parameter int PDEPTH = 16
+  parameter int PDEPTH = 32,                 // program memory entries (drop 0.22: 32, was 16)
+  parameter int PAW = $clog2(PDEPTH)
 )(
   input  logic          clk,
   input  logic          rst_n,
   // program memory outside this module (prog_mem, SECDED), read at pc_out
-  output logic [3:0]    pc_out,
+  output logic [PAW-1:0] pc_out,
   input  logic [63:0]   ins_in,
   input  logic          prog_start,
   output logic          fsm_err,        // state register outside the legal set
@@ -56,7 +57,7 @@ module tile_dma #(
                          S_WAITFREE = 4'd4, S_WAITDONE = 4'd5, S_END = 4'd6, S_WAITRDY = 4'd7, S_WAITRED = 4'd8,
                          S_WAITNTF = 4'd9;
   logic [3:0]  state;
-  logic [3:0]  pc;
+  logic [PAW-1:0] pc;
   logic [63:0] ins;
   logic [3:0]  op;
   logic signed [15:0] tiles_freed;
