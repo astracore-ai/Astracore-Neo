@@ -1,4 +1,4 @@
-# Neo regression on GitHub Actions (drop 0.22, repository layout = handoff package).
+# Neo regression on GitHub Actions (drop 0.24, repository layout = handoff package).
 # Every job builds the flat layout from the numbered folders with plain copies, then writes its logs to its own
 # branch ci-logs-<job> (ci_logs/<job>/*.txt), so results can be read from the repository and jobs never
 # overwrite each other's results.
@@ -32,10 +32,10 @@ jobs:
           cp 07_ci/Makefile Makefile
           mkdir -p ci_logs/python-regress && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/python-regress/RUN.txt
           ls
-      - name: regress
+      - name: regress (the CI subset; the whole-convolution neosim runs exceed the job limit and are covered by Verilator)
         run: |
           set -o pipefail
-          make regress 2>&1 | tee ci_logs/python-regress/regress.txt
+          make regress_ci 2>&1 | tee ci_logs/python-regress/regress.txt
       - name: tool qualification kit
         if: always()
         run: python3 compiler/tool_qual.py 2>&1 | tee ci_logs/python-regress/tool_qual.txt
@@ -87,6 +87,35 @@ jobs:
           git add -f ci_logs
           git commit -m "hdl-sim logs run ${{ github.run_number }}" || true
           git push origin ci-logs-hdl-sim --force
+  hdl-mesh8:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy
+      - name: install simulator
+        run: sudo apt-get update && sudo apt-get install -y verilator && verilator --version
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/hdl-mesh8 && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-mesh8/RUN.txt
+      - name: cocotb on the 8x8 silicon mesh
+        run: set -o pipefail; make cocotb_mesh8 2>&1 | tee ci_logs/hdl-mesh8/mesh8.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          mkdir -p ci_logs/hdl-mesh8 && echo "finished $(date -u)" >> ci_logs/hdl-mesh8/RUN.txt
+          git checkout --orphan ci-logs-hdl-mesh8
+          git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs
+          git commit -m "hdl-mesh8 logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-hdl-mesh8 --force
   tiles:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -104,6 +133,7 @@ jobs:
           cp 07_ci/Makefile Makefile
           mkdir -p ci_logs/tiles && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/tiles/RUN.txt
       - run: |
+          make regress 2>&1 | tee ci_logs/tiles/regress_full.txt || true
           for t in M3 M9 M12 M13 M11 M8 M1 M2 M4 M5 M6 M7; do python3 sim/run_tile_test.py $t 2>&1 | tee ci_logs/tiles/$t.txt; done
           python3 sim/run_two_layer.py 2>&1 | tee ci_logs/tiles/M10.txt
       - name: publish logs
