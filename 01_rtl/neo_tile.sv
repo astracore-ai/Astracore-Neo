@@ -105,8 +105,20 @@ module neo_tile #(
   logic [31:0]   b_wdata, b_rdata;
   logic bist_start, bist_active, bist_done, bist_fail, bist_fail_ce;
   logic [BAW-1:0] bist_fail_addr;
-  bank_bist_wrap #(.DEPTH(BANK_DEPTH), .AW(BAW), .BIST_WORDS(BIST_WORDS)) u_bank (
-    .clk(clk), .rst_n(rst_n), .we(b_we), .waddr(b_waddr), .wdata(b_wdata), .re(b_re), .raddr(b_raddr), .rdata(b_rdata), .rvalid(b_rvalid),
+  // the 512-bit bank (drop 0.28): 16 SECDED lanes per row; the interface still moves one word per cycle on its bank
+  // side, through bank_word_port, until stage 2 widens its serve and writeback paths
+  localparam int LANES = 16;
+  localparam int BROWS = BANK_DEPTH / LANES;
+  localparam int BRAW  = (BROWS > 1) ? $clog2(BROWS) : 1;
+  logic              r_we, r_re;
+  logic [BRAW-1:0]   r_wrow, r_rrow;
+  logic [LANES-1:0]  r_wmask;
+  logic [32*LANES-1:0] r_wdata, r_rdata;
+  bank_word_port #(.DEPTH(BANK_DEPTH), .AW(BAW), .LANES(LANES)) u_bank_port (
+    .clk(clk), .rst_n(rst_n), .we(b_we), .waddr(b_waddr), .wdata(b_wdata), .re(b_re), .raddr(b_raddr), .rdata(b_rdata),
+    .r_we(r_we), .r_wrow(r_wrow), .r_wmask(r_wmask), .r_wdata(r_wdata), .r_re(r_re), .r_rrow(r_rrow), .r_rdata(r_rdata));
+  bank_bist_wrap #(.DEPTH(BANK_DEPTH), .AW(BAW), .BIST_WORDS(BIST_WORDS), .LANES(LANES)) u_bank (
+    .clk(clk), .rst_n(rst_n), .we(r_we), .wrow(r_wrow), .wmask(r_wmask), .wdata(r_wdata), .re(r_re), .rrow(r_rrow), .rdata(r_rdata), .rvalid(b_rvalid),
     .err_clear(err_clear), .ecc_ce_sticky(ecc_ce), .ecc_ue_sticky(ecc_ue),
     .bist_start(bist_start), .bist_active(bist_active), .bist_done(bist_done), .bist_fail(bist_fail), .bist_fail_ce(bist_fail_ce),
     .bist_fail_addr(bist_fail_addr));

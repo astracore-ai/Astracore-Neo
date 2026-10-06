@@ -1,12 +1,18 @@
-// mbist.sv -- memory built-in self-test for sram_bank (drop 0.13): March C- over WORDS words.
+// mbist.sv -- memory built-in self-test for sram_bank (drop 0.13): March C- over WORDS words, by rows of LANES words since
+//   drop 0.28 (the 512-bit port): every element reads or writes a whole row, the data background in every lane, and a
+//   mismatch or a correction in any lane is the fault; fail_addr is the word address of the first failing lane.
 //   Elements: up(w0); up(r0,w1); up(r1,w0); down(r0,w1); down(r1,w0); up(r0), data background
 //   0x00000000 / 0xFFFFFFFF, then the same six elements with 0x55555555 / 0xAAAAAAAA to catch
 //   coupling faults between adjacent columns. The engine owns the bank's ports while running
 //   (bist_active), goes through the ECC encoder/decoder like normal traffic, and reports the first
 //   failing address. Scheduled by the safety island inside the FTTI on banks not in use.
 module mbist #(
-  parameter int AW    = 12,
-  parameter int WORDS = 4096
+  parameter int AW    = 12,                  // word address width (fail_addr)
+  parameter int WORDS = 4096,                // words tested, a multiple of LANES
+  parameter int LANES = 16,
+  parameter int ROWS  = WORDS / LANES,
+  parameter int RAW   = (ROWS > 1) ? $clog2(ROWS) : 1,
+  parameter int DW    = 32 * LANES
 )(
   input  logic          clk,
   input  logic          rst_n,
@@ -15,22 +21,26 @@ module mbist #(
   output logic          done,
   output logic          fail,
   output logic [AW-1:0] fail_addr,
-  // bank ports owned while active
-  output logic          we,
-  output logic [AW-1:0] waddr,
-  output logic [31:0]   wdata,
-  output logic          re,
-  output logic [AW-1:0] raddr,
-  input  logic [31:0]   rdata,
-  input  logic          rvalid,
-  input  logic          ce_now,           // the bank corrected this read: a stuck or weak bit, reported as a fault
-  output logic          fail_ce           // the failure was found by the ECC rather than by data mismatch
+  // bank ports owned while active (row addressed)
+  output logic             we,
+  output logic [RAW-1:0]   wrow,
+  output logic [LANES-1:0] wmask,
+  output logic [DW-1:0]    wdata,
+  output logic             re,
+  output logic [RAW-1:0]   rrow,
+  input  logic [DW-1:0]    rdata,
+  input  logic             rvalid,
+  input  logic [LANES-1:0] ce_lane,          // lanes the bank corrected on this read: a stuck or weak bit, reported as a fault
+  output logic             fail_ce           // the failure was found by the ECC rather than by data mismatch
 );
   localparam logic [2:0] S_IDLE = 3'd0, S_W = 3'd1, S_R = 3'd2, S_CHK = 3'd3, S_DONE = 3'd4;
   logic [2:0]    state;
   logic [3:0]    elem;            // 0..5 for background 0, 6..11 for background 0x55
-  logic [AW:0]   idx;             // position within the element
-  logic [AW-1:0] addr;
+  logic [RAW:0]  idx;             // position within the element (rows)
+  logic [RAW-1:0] addr;
+  logic [LANES-1:0] lane_bad;     // lanes whose data mismatched this read
+  logic [LANES-1:0] lane_hit;     // lanes that failed by mismatch or by correction
+  logic [3:0]    first_lane;
   logic [31:0]   bg, bg_inv;      // background and its complement
   logic          up;
   logic          has_read, has_write;
@@ -50,14 +60,21 @@ module mbist #(
       default: begin has_write = 1'b0; exp_rd = bg; end          // up: r0
     endcase
   end
-  assign addr   = up ? idx[AW-1:0] : (WORDS - 1 - idx[AW-1:0]);
+  assign addr   = up ? idx[RAW-1:0] : RAW'(ROWS - 1 - idx);
   assign active = (state != S_IDLE) && (state != S_DONE);
   assign done   = (state == S_DONE);
   assign re     = (state == S_R);
-  assign raddr  = addr;
+  assign rrow   = addr;
   assign we     = (state == S_W);
-  assign waddr  = addr;
-  assign wdata  = wr_val;
+  assign wrow   = addr;
+  assign wmask  = '1;
+  assign wdata  = {LANES{wr_val}};
+  always_comb begin
+    first_lane = 4'd0;
+    for (int l = 0; l < LANES; l++) lane_bad[l] = (rdata[32*l +: 32] != exp_rd);
+    lane_hit = lane_bad | ce_lane;
+    for (int l = LANES - 1; l >= 0; l--) if (lane_hit[l]) first_lane = 4'(l);
+  end
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -67,17 +84,19 @@ module mbist #(
         S_IDLE: if (start) begin elem <= '0; idx <= '0; fail <= 1'b0; fail_ce <= 1'b0; fail_addr <= '0; state <= has_read ? S_R : S_W; end
         S_R:    state <= S_CHK;                                  // rdata valid next cycle
         S_CHK: begin
-          if (rvalid && (rdata != exp_rd || ce_now) && !fail) begin fail <= 1'b1; fail_ce <= (rdata == exp_rd); fail_addr <= addr; end
+          if (rvalid && (lane_hit != '0) && !fail) begin
+            fail <= 1'b1; fail_ce <= (lane_bad == '0); fail_addr <= AW'(addr) * AW'(LANES) + AW'(first_lane);
+          end
           state <= has_write ? S_W : S_IDLE;                    // S_IDLE here means "advance" (see below)
           if (!has_write) begin
-            if (idx == WORDS - 1) begin
+            if (idx == ROWS - 1) begin
               if (elem == 4'd11) state <= S_DONE;
               else begin elem <= elem + 1; idx <= '0; state <= ((elem + 1) % 6 == 0) ? S_W : S_R; end
             end else begin idx <= idx + 1; state <= S_R; end
           end
         end
         S_W: begin
-          if (idx == WORDS - 1) begin
+          if (idx == ROWS - 1) begin
             if (elem == 4'd11) state <= S_DONE;
             else begin elem <= elem + 1; idx <= '0; state <= ((elem + 1) % 6 == 0) ? S_W : S_R; end
           end else begin idx <= idx + 1; state <= has_read ? S_R : S_W; end
