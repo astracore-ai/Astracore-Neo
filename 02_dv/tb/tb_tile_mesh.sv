@@ -46,7 +46,7 @@ module tb_tile_mesh;
       code = $fgets(line, fd);
       if (code > 0 && line.len() > 2) begin
         code = $sscanf(line, "@%h %h", addr, word39);
-        if (code == 2) dut.g_y[1].g_x[1].u_t.u_bank.u_bank.mem[addr] = word39;
+        if (code == 2) dut.g_y[1].g_x[1].u_t.u_bank.u_bank.mem[addr % 16][addr / 16] = word39;   // lane, row (drop 0.28)
       end
     end
     $fclose(fd);
@@ -68,7 +68,7 @@ module tb_tile_mesh;
     mism = 0;
     for (int m = 0; m < M; m++) begin
       for (int c = 0; c < COLS; c++) begin
-        word39 = dut.g_y[0].g_x[1].u_t.u_bank.u_bank.mem[R0 + m * (COLS + 1) + c];
+        word39 = dut.g_y[0].g_x[1].u_t.u_bank.u_bank.mem[(R0 + m * (COLS + 1) + c) % 16][(R0 + m * (COLS + 1) + c) / 16];
         if (word39[31:0] !== y_exp[m * COLS + c]) begin
           mism++;
           if (mism <= 5) $display("row %0d col %0d: got %0d expected %0d", m, c, $signed(word39[31:0]), $signed(y_exp[m * COLS + c]));

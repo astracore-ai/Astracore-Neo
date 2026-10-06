@@ -1,5 +1,5 @@
 // tile_mesh_cocotb.sv -- tile_mesh with packed host-bus and status ports, a bank backdoor, cycle-exact fault
-//   injection and router observation for cocotb (drop 0.27).
+//   injection and router observation for cocotb (drop 0.28: bank backdoors by lane and row).
 //   Ports: the simulator presents unpacked arrays of 1-bit ports to VPI as one packed register, so a Python
 //   testbench cannot index them; every per-tile port is packed into a vector: tile n occupies bit n (1-bit ports)
 //   or bits [n*W +: W] (W-bit ports).
@@ -101,9 +101,9 @@ module tile_mesh_cocotb #(
         // bank backdoor
         always_ff @(posedge clk) begin
           if (bd_we && (bd_node == tn))
-            u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[bd_addr[BAW-1:0]] <= bd_wdata;
+            u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[bd_addr[3:0]][bd_addr[BAW-1:4]] <= bd_wdata;   // lane, row (drop 0.28)
         end
-        assign bd_rd[tn] = u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[bd_addr[BAW-1:0]];
+        assign bd_rd[tn] = u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[bd_addr[3:0]][bd_addr[BAW-1:4]];
         // router observation
         assign ob_rv[tn] = {u_mesh.g_y[gy].g_x[gx].u_t.u_router.out_valid[4], u_mesh.g_y[gy].g_x[gx].u_t.u_router.out_valid[3],
                             u_mesh.g_y[gy].g_x[gx].u_t.u_router.out_valid[2], u_mesh.g_y[gy].g_x[gx].u_t.u_router.out_valid[1],
@@ -113,8 +113,8 @@ module tile_mesh_cocotb #(
         always_ff @(negedge clk) begin
           if (fi_en && (fi_node == tn)) begin
             case (fi_sel)
-              3'd1: u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[fi_idx[BAW-1:0]] <=
-                      u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[fi_idx[BAW-1:0]] | fi_mask[38:0];
+              3'd1: u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[fi_idx[3:0]][fi_idx[BAW-1:4]] <=
+                      u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[fi_idx[3:0]][fi_idx[BAW-1:4]] | fi_mask[38:0];
               3'd2: u_mesh.g_y[gy].g_x[gx].u_t.u_prog.mem[fi_idx[PAW-1:0]][0] <=
                       u_mesh.g_y[gy].g_x[gx].u_t.u_prog.mem[fi_idx[PAW-1:0]][0] ^ fi_mask[38:0];
               3'd3: u_mesh.g_y[gy].g_x[gx].u_t.u_host.cfg[fi_idx[4:0]] <=
