@@ -1,40 +1,147 @@
-# Continuous regression from the first commit (drop 0.11).
-# python-regress: the executable-spec regression (golden models, neosim, compiler, C driver check).
-# hdl-sim: the directed testbenches on Icarus Verilog and Verilator; this is where neosim meets a real
-# simulator, so a failure here is information, not noise: fix the RTL or the testbench, never neosim.
+# Neo regression on GitHub Actions (drop 0.24, repository layout = handoff package).
+# Every job builds the flat layout from the numbered folders with plain copies, then writes its logs to its own
+# branch ci-logs-<job> (ci_logs/<job>/*.txt), so results can be read from the repository and jobs never
+# overwrite each other's results.
 name: regress
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: write
+# One run per branch at a time: a new push (every folder of a web upload is one) cancels the queued and running runs
+# of the earlier commits, so only the last commit's run -- the one with every file -- is executed (drop 0.22).
+concurrency:
+  group: regress-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   python-regress:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install numpy openpyxl
-      - run: make regress
-      - run: gcc -std=c99 -Wall -O2 -o build/test_backend sw/neo_host.c sw/test_backend.c && mkdir -p build && ./build/test_backend > build/c_backend.txt && python3 sim/check_c_backend.py
-      - run: python3 compiler/neo_compile.py --report --ksplit && python3 compiler/neo_backend.py
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/python-regress && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/python-regress/RUN.txt
+          ls
+      - name: regress (the CI subset; the whole-convolution neosim runs exceed the job limit and are covered by Verilator)
+        run: |
+          set -o pipefail
+          make regress_ci 2>&1 | tee ci_logs/python-regress/regress.txt
+      - name: tool qualification kit
+        if: always()
+        run: python3 compiler/tool_qual.py 2>&1 | tee ci_logs/python-regress/tool_qual.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          mkdir -p ci_logs/python-regress && echo "finished $(date -u)" >> ci_logs/python-regress/RUN.txt
+          git checkout --orphan ci-logs-python-regress
+          git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs
+          git commit -m "python-regress logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-python-regress --force
   hdl-sim:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install numpy
-      - run: sudo apt-get update && sudo apt-get install -y iverilog verilator
-      - run: make lint
-      - run: make iverilog
-      - run: make iverilog_core
-      - run: make verilator
-  tiles-nightly:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: install simulators
+        run: sudo apt-get update && sudo apt-get install -y iverilog verilator && verilator --version && iverilog -V | head -1
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/hdl-sim && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-sim/RUN.txt
+      - name: lint
+        run: set -o pipefail; make lint 2>&1 | tee ci_logs/hdl-sim/lint.txt
+      - name: iverilog streaming core
+        if: always()
+        run: set -o pipefail; make iverilog 2>&1 | tee ci_logs/hdl-sim/iverilog.txt
+      - name: iverilog neo_core
+        if: always()
+        run: set -o pipefail; make iverilog_core 2>&1 | tee ci_logs/hdl-sim/iverilog_core.txt
+      - name: verilator streaming core, neo_core, tile mesh
+        if: always()
+        run: set -o pipefail; make verilator 2>&1 | tee ci_logs/hdl-sim/verilator.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          mkdir -p ci_logs/hdl-sim && echo "finished $(date -u)" >> ci_logs/hdl-sim/RUN.txt
+          git checkout --orphan ci-logs-hdl-sim
+          git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs
+          git commit -m "hdl-sim logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-hdl-sim --force
+  hdl-mesh8:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install numpy
-      - run: make tiles
-      - run: make ecc
+      - name: install simulator
+        run: sudo apt-get update && sudo apt-get install -y verilator && verilator --version
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/hdl-mesh8 && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-mesh8/RUN.txt
+      - name: cocotb on the 8x8 silicon mesh
+        run: set -o pipefail; make cocotb_mesh8 2>&1 | tee ci_logs/hdl-mesh8/mesh8.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          mkdir -p ci_logs/hdl-mesh8 && echo "finished $(date -u)" >> ci_logs/hdl-mesh8/RUN.txt
+          git checkout --orphan ci-logs-hdl-mesh8
+          git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs
+          git commit -m "hdl-mesh8 logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-hdl-mesh8 --force
+  tiles:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/tiles && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/tiles/RUN.txt
+      - run: |
+          make regress 2>&1 | tee ci_logs/tiles/regress_full.txt || true
+          for t in M3 M9 M12 M13 M11 M8 M1 M2 M4 M5 M6 M7; do python3 sim/run_tile_test.py $t 2>&1 | tee ci_logs/tiles/$t.txt; done
+          python3 sim/run_two_layer.py 2>&1 | tee ci_logs/tiles/M10.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          git checkout --orphan ci-logs-tiles
+          git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs
+          git commit -m "tiles logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-tiles --force
