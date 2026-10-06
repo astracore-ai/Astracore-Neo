@@ -323,7 +323,8 @@ def main():
     corrupted, n = False, 0
     while not mesh.prog_done[0].v:
         if not corrupted and valid_cell.v and ((flit_cell.v >> TYPE_SHIFT) & 7) == T_RDRSP and n > 30:
-            flit_cell.v ^= 1 << 9                     # payload bit, after the ingress router's parity check
+            last_word = (flit_cell.v >> (TYPE_SHIFT - 21)) & 0x3F   # words carried - 1 (0 with one word per flit)
+            flit_cell.v ^= 1 << (32 * last_word + 9)   # payload bit of the flit's last, still unconsumed word (drop 0.27)
             mesh.d.settle()
             corrupted = True
         mesh.tick()
