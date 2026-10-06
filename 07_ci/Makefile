@@ -24,6 +24,7 @@
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
 # make verilator  : Verilator: streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then cocotb: M1-M13 and M10 at 16x8/8x8, M1-M13 and C1 on the 32x32 silicon configuration (drop 0.21)
 # make cocotb_mesh8 : cocotb on Verilator: the mesh-level tests on the silicon mesh, 8x8 tiles of 32x32 cores with 2 MB banks (drop 0.24; its own CI job)
+# make cocotb_coverage : the coverage report (drop 0.26): 16x8 suite, M10 and C1 with Verilator line/toggle coverage + functional covergroups
 # make perf2      : 64-core event model with mesh and bank contention (compiler/neo_perf_v2.py)
 # make regress    : everything above that is self-checking (model, RTL v0.1/v0.2/core/NoC, compiler); hours under neosim
 # make regress_ci : the subset that finishes in minutes (drop 0.24); CI's python-regress job runs this -- the whole-convolution
@@ -42,11 +43,11 @@ RTL := rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
        rtl/act_feeder.sv rtl/acc_bank.sv rtl/neo_mac_core_v02.sv \
        rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv
 NOC := rtl/noc_router.sv rtl/noc_mesh.sv
-TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/neo_tile.sv rtl/tile_mesh.sv
+TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/link_pack.sv rtl/neo_tile.sv rtl/tile_mesh.sv
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist two_layer xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist two_layer xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_coverage
 
 all: regress model
 
@@ -186,7 +187,15 @@ cocotb_tiles:
 	-$(MAKE) -C dv/cocotb tile8
 	-$(MAKE) -C dv/cocotb tile32
 	-$(MAKE) -C dv/cocotb core32
+	-$(MAKE) cocotb_coverage
 	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml
+
+# the coverage report (drop 0.26, item 5): the 16x8 suite, M10 and C1 rebuilt with Verilator line/toggle coverage and the
+# functional covergroups on; the report and the raw data land in ci_logs/hdl-sim/, which the CI job publishes
+cocotb_coverage:
+	-$(MAKE) -C dv/cocotb coverage
+	mkdir -p ci_logs/hdl-sim
+	-cp dv/cocotb/coverage_report.md dv/cocotb/coverage_*.dat dv/cocotb/funcov_*.yml ci_logs/hdl-sim/ 2>/dev/null
 
 # the 8x8 silicon mesh under cocotb (drop 0.24): a 64-tile Verilator build, run by the hdl-mesh8 job so the hdl-sim job stays short
 cocotb_mesh8:
