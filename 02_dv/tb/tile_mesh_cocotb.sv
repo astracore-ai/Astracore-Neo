@@ -1,5 +1,5 @@
 // tile_mesh_cocotb.sv -- tile_mesh with packed host-bus and status ports, a bank backdoor, cycle-exact fault
-//   injection and router observation for cocotb (drop 0.21).
+//   injection and router observation for cocotb (drop 0.22).
 //   Ports: the simulator presents unpacked arrays of 1-bit ports to VPI as one packed register, so a Python
 //   testbench cannot index them; every per-tile port is packed into a vector: tile n occupies bit n (1-bit ports)
 //   or bits [n*W +: W] (W-bit ports).
@@ -13,6 +13,8 @@ module tile_mesh_cocotb #(
   parameter int NX = 2, NY = 2, ROWS = 16, COLS = 8, PW = 32,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
   parameter int FETCH_TIMEOUT = 8192, BIST_WORDS = 16,
+  parameter int PDEPTH = 32,                 // program memory entries, as neo_tile's default (drop 0.22)
+  parameter int PAW = $clog2(PDEPTH),
   parameter int N = NX * NY,
   parameter int NW = (N > 1) ? $clog2(N) : 1,
   parameter int XW = (NX > 1) ? $clog2(NX) : 1,
@@ -111,8 +113,8 @@ module tile_mesh_cocotb #(
             case (fi_sel)
               3'd1: u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[fi_idx[BAW-1:0]] <=
                       u_mesh.g_y[gy].g_x[gx].u_t.u_bank.u_bank.mem[fi_idx[BAW-1:0]] | fi_mask[38:0];
-              3'd2: u_mesh.g_y[gy].g_x[gx].u_t.u_prog.mem[fi_idx[3:0]][0] <=
-                      u_mesh.g_y[gy].g_x[gx].u_t.u_prog.mem[fi_idx[3:0]][0] ^ fi_mask[38:0];
+              3'd2: u_mesh.g_y[gy].g_x[gx].u_t.u_prog.mem[fi_idx[PAW-1:0]][0] <=
+                      u_mesh.g_y[gy].g_x[gx].u_t.u_prog.mem[fi_idx[PAW-1:0]][0] ^ fi_mask[38:0];
               3'd3: u_mesh.g_y[gy].g_x[gx].u_t.u_host.cfg[fi_idx[4:0]] <=
                       u_mesh.g_y[gy].g_x[gx].u_t.u_host.cfg[fi_idx[4:0]] ^ fi_mask[15:0];
               3'd4: u_mesh.g_y[gy].g_x[gx].u_t.u_dma.pc <= u_mesh.g_y[gy].g_x[gx].u_t.u_dma.pc ^ fi_mask[3:0];
