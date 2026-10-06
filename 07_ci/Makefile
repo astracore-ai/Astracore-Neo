@@ -20,6 +20,7 @@
 # make backend    : compiler backend: static compilation of YOLOv8-m to tile programs on the 8x8 mesh
 # make cdriver    : build the C host driver and check it emits the Python backend's programs word for word
 # make mbist      : March C- MBIST on an ECC bank (standalone) -- the tile-level version is M11 in run_tiles.py
+# make nic        : the tile interface's bank-side paths at 16 words per cycle (writeback, serve, packer/unpacker; drop 0.29)
 # make two_layer  : M10: two layers back to back on the mesh with INT8 handoff through the bank
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
 # make verilator  : Verilator: streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then cocotb: M1-M13 and M10 at 16x8/8x8, M1-M13 and C1 on the 32x32 silicon configuration (drop 0.21)
@@ -43,11 +44,11 @@ RTL := rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
        rtl/act_feeder.sv rtl/acc_bank.sv rtl/neo_mac_core_v02.sv \
        rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv
 NOC := rtl/noc_router.sv rtl/noc_mesh.sv
-TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/bank_word_port.sv rtl/crc16_word.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/link_pack.sv rtl/neo_tile.sv rtl/tile_mesh.sv
+TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/crc16_beat.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/link_pack.sv rtl/neo_tile.sv rtl/tile_mesh.sv
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist two_layer xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_coverage
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_coverage
 
 all: regress model
 
@@ -88,6 +89,9 @@ ecc:
 
 mbist:
 	python3 sim/run_mbist.py
+
+nic:
+	python3 sim/run_nic.py
 
 two_layer:
 	python3 sim/run_two_layer.py
@@ -141,6 +145,7 @@ regress: vectors
 	python3 sim/run_requant.py
 	python3 sim/run_ksplit.py
 	python3 sim/run_mbist.py
+	python3 sim/run_nic.py
 	$(MAKE) cdriver
 
 regress_ci: vectors
@@ -151,6 +156,7 @@ regress_ci: vectors
 	python3 sim/run_noc.py
 	python3 sim/run_requant.py
 	python3 sim/run_mbist.py
+	python3 sim/run_nic.py
 	$(MAKE) cdriver
 
 iverilog: vectors
