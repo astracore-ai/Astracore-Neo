@@ -1,6 +1,6 @@
-# Compiler tool-qualification kit report (2026-10-05, drop 0.16)
+# Compiler tool-qualification kit report (2026-10-06, drop 0.21)
 
-122/122 cases passed in 1.4 s.
+120/122 cases passed in 0.7 s.
 
 **Tool confidence argument.** TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model (lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool error cannot reach silicon undetected; the compiler itself therefore needs no further qualification beyond this kit and the project's configuration management (ISO 26262-8 11.4.5).
 
@@ -76,7 +76,7 @@
 | TQ2-007 | program emission structure | h=9 w=10 cin=190 cout=36 k=3 s=1 p=1 mesh=8 shares=4 oy0=0 oy_n=6 | PASS | 4 tile programs |
 | TQ2-008 | program emission structure | h=35 w=11 cin=81 cout=23 k=1 s=2 p=0 mesh=2 shares=1 oy0=2 oy_n=15 | PASS | 1 tile programs |
 | TQ2-009 | program emission structure | h=14 w=33 cin=49 cout=59 k=3 s=2 p=1 mesh=2 shares=1 oy0=4 oy_n=2 | PASS | 1 tile programs |
-| TQ2-010 | program emission structure | h=39 w=37 cin=194 cout=17 k=1 s=1 p=0 mesh=8 shares=1 oy0=4 oy_n=27 | PASS | 1 tile programs |
+| TQ2-010 | program emission structure | h=39 w=37 cin=194 cout=17 k=1 s=1 p=0 mesh=8 shares=1 oy0=4 oy_n=27 | FAIL | program of 19 words exceeds the 16-word program memory |
 | TQ2-011 | program emission structure | h=12 w=38 cin=5 cout=54 k=3 s=1 p=1 mesh=2 shares=2 oy0=5 oy_n=4 | PASS | 2 tile programs |
 | TQ2-012 | program emission structure | h=5 w=22 cin=196 cout=24 k=1 s=2 p=0 mesh=2 shares=4 oy0=0 oy_n=2 | PASS | 4 tile programs |
 | TQ2-013 | program emission structure | h=26 w=5 cin=52 cout=10 k=3 s=2 p=1 mesh=2 shares=1 oy0=4 oy_n=8 | PASS | 1 tile programs |
@@ -107,7 +107,7 @@
 | TQ2-038 | program emission structure | h=30 w=12 cin=23 cout=63 k=1 s=2 p=0 mesh=8 shares=2 oy0=0 oy_n=7 | PASS | 1 tile programs |
 | TQ2-039 | program emission structure | h=29 w=36 cin=60 cout=37 k=1 s=2 p=0 mesh=8 shares=3 oy0=2 oy_n=1 | PASS | 2 tile programs |
 | TQ2-040 | program emission structure | h=29 w=12 cin=149 cout=26 k=1 s=1 p=0 mesh=8 shares=4 oy0=13 oy_n=6 | PASS | 4 tile programs |
-| TQ2-041 | program emission structure | h=27 w=28 cin=144 cout=22 k=3 s=2 p=1 mesh=2 shares=1 oy0=0 oy_n=14 | PASS | 1 tile programs |
+| TQ2-041 | program emission structure | h=27 w=28 cin=144 cout=22 k=3 s=2 p=1 mesh=2 shares=1 oy0=0 oy_n=14 | FAIL | program of 18 words exceeds the 16-word program memory |
 | TQ2-042 | program emission structure | h=30 w=17 cin=68 cout=16 k=3 s=1 p=1 mesh=8 shares=4 oy0=0 oy_n=26 | PASS | 4 tile programs |
 | TQ2-043 | program emission structure | h=17 w=15 cin=132 cout=40 k=1 s=2 p=0 mesh=8 shares=4 oy0=1 oy_n=7 | PASS | 4 tile programs |
 | TQ2-044 | program emission structure | h=31 w=14 cin=72 cout=13 k=1 s=2 p=0 mesh=2 shares=3 oy0=0 oy_n=14 | PASS | 3 tile programs |
