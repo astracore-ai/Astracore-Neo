@@ -1,5 +1,5 @@
 // tile_mesh_cocotb.sv -- tile_mesh with packed host-bus and status ports, a bank backdoor, cycle-exact fault
-//   injection and router observation for cocotb (drop 0.22).
+//   injection and router observation for cocotb (drop 0.25).
 //   Ports: the simulator presents unpacked arrays of 1-bit ports to VPI as one packed register, so a Python
 //   testbench cannot index them; every per-tile port is packed into a vector: tile n occupies bit n (1-bit ports)
 //   or bits [n*W +: W] (W-bit ports).
@@ -20,7 +20,9 @@ module tile_mesh_cocotb #(
   parameter int XW = (NX > 1) ? $clog2(NX) : 1,
   parameter int YW = (NY > 1) ? $clog2(NY) : 1,
   parameter int DW = 64,
-  parameter int FW = 1 + 2 * (XW + YW) + 8 + DW,
+  parameter int WPF = 1,                     // words per link flit (drop 0.25)
+  parameter int DWL = 32 + 32 * WPF,
+  parameter int FW = 1 + 2 * (XW + YW) + 8 + DWL,     // the link flit, as the router sees it
   parameter int BAW = $clog2(BANK_DEPTH)
 )(
   input  logic          clk,
@@ -84,7 +86,7 @@ module tile_mesh_cocotb #(
     end
   endgenerate
 
-  tile_mesh #(.NX(NX), .NY(NY), .XW(XW), .YW(YW), .DW(DW), .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS),
+  tile_mesh #(.NX(NX), .NY(NY), .XW(XW), .YW(YW), .DW(DW), .WPF(WPF), .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS),
               .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT),
               .BIST_WORDS(BIST_WORDS)) u_mesh (
     .clk(clk), .rst_n(rst_n),
