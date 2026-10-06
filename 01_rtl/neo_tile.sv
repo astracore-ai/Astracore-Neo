@@ -1,7 +1,10 @@
 // neo_tile.sv -- one mesh node (drop 0.7): router + tile interface + local bank + neo_core.
 module neo_tile #(
   parameter int XW = 2, YW = 2, NX = 2, NY = 2, DW = 64,
-  parameter int FW = 1 + 2 * (XW + YW) + 8 + DW,
+  parameter int FW = 1 + 2 * (XW + YW) + 8 + DW,     // the tile interface's flit (one word)
+  parameter int WPF = 1,                     // words per link flit (drop 0.25): 1 as simulated before, 32 = the 1024-bit links
+  parameter int DWL = 32 + 32 * WPF,
+  parameter int FWL = 1 + 2 * (XW + YW) + 8 + DWL,   // the link flit (router ports, mesh links)
   parameter int MY_X = 0, MY_Y = 0,
   parameter int ROWS = 16, COLS = 8, PW = 32,
   parameter int WCW = 8 + $clog2(ROWS) + 1,
@@ -16,10 +19,10 @@ module neo_tile #(
   input  logic          rst_n,
   // mesh links (router ports 0..3 = N, E, S, W)
   input  logic          in_valid  [4],
-  input  logic [FW-1:0] in_flit   [4],
+  input  logic [FWL-1:0] in_flit  [4],
   output logic          in_ready  [4],
   output logic          out_valid [4],
-  output logic [FW-1:0] out_flit  [4],
+  output logic [FWL-1:0] out_flit [4],
   input  logic          out_ready [4],
   // host register bus (host_if inside; see rtl/host_if.sv for the map)
   input  logic          h_we,
@@ -64,10 +67,10 @@ module neo_tile #(
 
   // router <-> NIC local port
   logic          r_in_valid  [5];
-  logic [FW-1:0] r_in_flit   [5];
+  logic [FWL-1:0] r_in_flit  [5];
   logic          r_in_ready  [5];
   logic          r_out_valid [5];
-  logic [FW-1:0] r_out_flit  [5];
+  logic [FWL-1:0] r_out_flit [5];
   logic          r_out_ready [5];
   generate
     for (genvar p = 0; p < 4; p++) begin : g_p
@@ -80,11 +83,21 @@ module neo_tile #(
     end
   endgenerate
 
-  noc_router #(.XW(XW), .YW(YW), .DW(DW), .FW(FW), .MY_X(MY_X), .MY_Y(MY_Y)) u_router (
+  noc_router #(.XW(XW), .YW(YW), .DW(DWL), .FW(FWL), .MY_X(MY_X), .MY_Y(MY_Y)) u_router (
     .clk(clk), .rst_n(rst_n),
     .in_valid(r_in_valid), .in_flit(r_in_flit), .in_ready(r_in_ready),
     .out_valid(r_out_valid), .out_flit(r_out_flit), .out_ready(r_out_ready),
     .err_clear(err_clear), .parity_err_sticky(parity_err));
+
+  // the link layer (drop 0.25): WPF words per flit on the router side, one word per flit on the interface side
+  logic          nic_tx_valid, nic_tx_ready, nic_rx_valid, nic_rx_ready;
+  logic [FW-1:0] nic_tx_flit, nic_rx_flit;
+  link_packer #(.XW(XW), .YW(YW), .DW(DW), .WPF(WPF)) u_pack (
+    .clk(clk), .rst_n(rst_n), .core_valid(nic_tx_valid), .core_flit(nic_tx_flit), .core_ready(nic_tx_ready),
+    .link_valid(r_in_valid[4]), .link_flit(r_in_flit[4]), .link_ready(r_in_ready[4]));
+  link_unpacker #(.XW(XW), .YW(YW), .DW(DW), .WPF(WPF)) u_unpack (
+    .clk(clk), .rst_n(rst_n), .link_valid(r_out_valid[4]), .link_flit(r_out_flit[4]), .link_ready(r_out_ready[4]),
+    .core_valid(nic_rx_valid), .core_flit(nic_rx_flit), .core_ready(nic_rx_ready));
 
   // bank
   logic          b_we, b_re, b_rvalid;
@@ -171,8 +184,8 @@ module neo_tile #(
              .ROWS(ROWS), .COLS(COLS), .WCW(WCW), .IDXW(IDXW), .AW(AW), .WAW(WAW), .BAW(BAW), .PW(PW),
              .DFD(ACC_ROWS), .FETCH_TIMEOUT(FETCH_TIMEOUT)) u_nic (
     .clk(clk), .rst_n(rst_n),
-    .rx_valid(r_out_valid[4]), .rx_flit(r_out_flit[4]), .rx_ready(r_out_ready[4]),
-    .tx_valid(r_in_valid[4]), .tx_flit(r_in_flit[4]), .tx_ready(r_in_ready[4]),
+    .rx_valid(nic_rx_valid), .rx_flit(nic_rx_flit), .rx_ready(nic_rx_ready),
+    .tx_valid(nic_tx_valid), .tx_flit(nic_tx_flit), .tx_ready(nic_tx_ready),
     .b_we(b_we), .b_waddr(b_waddr), .b_wdata(b_wdata), .b_re(b_re), .b_raddr(b_raddr), .b_rdata(b_rdata), .b_rvalid(b_rvalid),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata),
     .wbuf_we(wbuf_we), .wbuf_waddr(wbuf_waddr), .wbuf_wdata(wbuf_wdata), .wcbuf_wdata(wcbuf_wdata),

@@ -1,7 +1,9 @@
 // tile_mesh.sv -- NX x NY neo_tile mesh (drop 0.7); host ports exposed per tile, edges terminated.
 module tile_mesh #(
   parameter int NX = 2, NY = 2, XW = 2, YW = 2, DW = 64,
-  parameter int FW = 1 + 2 * (XW + YW) + 8 + DW,
+  parameter int WPF = 1,                     // words per link flit (drop 0.25): 32 = the 1024-bit links
+  parameter int DWL = 32 + 32 * WPF,
+  parameter int FW = 1 + 2 * (XW + YW) + 8 + DWL,     // the link flit
   parameter int ROWS = 16, COLS = 8, PW = 32,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
   parameter int IDXW = $clog2(ACC_ROWS),
@@ -45,7 +47,7 @@ module tile_mesh #(
     for (genvar y = 0; y < NY; y++) begin : g_y
       for (genvar x = 0; x < NX; x++) begin : g_x
         localparam int n = y * NX + x;
-        neo_tile #(.XW(XW), .YW(YW), .NX(NX), .NY(NY), .DW(DW), .FW(FW), .MY_X(x), .MY_Y(y),
+        neo_tile #(.XW(XW), .YW(YW), .NX(NX), .NY(NY), .DW(DW), .WPF(WPF), .MY_X(x), .MY_Y(y),
                    .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH),
                    .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT), .BIST_WORDS(BIST_WORDS)) u_t (
           .clk(clk), .rst_n(rst_n),

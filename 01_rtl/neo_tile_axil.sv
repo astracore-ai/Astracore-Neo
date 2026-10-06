@@ -1,7 +1,7 @@
 // neo_tile_axil.sv -- neo_tile with an AXI4-Lite host port (drop 0.15): the integration view of one tile.
 module neo_tile_axil #(
-  parameter int XW = 2, YW = 2, NX = 2, NY = 2, DW = 64,
-  parameter int FW = 1 + 2 * (XW + YW) + 8 + DW,
+  parameter int XW = 2, YW = 2, NX = 2, NY = 2, DW = 64, WPF = 1,   // WPF words per link flit (drop 0.25)
+  parameter int FW = 1 + 2 * (XW + YW) + 8 + 32 + 32 * WPF,          // the link flit
   parameter int MY_X = 0, MY_Y = 0,
   parameter int ROWS = 16, COLS = 8, PW = 32,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
@@ -31,7 +31,7 @@ module neo_tile_axil #(
     .s_wready(s_wready), .s_bresp(s_bresp), .s_bvalid(s_bvalid), .s_bready(s_bready),
     .s_araddr(s_araddr), .s_arvalid(s_arvalid), .s_arready(s_arready), .s_rdata(s_rdata), .s_rresp(s_rresp), .s_rvalid(s_rvalid), .s_rready(s_rready),
     .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata));
-  neo_tile #(.XW(XW), .YW(YW), .NX(NX), .NY(NY), .DW(DW), .FW(FW), .MY_X(MY_X), .MY_Y(MY_Y), .ROWS(ROWS), .COLS(COLS), .PW(PW),
+  neo_tile #(.XW(XW), .YW(YW), .NX(NX), .NY(NY), .DW(DW), .WPF(WPF), .MY_X(MY_X), .MY_Y(MY_Y), .ROWS(ROWS), .COLS(COLS), .PW(PW),
              .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH),
              .FETCH_TIMEOUT(FETCH_TIMEOUT), .BIST_WORDS(BIST_WORDS)) u_tile (
     .clk(clk), .rst_n(rst_n),
