@@ -1,4 +1,4 @@
-"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.24.
+"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.25.
 
 Ports of sim/run_tiles.py's M-tests, driven the way the island's firmware drives a tile: everything through the
 host register bus (program, descriptor, start, status, causes), banks loaded and read through the wrapper's
@@ -24,6 +24,7 @@ Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_
      make -C dv/cocotb tile32 (the silicon core and depths: 32x32 cores, ACC_ROWS 512, ABUF 2048, WBUF 1024, 2 MB banks,
                               FETCH_TIMEOUT 65535: two 4,095-word fetches queued at one bank take more than 8,192 cycles)
      make -C dv/cocotb mesh8  (the silicon mesh: 8x8 tiles of the above; the tests use tiles (0,0), (1,0), (0,1), (1,1), M14 the first rows)
+     tile32 and mesh8 build with WPF=32, the 1024-bit links (drop 0.25): the same tests, 32 words per flit on the mesh
 The geometry and the fetch timeout come from the environment (NEO_NX, NEO_NY, NEO_ROWS, NEO_COLS,
 NEO_FETCH_TIMEOUT), exported by the Makefile to match its -G parameters; test_two_layer.py (M10) reuses the
 harness on the 8x8-core build. The convolution keeps three channel tiles at any core size (CIN = 2.5*ROWS, the
@@ -47,6 +48,9 @@ OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE = 9, 10, 11
 NX, NY = int(os.environ.get("NEO_NX", "2")), int(os.environ.get("NEO_NY", "2"))
 ROWS, COLS = int(os.environ.get("NEO_ROWS", "16")), int(os.environ.get("NEO_COLS", "8"))
 FETCH_TIMEOUT = int(os.environ.get("NEO_FETCH_TIMEOUT", "8192"))     # cycles; must match the build's -GFETCH_TIMEOUT
+WPF = int(os.environ.get("NEO_WPF", "1"))                            # words per link flit (drop 0.25); must match -GWPF
+DWL = 32 + 32 * WPF                                                  # link payload: {type[2:0], tag[8:0], hdr[19:0], words}
+TYPE_SHIFT = DWL - 3                                                 # the flit type at the top of the payload (bit 61 with one word)
 WCW = 8 + (ROWS - 1).bit_length() + 1
 WPA, WPW = ROWS * 8 // 32, (COLS * 8 + WCW + 31) // 32
 REG_CTRL, REG_STATUS, REG_PROG_ADDR, REG_PROG_LO, REG_PROG_HI, REG_ERR_MASK, REG_ERR_CAUSE = 0, 1, 2, 3, 4, 5, 6
@@ -389,7 +393,7 @@ async def corrupt_local_response(mesh, dut, sel, mask, tag):
             dut.fi_en.value = 0                                   # the fault was applied at the last falling edge
         if mesh.prog_done(0):
             break
-        if not applied and n > 40 and mesh.router_valid(4) and ((mesh.router_flit4() >> 61) & 7) == T_RDRSP:
+        if not applied and n > 40 and mesh.router_valid(4) and ((mesh.router_flit4() >> TYPE_SHIFT) & 7) == T_RDRSP:
             dut.fi_en.value = 1
             applied = True
         n += 1
