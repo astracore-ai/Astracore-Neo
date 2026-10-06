@@ -1,4 +1,4 @@
-"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.21.
+"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.22.
 
 Ports of sim/run_tiles.py's M-tests, driven the way the island's firmware drives a tile: everything through the
 host register bus (program, descriptor, start, status, causes), banks loaded and read through the wrapper's
@@ -21,8 +21,8 @@ Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_
      make -C dv/cocotb tile32 (the silicon core and depths: 32x32 cores, ACC_ROWS 512, ABUF 2048, WBUF 1024, 2 MB banks)
 The geometry and the fetch timeout come from the environment (NEO_NX, NEO_NY, NEO_ROWS, NEO_COLS,
 NEO_FETCH_TIMEOUT), exported by the Makefile to match its -G parameters; test_two_layer.py (M10) reuses the
-harness on the 8x8-core build. The convolution keeps three channel tiles at any core size (CIN = 3*ROWS - 8, the
-last tile partly filled), the bank layout follows the entry sizes, and weights are fetched one channel tile per
+harness on the 8x8-core build. The convolution keeps three channel tiles at any core size (CIN = 2.5*ROWS, the
+last half filled), the bank layout follows the entry sizes, and weights are fetched one channel tile per
 DMA instruction (the length field is 12 bits: one 32x32 tile is 2,592 words).
 Timing notes (Verilator): after `await RisingEdge(clk)` every signal already shows its post-edge value, and a
 value written then is applied in the same time step, i.e. it is seen by the falling edge that follows and by the
@@ -52,7 +52,7 @@ CAUSE_PROG_CE, CAUSE_CTRL_PATH, CAUSE_ISO, CAUSE_TIMEOUT, CAUSE_LOST, CAUSE_BIST
 CFG_ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_ct0",
              "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1"]
 T_RDRSP = 2
-CIN = 3 * ROWS - 8                                   # 40 channels at 16 rows, 88 at 32: three channel tiles, the last partly filled
+CIN = 2 * ROWS + ROWS // 2                           # 40 channels at 16 rows (20 at 8, 80 at 32): two and a half channel tiles, so three, the last half filled
 CT_N = (CIN + ROWS - 1) // ROWS
 assert CT_N == 3, "the suite is written for three channel tiles (M2 gives one to each of three tiles)"
 APT, WPT = 36 * WPA, 9 * ROWS * WPW                  # bank words per activation tile (36 pixels) and per weight tile (9 runs x ROWS entries)
@@ -624,7 +624,7 @@ async def m11_mbist_via_registers(dut):
     mesh.fault_release()
     st = await mesh.reg_read(0, REG_MBIST)
     c = await mesh.reg_read(0, REG_ERR_CAUSE)
-    assert (st & 0xE) == 0xE and (st >> 16) == 11 and (c >> CAUSE_BIST) & 1 == 1 and mesh.pins()[0] == 1, f"M11 status 0x{st:08x} cause 0x{c:05x}"
+    assert (st & 0xE) == 0xE and (st >> 12) == 11 and (c >> CAUSE_BIST) & 1 == 1 and mesh.pins()[0] == 1, f"M11 status 0x{st:08x} cause 0x{c:05x}"   # address at [31:12] (drop 0.22)
     fc.sample_flag("bist_fail")
     dut._log.info(f"M11: MBIST clean (0x{st_clean:x}); stuck bit found through the ECC at word 11, cause and pin raised")
 
