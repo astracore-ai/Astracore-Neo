@@ -35,7 +35,7 @@ sparsity engine planned for the second release.
 | Operators | 2-D convolution (any kernel, stride, padding), GEMM, depthwise, pooling, elementwise and activation through the requantization stage; transformer attention through GEMM; op set frozen as a static graph for tool qualification |
 | Per-tile memory | 2 MB SECDED bank, 64 KB activation buffer with regions, 1,024-entry weight buffer with per-lane SECDED, 512-row INT32 accumulator |
 | Interconnect | 2-D mesh, 1024-bit links, XY routing, flit parity, per-message CRC-16 with word count, fetch timeout, RDY flow control for reductions |
-| Programming | per-tile 16-entry DMA program (fetch, drain INT32/INT8, go, waits, notify) and a 21-register descriptor; host register map (8-bit address, 32-bit data), AXI-Lite/APB wrapper |
+| Programming | per-tile 32-entry DMA program (fetch, drain INT32/INT8, go, waits, notify) and a 21-register descriptor; host register map (8-bit address, 32-bit data), AXI-Lite/APB wrapper |
 | Host interfaces | register bus per tile or through an aggregator; data through the licensee's NoC into the banks (AXI bridge in release 1) |
 | Safety | SEooC, ASIL-B(D) HW metrics target for the block (SPFM ≥ 99 %, LFM ≥ 90 %, PMHF < 1 FIT per tile), ASIL-D systematic process; error pin and cause registers for the licensee's safety island; FTTI detect ≤ 10 ms |
 | Test | March C− MBIST per bank, checker self-test, scan-ready; LBIST via the licensee's DFT flow |
