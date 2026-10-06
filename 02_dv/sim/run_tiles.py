@@ -609,10 +609,10 @@ def main():
             break
     st_stuck = mesh.reg_read(0, REG_MBIST)
     cause_stuck = mesh.reg_read(0, REG_ERR_CAUSE)
-    ok11 = ((st_clean & 0xE) == 0x2 and cause_clean == 0 and (st_stuck & 0xE) == 0xE and (st_stuck >> 16) == 11
+    ok11 = ((st_clean & 0xE) == 0x2 and cause_clean == 0 and (st_stuck & 0xE) == 0xE and (st_stuck >> 12) == 11
             and (cause_stuck >> 14) & 1 == 1 and mesh.err_pin[0].v == 1)
     print(f"  M11: bank MBIST through registers (16 words): clean -> status 0x{st_clean:x} (done, no fail), cause 0x{cause_clean:x}; "
-          f"stuck bit at word 11 -> status 0x{st_stuck:08x} (fail, found by ECC, addr {st_stuck >> 16}), cause bit 14={(cause_stuck >> 14) & 1}, "
+          f"stuck bit at word 11 -> status 0x{st_stuck:08x} (fail, found by ECC, addr {st_stuck >> 12}), cause bit 14={(cause_stuck >> 14) & 1}, "
           f"error pin {mesh.err_pin[0].v} -> {'PASS' if ok11 else 'FAIL'} ({time.time() - t0:.0f} s)")
     fails += not ok11
 
