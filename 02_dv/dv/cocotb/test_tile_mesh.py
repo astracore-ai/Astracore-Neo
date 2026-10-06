@@ -1,4 +1,4 @@
-"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.23.
+"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.24.
 
 Ports of sim/run_tiles.py's M-tests, driven the way the island's firmware drives a tile: everything through the
 host register bus (program, descriptor, start, status, causes), banks loaded and read through the wrapper's
@@ -17,9 +17,13 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
   M11 bank MBIST through the registers: clean pass, then a stuck bit found by the ECC with its address
   M12 control path: program-memory SECDED, duplicated descriptor registers, lockstep DMA engines
   M13 spatial partitions: a cross-partition fetch is dropped and flagged; inside one partition it is clean
+  M14 bank contention (meshes of 16 tiles or more): as many tiles as the build's fetch watchdog admits (14 at 65,535, up to 15)
+      fetch a maximal entry-aligned chunk each from one bank at the same time; every fetch completes with no cause raised,
+      and the longest wait is reported against the watchdog
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
      make -C dv/cocotb tile32 (the silicon core and depths: 32x32 cores, ACC_ROWS 512, ABUF 2048, WBUF 1024, 2 MB banks,
                               FETCH_TIMEOUT 65535: two 4,095-word fetches queued at one bank take more than 8,192 cycles)
+     make -C dv/cocotb mesh8  (the silicon mesh: 8x8 tiles of the above; the tests use tiles (0,0), (1,0), (0,1), (1,1), M14 the first rows)
 The geometry and the fetch timeout come from the environment (NEO_NX, NEO_NY, NEO_ROWS, NEO_COLS,
 NEO_FETCH_TIMEOUT), exported by the Makefile to match its -G parameters; test_two_layer.py (M10) reuses the
 harness on the 8x8-core build. The convolution keeps three channel tiles at any core size (CIN = 2.5*ROWS, the
@@ -72,6 +76,14 @@ FI_NONE, FI_BANK_OR, FI_PROG_XOR, FI_CFG_XOR, FI_PC_XOR, FI_FLIT_XOR, FI_VALID_C
 
 def xy(n):
     return n % NX, n // NX
+
+
+def node(x, y):
+    return y * NX + x
+
+
+# the four tiles the suite uses, by coordinates, so the same tests run on any NX x NY mesh (nodes 0, 1, 2, 3 on 2x2)
+N00, N10, N01, N11 = node(0, 0), node(1, 0), node(0, 1), node(1, 1)
 
 
 def causes_str(c):
@@ -326,7 +338,7 @@ async def check_result(mesh, got, ref, tag):
 async def m1_fetch_compute_writeback(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
+    await mesh.load_bank(N11, act, wts)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
     prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
     prog += fetch_weights(1, 1) + [ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
@@ -334,7 +346,7 @@ async def m1_fetch_compute_writeback(dut):
     await mesh.start([0])
     n = await mesh.wait_prog(0)
     await mesh.tick(40)
-    got = to_image(await mesh.read_rows(1, R0, 36), ref, 36)
+    got = to_image(await mesh.read_rows(N10, R0, 36), ref, 36)
     await check_result(mesh, got, ref, "M1")
     await expect_clean(mesh)
     fc.sample_drain("int32")
@@ -345,8 +357,8 @@ async def m1_fetch_compute_writeback(dut):
 async def m2_ksplit_rdy(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
-    owner, contribs = 0, [1, 2]
+    await mesh.load_bank(N11, act, wts)
+    owner, contribs = N00, [N10, N01]
     for n, ct in ((owner, 0), (contribs[0], 1), (contribs[1], 2)):
         await mesh.descriptor(n, 6, 6, 6, 6, 1, 1, 3, CT_N, ct, 9, 2 if n == owner else 0, 36)
         fetch = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36), ins(OP_FETCH_W, 1, 1, W0 + ct * WPT, WPT, 0)]
@@ -359,7 +371,7 @@ async def m2_ksplit_rdy(dut):
     await mesh.start([owner, *contribs])
     n = await mesh.wait_prog(owner)
     await mesh.tick(40)
-    got = to_image(await mesh.read_rows(3, R0, 36), ref, 36)
+    got = to_image(await mesh.read_rows(N11, R0, 36), ref, 36)
     await check_result(mesh, got, ref, "M2")
     await expect_clean(mesh)
     fc.sample_drain("psum")
@@ -390,7 +402,7 @@ async def corrupt_local_response(mesh, dut, sel, mask, tag):
 async def m3_end_to_end_crc(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
+    await mesh.load_bank(N11, act, wts)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_END)])
     await mesh.start([0])
     await corrupt_local_response(mesh, dut, FI_FLIT_XOR, 1 << 5, "M3")   # payload bit, past the last link parity check
@@ -405,7 +417,7 @@ async def m3_end_to_end_crc(dut):
 async def m4_region_refill(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
+    await mesh.load_bank(N11, act, wts)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36, regions=2)
     prog = fetch_weights(1, 1) + [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_FETCH_A, 1, 1, A0 + APT, APT, 36),
             ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_FREE, arg=0), ins(OP_FETCH_A, 1, 1, A0 + 2 * APT, APT, 0),
@@ -414,7 +426,7 @@ async def m4_region_refill(dut):
     await mesh.start([0])
     n = await mesh.wait_prog(0)
     await mesh.tick(40)
-    got = to_image(await mesh.read_rows(1, R0, 36), ref, 36)
+    got = to_image(await mesh.read_rows(N10, R0, 36), ref, 36)
     await check_result(mesh, got, ref, "M4")
     await expect_clean(mesh)
     dut._log.info(f"M4: two-region buffer refilled behind the core, bit-exact in {n} clocks")
@@ -424,9 +436,9 @@ async def m4_region_refill(dut):
 async def m5_bank_ecc_in_flight(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
-    await mesh.bank_flip(3, A0 + 40, 13)
-    await mesh.bank_flip(3, W0 + 7, 35)
+    await mesh.load_bank(N11, act, wts)
+    await mesh.bank_flip(N11, A0 + 40, 13)
+    await mesh.bank_flip(N11, W0 + 7, 35)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
     prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
     prog += fetch_weights(1, 1) + [ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
@@ -434,10 +446,10 @@ async def m5_bank_ecc_in_flight(dut):
     await mesh.start([0])
     await mesh.wait_prog(0)
     await mesh.tick(40)
-    got = to_image(await mesh.read_rows(1, R0, 36), ref, 36)
+    got = to_image(await mesh.read_rows(N10, R0, 36), ref, 36)
     await check_result(mesh, got, ref, "M5")
     c = await mesh.causes()
-    assert (c[3] >> 8) & 1 == 1 and (c[3] >> 7) & 1 == 0 and c[0] == 0 and c[1] == 0 and c[2] == 0, f"M5 causes {causes_str(c)}"
+    assert (c[N11] >> 8) & 1 == 1 and (c[N11] >> 7) & 1 == 0 and all(c[n] == 0 for n in range(mesh.N) if n != N11), f"M5 causes {causes_str(c)}"
     fc.sample_flag("ecc_ce")
     dut._log.info("M5: flipped data and check bits corrected in flight; ecc_ce on the source tile only")
 
@@ -447,7 +459,7 @@ async def m6_compiler_program(dut):
     from neo_backend import compile_layer
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
+    await mesh.load_bank(N11, act, wts)
     lp = compile_layer("c1", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(1, 1), act_base=A0, w_bank=(1, 1), w_base=W0,
                        owner=(0, 0), shares=3)
     nodes = []
@@ -472,7 +484,7 @@ async def m7_mchunks_partial_fetch(dut):
     from neo_backend import compile_layer
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
+    await mesh.load_bank(N11, act, wts)
     lps = [compile_layer("r0", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(0, 0), shares=1, oy0=0, oy_n=3),
            compile_layer("r3", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(1, 0), shares=1, oy0=3, oy_n=3)]
     nodes = []
@@ -502,7 +514,7 @@ async def m7_mchunks_partial_fetch(dut):
 async def m8_registers_selftest_watchdog(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
+    await mesh.load_bank(N11, act, wts)
     await mesh.reg_write(0, REG_ERR_MASK, 1 << 8)
     await mesh.reg_write(0, REG_WD_CTRL, (600 << 8) | 1)
     await mesh.descriptor(0, 6, 6, 1, 1, 1, 1, 3, 1, 0, 9, 0, 1, tile_pixels=36)
@@ -537,7 +549,7 @@ async def m8_registers_selftest_watchdog(dut):
     x16, w16 = x[:ROWS], wgt[:, :ROWS]
     ref16 = direct_conv(x16, w16, 1, 1)
     act16, wts16 = pack_words(x16, w16, 1, 3, 7, rows=ROWS, cols=COLS)
-    await mesh.load_bank(3, act16, wts16)
+    await mesh.load_bank(N11, act16, wts16)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 1, 0, 9, 0, 36)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_FETCH_W, 1, 1, W0, WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, 36),
                            ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)])
@@ -565,7 +577,7 @@ async def m8_registers_selftest_watchdog(dut):
     # reading the result rows takes 36 x COLS backdoor clocks (1,152 at 32 columns), longer than the 600-cycle window:
     # watchdog off for the read-out, then re-enabled and left un-kicked for the expiry check
     await mesh.reg_write(0, REG_WD_CTRL, 0)
-    got = to_image(await mesh.read_rows(1, R0, 36), ref16, 36)
+    got = to_image(await mesh.read_rows(N10, R0, 36), ref16, 36)
     await check_result(mesh, got, ref16, "M8 real run")
     await mesh.reg_write(0, REG_WD_CTRL, (600 << 8) | 1)
     await mesh.tick(650)
@@ -579,7 +591,7 @@ async def m8_registers_selftest_watchdog(dut):
 async def m9_lost_flit_and_timeout(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    await mesh.load_bank(3, act, wts)
+    await mesh.load_bank(N11, act, wts)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_END)])
     await mesh.start([0])
     await corrupt_local_response(mesh, dut, FI_VALID_CLR, 0, "M9a")        # the flit vanishes at the owner's port
@@ -589,7 +601,7 @@ async def m9_lost_flit_and_timeout(dut):
     fc.sample_flag("lost")
     # starved request: the server tile's interface held busy, the requester times out and completes
     await mesh.reset()
-    mesh.fault_hold(3, FI_SERVE_HOLD)
+    mesh.fault_hold(N11, FI_SERVE_HOLD)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, 8, 0), ins(OP_END)])
     await mesh.start([0])
     n = 0
@@ -672,7 +684,7 @@ async def m12_control_path_protection(dut):
 async def m13_partitions(dut):
     mesh = await setup(dut)
     await mesh.reg_write(0, REG_PARTITION, 1)
-    await mesh.reg_write(3, REG_PARTITION, 2)
+    await mesh.reg_write(N11, REG_PARTITION, 2)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, 8, 0), ins(OP_END)])
     await mesh.start([0])
     n = 0
@@ -685,10 +697,10 @@ async def m13_partitions(dut):
         assert n < FETCH_TIMEOUT + 500, "M13: the requester did not time out"
     await RisingEdge(dut.clk)
     c = await mesh.causes()
-    assert (c[3] >> CAUSE_ISO) & 1 == 1 and (c[0] >> CAUSE_TIMEOUT) & 1 == 1 and mesh.pins()[3] == 1, f"M13 causes {causes_str(c)}"
+    assert (c[N11] >> CAUSE_ISO) & 1 == 1 and (c[0] >> CAUSE_TIMEOUT) & 1 == 1 and mesh.pins()[N11] == 1, f"M13 causes {causes_str(c)}"
     await mesh.reset()
     await mesh.reg_write(0, REG_PARTITION, 2)
-    await mesh.reg_write(3, REG_PARTITION, 2)
+    await mesh.reg_write(N11, REG_PARTITION, 2)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, 8, 0), ins(OP_END)])
     await mesh.start([0])
     await mesh.wait_prog(0)
@@ -696,3 +708,39 @@ async def m13_partitions(dut):
     fc.sample_flag("iso")
     fc.report("funcov_tile_mesh.yml")
     dut._log.info("M13: cross-partition fetch dropped and flagged, requester timed out; same fetch inside a partition clean")
+
+
+MAX_FETCH_WORDS = (4095 // WPA) * WPA                # the longest entry-aligned fetch one DMA instruction can issue (4,088 at 8 words per entry)
+
+
+@cocotb.test(skip=(NX * NY < 16))
+async def m14_bank_contention(dut):
+    """M7-style contention made a test (drop 0.24): as many tiles as the build's watchdog admits (14 at 65,535, up to 15) each
+    fetch a maximal chunk from the far corner's bank at the same time. The server takes the requests one at a time, so the
+    last one waits behind all the others; the silicon rule FETCH_TIMEOUT >= NX*NY*(4,095 + H) is what makes any such queue,
+    up to every tile of the mesh, complete without a timeout. Every requester must end with its program done and no cause
+    raised anywhere (the end-to-end CRC and the lost-flit count cover the data). H is budgeted at 400 cycles per request."""
+    mesh = await setup(dut)
+    server = node(NX - 1, NY - 1)
+    n_req = min(15, (FETCH_TIMEOUT - 1000) // (MAX_FETCH_WORDS + 400))
+    assert n_req >= 8, f"the build's FETCH_TIMEOUT {FETCH_TIMEOUT} admits only {n_req} queued maximal fetches"
+    requesters = [n for n in range(mesh.N) if n != server][:n_req]
+    await mesh.load_words(server, 0, [(i * 2654435761 + 12345) & 0xFFFFFFFF for i in range(MAX_FETCH_WORDS)])
+    for n in requesters:
+        await mesh.program(n, [ins(OP_FETCH_A, NX - 1, NY - 1, 0, MAX_FETCH_WORDS, 0), ins(OP_END)])
+    await mesh.start(requesters)
+    n, done_at = 0, {}
+    while len(done_at) < len(requesters):
+        await RisingEdge(dut.clk)
+        await ReadOnly()
+        for r in requesters:
+            if r not in done_at and mesh.prog_done(r):
+                done_at[r] = n
+        n += 1
+        assert n < FETCH_TIMEOUT + 2000, f"M14: {len(requesters) - len(done_at)} fetches still pending after {n} clocks"
+    await RisingEdge(dut.clk)
+    c = await mesh.causes()
+    assert all(v == 0 for v in c), f"M14 causes {causes_str(c)}"
+    first, last = min(done_at.values()), max(done_at.values())
+    dut._log.info(f"M14: {n_req} maximal fetches ({MAX_FETCH_WORDS} words each) queued at one bank: first done at {first} clocks, last at {last}, "
+                  f"{last / (n_req * MAX_FETCH_WORDS):.3f} clocks per word, no cause raised (FETCH_TIMEOUT {FETCH_TIMEOUT})")

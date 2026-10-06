@@ -1,10 +1,12 @@
-# cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.23). Requires: pip install cocotb numpy; verilator >= 5.0.
+# cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.24). Requires: pip install cocotb numpy; verilator >= 5.0.
 #   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core (16x8), bit-exact vs the golden model
 #   make -C dv/cocotb core32    # the same on the silicon core: 32x32, ACC_ROWS 512, ABUF 2048, WBUF 1024
 #   make -C dv/cocotb tile      # test_tile_mesh.py: M1-M13 through the register bus on tile_mesh (2x2, 16x8 cores)
 #   make -C dv/cocotb tile8     # test_two_layer.py: M10, two-layer INT8 handoff on 8x8 cores (own build directory)
 #   make -C dv/cocotb tile32    # M1-M13 on the silicon core and depths: 2x2 mesh of 32x32 cores, 2 MB (512K-word) banks,
-#                               # FETCH_TIMEOUT 65535 (the 16-bit timer's maximum: two 4,095-word fetches queued at one bank exceed 8,192)
+#                               # FETCH_TIMEOUT 65535 (two 4,095-word fetches queued at one bank exceed 8,192; the silicon value is 2^20-1)
+#   make -C dv/cocotb mesh8     # the silicon mesh: 8x8 tiles of 32x32 cores with the silicon depths and 2 MB banks; the mesh-level
+#                               # tests M1-M3, M5-M7, M9, M12-M14 (M4, M8, M11 are tile-local and proven on tile32); own build directory
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -61,10 +63,13 @@ tile8:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer SIM_BUILD=sim_build_tile8 COCOTB_RESULTS_FILE=results_tile8.xml
 tile32:
 	$(MAKE) TARGET=tile $(SILICON) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 SIM_BUILD=sim_build_tile32 COCOTB_RESULTS_FILE=results_tile32.xml
+MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_bank_ecc_in_flight,m6_compiler_program,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m12_control_path_protection,m13_partitions,m14_bank_contention
+mesh8:
+	$(MAKE) TARGET=tile $(SILICON) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml
 coverage:
 	$(MAKE) TARGET=core COVERAGE=1
 	$(MAKE) TARGET=tile COVERAGE=1
 	verilator_coverage --annotate coverage_annotated sim_build/coverage.dat || true
 	@echo "line/toggle coverage annotated in coverage_annotated/; functional coverage in funcov_*.yml"
 clean::
-	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 results_core.xml results_core32.xml results_tile8.xml results_tile32.xml funcov_*.yml coverage_annotated
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml funcov_*.yml coverage_annotated
