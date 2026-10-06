@@ -1,4 +1,5 @@
-/* neo_host.c -- see neo_host.h. Mirrors compiler/neo_backend.py compile_group() */
+/* neo_host.c -- see neo_host.h. Mirrors compiler/neo_backend.py compile_group() (drop 0.21: fetches split at the 12-bit
+ * length field, every program write bounded by NEO_MAX_PROG) */
 #include "neo_host.h"
 
 uint64_t neo_ins(int op, int x, int y, uint32_t addr, uint32_t len, uint32_t base, uint32_t arg) {
@@ -7,6 +8,27 @@ uint64_t neo_ins(int op, int x, int y, uint32_t addr, uint32_t len, uint32_t bas
 }
 
 static int ceil_div(int a, int b) { return (a + b - 1) / b; }
+
+/* FETCH_A/FETCH_W instructions covering `words` bank words from `addr` into local entries from `base_entries`: one
+ * instruction per NEO_MAX_FETCH words, cut at entry boundaries (`wpe` words per entry) because the NIC assembles an
+ * entry from the words of one instruction. Mirrors fetch() in neo_backend.py. Returns 0, or -1 if the program is full. */
+static int emit_fetch(neo_tile_prog_t *tp, int op, neo_tile_t bank, uint32_t addr, uint32_t words, uint32_t base_entries, int wpe) {
+    uint32_t per = (uint32_t)(NEO_MAX_FETCH / wpe) * (uint32_t)wpe;
+    for (uint32_t off = 0; off < words; ) {
+        uint32_t n = (words - off < per) ? words - off : per;
+        if (tp->nprog >= NEO_MAX_PROG) return -1;
+        tp->prog[tp->nprog++] = neo_ins(op, bank.x, bank.y, addr + off, n, base_entries + off / (uint32_t)wpe, 0);
+        off += n;
+    }
+    return 0;
+}
+
+/* one instruction, with the program-memory bound checked */
+static int emit(neo_tile_prog_t *tp, uint64_t word) {
+    if (tp->nprog >= NEO_MAX_PROG) return -1;
+    tp->prog[tp->nprog++] = word;
+    return 0;
+}
 static int ilog2_floor(int v) { int r = 0; while (v > 1) { v >>= 1; r++; } return r; }
 
 static int nearest_free(neo_tile_t owner, const neo_tile_t *free, const int *used, int nfree, int nx) {
@@ -60,30 +82,29 @@ int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *
         tp->cfg_m = M;
         tp->nprog = 0;
         for (int ct = ct_lo; ct <= ct_hi; ct++)
-            tp->prog[tp->nprog++] = neo_ins(NEO_OP_FETCH_A, g->act_bank.x, g->act_bank.y,
-                                            g->act_base + ct * apt + iy_lo * g->w * wpa, region_pixels * wpa, ct * region_pixels, 0);
-        tp->prog[tp->nprog++] = neo_ins(NEO_OP_FETCH_W, g->w_bank.x, g->w_bank.y,
-                                        g->w_base + (g->nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0, 0);
+            if (emit_fetch(tp, NEO_OP_FETCH_A, g->act_bank, g->act_base + ct * apt + iy_lo * g->w * wpa,
+                           region_pixels * wpa, ct * region_pixels, wpa) < 0) return -1;
+        if (emit_fetch(tp, NEO_OP_FETCH_W, g->w_bank, g->w_base + (g->nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0, wpw) < 0)
+            return -1;
         if (i != 0) {
-            tp->prog[tp->nprog++] = neo_ins(NEO_OP_GO, 0, 0, 0, 0, 0, 0);
-            tp->prog[tp->nprog++] = neo_ins(NEO_OP_WAIT_RDY, 0, 0, 0, 0, 0, 0);
-            tp->prog[tp->nprog++] = neo_ins(NEO_OP_DRAIN_PSUM, owner.x, owner.y, 0, M, 0, 0);
-            tp->prog[tp->nprog++] = neo_ins(NEO_OP_WAIT_DONE, 0, 0, 0, 0, 0, 0);
-            tp->prog[tp->nprog++] = neo_ins(NEO_OP_END, 0, 0, 0, 0, 0, 0);
+            if (emit(tp, neo_ins(NEO_OP_GO, 0, 0, 0, 0, 0, 0)) < 0) return -1;
+            if (emit(tp, neo_ins(NEO_OP_WAIT_RDY, 0, 0, 0, 0, 0, 0)) < 0) return -1;
+            if (emit(tp, neo_ins(NEO_OP_DRAIN_PSUM, owner.x, owner.y, 0, M, 0, 0)) < 0) return -1;
+            if (emit(tp, neo_ins(NEO_OP_WAIT_DONE, 0, 0, 0, 0, 0, 0)) < 0) return -1;
+            if (emit(tp, neo_ins(NEO_OP_END, 0, 0, 0, 0, 0, 0)) < 0) return -1;
         }
         n++;
     }
     /* finish the owner's program now that the contributors are placed */
     neo_tile_prog_t *ow = &out[0];
-    ow->prog[ow->nprog++] = neo_ins(NEO_OP_DRAIN_WR, owner.x, owner.y, g->out_base, M, 0, g->int8_out ? 1 : 0);
-    ow->prog[ow->nprog++] = neo_ins(NEO_OP_GO, 0, 0, 0, 0, 0, 0);
+    if (emit(ow, neo_ins(NEO_OP_DRAIN_WR, owner.x, owner.y, g->out_base, M, 0, g->int8_out ? 1 : 0)) < 0) return -1;
+    if (emit(ow, neo_ins(NEO_OP_GO, 0, 0, 0, 0, 0, 0)) < 0) return -1;
     if (n > 1) {
-        ow->prog[ow->nprog++] = neo_ins(NEO_OP_WAIT_REDUCE, 0, 0, 0, 0, 0, 0);
-        for (int i = 1; i < n; i++) ow->prog[ow->nprog++] = neo_ins(NEO_OP_NOTIFY, out[i].tile.x, out[i].tile.y, 0, 0, 0, 0);
+        if (emit(ow, neo_ins(NEO_OP_WAIT_REDUCE, 0, 0, 0, 0, 0, 0)) < 0) return -1;
+        for (int i = 1; i < n; i++) if (emit(ow, neo_ins(NEO_OP_NOTIFY, out[i].tile.x, out[i].tile.y, 0, 0, 0, 0)) < 0) return -1;
     }
-    ow->prog[ow->nprog++] = neo_ins(NEO_OP_WAIT_DONE, 0, 0, 0, 0, 0, 0);
-    ow->prog[ow->nprog++] = neo_ins(NEO_OP_END, 0, 0, 0, 0, 0, 0);
-    if (ow->nprog > NEO_MAX_PROG) return -1;
+    if (emit(ow, neo_ins(NEO_OP_WAIT_DONE, 0, 0, 0, 0, 0, 0)) < 0) return -1;
+    if (emit(ow, neo_ins(NEO_OP_END, 0, 0, 0, 0, 0, 0)) < 0) return -1;
     return n;
 }
 
