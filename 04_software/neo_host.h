@@ -19,7 +19,7 @@
 #define NEO_OP_WAIT_RDY 10
 #define NEO_OP_WAIT_REDUCE 11
 
-#define NEO_MAX_PROG 16
+#define NEO_MAX_PROG 32      /* program memory entries per tile (drop 0.22: 32, was 16) */
 #define NEO_MAX_FETCH 4095   /* the DMA instruction's 12-bit length field; longer fetches are split (drop 0.21) */
 #define NEO_MAX_SHARES 16
 #define NEO_NDESC 20
