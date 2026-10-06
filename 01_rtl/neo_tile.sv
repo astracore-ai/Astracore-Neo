@@ -1,7 +1,10 @@
 // neo_tile.sv -- one mesh node (drop 0.7): router + tile interface + local bank + neo_core.
+//   Since drop 0.29 the tile interface moves beats of BW = 16 words (one row of the 512-bit bank) on its link side and
+//   drives the bank's row port directly; link_packer / link_unpacker re-block between the beats and the WPF-word link flits.
 module neo_tile #(
-  parameter int XW = 2, YW = 2, NX = 2, NY = 2, DW = 64,
-  parameter int FW = 1 + 2 * (XW + YW) + 8 + DW,     // the tile interface's flit (one word)
+  parameter int XW = 2, YW = 2, NX = 2, NY = 2,
+  parameter int DW = 64,                     // narrow one-word payload of the single-word flit types (unused since drop 0.29;
+                                             // kept so the wrappers that set it still elaborate)
   parameter int WPF = 1,                     // words per link flit (drop 0.25): 1 as simulated before, 32 = the 1024-bit links
   parameter int DWL = 32 + 32 * WPF,
   parameter int FWL = 1 + 2 * (XW + YW) + 8 + DWL,   // the link flit (router ports, mesh links)
@@ -89,36 +92,32 @@ module neo_tile #(
     .out_valid(r_out_valid), .out_flit(r_out_flit), .out_ready(r_out_ready),
     .err_clear(err_clear), .parity_err_sticky(parity_err));
 
-  // the link layer (drop 0.25): WPF words per flit on the router side, one word per flit on the interface side
-  logic          nic_tx_valid, nic_tx_ready, nic_rx_valid, nic_rx_ready;
-  logic [FW-1:0] nic_tx_flit, nic_rx_flit;
-  link_packer #(.XW(XW), .YW(YW), .DW(DW), .WPF(WPF)) u_pack (
+  // the link layer (drop 0.25; beats since drop 0.29): WPF words per flit on the router side, BW-word beats on the
+  // interface side
+  localparam int LANES = 16;                 // lanes of the 512-bit bank = words per beat
+  localparam int BW  = LANES;
+  localparam int DWB = 32 + 32 * BW;         // the beat payload
+  localparam int FWB = 1 + 2 * (XW + YW) + 8 + DWB;
+  logic           nic_tx_valid, nic_tx_ready, nic_rx_valid, nic_rx_ready;
+  logic [FWB-1:0] nic_tx_flit, nic_rx_flit;
+  link_packer #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_pack (
     .clk(clk), .rst_n(rst_n), .core_valid(nic_tx_valid), .core_flit(nic_tx_flit), .core_ready(nic_tx_ready),
     .link_valid(r_in_valid[4]), .link_flit(r_in_flit[4]), .link_ready(r_in_ready[4]));
-  link_unpacker #(.XW(XW), .YW(YW), .DW(DW), .WPF(WPF)) u_unpack (
+  link_unpacker #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_unpack (
     .clk(clk), .rst_n(rst_n), .link_valid(r_out_valid[4]), .link_flit(r_out_flit[4]), .link_ready(r_out_ready[4]),
     .core_valid(nic_rx_valid), .core_flit(nic_rx_flit), .core_ready(nic_rx_ready));
 
-  // bank
-  logic          b_we, b_re, b_rvalid;
-  logic [BAW-1:0] b_waddr, b_raddr;
-  logic [31:0]   b_wdata, b_rdata;
-  logic bist_start, bist_active, bist_done, bist_fail, bist_fail_ce;
-  logic [BAW-1:0] bist_fail_addr;
-  // the 512-bit bank (drop 0.28): 16 SECDED lanes per row; the interface still moves one word per cycle on its bank
-  // side, through bank_word_port, until stage 2 widens its serve and writeback paths
-  localparam int LANES = 16;
+  // the 512-bit bank (drop 0.28): 16 SECDED lanes per row, MBIST over rows; the interface drives the row port (drop 0.29)
   localparam int BROWS = BANK_DEPTH / LANES;
   localparam int BRAW  = (BROWS > 1) ? $clog2(BROWS) : 1;
-  logic              r_we, r_re;
-  logic [BRAW-1:0]   r_wrow, r_rrow;
-  logic [LANES-1:0]  r_wmask;
-  logic [32*LANES-1:0] r_wdata, r_rdata;
-  bank_word_port #(.DEPTH(BANK_DEPTH), .AW(BAW), .LANES(LANES)) u_bank_port (
-    .clk(clk), .rst_n(rst_n), .we(b_we), .waddr(b_waddr), .wdata(b_wdata), .re(b_re), .raddr(b_raddr), .rdata(b_rdata),
-    .r_we(r_we), .r_wrow(r_wrow), .r_wmask(r_wmask), .r_wdata(r_wdata), .r_re(r_re), .r_rrow(r_rrow), .r_rdata(r_rdata));
+  logic                b_we, b_re, b_rvalid;
+  logic [BRAW-1:0]     b_wrow, b_rrow;
+  logic [LANES-1:0]    b_wmask;
+  logic [32*LANES-1:0] b_wdata, b_rdata;
+  logic bist_start, bist_active, bist_done, bist_fail, bist_fail_ce;
+  logic [BAW-1:0] bist_fail_addr;
   bank_bist_wrap #(.DEPTH(BANK_DEPTH), .AW(BAW), .BIST_WORDS(BIST_WORDS), .LANES(LANES)) u_bank (
-    .clk(clk), .rst_n(rst_n), .we(r_we), .wrow(r_wrow), .wmask(r_wmask), .wdata(r_wdata), .re(r_re), .rrow(r_rrow), .rdata(r_rdata), .rvalid(b_rvalid),
+    .clk(clk), .rst_n(rst_n), .we(b_we), .wrow(b_wrow), .wmask(b_wmask), .wdata(b_wdata), .re(b_re), .rrow(b_rrow), .rdata(b_rdata), .rvalid(b_rvalid),
     .err_clear(err_clear), .ecc_ce_sticky(ecc_ce), .ecc_ue_sticky(ecc_ue),
     .bist_start(bist_start), .bist_active(bist_active), .bist_done(bist_done), .bist_fail(bist_fail), .bist_fail_ce(bist_fail_ce),
     .bist_fail_addr(bist_fail_addr));
@@ -192,13 +191,13 @@ module neo_tile #(
   end
   assign ctrl_path_err = dma_err_sticky | cfg_err_sticky | prog_ue | dma_fsm_err | dma_fsm_err_d;
 
-  tile_nic #(.XW(XW), .YW(YW), .NX(NX), .NSRC(NX * NY), .DW(DW), .FW(FW), .MY_X(MY_X), .MY_Y(MY_Y),
+  tile_nic #(.XW(XW), .YW(YW), .NX(NX), .NSRC(NX * NY), .BW(BW), .MY_X(MY_X), .MY_Y(MY_Y),
              .ROWS(ROWS), .COLS(COLS), .WCW(WCW), .IDXW(IDXW), .AW(AW), .WAW(WAW), .BAW(BAW), .PW(PW),
              .DFD(ACC_ROWS), .FETCH_TIMEOUT(FETCH_TIMEOUT)) u_nic (
     .clk(clk), .rst_n(rst_n),
     .rx_valid(nic_rx_valid), .rx_flit(nic_rx_flit), .rx_ready(nic_rx_ready),
     .tx_valid(nic_tx_valid), .tx_flit(nic_tx_flit), .tx_ready(nic_tx_ready),
-    .b_we(b_we), .b_waddr(b_waddr), .b_wdata(b_wdata), .b_re(b_re), .b_raddr(b_raddr), .b_rdata(b_rdata), .b_rvalid(b_rvalid),
+    .b_we(b_we), .b_wrow(b_wrow), .b_wmask(b_wmask), .b_wdata(b_wdata), .b_re(b_re), .b_rrow(b_rrow), .b_rdata(b_rdata), .b_rvalid(b_rvalid),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata),
     .wbuf_we(wbuf_we), .wbuf_waddr(wbuf_waddr), .wbuf_wdata(wbuf_wdata), .wcbuf_wdata(wcbuf_wdata),
     .ext_valid(ext_valid), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(ext_ready),
