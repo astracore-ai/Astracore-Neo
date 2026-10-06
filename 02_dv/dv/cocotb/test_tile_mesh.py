@@ -609,7 +609,8 @@ async def m9_lost_flit_and_timeout(dut):
     c = await mesh.causes()
     assert (c[0] >> CAUSE_LOST) & 1 == 1 and (c[0] >> 1) & 1 == 1, f"M9a causes {causes_str(c)}"
     fc.sample_flag("lost")
-    # starved request: the server tile's interface held busy, the requester times out and completes
+    # starved request: the server tile's transmit engine held in its serve-read state (a dead server: the request is taken,
+    # the response never comes), the requester times out and completes
     await mesh.reset()
     mesh.fault_hold(N11, FI_SERVE_HOLD)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, 8, 0), ins(OP_END)])

@@ -14,12 +14,13 @@ TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
 CORE_SRCS := $(addprefix $(RTL)/, delay_line.sv mac_pe.sv skew_in.sv deskew_out.sv systolic_array.sv abft_checker.sv neo_mac_core.sv \
   act_feeder.sv acc_bank.sv neo_mac_core_v02.sv core_seq.sv ecc39.sv wbuf_mem.sv requant.sv neo_core.sv)
-TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv tile_nic.sv tile_dma.sv \
-  bank_word_port.sv prog_mem.sv host_if.sv esm.sv link_pack.sv neo_tile.sv tile_mesh.sv)
+TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv crc16_beat.sv tile_nic.sv tile_dma.sv \
+  prog_mem.sv host_if.sv esm.sv link_pack.sv neo_tile.sv tile_mesh.sv)
 export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH)
 # the wrapper writes design state at the falling edge for fault injection, hence MULTIDRIVEN is expected.
-# --unroll-count: the NIC resets its per-source state in a loop over the NX*NY sources; with 64 tiles that exceeds the
-# default unroll limit (64), and a delayed array assignment inside a loop Verilator leaves rolled is unsupported (drop 0.27)
+# --unroll-count 1024 (drop 0.27) did not get the 8x8 build past the NIC's reset loop over NX*NY sources (BLKLOOPINIT, run 68);
+# drop 0.29 keeps each source's receive state in its own generate block instead, so no procedural loop scales with the mesh.
+# The raised limit stays: it is harmless and covers the COLS-wide loops of the 32x32 builds with margin.
 EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN --public-flat-rw --unroll-count 1024
 # geometry, depths and fetch watchdog; the tests read the geometry from the environment
 NX ?= 2
