@@ -22,7 +22,7 @@
 # make mbist      : March C- MBIST on an ECC bank (standalone) -- the tile-level version is M11 in run_tiles.py
 # make two_layer  : M10: two layers back to back on the mesh with INT8 handoff through the bank
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
-# make verilator  : Verilator: streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then the cocotb mesh suite M1-M13 (drop 0.19)
+# make verilator  : Verilator: streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then the cocotb mesh suite M1-M13 and M10 (drop 0.20)
 # make perf2      : 64-core event model with mesh and bank contention (compiler/neo_perf_v2.py)
 # make regress    : everything above that is self-checking (model, RTL v0.1/v0.2/core/NoC, compiler)
 # make xrun_core  : Cadence Xcelium replay of the C1 convolution on neo_core (vectors_core from --dump)
@@ -159,11 +159,15 @@ verilator: vectors vectors_core
 	./obj_tiles/sim_tiles
 	$(MAKE) cocotb_tiles
 
-# cocotb on Verilator: the mesh suite M1-M13 (installs cocotb into the current Python if missing)
+# cocotb on Verilator: the mesh suite M1-M13 (16x8 cores), then M10 on the 8x8-core build (installs cocotb into the
+# current Python if missing). cocotb 1.x's make returns 0 even when tests fail, so check_results.py reads the two
+# results files, prints one summary table and fails the target if any test failed.
 cocotb_tiles:
 	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"   # cocotb 2.x needs Verilator >= 5.036; Ubuntu ships 5.020
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
 	$(MAKE) -C dv/cocotb tile
+	$(MAKE) -C dv/cocotb tile8
+	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml
 
 LINTW := -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-WIDTHEXPAND -Wno-UNSIGNED -Wno-TIMESCALEMOD
 lint:
