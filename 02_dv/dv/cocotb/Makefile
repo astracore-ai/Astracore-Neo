@@ -1,7 +1,9 @@
-# cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.20). Requires: pip install cocotb numpy; verilator >= 5.0.
-#   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core, bit-exact vs the golden model
+# cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.21). Requires: pip install cocotb numpy; verilator >= 5.0.
+#   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core (16x8), bit-exact vs the golden model
+#   make -C dv/cocotb core32    # the same on the silicon core: 32x32, ACC_ROWS 512, ABUF 2048, WBUF 1024
 #   make -C dv/cocotb tile      # test_tile_mesh.py: M1-M13 through the register bus on tile_mesh (2x2, 16x8 cores)
 #   make -C dv/cocotb tile8     # test_two_layer.py: M10, two-layer INT8 handoff on 8x8 cores (own build directory)
+#   make -C dv/cocotb tile32    # M1-M13 on the silicon core and depths: 2x2 mesh of 32x32 cores, 2 MB (512K-word) banks
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -12,11 +14,15 @@ TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, noc_router.sv sram_bank.sv mbist.
 export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH)
 # the wrapper writes design state at the falling edge for fault injection, hence MULTIDRIVEN is expected
 EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN --public-flat-rw
-# mesh geometry and fetch watchdog of the tile targets; the tests read the same values from the environment
+# geometry, depths and fetch watchdog; the tests read the geometry from the environment
 NX ?= 2
 NY ?= 2
 ROWS ?= 16
 COLS ?= 8
+ACC_ROWS ?= 64
+ABUF_DEPTH ?= 256
+WBUF_DEPTH ?= 512
+BANK_DEPTH ?= 4096
 FETCH_TIMEOUT ?= 8192
 BIST_WORDS ?= 16
 export NEO_NX := $(NX)
@@ -34,25 +40,30 @@ ifeq ($(TARGET),tile)
   VERILOG_SOURCES = $(TILE_SRCS) $(abspath ../../tb/tile_mesh_cocotb.sv)
   TOPLEVEL = tile_mesh_cocotb
   MODULE ?= test_tile_mesh
-  EXTRA_ARGS += -GNX=$(NX) -GNY=$(NY) -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=64 -GABUF_DEPTH=256 -GWBUF_DEPTH=512 -GBANK_DEPTH=4096 \
-    -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS)
+  EXTRA_ARGS += -GNX=$(NX) -GNY=$(NY) -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) \
+    -GWBUF_DEPTH=$(WBUF_DEPTH) -GBANK_DEPTH=$(BANK_DEPTH) -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS)
 else
   VERILOG_SOURCES = $(CORE_SRCS)
   TOPLEVEL = neo_core
   MODULE ?= test_neo_core
-  EXTRA_ARGS += -GROWS=16 -GCOLS=8 -GACC_ROWS=64 -GABUF_DEPTH=256 -GWBUF_DEPTH=512
+  EXTRA_ARGS += -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) -GWBUF_DEPTH=$(WBUF_DEPTH)
 endif
 include $(shell cocotb-config --makefiles)/Makefile.sim
+SILICON := ROWS=32 COLS=32 ACC_ROWS=512 ABUF_DEPTH=2048 WBUF_DEPTH=1024
 core:
-	$(MAKE) TARGET=core
+	$(MAKE) TARGET=core SIM_BUILD=sim_build_core COCOTB_RESULTS_FILE=results_core.xml
+core32:
+	$(MAKE) TARGET=core $(SILICON) SIM_BUILD=sim_build_core32 COCOTB_RESULTS_FILE=results_core32.xml
 tile:
 	$(MAKE) TARGET=tile
 tile8:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer SIM_BUILD=sim_build_tile8 COCOTB_RESULTS_FILE=results_tile8.xml
+tile32:
+	$(MAKE) TARGET=tile $(SILICON) BANK_DEPTH=524288 SIM_BUILD=sim_build_tile32 COCOTB_RESULTS_FILE=results_tile32.xml
 coverage:
 	$(MAKE) TARGET=core COVERAGE=1
 	$(MAKE) TARGET=tile COVERAGE=1
 	verilator_coverage --annotate coverage_annotated sim_build/coverage.dat || true
 	@echo "line/toggle coverage annotated in coverage_annotated/; functional coverage in funcov_*.yml"
 clean::
-	rm -rf sim_build_tile8 results_tile8.xml funcov_*.yml coverage_annotated
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 results_core.xml results_core32.xml results_tile8.xml results_tile32.xml funcov_*.yml coverage_annotated

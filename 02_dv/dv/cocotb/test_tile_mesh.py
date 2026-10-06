@@ -1,4 +1,4 @@
-"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.20.
+"""test_tile_mesh.py -- the mesh suite on tile_mesh under cocotb (Verilator or Icarus), drop 0.21.
 
 Ports of sim/run_tiles.py's M-tests, driven the way the island's firmware drives a tile: everything through the
 host register bus (program, descriptor, start, status, causes), banks loaded and read through the wrapper's
@@ -18,9 +18,12 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
   M12 control path: program-memory SECDED, duplicated descriptor registers, lockstep DMA engines
   M13 spatial partitions: a cross-partition fetch is dropped and flagged; inside one partition it is clean
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
+     make -C dv/cocotb tile32 (the silicon core and depths: 32x32 cores, ACC_ROWS 512, ABUF 2048, WBUF 1024, 2 MB banks)
 The geometry and the fetch timeout come from the environment (NEO_NX, NEO_NY, NEO_ROWS, NEO_COLS,
 NEO_FETCH_TIMEOUT), exported by the Makefile to match its -G parameters; test_two_layer.py (M10) reuses the
-harness on the 8x8-core build.
+harness on the 8x8-core build. The convolution keeps three channel tiles at any core size (CIN = 3*ROWS - 8, the
+last tile partly filled), the bank layout follows the entry sizes, and weights are fetched one channel tile per
+DMA instruction (the length field is 12 bits: one 32x32 tile is 2,592 words).
 Timing notes (Verilator): after `await RisingEdge(clk)` every signal already shows its post-edge value, and a
 value written then is applied in the same time step, i.e. it is seen by the falling edge that follows and by the
 next rising edge. The fault port relies on that: detect at a rising edge, raise fi_en, the fault lands at the
@@ -49,8 +52,19 @@ CAUSE_PROG_CE, CAUSE_CTRL_PATH, CAUSE_ISO, CAUSE_TIMEOUT, CAUSE_LOST, CAUSE_BIST
 CFG_ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_ct0",
              "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1"]
 T_RDRSP = 2
-A0, W0, R0 = 0, 512, 2048
-APT, WPT = 36 * WPA, 9 * ROWS * WPW
+CIN = 3 * ROWS - 8                                   # 40 channels at 16 rows, 88 at 32: three channel tiles, the last partly filled
+CT_N = (CIN + ROWS - 1) // ROWS
+assert CT_N == 3, "the suite is written for three channel tiles (M2 gives one to each of three tiles)"
+APT, WPT = 36 * WPA, 9 * ROWS * WPW                  # bank words per activation tile (36 pixels) and per weight tile (9 runs x ROWS entries)
+
+
+def _align(n, a=256):
+    return (n + a - 1) // a * a
+
+
+A0 = 0                                               # bank layout: activations, then weights, then the result rows (0 / 512 / 2048 at 16x8)
+W0 = _align(CT_N * APT)
+R0 = _align(W0 + CT_N * WPT)
 # fault port selectors (tb/tile_mesh_cocotb.sv)
 FI_NONE, FI_BANK_OR, FI_PROG_XOR, FI_CFG_XOR, FI_PC_XOR, FI_FLIT_XOR, FI_VALID_CLR, FI_SERVE_HOLD = range(8)
 
@@ -210,7 +224,7 @@ class Mesh:
     def fault_set(self, node, sel, idx=0, mask=0, en=1):
         self.dut.fi_node.value = node
         self.dut.fi_sel.value = sel
-        self.dut.fi_idx.value = idx & 0xFFFF
+        self.dut.fi_idx.value = idx & 0xFFFFF
         self.dut.fi_mask.value = mask & ((1 << 64) - 1)
         self.dut.fi_en.value = en
 
@@ -263,13 +277,19 @@ class Mesh:
         return [self.status("err_pin", n) for n in range(self.N)]
 
 
-def conv_data(seed=17, cin=40, cout=7):
+def conv_data(seed=17, cin=CIN, cout=7):
     rng = np.random.default_rng(seed)
     x = rng.integers(-128, 128, size=(cin, 6, 6), dtype=np.int64)
     wgt = rng.integers(-128, 128, size=(cout, cin, 3, 3), dtype=np.int64)
     ref = direct_conv(x, wgt, 1, 1)
     act, wts = pack_words(x, wgt, (cin + ROWS - 1) // ROWS, 3, cout, rows=ROWS, cols=COLS)
     return x, wgt, ref, act, wts
+
+
+def fetch_weights(x, y, w0=W0):
+    """One FETCH_W per channel tile from bank (x, y): the DMA length field holds 12 bits, so a 32x32 tile (2,592 words)
+    must be its own instruction; weight-buffer entry base = ct * 9 * ROWS."""
+    return [ins(OP_FETCH_W, x, y, w0 + ct * WPT, WPT, ct * 9 * ROWS) for ct in range(CT_N)]
 
 
 def to_image(out, ref, M, cout=7, wo=6):
@@ -306,9 +326,9 @@ async def m1_fetch_compute_writeback(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
     await mesh.load_bank(3, act, wts)
-    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 3, 0, 27, 0, 36)
-    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(3)]
-    prog += [ins(OP_FETCH_W, 1, 1, W0, 3 * WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
+    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
+    prog += fetch_weights(1, 1) + [ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
     await mesh.program(0, prog)
     await mesh.start([0])
     n = await mesh.wait_prog(0)
@@ -327,7 +347,7 @@ async def m2_ksplit_rdy(dut):
     await mesh.load_bank(3, act, wts)
     owner, contribs = 0, [1, 2]
     for n, ct in ((owner, 0), (contribs[0], 1), (contribs[1], 2)):
-        await mesh.descriptor(n, 6, 6, 6, 6, 1, 1, 3, 3, ct, 9, 2 if n == owner else 0, 36)
+        await mesh.descriptor(n, 6, 6, 6, 6, 1, 1, 3, CT_N, ct, 9, 2 if n == owner else 0, 36)
         fetch = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36), ins(OP_FETCH_W, 1, 1, W0 + ct * WPT, WPT, 0)]
         if n == owner:
             prog = fetch + [ins(OP_DRAIN_WR, 1, 1, R0, 36), ins(OP_GO), ins(OP_WAIT_REDUCE)]
@@ -385,8 +405,8 @@ async def m4_region_refill(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
     await mesh.load_bank(3, act, wts)
-    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 3, 0, 27, 0, 36, regions=2)
-    prog = [ins(OP_FETCH_W, 1, 1, W0, 3 * WPT, 0), ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_FETCH_A, 1, 1, A0 + APT, APT, 36),
+    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36, regions=2)
+    prog = fetch_weights(1, 1) + [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_FETCH_A, 1, 1, A0 + APT, APT, 36),
             ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_FREE, arg=0), ins(OP_FETCH_A, 1, 1, A0 + 2 * APT, APT, 0),
             ins(OP_WAIT_DONE), ins(OP_END)]
     await mesh.program(0, prog)
@@ -406,9 +426,9 @@ async def m5_bank_ecc_in_flight(dut):
     await mesh.load_bank(3, act, wts)
     await mesh.bank_flip(3, A0 + 40, 13)
     await mesh.bank_flip(3, W0 + 7, 35)
-    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 3, 0, 27, 0, 36)
-    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(3)]
-    prog += [ins(OP_FETCH_W, 1, 1, W0, 3 * WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
+    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
+    prog += fetch_weights(1, 1) + [ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
     await mesh.program(0, prog)
     await mesh.start([0])
     await mesh.wait_prog(0)
@@ -427,7 +447,7 @@ async def m6_compiler_program(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
     await mesh.load_bank(3, act, wts)
-    lp = compile_layer("c1", 6, 6, 40, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(1, 1), act_base=A0, w_bank=(1, 1), w_base=W0,
+    lp = compile_layer("c1", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(1, 1), act_base=A0, w_bank=(1, 1), w_base=W0,
                        owner=(0, 0), shares=3)
     nodes = []
     for tp in lp.tiles:
@@ -452,8 +472,8 @@ async def m7_mchunks_partial_fetch(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
     await mesh.load_bank(3, act, wts)
-    lps = [compile_layer("r0", 6, 6, 40, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(0, 0), shares=1, oy0=0, oy_n=3),
-           compile_layer("r3", 6, 6, 40, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(1, 0), shares=1, oy0=3, oy_n=3)]
+    lps = [compile_layer("r0", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(0, 0), shares=1, oy0=0, oy_n=3),
+           compile_layer("r3", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(1, 0), shares=1, oy0=3, oy_n=3)]
     nodes = []
     for lp in lps:
         for tp in lp.tiles:
@@ -509,14 +529,18 @@ async def m8_registers_selftest_watchdog(dut):
     await mesh.clear_errors(0)
     c_cl = await mesh.reg_read(0, REG_ERR_CAUSE)
     assert c_cl == 0, f"M8 causes not clear after the clear: 0x{c_cl:05x}"
-    # real 16-channel run, watchdog kicked
-    x16, w16 = x[:16], wgt[:, :16]
+    # real one-channel-tile run, watchdog kicked. Reloading the bank through the backdoor takes more clocks than the
+    # 600-cycle window, so the watchdog is disabled for the reload (its counter restarts on enable) and re-enabled
+    # before the run.
+    await mesh.reg_write(0, REG_WD_CTRL, 0)
+    x16, w16 = x[:ROWS], wgt[:, :ROWS]
     ref16 = direct_conv(x16, w16, 1, 1)
     act16, wts16 = pack_words(x16, w16, 1, 3, 7, rows=ROWS, cols=COLS)
     await mesh.load_bank(3, act16, wts16)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 1, 0, 9, 0, 36)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_FETCH_W, 1, 1, W0, WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, 36),
                            ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)])
+    await mesh.reg_write(0, REG_WD_CTRL, (600 << 8) | 1)
     await mesh.start([0])
     n = 0
     while True:

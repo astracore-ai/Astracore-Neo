@@ -1,6 +1,9 @@
-"""test_neo_core.py -- cocotb: the C1 convolution on neo_core (16x8), bit-exact against the golden model.
+"""test_neo_core.py -- cocotb: the C1 convolution on neo_core, bit-exact against the golden model (drop 0.21).
 Mirrors sim/run_conv_core.py's NeoCore.execute() step for step, driving the DMA write ports, the descriptor and go,
-and collecting the drained rows. Run: make -C dv/cocotb core  (Verilator or Icarus)."""
+and collecting the drained rows. Run: make -C dv/cocotb core (16x8) or core32 (the silicon core: 32x32, ACC_ROWS 512,
+ABUF 2048, WBUF 1024); the geometry comes from NEO_ROWS/NEO_COLS, exported by the Makefile to match its -G values.
+The convolution keeps three channel tiles at any core size (CIN = 3*ROWS - 8, the last tile partly filled)."""
+import os
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ReadOnly
@@ -8,7 +11,9 @@ import numpy as np
 from neo_golden import direct_conv, bits, sbits
 import neo_funcov as fc
 
-ROWS, COLS = 16, 8
+ROWS, COLS = int(os.environ.get("NEO_ROWS", "16")), int(os.environ.get("NEO_COLS", "8"))
+WCW = 8 + (ROWS - 1).bit_length() + 1                 # check-weight width
+CIN = 3 * ROWS - 8                                   # 40 at 16 rows, 88 at 32
 
 
 def packed_act(x, cin_tiles, h, w):
@@ -51,7 +56,7 @@ async def write_wbuf(dut, entries):
         dut.wbuf_waddr.value = a
         for c in range(COLS):
             dut.wbuf_wdata[c].value = bits(ws[c], 8)
-        dut.wcbuf_wdata.value = bits(chk, 13)
+        dut.wcbuf_wdata.value = bits(chk, WCW)
         await RisingEdge(dut.clk)
     dut.wbuf_we.value = 0
 
@@ -60,8 +65,8 @@ async def write_wbuf(dut, entries):
 async def c1_conv(dut):
     cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
     rng = np.random.default_rng(9)
-    x = rng.integers(-128, 128, size=(40, 6, 6), dtype=np.int64)
-    wgt = rng.integers(-128, 128, size=(7, 40, 3, 3), dtype=np.int64)
+    x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
     ref = direct_conv(x, wgt, 1, 1)
     h = w = ho = wo = 6; k = 3; s = p = 1; cin_tiles = 3; M = ho * wo
     # reset and quiet inputs
@@ -99,5 +104,5 @@ async def c1_conv(dut):
     assert int(dut.array_abft_sticky.value) == 0 and int(dut.acc_abft_sticky.value) == 0 and int(dut.ctrl_err_sticky.value) == 0
     assert int(dut.seq_err_sticky.value) == 0 and int(dut.rq_err_sticky.value) == 0
     fc.sample_descriptor(dict(cfg_k=k, cfg_s=s, cfg_ct_n=cin_tiles, cfg_oy_n=ho, cfg_ho=ho, cfg_contrib_n=0, cfg_ct0=0, cfg_ky0=0, cfg_kx0=0))
-    dut._log.info(f"C1 on neo_core under cocotb: {M} rows bit-exact, flags clean")
+    dut._log.info(f"C1 on neo_core {ROWS}x{COLS} under cocotb: {M} rows bit-exact, flags clean")
     fc.report("funcov_neo_core.yml")
