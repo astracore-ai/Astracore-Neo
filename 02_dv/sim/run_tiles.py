@@ -29,7 +29,7 @@ from neo_compile import direct_conv  # noqa: E402
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv",
        "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "wbuf_mem.sv", "requant.sv",
        "neo_core.sv", "noc_router.sv", "ecc39.sv", "sram_bank.sv", "crc16_word.sv", "tile_nic.sv", "tile_dma.sv",
-       "mbist.sv", "bank_bist_wrap.sv", "bank_word_port.sv", "prog_mem.sv", "host_if.sv", "esm.sv", "link_pack.sv", "neo_tile.sv", "tile_mesh.sv"]
+       "mbist.sv", "bank_bist_wrap.sv", "crc16_beat.sv", "prog_mem.sv", "host_if.sv", "esm.sv", "link_pack.sv", "neo_tile.sv", "tile_mesh.sv"]
 WPF = int(os.environ.get("NEO_WPF", "1"))   # words per link flit (drop 0.25): 1 as before, 32 = the 1024-bit links
 TYPE_SHIFT = 32 + 32 * WPF - 3                # the flit type sits at the top of the link payload (bit 61 with one word per flit)
 REG_PARTITION = 0x0B
@@ -500,22 +500,23 @@ def main():
     mesh.tick(5)
     fl = mesh.flags()
     ok9a = dropped and fl["lost"] == [1, 0, 0, 0] and fl["crc"][0] == 1 and sum(fl["parity"]) == 0
-    # starved request: tile (1,1)'s interface is made to look busy, so the request is never served
+    # starved request: tile (1,1)'s transmit engine is held in its serve-read state (X_SERVE_RD = 2) -- a dead server that
+    # takes the request and never answers it, whatever its length (drop 0.29; was serve_busy held at 1)
     mesh2 = Mesh(fetch_timeout=600)
-    sb = mesh2.d.cells["top.g_y[1].g_x[1].u_t.u_nic.serve_busy"]
-    sb.v = 1
+    ts = mesh2.d.cells["top.g_y[1].g_x[1].u_t.u_nic.tx_state"]
+    ts.v = 2
     mesh2.program(0, [ins(OP_FETCH_A, 1, 1, A0, 8, 0), ins(OP_END)])
     mesh2.start([0])
     n = 0
     while not mesh2.prog_done[0].v:
-        sb.v = 1
+        ts.v = 2
         mesh2.tick(); n += 1
         if n > 3000:
             break
     fl2 = mesh2.flags()
     ok9b = mesh2.prog_done[0].v == 1 and fl2["timeout"] == [1, 0, 0, 0]
     print(f"  M9: (a) a fetch-response flit dropped at the owner's port: lost_err {fl['lost']} (expect [1,0,0,0]), crc_err[0]={fl['crc'][0]}, "
-          f"parity clean -> {'PASS' if ok9a else 'FAIL'}; (b) request starved by a busy server: fetch_timeout {fl2['timeout']} (expect [1,0,0,0]), "
+          f"parity clean -> {'PASS' if ok9a else 'FAIL'}; (b) request starved by a dead server: fetch_timeout {fl2['timeout']} (expect [1,0,0,0]), "
           f"program completed after {n} cycles instead of hanging -> {'PASS' if ok9b else 'FAIL'} ({time.time() - t0:.0f} s)")
     fails += not (ok9a and ok9b)
 
