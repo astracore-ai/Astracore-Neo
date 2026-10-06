@@ -28,7 +28,7 @@ OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE = 9, 10, 11
 
 
 MAX_FETCH = 4095        # the DMA instruction's length field is 12 bits (drop 0.21: a fetch longer than that is split)
-PROG_DEPTH = 16         # program memory per tile (prog_mem DEPTH)
+PROG_DEPTH = 32         # program memory per tile (prog_mem DEPTH; 32 since drop 0.22, was 16)
 
 
 def ins(op, x=0, y=0, addr=0, length=0, base=0, arg=0):
