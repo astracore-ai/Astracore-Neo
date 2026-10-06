@@ -29,7 +29,7 @@ from neo_compile import direct_conv  # noqa: E402
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv",
        "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "wbuf_mem.sv", "requant.sv",
        "neo_core.sv", "noc_router.sv", "ecc39.sv", "sram_bank.sv", "crc16_word.sv", "tile_nic.sv", "tile_dma.sv",
-       "mbist.sv", "bank_bist_wrap.sv", "prog_mem.sv", "host_if.sv", "esm.sv", "link_pack.sv", "neo_tile.sv", "tile_mesh.sv"]
+       "mbist.sv", "bank_bist_wrap.sv", "bank_word_port.sv", "prog_mem.sv", "host_if.sv", "esm.sv", "link_pack.sv", "neo_tile.sv", "tile_mesh.sv"]
 WPF = int(os.environ.get("NEO_WPF", "1"))   # words per link flit (drop 0.25): 1 as before, 32 = the 1024-bit links
 TYPE_SHIFT = 32 + 32 * WPF - 3                # the flit type sits at the top of the link payload (bit 61 with one word per flit)
 REG_PARTITION = 0x0B
@@ -111,7 +111,7 @@ class Mesh:
         self.clocks += n
 
     def bank_cell(self, node, addr):
-        return self.d.cells[f"top.g_y[{node // NX}].g_x[{node % NX}].u_t.u_bank.u_bank.mem[{addr}]"]
+        return self.d.cells[f"top.g_y[{node // NX}].g_x[{node % NX}].u_t.u_bank.u_bank.mem[{addr % 16},{addr // 16}]"]   # lane, row (drop 0.28)
 
     def bank_write(self, node, addr, word):
         """Backdoor write of a 32-bit word as its (39,32) codeword, the way the bank's own write port stores it."""
@@ -603,7 +603,7 @@ def main():
     cause_clean = mesh.reg_read(0, REG_ERR_CAUSE)
     mesh.reg_write(0, REG_MBIST, 1)
     mesh.tick(2)                                                # done drops two cycles after the start write
-    cell = mesh.d.cells["top.g_y[0].g_x[0].u_t.u_bank.u_bank.mem[11]"]
+    cell = mesh.d.cells["top.g_y[0].g_x[0].u_t.u_bank.u_bank.mem[11,0]"]
     n = 0
     while not (mesh.reg_read(0, REG_MBIST) & 2):
         cell.v |= 1 << 3                                        # stuck-at-1 at word 11 bit 3

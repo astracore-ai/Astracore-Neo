@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""run_mbist.py -- March C- MBIST on an ECC bank under neosim.
+"""run_mbist.py -- March C- MBIST on an ECC bank under neosim (the 512-bit bank with 16 lanes since drop 0.28: 64 words = 4 rows).
   B1 clean bank of 64 words: done, no fail, every word left at the last background
   B2 a stuck-at-1 emulated at word 37 bit 5 (re-applied after every write): fail with fail_addr = 37
   B3 after the MBIST, functional writes and reads still work and ECC flags are clean"""
@@ -10,7 +10,7 @@ rtl = os.path.join(HERE, "..", "rtl")
 def run(stuck=None, stuck2=None):
     d = Design(load([os.path.join(rtl, f) for f in ("ecc39.sv", "sram_bank.sv", "mbist.sv", "bank_bist_wrap.sv")]))
     d.elaborate("bank_bist_wrap", {"DEPTH": 64, "BIST_WORDS": 64})
-    p = {n: d.cell_of(n) for n in ("rst_n", "we", "waddr", "wdata", "re", "raddr", "rdata", "rvalid", "err_clear",
+    p = {n: d.cell_of(n) for n in ("rst_n", "we", "wrow", "wmask", "wdata", "re", "rrow", "rdata", "rvalid", "err_clear",
                                    "ecc_ce_sticky", "ecc_ue_sticky", "bist_start", "bist_active", "bist_done", "bist_fail", "bist_fail_addr", "bist_fail_ce")}
     for n in ("we", "re", "err_clear", "bist_start"): p[n].v = 0
     p["rst_n"].v = 0; d.tick(); d.tick(); p["rst_n"].v = 1; d.tick()
@@ -21,7 +21,7 @@ def run(stuck=None, stuck2=None):
         for st in (stuck, stuck2):
             if st is not None:
                 addr, bit = st
-                c = d.cells[f"top.u_bank.mem[{addr}]"]
+                c = d.cells[f"top.u_bank.mem[{addr % 16},{addr // 16}]"]      # lane, row
                 c.v |= (1 << bit)                 # a stuck-at-1 in the array: the bit never stores a 0
         if cycles > 20000: raise RuntimeError("mbist did not finish")
     return d, p, cycles
@@ -39,10 +39,12 @@ ok2b = p3["bist_fail"].v == 1 and p3["bist_fail_addr"].v == 37 and p3["bist_fail
 print(f"  B2b two stuck bits in word 37: fail={p3['bist_fail'].v}, fail_addr={p3['bist_fail_addr'].v}, by data mismatch (fail_ce={p3['bist_fail_ce'].v}), ecc_ue={p3['ecc_ue_sticky'].v} -> {'PASS' if ok2b else 'FAIL'}")
 fails += not ok2b
 fails += not ok2
-p["we"].v = 1; p["waddr"].v = 9; p["wdata"].v = 0xC0FFEE11; d.tick(); p["we"].v = 0
-p["re"].v = 1; p["raddr"].v = 9; d.tick(); p["re"].v = 0
-ok3 = p["rdata"].v == 0xC0FFEE11 and p["rvalid"].v == 1 and p["ecc_ce_sticky"].v == 0
-print(f"  B3 functional access after MBIST: wrote 0xC0FFEE11 at 9, read 0x{p['rdata'].v:08x}, ecc clean -> {'PASS' if ok3 else 'FAIL'}")
+# B3 through the row port: word 9 = row 0 lane 9 (one lane of the 512-bit write, the lane picked out of the 512-bit read)
+p["we"].v = 1; p["wrow"].v = 0; p["wmask"].v = 1 << 9; p["wdata"].v = 0xC0FFEE11 << (32 * 9); d.tick(); p["we"].v = 0
+p["re"].v = 1; p["rrow"].v = 0; d.tick(); p["re"].v = 0
+got = (p["rdata"].v >> (32 * 9)) & 0xFFFFFFFF
+ok3 = got == 0xC0FFEE11 and p["rvalid"].v == 1 and p["ecc_ce_sticky"].v == 0
+print(f"  B3 functional access after MBIST (row port, lane 9): wrote 0xC0FFEE11 at word 9, read 0x{got:08x}, ecc clean -> {'PASS' if ok3 else 'FAIL'}")
 fails += not ok3
 print("RESULT:", "ALL PASS" if fails == 0 else f"{fails} FAILURES")
 raise SystemExit(1 if fails else 0)
