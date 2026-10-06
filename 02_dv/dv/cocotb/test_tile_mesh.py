@@ -70,6 +70,18 @@ def scope(obj, name):
         return getattr(obj, name)
 
 
+def path(dut, dotted):
+    """Resolve an internal signal by its full dotted path below the top (generate scopes included). cocotb's VPI
+    layer on Verilator cannot enumerate generate blocks, but Verilator resolves a complete name directly."""
+    try:
+        return dut._id(dotted, extended=False)
+    except Exception:
+        h = dut
+        for part in dotted.split("."):
+            h = scope(h, part)
+        return h
+
+
 class Mesh:
     """Host-side view of the mesh through the packed-port wrapper tile_mesh_cocotb: registers, programs,
     bank backdoor, causes. Per-tile inputs are kept as shadow values and written as packed vectors."""
@@ -82,11 +94,16 @@ class Mesh:
         self.addr = [0] * self.N
         self.wdata = [0] * self.N
 
-    def tile(self, n):
+    def tile_path(self, n):
         x, y = xy(n)
-        return getattr(scope(scope(self.dut.u_mesh, f"g_y[{y}]"), f"g_x[{x}]"), "u_t")
+        return f"u_mesh.g_y[{y}].g_x[{x}].u_t"
+
+    def sig(self, n, rel):
+        """An internal signal of tile n, by its path relative to the tile (e.g. 'u_router.out_valid')."""
+        return path(self.dut, f"{self.tile_path(n)}.{rel}")
 
     def _drive(self):
+        self.dut.bd_we.value = 0
         self.dut.h_we.value = sum(v << n for n, v in enumerate(self.we))
         self.dut.h_re.value = sum(v << n for n, v in enumerate(self.re))
         self.dut.h_addr.value = sum((v & 0xFF) << (8 * n) for n, v in enumerate(self.addr))
@@ -156,28 +173,44 @@ class Mesh:
             await self.set_cfg(node, name, v)
         await self.set_cfg(node, "cfg_m", M)
 
-    # ---- bank backdoor (39,32) codewords ----
-    def bank_mem(self, node):
-        return self.tile(node).u_bank.u_bank.mem
+    # ---- bank backdoor through the wrapper's bd_* port: raw 39-bit codewords ----
+    async def bank_poke(self, node, addr, word39):
+        self.dut.bd_node.value = node
+        self.dut.bd_addr.value = addr
+        self.dut.bd_wdata.value = word39 & ((1 << 39) - 1)
+        self.dut.bd_we.value = 1
+        await RisingEdge(self.dut.clk)
+        self.dut.bd_we.value = 0
 
-    def bank_write(self, node, addr, word):
+    async def bank_peek(self, node, addr):
+        self.dut.bd_node.value = node
+        self.dut.bd_addr.value = addr
+        await ReadOnly()
+        v = int(self.dut.bd_rdata.value)
+        await RisingEdge(self.dut.clk)
+        return v
+
+    async def bank_write(self, node, addr, word):
         p, op = ecc_encode(word)
-        self.bank_mem(node)[addr].value = (op << 38) | (p << 32) | (word & 0xFFFFFFFF)
+        await self.bank_poke(node, addr, (op << 38) | (p << 32) | (word & 0xFFFFFFFF))
 
-    def bank_read(self, node, addr):
-        return int(self.bank_mem(node)[addr].value) & 0xFFFFFFFF
+    async def bank_read(self, node, addr):
+        return (await self.bank_peek(node, addr)) & 0xFFFFFFFF
 
-    def load_bank(self, node, act, wts, a0=A0, w0=W0):
+    async def bank_flip(self, node, addr, bit):
+        await self.bank_poke(node, addr, (await self.bank_peek(node, addr)) ^ (1 << bit))
+
+    async def load_bank(self, node, act, wts, a0=A0, w0=W0):
         for i, wd in enumerate(act):
-            self.bank_write(node, a0 + i, wd)
+            await self.bank_write(node, a0 + i, wd)
         for i, wd in enumerate(wts):
-            self.bank_write(node, w0 + i, wd)
+            await self.bank_write(node, w0 + i, wd)
 
-    def read_rows(self, node, addr, M):
+    async def read_rows(self, node, addr, M):
         out = np.zeros((M, COLS), dtype=np.int64)
         for m in range(M):
             for j in range(COLS):
-                out[m, j] = sbits(self.bank_read(node, addr + m * (COLS + 1) + j), 32)
+                out[m, j] = sbits(await self.bank_read(node, addr + m * (COLS + 1) + j), 32)
         return out
 
     def prog_done(self, node):
@@ -240,7 +273,7 @@ async def expect_clean(mesh, nodes=None):
 async def m1_fetch_compute_writeback(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
+    await mesh.load_bank(3, act, wts)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 3, 0, 27, 0, 36)
     prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(3)]
     prog += [ins(OP_FETCH_W, 1, 1, W0, 3 * WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
@@ -248,7 +281,7 @@ async def m1_fetch_compute_writeback(dut):
     await mesh.start([0])
     n = await mesh.wait_prog(0)
     await mesh.tick(40)
-    got = to_image(mesh.read_rows(1, R0, 36), ref, 36)
+    got = to_image(await mesh.read_rows(1, R0, 36), ref, 36)
     assert np.array_equal(got, ref), "M1 mismatch"
     await expect_clean(mesh)
     fc.sample_drain("int32")
@@ -259,7 +292,7 @@ async def m1_fetch_compute_writeback(dut):
 async def m2_ksplit_rdy(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
+    await mesh.load_bank(3, act, wts)
     owner, contribs = 0, [1, 2]
     for n, ct in ((owner, 0), (contribs[0], 1), (contribs[1], 2)):
         await mesh.descriptor(n, 6, 6, 6, 6, 1, 1, 3, 3, ct, 9, 2 if n == owner else 0, 36)
@@ -273,7 +306,7 @@ async def m2_ksplit_rdy(dut):
     await mesh.start([owner, *contribs])
     n = await mesh.wait_prog(owner)
     await mesh.tick(40)
-    got = to_image(mesh.read_rows(3, R0, 36), ref, 36)
+    got = to_image(await mesh.read_rows(3, R0, 36), ref, 36)
     assert np.array_equal(got, ref), "M2 mismatch"
     await expect_clean(mesh)
     fc.sample_drain("psum")
@@ -284,8 +317,9 @@ async def m2_ksplit_rdy(dut):
 async def m3_end_to_end_crc(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
-    router = mesh.tile(0).u_router
+    await mesh.load_bank(3, act, wts)
+    rv = mesh.sig(0, "u_router.out_valid")
+    rf = mesh.sig(0, "u_router.out_flit")
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_END)])
     await mesh.start([0])
     corrupted, n = False, 0
@@ -294,9 +328,9 @@ async def m3_end_to_end_crc(dut):
         await ReadOnly()
         if mesh.prog_done(0):
             break
-        if not corrupted and bit_get(router.out_valid, 4) and ((int(router.out_flit[4].value) >> 61) & 7) == T_RDRSP and n > 40:
+        if not corrupted and bit_get(rv, 4) and ((int(rf[4].value) >> 61) & 7) == T_RDRSP and n > 40:
             await RisingEdge(dut.clk)
-            router.out_flit[4].value = int(router.out_flit[4].value) ^ (1 << 5)   # past the last link parity check
+            rf[4].value = int(rf[4].value) ^ (1 << 5)   # past the last link parity check
             corrupted = True
             continue
         n += 1
@@ -312,7 +346,7 @@ async def m3_end_to_end_crc(dut):
 async def m4_region_refill(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
+    await mesh.load_bank(3, act, wts)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 3, 0, 27, 0, 36, regions=2)
     prog = [ins(OP_FETCH_W, 1, 1, W0, 3 * WPT, 0), ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_FETCH_A, 1, 1, A0 + APT, APT, 36),
             ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_FREE, arg=0), ins(OP_FETCH_A, 1, 1, A0 + 2 * APT, APT, 0),
@@ -321,7 +355,7 @@ async def m4_region_refill(dut):
     await mesh.start([0])
     n = await mesh.wait_prog(0)
     await mesh.tick(40)
-    got = to_image(mesh.read_rows(1, R0, 36), ref, 36)
+    got = to_image(await mesh.read_rows(1, R0, 36), ref, 36)
     assert np.array_equal(got, ref), "M4 mismatch"
     await expect_clean(mesh)
     dut._log.info(f"M4: two-region buffer refilled behind the core, bit-exact in {n} clocks")
@@ -331,10 +365,9 @@ async def m4_region_refill(dut):
 async def m5_bank_ecc_in_flight(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
-    mem = mesh.bank_mem(3)
-    mem[A0 + 40].value = int(mem[A0 + 40].value) ^ (1 << 13)
-    mem[W0 + 7].value = int(mem[W0 + 7].value) ^ (1 << 35)
+    await mesh.load_bank(3, act, wts)
+    await mesh.bank_flip(3, A0 + 40, 13)
+    await mesh.bank_flip(3, W0 + 7, 35)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 3, 0, 27, 0, 36)
     prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(3)]
     prog += [ins(OP_FETCH_W, 1, 1, W0, 3 * WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
@@ -342,7 +375,7 @@ async def m5_bank_ecc_in_flight(dut):
     await mesh.start([0])
     await mesh.wait_prog(0)
     await mesh.tick(40)
-    got = to_image(mesh.read_rows(1, R0, 36), ref, 36)
+    got = to_image(await mesh.read_rows(1, R0, 36), ref, 36)
     assert np.array_equal(got, ref), "M5 mismatch"
     c = await mesh.causes()
     assert (c[3] >> 8) & 1 == 1 and (c[3] >> 7) & 1 == 0 and c[0] == 0 and c[1] == 0 and c[2] == 0, f"M5 causes {['0x%05x' % v for v in c]}"
@@ -355,7 +388,7 @@ async def m6_compiler_program(dut):
     from neo_backend import compile_layer
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
+    await mesh.load_bank(3, act, wts)
     lp = compile_layer("c1", 6, 6, 40, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(1, 1), act_base=A0, w_bank=(1, 1), w_base=W0,
                        owner=(0, 0), shares=3)
     nodes = []
@@ -369,7 +402,7 @@ async def m6_compiler_program(dut):
     onode = lp.out_bank[1] * NX + lp.out_bank[0]
     n = await mesh.wait_prog(onode)
     await mesh.tick(40)
-    got = to_image(mesh.read_rows(onode, lp.out_base, 36), ref, 36)
+    got = to_image(await mesh.read_rows(onode, lp.out_base, 36), ref, 36)
     assert np.array_equal(got, ref), "M6 mismatch"
     await expect_clean(mesh)
     dut._log.info(f"M6: compiler-emitted program ({len(lp.tiles)} tiles) bit-exact in {n} clocks")
@@ -380,7 +413,7 @@ async def m7_mchunks_partial_fetch(dut):
     from neo_backend import compile_layer
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
+    await mesh.load_bank(3, act, wts)
     lps = [compile_layer("r0", 6, 6, 40, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(0, 0), shares=1, oy0=0, oy_n=3),
            compile_layer("r3", 6, 6, 40, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(1, 0), shares=1, oy0=3, oy_n=3)]
     nodes = []
@@ -397,7 +430,7 @@ async def m7_mchunks_partial_fetch(dut):
     await mesh.tick(40)
     got = np.zeros_like(ref)
     for lp, oy0 in zip(lps, (0, 3)):
-        out = mesh.read_rows(lp.out_bank[1] * NX + lp.out_bank[0], lp.out_base, lp.M)
+        out = await mesh.read_rows(lp.out_bank[1] * NX + lp.out_bank[0], lp.out_base, lp.M)
         for m in range(lp.M):
             for c in range(7):
                 got[c, oy0 + m // 6, m % 6] = out[m, c]
@@ -410,7 +443,7 @@ async def m7_mchunks_partial_fetch(dut):
 async def m8_registers_selftest_watchdog(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
+    await mesh.load_bank(3, act, wts)
     await mesh.reg_write(0, REG_ERR_MASK, 1 << 8)
     await mesh.reg_write(0, REG_WD_CTRL, (600 << 8) | 1)
     await mesh.descriptor(0, 6, 6, 1, 1, 1, 1, 3, 1, 0, 9, 0, 1, tile_pixels=36)
@@ -440,7 +473,7 @@ async def m8_registers_selftest_watchdog(dut):
     x16, w16 = x[:16], wgt[:, :16]
     ref16 = direct_conv(x16, w16, 1, 1)
     act16, wts16 = pack_words(x16, w16, 1, 3, 7)
-    mesh.load_bank(3, act16, wts16)
+    await mesh.load_bank(3, act16, wts16)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 1, 0, 9, 0, 36)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_FETCH_W, 1, 1, W0, WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, 36),
                            ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)])
@@ -458,7 +491,7 @@ async def m8_registers_selftest_watchdog(dut):
     await RisingEdge(dut.clk)
     await mesh.tick(40)
     await mesh.reg_write(0, REG_WD_KICK, 0)
-    got = to_image(mesh.read_rows(1, R0, 36), ref16, 36)
+    got = to_image(await mesh.read_rows(1, R0, 36), ref16, 36)
     status = await mesh.reg_read(0, REG_STATUS)
     c_run = await mesh.reg_read(0, REG_ERR_CAUSE)
     assert np.array_equal(got, ref16) and c_run == 0 and mesh.pins()[0] == 0 and (status & 1) == 1
@@ -473,8 +506,9 @@ async def m8_registers_selftest_watchdog(dut):
 async def m9_lost_flit_and_timeout(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
-    mesh.load_bank(3, act, wts)
-    router = mesh.tile(0).u_router
+    await mesh.load_bank(3, act, wts)
+    rv = mesh.sig(0, "u_router.out_valid")
+    rf = mesh.sig(0, "u_router.out_flit")
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_END)])
     await mesh.start([0])
     dropped, n = False, 0
@@ -483,9 +517,9 @@ async def m9_lost_flit_and_timeout(dut):
         await ReadOnly()
         if mesh.prog_done(0):
             break
-        if not dropped and bit_get(router.out_valid, 4) and ((int(router.out_flit[4].value) >> 61) & 7) == T_RDRSP and n > 40:
+        if not dropped and bit_get(rv, 4) and ((int(rf[4].value) >> 61) & 7) == T_RDRSP and n > 40:
             await RisingEdge(dut.clk)
-            bit_set(router.out_valid, 4, 0)                     # the flit vanishes at the owner's port
+            bit_set(rv, 4, 0)                     # the flit vanishes at the owner's port
             dropped = True
             continue
         n += 1
@@ -496,7 +530,7 @@ async def m9_lost_flit_and_timeout(dut):
     fc.sample_flag("lost")
     # starved request: the server tile's interface held busy
     await mesh.reset()
-    sb = mesh.tile(3).u_nic.serve_busy
+    sb = mesh.sig(3, "u_nic.serve_busy")
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, 8, 0), ins(OP_END)])
     await mesh.start([0])
     n = 0
@@ -527,10 +561,9 @@ async def m11_mbist_via_registers(dut):
     assert (st_clean & 0xE) == 0x2 and await mesh.reg_read(0, REG_ERR_CAUSE) == 0
     await mesh.reg_write(0, REG_MBIST, 1)
     await mesh.tick(2)
-    mem = mesh.bank_mem(0)
     n = 0
     while not (await mesh.reg_read(0, REG_MBIST) & 2):
-        mem[11].value = int(mem[11].value) | (1 << 3)             # stuck-at-1 at word 11 bit 3
+        await mesh.bank_poke(0, 11, (await mesh.bank_peek(0, 11)) | (1 << 3))   # stuck-at-1 at word 11 bit 3
         n += 1
         assert n < 4000
     st = await mesh.reg_read(0, REG_MBIST)
@@ -543,16 +576,17 @@ async def m11_mbist_via_registers(dut):
 @cocotb.test()
 async def m12_control_path_protection(dut):
     mesh = await setup(dut)
-    t = mesh.tile(0)
     await mesh.program(0, [ins(OP_END)])
-    t.u_prog.mem[0][0].value = int(t.u_prog.mem[0][0].value) ^ (1 << 7)
+    pm = mesh.sig(0, "u_prog.mem")
+    pm[0][0].value = int(pm[0][0].value) ^ (1 << 7)
     await mesh.start([0])
     await mesh.wait_prog(0)
     c_a = await mesh.reg_read(0, REG_ERR_CAUSE)
     assert (c_a >> CAUSE_PROG_CE) & 1 == 1 and (c_a >> CAUSE_CTRL_PATH) & 1 == 0, f"prog ECC cause 0x{c_a:05x}"
     await mesh.clear_errors(0)
     await mesh.set_cfg(0, "cfg_k", 3)
-    t.u_host.cfg[9].value = int(t.u_host.cfg[9].value) ^ (1 << 2)
+    cfg = mesh.sig(0, "u_host.cfg")
+    cfg[9].value = int(cfg[9].value) ^ (1 << 2)
     await mesh.tick(2)
     c_b = await mesh.reg_read(0, REG_ERR_CAUSE)
     assert (c_b >> CAUSE_CTRL_PATH) & 1 == 1 and mesh.pins()[0] == 1, f"descriptor cause 0x{c_b:05x}"
@@ -562,7 +596,8 @@ async def m12_control_path_protection(dut):
     await mesh.program(0, [ins(OP_WAIT_FREE, arg=3), ins(OP_END)])
     await mesh.start([0])
     await mesh.tick(3)
-    t.u_dma.pc.value = int(t.u_dma.pc.value) ^ 1
+    pc = mesh.sig(0, "u_dma.pc")
+    pc.value = int(pc.value) ^ 1
     await mesh.tick(3)
     c_c = await mesh.reg_read(0, REG_ERR_CAUSE)
     assert (c_c >> CAUSE_CTRL_PATH) & 1 == 1, f"lockstep cause 0x{c_c:05x}"
