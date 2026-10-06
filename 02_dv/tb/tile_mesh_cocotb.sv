@@ -1,7 +1,8 @@
 // tile_mesh_cocotb.sv -- tile_mesh with packed host-bus and status ports for cocotb (drop 0.19).
-//   Verilator presents unpacked arrays of 1-bit ports to VPI as one packed register, so a Python testbench
-//   cannot index them; this wrapper packs every per-tile port into a vector: tile n occupies bit n (1-bit
-//   ports) or bits [n*W +: W] (W-bit ports). Internals are reached through u_mesh.
+//   The simulator presents unpacked arrays of 1-bit ports to VPI as one packed register, so a Python
+//   testbench cannot index them; this wrapper packs every per-tile port into a vector: tile n occupies bit n
+//   (1-bit ports) or bits [n*W +: W] (W-bit ports). Internals are reached through u_mesh. (A comment must not
+//   begin with the simulator's name: it would be read as a directive.)
 module tile_mesh_cocotb #(
   parameter int NX = 2, NY = 2, ROWS = 16, COLS = 8, PW = 32,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
