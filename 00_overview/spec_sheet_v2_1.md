@@ -75,7 +75,7 @@ cfg_tile_pixels, cfg_regions_m1, (2 reserved), cfg_m` (rows to drain). A descrip
 
 ## 6. DMA program engine (per tile)
 
-16 entries × 64-bit instructions: `op[63:60], x[59:56], y[55:52], addr[51:32], len[31:20], base[19:4], arg[3:0]`.
+32 entries × 64-bit instructions (drop 0.22; 16 before): `op[63:60], x[59:56], y[55:52], addr[51:32], len[31:20], base[19:4], arg[3:0]`. `len` is 12 bits: the compiler and the host driver split a longer fetch into instructions of at most 4,095 words on entry boundaries (drop 0.21).
 
 | Op | Name | Behaviour |
 | --- | --- | --- |
@@ -100,13 +100,13 @@ The sequencer starts the first run of channel tile ct only when `tiles_ready > c
 | --- | --- | --- |
 | 0x00 | CTRL | w: bit 0 program start (pulse), bit 1 error clear (pulse) |
 | 0x01 | STATUS | r: bit 0 prog_done, bit 1 drain_busy, bit 2 core done (latched since start), bits 8–15 parity, crc, array_abft, acc_abft, ctrl, seq, rq, ecc_ue; bit 16 ecc_ce |
-| 0x02–0x04 | PROG_ADDR, PROG_LO, PROG_HI | program entry index; low word; high word (writing HI commits the entry) |
+| 0x02–0x04 | PROG_ADDR, PROG_LO, PROG_HI | program entry index (0..31); low word; high word (writing HI commits the entry) |
 | 0x05 | ERR_MASK | w/r: bit i masks cause i from `err_pin` (bit 16 = watchdog) |
 | 0x06 | ERR_CAUSE | r: latched causes (bit 16 = watchdog) |
 | 0x07 | WD_CTRL | w: bit 0 enable, [31:8] window in cycles |
 | 0x08 | WD_KICK | w: any write kicks the watchdog |
 | 0x09 | SELFTEST | w: bit 0 asserts the core's fault-injection hook |
-| 0x0A | MBIST | w: start; r: bit 0 active, bit 1 done, bit 2 fail, bit 3 fail found by ECC, [31:16] failing address |
+| 0x0A | MBIST | w: start; r: bit 0 active, bit 1 done, bit 2 fail, bit 3 fail found by ECC, [31:12] failing address (20 bits, drop 0.22; was [31:16]) |
 | 0x10–0x23 | CFG[0..19] | descriptor registers (16-bit) |
 | 0x24 | CFG_M | rows to drain |
 | 0x30–0x32 | RQ_TBL, RQ_ADDR, RQ_RELU | requantization table row {zp[31:24], shift[20:16], mult[15:0]} at RQ_ADDR; ReLU enable |
