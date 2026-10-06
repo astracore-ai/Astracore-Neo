@@ -6,7 +6,7 @@ set search_path [concat $search_path $LIB_DIR]
 set target_library [glob $LIB_DIR/*${CORNER}*.db]
 set link_library   [concat "*" $target_library]
 set RTL [list delay_line mac_pe skew_in deskew_out systolic_array abft_checker neo_mac_core act_feeder acc_bank \
-  neo_mac_core_v02 core_seq ecc39 wbuf_mem requant neo_core noc_router sram_bank mbist bank_bist_wrap crc16_word \
+  neo_mac_core_v02 core_seq ecc39 wbuf_mem requant neo_core noc_router sram_bank mbist bank_bist_wrap crc16_word crc16_beat link_pack \
   tile_nic tile_dma prog_mem host_if esm neo_tile host_axil neo_tile_axil]
 foreach f $RTL { analyze -format sverilog rtl/$f.sv }
 elaborate neo_tile_axil -parameters "XW=3,YW=3,NX=8,NY=8,ROWS=32,COLS=32,ACC_ROWS=512,ABUF_DEPTH=2048,WBUF_DEPTH=1024,BANK_DEPTH=524288"
