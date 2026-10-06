@@ -33,10 +33,13 @@ PROG_DEPTH = 32         # program memory per tile (prog_mem DEPTH; 32 since drop
 
 def ins(op, x=0, y=0, addr=0, length=0, base=0, arg=0):
     """64-bit DMA instruction: op[63:60] x[59:56] y[55:52] addr[51:32] len[31:20] base[19:4] arg[3:0].
-    A field that does not fit is an error, never a silent overflow into the neighbouring field (drop 0.21)."""
+    A field that does not fit is an error, never a silent overflow into the neighbouring field (drop 0.21); a FETCH of
+    zero words is an error too (drop 0.29: the server answers it with a bare CRC flit, but no program has a use for it)."""
     if not (0 <= op < 16 and 0 <= x < 16 and 0 <= y < 16 and 0 <= addr < (1 << 20) and 0 <= length <= MAX_FETCH
             and 0 <= base < (1 << 16) and 0 <= arg < 16):
         raise ValueError(f"DMA instruction field out of range: op {op} x {x} y {y} addr {addr} len {length} base {base} arg {arg}")
+    if op in (OP_FETCH_A, OP_FETCH_W) and length < 1:
+        raise ValueError(f"FETCH of 0 words (op {op} addr {addr} base {base}): a fetch moves at least one word (drop 0.29)")
     return (op << 60) | (x << 56) | (y << 52) | (addr << 32) | (length << 20) | (base << 4) | arg
 
 
