@@ -1,4 +1,4 @@
-# Neo regression on GitHub Actions (drop 0.18, repository layout = handoff package).
+# Neo regression on GitHub Actions (drop 0.22, repository layout = handoff package).
 # Every job builds the flat layout from the numbered folders with plain copies, then writes its logs to its own
 # branch ci-logs-<job> (ci_logs/<job>/*.txt), so results can be read from the repository and jobs never
 # overwrite each other's results.
@@ -10,6 +10,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+# One run per branch at a time: a new push (every folder of a web upload is one) cancels the queued and running runs
+# of the earlier commits, so only the last commit's run -- the one with every file -- is executed (drop 0.22).
+concurrency:
+  group: regress-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   python-regress:
     runs-on: ubuntu-latest
