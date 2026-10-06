@@ -21,7 +21,13 @@ module tile_mesh_cocotb #(
   output logic [N-1:0]  drain_busy,
   output logic [N-1:0]  done,
   output logic [N-1:0]  crc_err,
-  output logic [N-1:0]  parity_err
+  output logic [N-1:0]  parity_err,
+  // bank backdoor: write bd_wdata into node bd_node's bank at bd_addr on bd_we; bd_rdata reads it combinationally
+  input  logic [1:0]    bd_node,
+  input  logic          bd_we,
+  input  logic [15:0]   bd_addr,
+  input  logic [38:0]   bd_wdata,
+  output logic [38:0]   bd_rdata
 );
   logic          h_we_a [N], h_re_a [N], err_pin_a [N], prog_done_a [N], drain_busy_a [N], done_a [N], crc_err_a [N], parity_err_a [N];
   logic [7:0]    h_addr_a [N];
@@ -41,6 +47,25 @@ module tile_mesh_cocotb #(
       assign parity_err[n] = parity_err_a[n];
     end
   endgenerate
+  // backdoor into the four banks (2x2 mesh); hierarchical references, testbench only
+  always_ff @(posedge clk) begin
+    if (bd_we) begin
+      case (bd_node)
+        2'd0: u_mesh.g_y[0].g_x[0].u_t.u_bank.u_bank.mem[bd_addr] <= bd_wdata;
+        2'd1: u_mesh.g_y[0].g_x[1].u_t.u_bank.u_bank.mem[bd_addr] <= bd_wdata;
+        2'd2: u_mesh.g_y[1].g_x[0].u_t.u_bank.u_bank.mem[bd_addr] <= bd_wdata;
+        default: u_mesh.g_y[1].g_x[1].u_t.u_bank.u_bank.mem[bd_addr] <= bd_wdata;
+      endcase
+    end
+  end
+  always_comb begin
+    case (bd_node)
+      2'd0: bd_rdata = u_mesh.g_y[0].g_x[0].u_t.u_bank.u_bank.mem[bd_addr];
+      2'd1: bd_rdata = u_mesh.g_y[0].g_x[1].u_t.u_bank.u_bank.mem[bd_addr];
+      2'd2: bd_rdata = u_mesh.g_y[1].g_x[0].u_t.u_bank.u_bank.mem[bd_addr];
+      default: bd_rdata = u_mesh.g_y[1].g_x[1].u_t.u_bank.u_bank.mem[bd_addr];
+    endcase
+  end
   tile_mesh #(.NX(NX), .NY(NY), .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH),
               .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT), .BIST_WORDS(BIST_WORDS)) u_mesh (
     .clk(clk), .rst_n(rst_n),
