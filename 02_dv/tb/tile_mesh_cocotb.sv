@@ -1,5 +1,5 @@
 // tile_mesh_cocotb.sv -- tile_mesh with packed host-bus and status ports, a bank backdoor, cycle-exact fault
-//   injection and router observation for cocotb (drop 0.20).
+//   injection and router observation for cocotb (drop 0.21).
 //   Ports: the simulator presents unpacked arrays of 1-bit ports to VPI as one packed register, so a Python
 //   testbench cannot index them; every per-tile port is packed into a vector: tile n occupies bit n (1-bit ports)
 //   or bits [n*W +: W] (W-bit ports).
@@ -38,7 +38,7 @@ module tile_mesh_cocotb #(
   // at bd_addr; bd_rdata shows node bd_node's word bd_addr combinationally
   input  logic [NW-1:0] bd_node,
   input  logic          bd_we,
-  input  logic [15:0]   bd_addr,
+  input  logic [19:0]   bd_addr,            // 20 bits: the silicon bank has 512K words
   input  logic [38:0]   bd_wdata,
   output logic [38:0]   bd_rdata,
   // fault injection into node fi_node, applied at every falling edge while fi_en is high (a one-clock pulse of fi_en
@@ -53,7 +53,7 @@ module tile_mesh_cocotb #(
   input  logic [NW-1:0] fi_node,
   input  logic [2:0]    fi_sel,
   input  logic          fi_en,
-  input  logic [15:0]   fi_idx,
+  input  logic [19:0]   fi_idx,
   input  logic [63:0]   fi_mask,
   // observation of node fi_node's router output stage: valid of port k in bit k, and the local-port (4) flit
   output logic [4:0]    ob_out_valid,
