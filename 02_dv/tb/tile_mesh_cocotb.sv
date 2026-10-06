@@ -1,5 +1,5 @@
 // tile_mesh_cocotb.sv -- tile_mesh with packed host-bus and status ports, a bank backdoor, cycle-exact fault
-//   injection and router observation for cocotb (drop 0.28: bank backdoors by lane and row).
+//   injection and router observation for cocotb (drop 0.28: bank backdoors by lane and row; drop 0.29: the dead-server fault).
 //   Ports: the simulator presents unpacked arrays of 1-bit ports to VPI as one packed register, so a Python
 //   testbench cannot index them; every per-tile port is packed into a vector: tile n occupies bit n (1-bit ports)
 //   or bits [n*W +: W] (W-bit ports).
@@ -53,7 +53,10 @@ module tile_mesh_cocotb #(
   //          4  primary DMA engine pc XOR fi_mask[3:0]
   //          5  router output register out_flit[fi_idx] XOR fi_mask  (payload bits, any of the WPF words; fi_idx = port, 4 = local)
   //          6  router output register out_valid[fi_idx] cleared     (the flit vanishes)
-  //          7  NIC serve_busy held at 1                            (requests are never served; hold fi_en)
+  //          7  NIC transmit engine held in X_SERVE_RD (4'd2)        (a dead server: a request is taken and its response never
+//                                                                 comes, whatever the request's length; hold fi_en. Drop 0.29:
+//                                                                 was serve_busy held at 1, which only starved the requester
+//                                                                 because the old engine streamed words without ever closing)
   input  logic [NW-1:0] fi_node,
   input  logic [2:0]    fi_sel,
   input  logic          fi_en,
@@ -123,7 +126,7 @@ module tile_mesh_cocotb #(
               3'd5: u_mesh.g_y[gy].g_x[gx].u_t.u_router.out_flit[fi_idx[2:0]] <=
                       u_mesh.g_y[gy].g_x[gx].u_t.u_router.out_flit[fi_idx[2:0]] ^ FW'(fi_mask);
               3'd6: u_mesh.g_y[gy].g_x[gx].u_t.u_router.out_valid[fi_idx[2:0]] <= 1'b0;
-              3'd7: u_mesh.g_y[gy].g_x[gx].u_t.u_nic.serve_busy <= 1'b1;
+              3'd7: u_mesh.g_y[gy].g_x[gx].u_t.u_nic.tx_state <= 4'd2;        // X_SERVE_RD: nothing is ever emitted
               default: ;
             endcase
           end
