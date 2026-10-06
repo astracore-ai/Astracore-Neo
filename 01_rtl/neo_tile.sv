@@ -7,7 +7,7 @@ module neo_tile #(
   parameter int WCW = 8 + $clog2(ROWS) + 1,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
   parameter int IDXW = $clog2(ACC_ROWS), AW = $clog2(ABUF_DEPTH), WAW = $clog2(WBUF_DEPTH), BAW = $clog2(BANK_DEPTH),
-  parameter int FETCH_TIMEOUT = 8192,
+  parameter int FETCH_TIMEOUT = 1048575,     // silicon default (drop 0.24): 2^20 - 1, see tile_nic.sv
   parameter int BIST_WORDS = BANK_DEPTH,
   parameter int PDEPTH = 32,                 // DMA program memory entries (drop 0.22: 32, was 16)
   parameter int PAW = $clog2(PDEPTH)

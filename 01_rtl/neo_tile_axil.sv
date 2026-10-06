@@ -5,7 +5,7 @@ module neo_tile_axil #(
   parameter int MY_X = 0, MY_Y = 0,
   parameter int ROWS = 16, COLS = 8, PW = 32,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
-  parameter int FETCH_TIMEOUT = 8192, BIST_WORDS = BANK_DEPTH
+  parameter int FETCH_TIMEOUT = 1048575, BIST_WORDS = BANK_DEPTH   // silicon default (drop 0.24): 2^20 - 1, see tile_nic.sv
 )(
   input  logic          clk,
   input  logic          rst_n,

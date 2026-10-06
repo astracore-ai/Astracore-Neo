@@ -5,7 +5,7 @@ module tile_mesh #(
   parameter int ROWS = 16, COLS = 8, PW = 32,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
   parameter int IDXW = $clog2(ACC_ROWS),
-  parameter int FETCH_TIMEOUT = 8192,
+  parameter int FETCH_TIMEOUT = 1048575,     // silicon default (drop 0.24): 2^20 - 1, see tile_nic.sv
   parameter int BIST_WORDS = BANK_DEPTH
 )(
   input  logic          clk,

@@ -42,7 +42,11 @@ module tile_nic #(
   parameter int WPA   = ROWS * 8 / 32,      // words per activation entry
   parameter int WPW   = (COLS * 8 + WCW + 31) / 32,   // words per weight entry
   parameter int DFD   = 64,                 // drain FIFO rows
-  parameter int FETCH_TIMEOUT = 8192        // cycles a fetch may wait for its response
+  parameter int FETCH_TIMEOUT = 1048575     // cycles a fetch may wait for its response. Silicon rule (drop 0.24): every tile has at
+                                            // most one fetch outstanding and a fetch is at most 4,095 words, so the longest wait at one
+                                            // bank is (NX*NY - 1) queued maximal fetches plus its own: FETCH_TIMEOUT >= NX*NY*(4,095 + H),
+                                            // H the per-request overhead; 2^20 - 1 covers 64 tiles with H up to 12,000 cycles.
+                                            // The simulation builds pass 8,192 / 65,535 so the timeout tests stay short.
 )(
   input  logic                  clk,
   input  logic                  rst_n,
@@ -128,7 +132,8 @@ module tile_nic #(
   logic [BAW-1:0]       wr_ptr  [NSRC];
   logic [15:0]          crc_acc [NSRC];
   logic [15:0]          rx_cnt  [NSRC];                 // data words received in the current message
-  logic [15:0]          fetch_timer;
+  localparam int FTW = $clog2(FETCH_TIMEOUT + 1);          // timer width follows the parameter (drop 0.24: was a fixed 16 bits)
+  logic [FTW-1:0]       fetch_timer;
   logic signed [PW-1:0] prow    [NSRC][COLS];            // partial-sum row under assembly
 
   // outstanding fetch
