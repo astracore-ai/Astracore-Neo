@@ -29,13 +29,15 @@ MESH_NX = NX_CORES + 2            # bank columns at x = 0 and x = MESH_NX - 1
 HOP_LAT = 2
 LINK_BYTES = 64                   # 512-bit links at one flit per cycle
 BANK_BYTES = 64                   # bytes per cycle per bank
-# the tile interface's per-flow rates as the RTL has them after drop 0.31: a fetch is received at entry rate (one 8-word
-# activation entry per cycle = 32 B; weights 9 words = 36 B, modelled at 32), the drain sends 16-word beats (64 B/cycle;
-# a 33-word INT32 row in three beats, drop 0.31), partial sums are taken a 16-column beat per cycle at the owner's reduce
-# port (64 B/cycle, drop 0.31). A transfer takes max(bytes / link, bytes / endpoint rate) cycles on its links; the bank is
-# busy bytes / BANK_BYTES. Up to drop 0.30 the drain and the partial sums moved one word per cycle (--tx 4 --psum 4); the
-# pre-0.30 model assumed every endpoint absorbs a full link (set --rx/--tx/--psum to the link width to reproduce it).
-RX_BYTES = 32                     # fetch receive, bytes per cycle into a core
+# the tile interface's per-flow rates as the RTL has them after drop 0.32: a fetch is received two entries per cycle
+# (two 8-word activation entries = 64 B, the buffer's word-wide write port, drop 0.32; weights at 9 words per entry pair
+# up less often, modelled at the same 64), the drain sends 16-word beats (64 B/cycle; a 33-word INT32 row in three
+# beats, drop 0.31), partial sums are taken a 16-column beat per cycle at the owner's reduce port (64 B/cycle, drop 0.31).
+# 64 B/cycle is the tile interface's beat (16 words) and the bank's row: the per-flow ceiling of the design; the 128 B/cycle
+# link carries two such flows. A transfer takes max(bytes / link, bytes / endpoint rate) cycles on its links; the bank is
+# busy bytes / BANK_BYTES. History: --rx 32 after drop 0.30 (one entry per cycle), --tx 4 --psum 4 up to drop 0.30 (one
+# word per cycle); the pre-0.30 model assumed every endpoint absorbs a full link (set all three to 128 to reproduce it).
+RX_BYTES = 64                     # fetch receive, bytes per cycle into a core
 TX_BYTES = 64                     # drain / writeback, bytes per cycle out of a core
 PSUM_BYTES = 64                   # partial sums, bytes per cycle into the owner's reduce port
 F_GHZ = nc.F_GHZ
