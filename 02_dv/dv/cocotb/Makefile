@@ -78,11 +78,23 @@ tile32:
 MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_bank_ecc_in_flight,m6_compiler_program,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m12_control_path_protection,m13_partitions,m14_bank_contention
 # --build-jobs 4: the 64-tile model's C++ is compiled on four cores (drop 0.30: run 85's mesh8 job had not reported after an
 # hour, so the single-core compile of 64 tiles of 32x32 cores is the suspect; the hdl-sim job's 2x2 builds take ~50 min)
-MESH8_MAKE := $(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml BUILD_JOBS_ARG="--build-jobs 4"
+# MESH8_BUILD_JOBS / MESH8_CFLAGS (drop 0.32): the fallbacks for a build that kills the runner are a one-line change in the
+# workflow -- `make cocotb_mesh8_build MESH8_BUILD_JOBS=2 MESH8_CFLAGS="-CFLAGS -O1"` -- and, below, a mesh8 variant on
+# 16x8 cores with the silicon depths (mesh-level tests only; the tile32 suite proves the 32x32 core)
+MESH8_BUILD_JOBS ?= 4
+MESH8_CFLAGS ?=
+MESH8_MAKE := $(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)"
 mesh8:
 	$(MESH8_MAKE)
 mesh8_build:                       # the model only (sim_build_mesh8/Vtop), so CI can publish a heartbeat between build and run
 	$(MESH8_MAKE) sim_build_mesh8/Vtop
+# the small-core 8x8 mesh: 64 tiles of 16x8 cores, silicon depths and links, the mesh tests (the model is ~16x smaller)
+SMALL_SILICON := ROWS=16 COLS=8 ACC_ROWS=512 ABUF_DEPTH=2048 WBUF_DEPTH=1024
+MESH8S_MAKE := $(MAKE) TARGET=tile $(SMALL_SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8s COCOTB_RESULTS_FILE=results_mesh8s.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)"
+mesh8s:
+	$(MESH8S_MAKE)
+mesh8s_build:
+	$(MESH8S_MAKE) sim_build_mesh8s/Vtop
 # coverage builds (drop 0.26, item 5): the same tests with Verilator line/toggle coverage and the functional covergroups on,
 # in their own build directories; each run's coverage.dat is renamed after it so the three merge into one report
 define keep_cov
@@ -97,9 +109,16 @@ tile_cov:
 tile8_cov:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer VCOV=1 SIM_BUILD=sim_build_cov_tile8 COCOTB_RESULTS_FILE=results_cov_tile8.xml
 	$(call keep_cov,sim_build_cov_tile8,coverage_tile8.dat)
-coverage: core_cov tile_cov tile8_cov
+# tile32_cov (drop 0.32): the 32x32 silicon configuration at 32 words per flit, so the beat paths of the tile interface
+# (two entries per cycle, 16-column PSUM beats, 16 + 16 + 1 drains, merged flits) are measured, not only the one-word
+# builds; a subset of the suite keeps the coverage job within its time (the whole tile32 suite is in `tile32`)
+TILE32_COV_TESTS ?= m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m13_partitions
+tile32_cov:
+	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 TESTCASE=$(TILE32_COV_TESTS) VCOV=1 SIM_BUILD=sim_build_cov_tile32 COCOTB_RESULTS_FILE=results_cov_tile32.xml
+	$(call keep_cov,sim_build_cov_tile32,coverage_tile32.dat)
+coverage: core_cov tile_cov tile8_cov tile32_cov
 	python3 coverage_report.py --dat "coverage_*.dat" --funcov "funcov_*.yml" --out coverage_report.md
 	-verilator_coverage --annotate coverage_annotated --annotate-min 1 coverage_*.dat > /dev/null 2>&1
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
-	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_mesh8s sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated

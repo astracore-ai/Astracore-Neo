@@ -394,7 +394,9 @@ async def corrupt_local_response(mesh, dut, sel, mask, tag):
             dut.fi_en.value = 0                                   # the fault was applied at the last falling edge
         if mesh.prog_done(0):
             break
-        if not applied and n > 40 and mesh.router_valid(4) and ((mesh.router_flit4() >> TYPE_SHIFT) & 7) == T_RDRSP:
+        # the first response flit at the port (drop 0.32: the old `n > 40` guard found nothing once a response is consumed
+        # at two entries per cycle -- the whole 16x8 response can be gone before cycle 40)
+        if not applied and mesh.router_valid(4) and ((mesh.router_flit4() >> TYPE_SHIFT) & 7) == T_RDRSP:
             if sel == FI_FLIT_XOR:
                 # a packed flit stays in the register for WPF cycles and the unpacker has taken word 0 by the time the fault
                 # lands: aim the mask at the flit's last word, which is still to be consumed (word 0 with one word per flit)
