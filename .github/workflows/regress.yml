@@ -89,7 +89,12 @@ jobs:
           git push origin ci-logs-hdl-sim --force
   hdl-mesh8:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 300
+    # its own group (drop 0.30): a push cancels only this job's own predecessor, and the job is not held by the regress
+    # group while python-regress / hdl-sim of the same run are still on it
+    concurrency:
+      group: mesh8-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -104,14 +109,38 @@ jobs:
           cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
           cp 07_ci/Makefile Makefile
           mkdir -p ci_logs/hdl-mesh8 && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-mesh8/RUN.txt
+          nproc; free -m; df -h / | tail -1
+      # heartbeat (drop 0.30): runs 74 and 85 left nothing on the log branch, not even the timeout publish, so the job
+      # publishes RUN.txt as soon as it starts and again after the build -- whatever happens later, the branch shows how
+      # far it got
+      - name: publish heartbeat
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          echo "started $(date -u)" >> ci_logs/hdl-mesh8/RUN.txt
+          git checkout --orphan ci-logs-hdl-mesh8 && git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs && git commit -q -m "hdl-mesh8 heartbeat run ${{ github.run_number }}" && git push -q origin ci-logs-hdl-mesh8 --force
+      # (the job stays on the orphan branch: the working tree keeps every file, and the final publish commits onto it)
+      # the runner's own toolchains are removed first (~10 GB of the 14 GB disk): the cancelled run-86 job published its
+      # "finished" line, so a cancel or a timeout does publish -- runs 74 and 85 left nothing, i.e. the runner itself died
+      # during the build, out of disk or memory being the usual cause
+      - name: build the 8x8 silicon mesh (Verilator, 4 build jobs)
+        run: |
+          set -o pipefail
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost 2>/dev/null || true
+          df -h / | tail -1
+          make cocotb_mesh8_build 2>&1 | tee ci_logs/hdl-mesh8/build.txt
+          echo "built $(date -u)" >> ci_logs/hdl-mesh8/RUN.txt; free -m; df -h / | tail -1; du -sh dv/cocotb/sim_build_mesh8 2>/dev/null || true
+      - name: publish heartbeat after the build
+        run: |
+          git add -f ci_logs && git commit -q -m "hdl-mesh8 built run ${{ github.run_number }}" && git push -q origin ci-logs-hdl-mesh8 --force
       - name: cocotb on the 8x8 silicon mesh
-        run: set -o pipefail; make cocotb_mesh8 2>&1 | tee ci_logs/hdl-mesh8/mesh8.txt
+        run: set -o pipefail; make cocotb_mesh8_run 2>&1 | tee ci_logs/hdl-mesh8/mesh8.txt
       - name: publish logs
         if: always()
         run: |
           git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
           mkdir -p ci_logs/hdl-mesh8 && echo "finished $(date -u)" >> ci_logs/hdl-mesh8/RUN.txt
-          git checkout --orphan ci-logs-hdl-mesh8
+          git checkout --orphan ci-logs-hdl-mesh8 2>/dev/null || git checkout ci-logs-hdl-mesh8
           git rm -rfq --cached . 2>/dev/null || true
           git add -f ci_logs
           git commit -m "hdl-mesh8 logs run ${{ github.run_number }}" || true
