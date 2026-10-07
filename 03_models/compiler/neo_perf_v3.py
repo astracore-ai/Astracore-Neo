@@ -263,8 +263,8 @@ def main():
     ap.add_argument("--inherit", action="store_true", help="consistent chunk partitioning across layers")
     ap.add_argument("--band", action="store_true", help="spatial banding: tile t owns row band t at every layer")
     ap.add_argument("--rx", type=int, default=v2.RX_BYTES, help="fetch receive rate, bytes per cycle into a core (RTL after drop 0.30: 32)")
-    ap.add_argument("--tx", type=int, default=v2.TX_BYTES, help="drain rate, bytes per cycle out of a core (RTL: 4, one word per beat)")
-    ap.add_argument("--psum", type=int, default=v2.PSUM_BYTES, help="partial-sum receive rate, bytes per cycle (RTL: 4)")
+    ap.add_argument("--tx", type=int, default=v2.TX_BYTES, help="drain rate, bytes per cycle out of a core (RTL since drop 0.31: 64, 16-word beats; 4 before)")
+    ap.add_argument("--psum", type=int, default=v2.PSUM_BYTES, help="partial-sum receive rate, bytes per cycle (RTL since drop 0.31: 64; 4 before)")
     a = ap.parse_args()
     global INHERIT_CHUNKS, BAND
     INHERIT_CHUNKS = a.inherit

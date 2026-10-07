@@ -29,14 +29,15 @@ MESH_NX = NX_CORES + 2            # bank columns at x = 0 and x = MESH_NX - 1
 HOP_LAT = 2
 LINK_BYTES = 64                   # 512-bit links at one flit per cycle
 BANK_BYTES = 64                   # bytes per cycle per bank
-# the tile interface's per-flow rates as the RTL has them after drop 0.30 (stage 3 of the bank port): a fetch is received
-# at entry rate (one 8-word activation entry per cycle = 32 B; weights 9 words = 36 B, modelled at 32), a drain sends one
-# word per beat (4 B/cycle, the packer merges them into wide flits), partial sums are consumed one word per cycle (4 B).
-# A transfer takes max(bytes / link, bytes / endpoint rate) cycles on its links; the bank is busy bytes / BANK_BYTES.
-# The pre-0.30 model assumed every endpoint could absorb a full link (set --rx/--tx/--psum to the link width to reproduce it).
+# the tile interface's per-flow rates as the RTL has them after drop 0.31: a fetch is received at entry rate (one 8-word
+# activation entry per cycle = 32 B; weights 9 words = 36 B, modelled at 32), the drain sends 16-word beats (64 B/cycle;
+# a 33-word INT32 row in three beats, drop 0.31), partial sums are taken a 16-column beat per cycle at the owner's reduce
+# port (64 B/cycle, drop 0.31). A transfer takes max(bytes / link, bytes / endpoint rate) cycles on its links; the bank is
+# busy bytes / BANK_BYTES. Up to drop 0.30 the drain and the partial sums moved one word per cycle (--tx 4 --psum 4); the
+# pre-0.30 model assumed every endpoint absorbs a full link (set --rx/--tx/--psum to the link width to reproduce it).
 RX_BYTES = 32                     # fetch receive, bytes per cycle into a core
-TX_BYTES = 4                      # drain / writeback, bytes per cycle out of a core
-PSUM_BYTES = 4                    # partial sums, bytes per cycle into the owner's reduce port
+TX_BYTES = 64                     # drain / writeback, bytes per cycle out of a core
+PSUM_BYTES = 64                   # partial sums, bytes per cycle into the owner's reduce port
 F_GHZ = nc.F_GHZ
 
 
