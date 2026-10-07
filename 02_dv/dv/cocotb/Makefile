@@ -22,6 +22,9 @@ export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH
 # drop 0.29 keeps each source's receive state in its own generate block instead, so no procedural loop scales with the mesh.
 # The raised limit stays: it is harmless and covers the COLS-wide loops of the 32x32 builds with margin.
 EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN --public-flat-rw --unroll-count 1024
+# BUILD_JOBS_ARG: set by a target that wants Verilator's C++ compile on several cores (the mesh8 build, drop 0.30)
+BUILD_JOBS_ARG ?=
+EXTRA_ARGS += $(BUILD_JOBS_ARG)
 # geometry, depths and fetch watchdog; the tests read the geometry from the environment
 NX ?= 2
 NY ?= 2
@@ -73,8 +76,10 @@ tile8:
 tile32:
 	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 SIM_BUILD=sim_build_tile32 COCOTB_RESULTS_FILE=results_tile32.xml
 MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_bank_ecc_in_flight,m6_compiler_program,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m12_control_path_protection,m13_partitions,m14_bank_contention
+# --build-jobs 4: the 64-tile model's C++ is compiled on four cores (drop 0.30: run 85's mesh8 job had not reported after an
+# hour, so the single-core compile of 64 tiles of 32x32 cores is the suspect; the hdl-sim job's 2x2 builds take ~50 min)
 mesh8:
-	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml
+	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml BUILD_JOBS_ARG="--build-jobs 4"
 # coverage builds (drop 0.26, item 5): the same tests with Verilator line/toggle coverage and the functional covergroups on,
 # in their own build directories; each run's coverage.dat is renamed after it so the three merge into one report
 define keep_cov
