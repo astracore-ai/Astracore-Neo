@@ -48,7 +48,7 @@ TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wra
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_coverage
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_coverage
 
 all: regress model
 
@@ -207,6 +207,14 @@ cocotb_coverage:
 cocotb_mesh8:
 	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
+	-$(MAKE) -C dv/cocotb mesh8
+	python3 dv/cocotb/check_results.py dv/cocotb/results_mesh8.xml
+# the same in two halves for CI (drop 0.30): build the model, publish a heartbeat, then run on the built model (no clean)
+cocotb_mesh8_build:
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
+	$(MAKE) -C dv/cocotb mesh8_build
+cocotb_mesh8_run:
 	-$(MAKE) -C dv/cocotb mesh8
 	python3 dv/cocotb/check_results.py dv/cocotb/results_mesh8.xml
 
