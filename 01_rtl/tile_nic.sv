@@ -20,11 +20,13 @@
 //   received at entry rate (drop 0.30, stage 3): each cycle one activation entry (WPA words) or weight entry (WPW words)
 //   is assembled from the words staged from earlier beats plus the current beat and written to its buffer, so a 16-word
 //   beat is taken in ceil(words / WPE) cycles (two at 32x32) instead of sixteen; words that do not complete an entry are
-//   staged for the next beat. PSUM beats are still consumed one word per cycle (row assembly for the reduce port).
+//   staged for the next beat. PSUM beats are taken whole (drop 0.31): up to 16 columns per cycle into the row under
+//   assembly, the row handed to the reduce port in the cycle its check word arrives.
 //   Drain modes (drop 0.13): INT32 rows (COLS words + check word) for partial results and debug, or INT8 rows from the
 //   requantization stage packed 4 channels per word (COLS/4 words per row, no check word): with COLS == ROWS one INT8 row
 //   is exactly one activation entry of the next layer, so the written region is the next layer's input with no
-//   reformatting. The drain still sends one word per beat; the packer merges them into wide flits.
+//   reformatting. The drain sends 16-word beats (drop 0.31): an INT32 row (COLS + 1 words) is 16 + 16 + 1 at 32x32, an
+//   INT8 row (COLS / 4 words) one beat; the packer merges beats into wide flits as before.
 //   RX: per-source write pointers, PSUM row assembly and CRC accumulators (sources interleave at a destination; each
 //   (source, destination) stream is in order on the XY mesh), each source's state in its own register block. TX: one
 //   message at a time (RDREQ, serve a read, or drain), so a receiver never sees two of our messages interleaved.
@@ -137,11 +139,8 @@ module tile_nic #(
   logic [VW-1:0]   rx_words;
   logic            rx_is_data;
   logic [CW-1:0]   rx_nw;                                 // words in the beat
-  logic [CW-1:0]   rx_widx;                               // word of the beat presented to the serial paths (RDRSP, PSUM)
-  logic [VW-1:0]   rx_shift;
-  logic [31:0]     rx_word;                               // the word presented now (word 0 of the single-word types)
+  logic [31:0]     rx_word;                               // word 0: the word of the single-word types
   logic [51:0]     rx_data;                               // the one-word view {hdr, word}: the fields of RDREQ, WRHDR, CRC
-  logic            rx_wlast;                              // rx_word is the beat's last word
   logic [XW-1:0]   rx_src_x;
   logic [YW-1:0]   rx_src_y;
   logic [7:0]      rx_src;                                // source node index
@@ -151,10 +150,8 @@ module tile_nic #(
   assign rx_words = rx_flit[VW-1:0];
   assign rx_is_data = (rx_type == T_RDRSP) || (rx_type == T_WRDATA) || (rx_type == T_PSUM);
   assign rx_nw    = rx_is_data ? CW'(rx_hdr[13:8]) + CW'(1) : CW'(1);
-  assign rx_shift = rx_words >> (32 * rx_widx);
-  assign rx_word  = rx_shift[31:0];
+  assign rx_word  = rx_words[31:0];
   assign rx_data  = {rx_hdr, rx_word};
-  assign rx_wlast = (rx_widx == rx_nw - 1);
   assign rx_src_x = rx_flit[SRCX_LO +: XW];
   assign rx_src_y = rx_flit[SRCY_LO +: YW];
   assign rx_src   = rx_src_y * NX + rx_src_x;
@@ -197,10 +194,16 @@ module tile_nic #(
   logic [BAW-1:0]       serve_addr;
   logic [11:0]          serve_len;
 
-  logic [7:0] rx_col;                                     // PSUM column of rx_word (COLS = the check value); 8 bits for COLS up to 255 (drop 0.21)
-  assign rx_col = rx_hdr[7:0] + 8'(rx_widx);
-  logic rx_is_psum_last;
-  assign rx_is_psum_last = (rx_type == T_PSUM) && (rx_col == COLS);
+  // PSUM beat (drop 0.31): columns ps_col0 .. ps_col0 + words - 1 of row rx_tag; column COLS is the check value and
+  // completes the row (8-bit columns for COLS up to 255, drop 0.21)
+  logic [7:0]  ps_col0;
+  logic [8:0]  ps_end;                                    // one past the beat's last column
+  logic        ps_has_chk;                                // the beat carries the check word: the row goes to the reduce port
+  logic [LW-1:0] ps_chk_idx;                              // its position in the beat
+  assign ps_col0    = rx_hdr[7:0];
+  assign ps_end     = {1'b0, ps_col0} + {4'd0, rx_nw};
+  assign ps_has_chk = (rx_type == T_PSUM) && ({1'b0, ps_col0} <= 9'(COLS)) && (ps_end > 9'(COLS));
+  assign ps_chk_idx = LW'(9'(COLS) - {1'b0, ps_col0});
   logic rx_foreign;
   assign rx_foreign = rx_valid && (rx_flit[SEQ_LO +: 4] != partition);
 
@@ -275,38 +278,26 @@ module tile_nic #(
   end
 
   // ------------------------------------------------------------------ RX handshake
-  // PSUM beats are consumed one word per cycle (rx_wfire); RDRSP beats at entry rate (fx_done); the other types, and a
-  // WRDATA beat once its last row write is on the port, are consumed whole (rx_fire).
-  logic rx_serial;
-  logic rx_waccept;
-  logic rx_wfire;
+  // RDRSP beats are consumed at entry rate (fx_done); a PSUM beat whole, held only while its check word finds the reduce
+  // FIFO full; the other types, and a WRDATA beat once its last row write is on the port, whole (rx_fire).
   logic rx_fire;
-  assign rx_serial  = (rx_type == T_PSUM);
-  assign rx_waccept = !(rx_is_psum_last && efifo_full);
   always_comb begin
     if (rx_foreign) rx_ready = 1'b1;                       // dropped
     else begin
       case (rx_type)
         T_RDREQ:  rx_ready = !serve_busy;
         T_RDRSP:  rx_ready = fx_done;
-        T_PSUM:   rx_ready = rx_wlast && rx_waccept;
+        T_PSUM:   rx_ready = !(ps_has_chk && efifo_full);
         T_WRDATA: rx_ready = !wb_cross || wb_phase;
         default:  rx_ready = 1'b1;
       endcase
     end
   end
-  assign rx_wfire = rx_valid && !rx_foreign && rx_serial && rx_waccept;
   assign rx_fire  = rx_valid && rx_ready && !rx_foreign;
 
-  // CRC update for what is received this cycle: the whole WRDATA or RDRSP beat, otherwise the word presented
-  logic [VW-1:0] rx_crc_words;
-  logic [CW-1:0] rx_crc_n;
+  // CRC update for what is received this cycle: the whole data beat (its first rx_nw words), otherwise the one word
   logic [15:0]   rx_crc_next;
-  logic          rx_beat_crc;
-  assign rx_beat_crc  = (rx_type == T_WRDATA) || (rx_type == T_RDRSP);
-  assign rx_crc_words = rx_beat_crc ? rx_words : VW'(rx_word);
-  assign rx_crc_n     = rx_beat_crc ? rx_nw : CW'(1);
-  crc16_beat #(.BW(BW)) u_rxcrc (.crc_in(crc_acc[rx_src]), .words(rx_crc_words), .n(rx_crc_n), .crc_out(rx_crc_next));
+  crc16_beat #(.BW(BW)) u_rxcrc (.crc_in(crc_acc[rx_src]), .words(rx_words), .n(rx_nw), .crc_out(rx_crc_next));
   generate
     for (genvar c = 0; c < ROWS; c++) begin : g_a
       assign abuf_wdata[c] = ent[c / 4][8 * (c % 4) +: 8];
@@ -328,11 +319,6 @@ module tile_nic #(
         if (!rst_n) begin
           wr_ptr[s] <= '0; crc_acc[s] <= 16'hFFFF; rx_cnt[s] <= '0; prow[s] <= '0;
         end else if (rx_src == s) begin
-          if (rx_wfire) begin                                // PSUM: one word per cycle
-            crc_acc[s] <= rx_crc_next;
-            rx_cnt[s]  <= rx_cnt[s] + 16'd1;
-            if (rx_col < COLS) prow[s][PW * rx_col +: PW] <= rx_word;
-          end
           if (rx_fire) begin
             case (rx_type)
               T_WRHDR:  wr_ptr[s] <= rx_word[BAW-1:0];
@@ -344,6 +330,12 @@ module tile_nic #(
               T_RDRSP: begin                                 // the whole beat, after its last entry
                 crc_acc[s] <= rx_crc_next;
                 rx_cnt[s]  <= rx_cnt[s] + 16'(rx_nw);
+              end
+              T_PSUM: begin                                  // the whole beat: its columns into the row under assembly
+                crc_acc[s] <= rx_crc_next;
+                rx_cnt[s]  <= rx_cnt[s] + 16'(rx_nw);
+                for (int j = 0; j < COLS; j++)
+                  if ((j >= ps_col0) && (j < ps_end)) prow[s][PW * j +: PW] <= rx_words[32 * LW'(j - ps_col0) +: 32];
               end
               T_CRC: begin
                 crc_acc[s] <= 16'hFFFF;
@@ -368,7 +360,7 @@ module tile_nic #(
       for (int j = 0; j < COLS; j++) begin efifo_y[0][j] <= '0; efifo_y[1][j] <= '0; end
       serve_busy <= 1'b0; serve_x <= '0; serve_y <= '0; serve_addr <= '0; serve_len <= '0;
       crc_err_sticky <= 1'b0; rdy_seen <= 1'b0;
-      rx_widx <= '0; wb_phase <= 1'b0;
+      wb_phase <= 1'b0;
     end else begin
       if (err_clear) begin crc_err_sticky <= 1'b0; lost_err_sticky <= 1'b0; fetch_timeout_sticky <= 1'b0; iso_err_sticky <= 1'b0; end
       if (rx_foreign) iso_err_sticky <= 1'b1;
@@ -390,12 +382,10 @@ module tile_nic #(
         efifo_valid[efifo_rd] <= 1'b0;
         efifo_rd <= !efifo_rd;
       end
-      // word position inside a serially consumed beat (a beat is presented continuously from its first word; if it vanishes
-      // under us -- a dropped flit, M9a -- the next beat starts at word 0 again); second-row phase of a crossing WRDATA beat
-      if (!rx_valid) rx_widx <= '0;
-      else if (rx_wfire) rx_widx <= rx_wlast ? '0 : rx_widx + CW'(1);
+      // second-row phase of a crossing WRDATA beat
       wb_phase <= wb_active && wb_cross && !wb_phase;
-      // fetch receive: entries out, leftovers staged (the beat position resets if the beat vanishes, as rx_widx does)
+      // fetch receive: entries out, leftovers staged (the beat position resets if the beat vanishes under us -- a dropped
+      // flit, M9a -- so the next beat starts at word 0 again)
       if (!rx_valid) rx_woff <= '0;
       else if (fx_act) rx_woff <= fx_more ? rx_woff + fx_k : '0;
       if (fx_entry) fetch_ent <= fetch_ent + 16'd1;
@@ -405,14 +395,13 @@ module tile_nic #(
         for (int w = 0; w < EW; w++)
           if (w >= fx_dst && w < fx_dst + fx_rem) stage[w] <= rx_words[32 * LW'(fx_src + w - fx_dst) +: 32];
       end
-      if (rx_wfire) begin
-        if (rx_col >= COLS) begin                          // PSUM check word: the row is complete
-          efifo_valid[efifo_wr] <= 1'b1;
-          efifo_idx[efifo_wr]   <= rx_tag[IDXW-1:0];
-          efifo_chk[efifo_wr]   <= rx_word;
-          for (int j = 0; j < COLS; j++) efifo_y[efifo_wr][j] <= prow[rx_src][PW * j +: PW];
-          efifo_wr <= !efifo_wr;
-        end
+      if (rx_fire && ps_has_chk) begin                     // PSUM check word: the row is complete -- the columns this
+        efifo_valid[efifo_wr] <= 1'b1;                     // beat brings are taken from the beat, the rest from prow
+        efifo_idx[efifo_wr]   <= rx_tag[IDXW-1:0];
+        efifo_chk[efifo_wr]   <= rx_words[32 * ps_chk_idx +: 32];
+        for (int j = 0; j < COLS; j++)
+          efifo_y[efifo_wr][j] <= ((j >= ps_col0) && (j < ps_end)) ? rx_words[32 * LW'(j - ps_col0) +: 32] : prow[rx_src][PW * j +: PW];
+        efifo_wr <= !efifo_wr;
       end
       if (rx_fire) begin
         case (rx_type)
@@ -494,17 +483,37 @@ module tile_nic #(
   assign serve_last = (s_rem == {8'd0, s_n});
   assign serve_beat = serve_cur >> (32 * s_off);
   localparam int DWW = $clog2(COLS + 1);                 // row word index width: 0..COLS (drop 0.21)
-  logic [DWW-1:0] dword;                                  // word within the drain row (0..COLS = check; INT8: 0..COLS/4-1)
+  logic [DWW-1:0] dword;                                  // first word of the beat within the drain row (0..COLS = check; INT8: 0..COLS/4-1)
   logic        drain_int8;
   logic [DWW-1:0] last_word;
   logic        drain_push;
-  logic [31:0] int8_word;
   assign last_word  = drain_int8 ? DWW'(COLS / 4 - 1) : DWW'(COLS);
   assign drain_push = drain_int8 ? rq_valid : rd_valid;
-  logic [DWW-1:0] dw8;                                    // word index kept inside the row for the INT8 pack
-  assign dw8        = dword % DWW'(COLS / 4);
-  assign int8_word  = {dfifo_y[dfifo_rd][dw8 * 4 + 3][7:0], dfifo_y[dfifo_rd][dw8 * 4 + 2][7:0],
-                       dfifo_y[dfifo_rd][dw8 * 4 + 1][7:0], dfifo_y[dfifo_rd][dw8 * 4][7:0]};
+  // the drain beat (drop 0.31): words dword .. dword + d_n - 1 of the row at the FIFO's read pointer
+  logic [DWW:0]   d_left;                                 // words of the row from dword on
+  logic [CW-1:0]  d_n;                                    // words in this beat
+  logic           d_row_done;                             // this beat completes the row
+  logic [DWW-1:0] d_wi [BW];                              // row word index of beat word i
+  logic [31:0]    d_word [BW];
+  logic [VW-1:0]  drain_beat;
+  assign d_left     = {1'b0, last_word} - {1'b0, dword} + 1'b1;
+  assign d_n        = (d_left < BW) ? CW'(d_left) : CW'(BW);
+  assign d_row_done = (d_left <= BW);
+  always_comb begin
+    drain_beat = '0;
+    for (int i = 0; i < BW; i++) begin
+      d_wi[i]   = dword + DWW'(i);
+      d_word[i] = '0;
+      if (i < d_n) begin                                  // inside the row (the indices below stay in range)
+        if (drain_int8)
+          d_word[i] = {dfifo_y[dfifo_rd][d_wi[i] * 4 + 3][7:0], dfifo_y[dfifo_rd][d_wi[i] * 4 + 2][7:0],
+                       dfifo_y[dfifo_rd][d_wi[i] * 4 + 1][7:0], dfifo_y[dfifo_rd][d_wi[i] * 4][7:0]};
+        else
+          d_word[i] = (d_wi[i] < COLS) ? dfifo_y[dfifo_rd][d_wi[i]] : dfifo_chk[dfifo_rd];
+        drain_beat[32 * i +: 32] = d_word[i];
+      end
+    end
+  end
   logic [15:0] tx_crc;
   logic [15:0] tx_crc_next;
   logic [15:0] tx_cnt;                                    // data words sent in the current message
@@ -517,10 +526,6 @@ module tile_nic #(
   logic [11:0]   req_len;
 
   crc16_beat #(.BW(BW)) u_txcrc (.crc_in(tx_crc), .words(tx_words), .n(tx_n), .crc_out(tx_crc_next));
-
-  // the word being transmitted this cycle by the drain
-  logic signed [PW-1:0] drow_word;
-  assign drow_word = drain_int8 ? int8_word : ((dword < COLS) ? dfifo_y[dfifo_rd][dword] : dfifo_chk[dfifo_rd]);
 
   // flit assembly
   logic [2:0]   tx_type;
@@ -548,11 +553,11 @@ module tile_nic #(
         tx_type = T_WRHDR; tx_dx = drain_x; tx_dy = drain_y; tx_words = VW'({12'd0, drain_addr}); tx_valid = 1'b1;
       end
       X_DRAIN_WORD: begin
-        tx_dx = drain_x; tx_dy = drain_y; tx_words = VW'($unsigned(drow_word)); tx_valid = 1'b1;
+        tx_dx = drain_x; tx_dy = drain_y; tx_words = drain_beat; tx_n = d_n; tx_valid = 1'b1;
         if (drain_mode_psum) begin
-          tx_type = T_PSUM; tx_tag = 9'(dfifo_idx[dfifo_rd]); tx_hdr = {12'd0, 8'(dword)};
+          tx_type = T_PSUM; tx_tag = 9'(dfifo_idx[dfifo_rd]); tx_hdr = {6'd0, 6'(d_n - CW'(1)), 8'(dword)};
         end else begin
-          tx_type = T_WRDATA;
+          tx_type = T_WRDATA; tx_hdr = {6'd0, 6'(d_n - CW'(1)), 8'd0};
         end
       end
       X_DRAIN_CRC: begin
@@ -605,8 +610,8 @@ module tile_nic #(
         dfifo_chk[dfifo_wr] <= rd_chk;
         dfifo_wr <= (dfifo_wr == DFD - 1) ? '0 : dfifo_wr + 1;
       end
-      if (drain_push && !(tx_state == X_DRAIN_WORD && tx_fire && dword == last_word))      dfifo_cnt <= dfifo_cnt + 1;
-      else if (!drain_push && (tx_state == X_DRAIN_WORD && tx_fire && dword == last_word)) dfifo_cnt <= dfifo_cnt - 1;
+      if (drain_push && !(tx_state == X_DRAIN_WORD && tx_fire && d_row_done))      dfifo_cnt <= dfifo_cnt + 1;
+      else if (!drain_push && (tx_state == X_DRAIN_WORD && tx_fire && d_row_done)) dfifo_cnt <= dfifo_cnt - 1;
 
       if (b_rvalid) serve_row <= b_rdata;                 // the row read last cycle
 
@@ -652,15 +657,15 @@ module tile_nic #(
         X_DRAIN_WORD: begin
           if (tx_fire) begin
             tx_crc <= tx_crc_next;
-            tx_cnt <= tx_cnt + 1;
-            if (dword == last_word) begin
+            tx_cnt <= tx_cnt + 16'(d_n);
+            if (d_row_done) begin
               dword <= '0;
               dfifo_rd <= (dfifo_rd == DFD - 1) ? '0 : dfifo_rd + 1;
               drain_sent <= drain_sent + 1;
               if (drain_sent + 1 == drain_rows) tx_state <= X_DRAIN_CRC;
               else if (dfifo_cnt == 1) tx_state <= X_IDLE;   // wait for more rows (message stays open)
             end else begin
-              dword <= dword + 1;
+              dword <= dword + DWW'(d_n);
             end
           end
         end
