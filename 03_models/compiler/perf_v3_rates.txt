@@ -1,0 +1,61 @@
+perf model v3 with the tile interface's endpoint rates (drop 0.30): --rx fetch receive, --tx drain, --psum partial sums, bytes per cycle
+(the rows before drop 0.30 assumed every endpoint absorbs a full 128 B/cycle link; the bank stays 64 B/cycle)
+
+## 736x1280, K-split, no affinity
+YOLOv8-m class at 736x1280, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 128 / tx 128 / psum 128 B/cycle (bank 64)
+  compute-only schedule:    1858955 cycles = 0.93 ms
+  event model v3:           2629502 cycles = 1.31 ms (+41 %)
+  MAC utilization 57.1 %, busiest link 17.2 %, busiest bank 14.1 %, activation reads served locally 581/25525 groups
+
+YOLOv8-m class at 736x1280, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 32 / tx 4 / psum 4 B/cycle (bank 64)
+  compute-only schedule:    1858955 cycles = 0.93 ms
+  event model v3:          22259943 cycles = 11.13 ms (+1097 %)
+  MAC utilization 6.7 %, busiest link 25.0 %, busiest bank 1.6 %, activation reads served locally 581/25525 groups
+
+YOLOv8-m class at 736x1280, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 32 / tx 64 / psum 64 B/cycle (bank 64)
+  compute-only schedule:    1858955 cycles = 0.93 ms
+  event model v3:           5785999 cycles = 2.89 ms (+211 %)
+  MAC utilization 26.0 %, busiest link 27.7 %, busiest bank 6.1 %, activation reads served locally 581/25525 groups
+
+## 640x640, K-split, no affinity: attribution (one rate at its RTL value, the others at 128)
+YOLOv8-m class at 640x640, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 128 / tx 128 / psum 128 B/cycle (bank 64)
+  compute-only schedule:     858128 cycles = 0.43 ms
+  event model v3:           1298903 cycles = 0.65 ms (+51 %)
+  MAC utilization 50.3 %, busiest link 19.0 %, busiest bank 15.0 %, activation reads served locally 578/24549 groups
+
+YOLOv8-m class at 640x640, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 32 / tx 4 / psum 4 B/cycle (bank 64)
+  compute-only schedule:     858128 cycles = 0.43 ms
+  event model v3:          14430820 cycles = 7.22 ms (+1582 %)
+  MAC utilization 4.5 %, busiest link 29.4 %, busiest bank 1.4 %, activation reads served locally 578/24549 groups
+
+YOLOv8-m class at 640x640, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 32 / tx 128 / psum 128 B/cycle (bank 64)
+  compute-only schedule:     858128 cycles = 0.43 ms
+  event model v3:           2959429 cycles = 1.48 ms (+245 %)
+  MAC utilization 22.1 %, busiest link 26.0 %, busiest bank 6.1 %, activation reads served locally 578/24549 groups
+
+YOLOv8-m class at 640x640, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 128 / tx 4 / psum 128 B/cycle (bank 64)
+  compute-only schedule:     858128 cycles = 0.43 ms
+  event model v3:           1407418 cycles = 0.70 ms (+64 %)
+  MAC utilization 46.4 %, busiest link 18.1 %, busiest bank 13.2 %, activation reads served locally 578/24549 groups
+
+YOLOv8-m class at 640x640, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 128 / tx 128 / psum 4 B/cycle (bank 64)
+  compute-only schedule:     858128 cycles = 0.43 ms
+  event model v3:          13454284 cycles = 6.73 ms (+1468 %)
+  MAC utilization 4.9 %, busiest link 28.6 %, busiest bank 1.4 %, activation reads served locally 578/24549 groups
+
+YOLOv8-m class at 640x640, 64 tiles, one bank per tile, 128 B/cycle links, K-split=on, affinity=off, dataflow, chunks=per layer, endpoint rates rx 32 / tx 64 / psum 64 B/cycle (bank 64)
+  compute-only schedule:     858128 cycles = 0.43 ms
+  event model v3:           3124959 cycles = 1.56 ms (+264 %)
+  MAC utilization 20.9 %, busiest link 27.6 %, busiest bank 5.9 %, activation reads served locally 578/24549 groups
+
+## 640x640 without K-split
+YOLOv8-m class at 640x640, 64 tiles, one bank per tile, 128 B/cycle links, K-split=off, affinity=off, dataflow, chunks=per layer, endpoint rates rx 128 / tx 128 / psum 128 B/cycle (bank 64)
+  compute-only schedule:    1175154 cycles = 0.59 ms
+  event model v3:           1265260 cycles = 0.63 ms (+8 %)
+  MAC utilization 51.6 %, busiest link 15.4 %, busiest bank 15.6 %, activation reads served locally 95/6263 groups
+
+YOLOv8-m class at 640x640, 64 tiles, one bank per tile, 128 B/cycle links, K-split=off, affinity=off, dataflow, chunks=per layer, endpoint rates rx 32 / tx 4 / psum 4 B/cycle (bank 64)
+  compute-only schedule:    1175154 cycles = 0.59 ms
+  event model v3:           2902301 cycles = 1.45 ms (+147 %)
+  MAC utilization 22.5 %, busiest link 27.2 %, busiest bank 7.6 %, activation reads served locally 95/6263 groups
+

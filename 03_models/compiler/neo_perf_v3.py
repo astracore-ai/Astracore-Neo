@@ -144,9 +144,11 @@ def assign(per_layer, affinity):
             load[c] += g.compute
 
 
-def simulate(layers, link_bytes, ksplit, affinity, barrier):
+def simulate(layers, link_bytes, ksplit, affinity, barrier, rx_bytes=v2.RX_BYTES, tx_bytes=v2.TX_BYTES, psum_bytes=v2.PSUM_BYTES):
     v2.LAYOUT = "dist64"
-    fab = v2.Fabric(N_CORES, link_bytes, v2.BANK_BYTES)
+    fab = v2.Fabric(N_CORES, link_bytes, v2.BANK_BYTES, rx_bytes, tx_bytes, psum_bytes)
+    local_rx = min(v2.BANK_BYTES, rx_bytes)              # a local activation read is still received at entry rate
+    local_tx = min(v2.BANK_BYTES, tx_bytes)              # a local writeback still goes out one word per beat
     all_groups, per_layer = build_groups(layers, ksplit)
     assign(per_layer, affinity)
     # per-core queues in layer order
@@ -196,7 +198,7 @@ def simulate(layers, link_bytes, ksplit, affinity, barrier):
                 bank_rr += 1
             b_w = bank_rr % N_CORES
             bank_rr += 1
-            t_act = fab.transfer(t, b_act, node, g.act_bytes) if b_act != c else t + max(1, g.act_bytes // v2.BANK_BYTES)
+            t_act = fab.transfer(t, b_act, node, g.act_bytes) if b_act != c else t + max(1, math.ceil(g.act_bytes / local_rx))
             t_w0 = fab.transfer(t, b_w, node, nc.ROWS * nc.COLS)
             heapq.heappush(heap, (max(t_act, t_w0), 1, c, gid))
         elif kind == 1:                                            # ready: compute when the core is free
@@ -229,7 +231,7 @@ def simulate(layers, link_bytes, ksplit, affinity, barrier):
                 t = max([t] + arr) + (s_ - 1) * chunk
                 compute_free[c] = max(compute_free[c], t)
             # write output to the local bank
-            t_out = t + max(1, g.out_bytes // v2.BANK_BYTES)
+            t_out = t + max(1, math.ceil(g.out_bytes / local_tx))
             g.landed = t_out
             layer_done_time[g.layer] = max(layer_done_time[g.layer], t_out)
             layer_left[g.layer] -= 1
@@ -260,6 +262,9 @@ def main():
     ap.add_argument("--barrier", action="store_true", help="layer barriers instead of dataflow")
     ap.add_argument("--inherit", action="store_true", help="consistent chunk partitioning across layers")
     ap.add_argument("--band", action="store_true", help="spatial banding: tile t owns row band t at every layer")
+    ap.add_argument("--rx", type=int, default=v2.RX_BYTES, help="fetch receive rate, bytes per cycle into a core (RTL after drop 0.30: 32)")
+    ap.add_argument("--tx", type=int, default=v2.TX_BYTES, help="drain rate, bytes per cycle out of a core (RTL: 4, one word per beat)")
+    ap.add_argument("--psum", type=int, default=v2.PSUM_BYTES, help="partial-sum receive rate, bytes per cycle (RTL: 4)")
     a = ap.parse_args()
     global INHERIT_CHUNKS, BAND
     INHERIT_CHUNKS = a.inherit
@@ -267,10 +272,11 @@ def main():
     nc.set_v02(ksplit=a.ksplit)
     layers = nc.yolov8m(a.h, a.w)
     compute_only = sum(nc.lower(L).cycles for L in layers)
-    total, util, bl, bb, local, ng = simulate(layers, a.link, a.ksplit, not a.no_affinity, a.barrier)
+    total, util, bl, bb, local, ng = simulate(layers, a.link, a.ksplit, not a.no_affinity, a.barrier, a.rx, a.tx, a.psum)
     print(f"YOLOv8-m class at {a.h}x{a.w}, 64 tiles, one bank per tile, {a.link} B/cycle links, "
           f"K-split={'on' if a.ksplit else 'off'}, affinity={'off' if a.no_affinity else 'on'}, "
-          f"{'layer barriers' if a.barrier else 'dataflow'}, chunks={'bands' if a.band else ('inherited' if a.inherit else 'per layer')}")
+          f"{'layer barriers' if a.barrier else 'dataflow'}, chunks={'bands' if a.band else ('inherited' if a.inherit else 'per layer')}, "
+          f"endpoint rates rx {a.rx} / tx {a.tx} / psum {a.psum} B/cycle (bank {v2.BANK_BYTES})")
     print(f"  compute-only schedule:  {compute_only:9d} cycles = {compute_only / (nc.F_GHZ * 1e6):.2f} ms")
     print(f"  event model v3:         {total:9d} cycles = {total / (nc.F_GHZ * 1e6):.2f} ms ({100 * (total / compute_only - 1):+.0f} %)")
     print(f"  MAC utilization {100 * util:.1f} %, busiest link {100 * bl:.1f} %, busiest bank {100 * bb:.1f} %, "

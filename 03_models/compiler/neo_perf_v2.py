@@ -29,6 +29,14 @@ MESH_NX = NX_CORES + 2            # bank columns at x = 0 and x = MESH_NX - 1
 HOP_LAT = 2
 LINK_BYTES = 64                   # 512-bit links at one flit per cycle
 BANK_BYTES = 64                   # bytes per cycle per bank
+# the tile interface's per-flow rates as the RTL has them after drop 0.30 (stage 3 of the bank port): a fetch is received
+# at entry rate (one 8-word activation entry per cycle = 32 B; weights 9 words = 36 B, modelled at 32), a drain sends one
+# word per beat (4 B/cycle, the packer merges them into wide flits), partial sums are consumed one word per cycle (4 B).
+# A transfer takes max(bytes / link, bytes / endpoint rate) cycles on its links; the bank is busy bytes / BANK_BYTES.
+# The pre-0.30 model assumed every endpoint could absorb a full link (set --rx/--tx/--psum to the link width to reproduce it).
+RX_BYTES = 32                     # fetch receive, bytes per cycle into a core
+TX_BYTES = 4                      # drain / writeback, bytes per cycle out of a core
+PSUM_BYTES = 4                    # partial sums, bytes per cycle into the owner's reduce port
 F_GHZ = nc.F_GHZ
 
 
@@ -67,7 +75,7 @@ def xy_path(src, dst):
 
 
 class Fabric:
-    def __init__(self, n_banks, link_bytes, bank_bytes):
+    def __init__(self, n_banks, link_bytes, bank_bytes, rx_bytes=RX_BYTES, tx_bytes=TX_BYTES, psum_bytes=PSUM_BYTES):
         self.link_free = defaultdict(int)     # link -> cycle it becomes free
         self.link_busy = defaultdict(int)     # link -> total busy cycles
         self.bank_free = [0] * n_banks
@@ -75,11 +83,12 @@ class Fabric:
         self.n_banks = n_banks
         self.link_bytes = link_bytes
         self.bank_bytes = bank_bytes
+        self.rx_bytes, self.tx_bytes, self.psum_bytes = rx_bytes, tx_bytes, psum_bytes
 
     def transfer_nodes(self, t, src, dst, nbytes):
-        """Core-to-core transfer (partial sums); occupies links only."""
+        """Core-to-core transfer (partial sums); occupies links only, at the slower of the link and the reduce port."""
         links = xy_path(src, dst)
-        cycles = max(1, math.ceil(nbytes / self.link_bytes))
+        cycles = max(1, math.ceil(nbytes / min(self.link_bytes, self.psum_bytes)))
         start = max([t] + [self.link_free[l] for l in links])
         for l in links:
             self.link_free[l] = start + cycles
@@ -91,7 +100,8 @@ class Fabric:
         Returns the cycle the last byte arrives."""
         src, dst = (bank_xy(bank, self.n_banks), node) if not to_bank else (node, bank_xy(bank, self.n_banks))
         links = xy_path(src, dst)
-        cycles = max(1, math.ceil(nbytes / self.link_bytes))
+        rate = min(self.link_bytes, self.tx_bytes if to_bank else self.rx_bytes)   # the endpoint is the per-flow limit
+        cycles = max(1, math.ceil(nbytes / rate))
         bank_cycles = max(1, math.ceil(nbytes / self.bank_bytes))
         start = max([t, self.bank_free[bank]] + [self.link_free[l] for l in links])
         self.bank_free[bank] = start + bank_cycles
