@@ -322,7 +322,7 @@ def main():
     mesh.start([0])
     corrupted, n = False, 0
     while not mesh.prog_done[0].v:
-        if not corrupted and valid_cell.v and ((flit_cell.v >> TYPE_SHIFT) & 7) == T_RDRSP and n > 30:
+        if not corrupted and valid_cell.v and ((flit_cell.v >> TYPE_SHIFT) & 7) == T_RDRSP:    # the first response flit (drop 0.32: no cycle guard)
             last_word = (flit_cell.v >> (TYPE_SHIFT - 21)) & 0x3F   # words carried - 1 (0 with one word per flit)
             flit_cell.v ^= 1 << (32 * last_word + 9)   # payload bit of the flit's last, still unconsumed word (drop 0.27)
             mesh.d.settle()
@@ -490,7 +490,9 @@ def main():
     mesh.start([0])
     dropped, n = False, 0
     while not mesh.prog_done[0].v:
-        if not dropped and vcell.v and ((fcell.v >> TYPE_SHIFT) & 7) == T_RDRSP and n > 40:
+        # the first RDRSP flit at the owner's port (drop 0.32: no cycle guard -- at two entries per cycle the whole response
+        # can be consumed before cycle 40, which is where the old `n > 40` guard left nothing to drop)
+        if not dropped and vcell.v and ((fcell.v >> TYPE_SHIFT) & 7) == T_RDRSP:
             vcell.v = 0                                     # the flit at the owner's local port vanishes
             mesh.d.settle()
             dropped = True

@@ -8,8 +8,9 @@ bank port). tile_nic alone, its link side driven with beats and its bank side mo
   I3 serve under back-pressure: the link accepts every third beat only; the data and the CRC are unchanged
   I6 a zero-length request is answered by its CRC flit alone (count 0, the initial CRC)
   I7 the dead-server fault of M9b: tx_state held in X_SERVE_RD takes the request and never answers it; released, it serves
-  I8/I9 fetch receive at entry rate (drop 0.30) at 16x8 and 32x32: activation and weight entries assembled from beats of random
-     sizes land at base + index with the right bytes and check values, a beat held ceil(words / WPE) cycles, flags clean
+  I8/I9 fetch receive at entry rate (drop 0.30), two entries per cycle (drop 0.32) at 16x8 and 32x32: activation and weight entries
+     assembled from beats of random sizes land at base + index with the right bytes and check values, pairs at even addresses,
+     a single entry at an odd base, a beat held at most ceil(words / WPE) cycles, flags clean
   I10 a response with no fetch outstanding is consumed in one cycle per beat and stored nowhere
   I11 PSUM rows into the reduce port at beat rate (drop 0.31): beats of random column counts, the FIFO-full stall on the check word
   I12 the drain in 16-word beats (drop 0.31): INT32 rows as 16 + 16 + 1, INT8 rows, PSUM rows with tags and column headers
@@ -61,9 +62,11 @@ class Nic:
                                            "cmd_valid", "cmd_op", "err_clear", "rdy_clear", "partition", "crc_err_sticky", "lost_err_sticky",
                                            "iso_err_sticky")}
         for n in ("abuf_we", "abuf_waddr", "wbuf_we", "wbuf_waddr", "wcbuf_wdata", "cmd_op", "cmd_x", "cmd_y", "cmd_addr", "cmd_len", "cmd_base",
-                  "cmd_int8", "cmd_busy", "fetch_timeout_sticky"):
+                  "cmd_int8", "cmd_busy", "fetch_timeout_sticky", "abuf_we2", "wbuf_we2", "wcbuf_wdata2"):
             self.p[n] = d.cell_of(n)
         self.abuf_wdata, self.wbuf_wdata = d.array_of("abuf_wdata"), d.array_of("wbuf_wdata")
+        self.abuf_wdata2, self.wbuf_wdata2 = d.array_of("abuf_wdata2"), d.array_of("wbuf_wdata2")
+        self.pairs = 0                                   # cycles that wrote two entries (drop 0.32)
         for n in ("ext_valid", "ext_idx", "ext_chk", "rd_chk", "drain_busy"):
             self.p[n] = d.cell_of(n)
         self.ext_y, self.rd_data, self.rq_q = d.array_of("ext_y"), d.array_of("rd_data"), d.array_of("rq_q")
@@ -85,8 +88,14 @@ class Nic:
             self.ext_rows.append((p["ext_idx"].v, [c.v & 0xFFFFFFFF for c in self.ext_y], p["ext_chk"].v & 0xFFFFFFFF))
         if p["abuf_we"].v:
             self.abuf.append((p["abuf_waddr"].v, [c.v & 0xFF for c in self.abuf_wdata]))
+        if p["abuf_we2"].v:                              # the pair's upper entry (drop 0.32): only at an even address
+            assert p["abuf_we"].v and p["abuf_waddr"].v % 2 == 0, "abuf_we2 without an even-address first entry"
+            self.abuf.append((p["abuf_waddr"].v + 1, [c.v & 0xFF for c in self.abuf_wdata2])); self.pairs += 1
         if p["wbuf_we"].v:
             self.wbuf.append((p["wbuf_waddr"].v, [c.v & 0xFF for c in self.wbuf_wdata], p["wcbuf_wdata"].v & ((1 << self.wcw) - 1)))
+        if p["wbuf_we2"].v:
+            assert p["wbuf_we"].v and p["wbuf_waddr"].v % 2 == 0, "wbuf_we2 without an even-address first entry"
+            self.wbuf.append((p["wbuf_waddr"].v + 1, [c.v & 0xFF for c in self.wbuf_wdata2], p["wcbuf_wdata2"].v & ((1 << self.wcw) - 1))); self.pairs += 1
         wr = None
         if p["b_we"].v:
             wr = (p["b_wrow"].v, p["b_wmask"].v, p["b_wdata"].v)
@@ -258,7 +267,7 @@ def entry_bytes(words, wpe):
     return [(words[k // 4] >> (8 * (k % 4))) & 0xFF for k in range(4 * wpe)]
 
 
-def fetch_test(rows, cols, is_w, n_entries, seed, src=(1, 1)):
+def fetch_test(rows, cols, is_w, n_entries, seed, src=(1, 1), sizes=(1, 2, 5, 9, 16, 16, 16), base=None):
     """A FETCH command for n_entries entries, the response as RDRSP beats of random sizes from `src`, then the CRC flit:
     every entry lands at base + its index with the right bytes (and check value), one entry per cycle at most, the beat
     held for ceil(words / WPE) cycles, flags clean, the fetch complete at the CRC flit."""
@@ -266,11 +275,12 @@ def fetch_test(rows, cols, is_w, n_entries, seed, src=(1, 1)):
     nic = Nic(rows, cols)
     wpe = nic.wpw if is_w else nic.wpa
     words = [r.getrandbits(32) for _ in range(n_entries * wpe)]
-    base = 37
+    if base is None:
+        base = 37 if is_w else 36                       # an odd base (a single first entry, then pairs) and an even one
     nic.fetch(2 if is_w else 1, src[0], src[1], 0x100, len(words), base)
     pos, held = 0, []
     while pos < len(words):
-        n = min(r.choice([1, 2, 5, 9, 16, 16, 16]), len(words) - pos)
+        n = min(r.choice(list(sizes)), len(words) - pos)
         held.append((n, nic.send(flit(T_RDRSP, words[pos:pos + n], src=src))))
         pos += n
     busy_before = nic.p["cmd_busy"].v
@@ -287,16 +297,25 @@ def fetch_test(rows, cols, is_w, n_entries, seed, src=(1, 1)):
     cycles_ok = all(h <= max(1, -(-n // wpe) + 1) for n, h in held)       # ceil(n / wpe) entry cycles, +1 when a leftover is staged alone
     ok = (got == exp and busy_before == 1 and nic.p["cmd_busy"].v == 0 and nic.p["crc_err_sticky"].v == 0
           and nic.p["lost_err_sticky"].v == 0 and (nic.abuf if is_w else nic.wbuf) == [] and cycles_ok)
-    return ok, len(words), len(held), max(h for _, h in held), wpe
+    return ok, len(words), len(held), max(h for _, h in held), wpe, nic.pairs
 
 
 for rows, cols, label in ((16, 8, "I8"), (32, 32, "I9")):
-    oka, nw_a, nb_a, mx_a, wpa = fetch_test(rows, cols, False, 12, 100 + rows)
-    okw, nw_w, nb_w, mx_w, wpw = fetch_test(rows, cols, True, 7, 200 + rows)
-    print(f"  {label} fetch receive at {rows}x{cols}: {nw_a} activation words ({wpa} per entry) in {nb_a} beats of 1..16 words -> 12 entries at base + index, "
-          f"longest beat held {mx_a} cycles -> {'PASS' if oka else 'FAIL'}; {nw_w} weight words ({wpw} per entry) in {nb_w} beats -> 7 entries with check values, "
-          f"held at most {mx_w} cycles -> {'PASS' if okw else 'FAIL'}")
+    oka, nw_a, nb_a, mx_a, wpa, pa = fetch_test(rows, cols, False, 12, 100 + rows)
+    okw, nw_w, nb_w, mx_w, wpw, pw_ = fetch_test(rows, cols, True, 7, 200 + rows)
+    print(f"  {label} fetch receive at {rows}x{cols}: {nw_a} activation words ({wpa} per entry) in {nb_a} beats of 1..16 words -> 12 entries at even base + index, "
+          f"{pa} cycles wrote a pair, longest beat held {mx_a} cycles -> {'PASS' if oka else 'FAIL'}; {nw_w} weight words ({wpw} per entry) in {nb_w} beats -> 7 entries "
+          f"at odd base + index with check values (a single entry first, then pairs: {pw_}), held at most {mx_w} cycles -> {'PASS' if okw else 'FAIL'}")
     fails += not (oka and okw)
+    # the rate (drop 0.32): full 16-word beats at an even base -- activations at 32x32 are two 8-word entries per beat, one
+    # cycle per beat; at 16x8 four 4-word entries, two cycles; weights (9 / 3 words) pair up whenever two fit
+    okf, nw_f, nb_f, mx_f, wpa_, pf = fetch_test(rows, cols, False, 16, 300 + rows, sizes=(16,), base=40)
+    okg, nw_g, nb_g, mx_g, wpw_, pg = fetch_test(rows, cols, True, 16, 400 + rows, sizes=(16,), base=40)
+    exp_cyc = -(-16 // (2 * wpa_))
+    rate_ok = okf and okg and mx_f == exp_cyc and pf == 8 and pg >= 3     # 9-word weight entries pair up less often: a single entry leaves the next address odd
+    print(f"  {label}b full 16-word beats at an even base: {nw_f} activation words -> 16 entries, every beat taken in {mx_f} cycle(s) (expect {exp_cyc}), "
+          f"{pf} pair writes (expect 8); {nw_g} weight words -> 16 entries, beats held at most {mx_g} cycles, {pg} pair writes -> {'PASS' if rate_ok else 'FAIL'}")
+    fails += not rate_ok
 
 # ---------------- I10: a response with no fetch outstanding is consumed and stored nowhere ----------------
 nic = Nic()

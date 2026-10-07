@@ -391,8 +391,8 @@ def late_tests(rng, fails, mult, shift, zp, x, wgt, ref):
     # C9: weight-buffer ECC: a bit flipped in a stored weight codeword is corrected on read
     core = NeoCore(16, 8, acc_rows=64, abuf_depth=256, wbuf_depth=512)
     got, acc_errs, _ = conv_on_core(core, x, wgt, 1, 1)         # loads the buffers
-    core.d.cells["top.u_wbuf.mem[100,0]"].v ^= 1 << 9        # a data bit of entry 100, lane 0
-    core.d.cells["top.u_wbuf.mem[7,1]"].v ^= 1 << 34         # a check bit of entry 7, lane 1
+    core.d.cells["top.u_wbuf.mem[50,0,0]"].v ^= 1 << 9       # a data bit of entry 100 (pair 50, lower entry), lane 0 -- pairs since drop 0.32
+    core.d.cells["top.u_wbuf.mem[3,1,1]"].v ^= 1 << 34        # a check bit of entry 7 (pair 3, upper entry), lane 1
     core.p["err_clear"].v = 1; core.tick(); core.p["err_clear"].v = 0
     out, errs, _ = core.execute(6, 6, 6, 6, 1, 1, 3, 3, 36, 36)   # re-execute the same descriptor without rewriting the buffers
     got2 = np.zeros_like(ref)
