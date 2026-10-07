@@ -8,6 +8,9 @@ bank port). tile_nic alone, its link side driven with beats and its bank side mo
   I3 serve under back-pressure: the link accepts every third beat only; the data and the CRC are unchanged
   I6 a zero-length request is answered by its CRC flit alone (count 0, the initial CRC)
   I7 the dead-server fault of M9b: tx_state held in X_SERVE_RD takes the request and never answers it; released, it serves
+  I8/I9 fetch receive at entry rate (drop 0.30) at 16x8 and 32x32: activation and weight entries assembled from beats of random
+     sizes land at base + index with the right bytes and check values, a beat held ceil(words / WPE) cycles, flags clean
+  I10 a response with no fetch outstanding is consumed in one cycle per beat and stored nowhere
   I4/I5 link_packer -> link_unpacker back to back at 32 and 1 words per flit: random beats, PSUM rows and single-word
      types come out as the words, columns and types that went in, no flit wider than WPF"""
 import os, random, sys
@@ -43,25 +46,39 @@ def flit(typ, words, hdr=0, tag=0, src=(1, 1), dst=(0, 0), partition=0):
 
 
 class Nic:
-    def __init__(self):
+    def __init__(self, rows=16, cols=8):
         self.d = Design(load([os.path.join(rtl, f) for f in ("crc16_word.sv", "crc16_beat.sv", "tile_nic.sv")]))
+        self.rows, self.cols = rows, cols
+        self.wcw = 8 + (rows - 1).bit_length() + 1
+        self.wpa, self.wpw = rows * 8 // 32, (cols * 8 + self.wcw + 31) // 32
         self.d.elaborate("tile_nic", {"XW": XW, "YW": YW, "NX": NX, "NSRC": NX * NY, "BW": BW, "MY_X": 0, "MY_Y": 0,
-                                       "ROWS": 16, "COLS": 8, "IDXW": 6, "AW": 8, "WAW": 9, "BAW": BAW, "DFD": 64, "FETCH_TIMEOUT": 8192})
+                                       "ROWS": rows, "COLS": cols, "IDXW": 6, "AW": 8, "WAW": 9, "BAW": BAW, "DFD": 64, "FETCH_TIMEOUT": 8192})
         d = self.d
         self.p = {n: d.cell_of(n) for n in ("rst_n", "rx_valid", "rx_flit", "rx_ready", "tx_valid", "tx_flit", "tx_ready", "b_we", "b_wrow",
                                            "b_wmask", "b_wdata", "b_re", "b_rrow", "b_rdata", "b_rvalid", "ext_ready", "rd_valid", "rq_valid",
                                            "cmd_valid", "cmd_op", "err_clear", "rdy_clear", "partition", "crc_err_sticky", "lost_err_sticky",
                                            "iso_err_sticky")}
-        for n in ("rx_valid", "tx_ready", "b_rvalid", "ext_ready", "rd_valid", "rq_valid", "cmd_valid", "err_clear", "rdy_clear", "partition"):
+        for n in ("abuf_we", "abuf_waddr", "wbuf_we", "wbuf_waddr", "wcbuf_wdata", "cmd_op", "cmd_x", "cmd_y", "cmd_addr", "cmd_len", "cmd_base",
+                  "cmd_int8", "cmd_busy", "fetch_timeout_sticky"):
+            self.p[n] = d.cell_of(n)
+        self.abuf_wdata, self.wbuf_wdata = d.array_of("abuf_wdata"), d.array_of("wbuf_wdata")
+        for n in ("rx_valid", "tx_ready", "b_rvalid", "ext_ready", "rd_valid", "rq_valid", "cmd_valid", "err_clear", "rdy_clear", "partition",
+                  "cmd_op", "cmd_x", "cmd_y", "cmd_addr", "cmd_len", "cmd_base", "cmd_int8"):
             self.p[n].v = 0
         self.mem = {}                                   # word address -> word (the bank, as the row port sees it)
+        self.abuf, self.wbuf = [], []                   # buffer writes seen (address, bytes[, check])
         self.p["rst_n"].v = 0; d.tick(); d.tick(); self.p["rst_n"].v = 1; d.tick()
         self.pending_read = None
 
     def tick(self):
-        """One clock with the bank model: writes land at the edge, a read returns its row the next cycle."""
+        """One clock with the bank model: writes land at the edge, a read returns its row the next cycle. Buffer writes
+        (abuf_we / wbuf_we) are recorded as (address, bytes[, check]) in self.abuf / self.wbuf."""
         p = self.p
         self.d.settle()
+        if p["abuf_we"].v:
+            self.abuf.append((p["abuf_waddr"].v, [c.v & 0xFF for c in self.abuf_wdata]))
+        if p["wbuf_we"].v:
+            self.wbuf.append((p["wbuf_waddr"].v, [c.v & 0xFF for c in self.wbuf_wdata], p["wcbuf_wdata"].v & ((1 << self.wcw) - 1)))
         wr = None
         if p["b_we"].v:
             wr = (p["b_wrow"].v, p["b_wmask"].v, p["b_wdata"].v)
@@ -80,6 +97,18 @@ class Nic:
         else:
             p["b_rvalid"].v = 0
         self.d.settle()
+
+    def fetch(self, op, x, y, addr, length, base):
+        """One FETCH_A (1) / FETCH_W (2) command on the command port (the DMA engine's cycle)."""
+        p = self.p
+        p["cmd_valid"].v = 1; p["cmd_op"].v = op; p["cmd_x"].v = x; p["cmd_y"].v = y; p["cmd_addr"].v = addr; p["cmd_len"].v = length; p["cmd_base"].v = base
+        self.tick()
+        p["cmd_valid"].v = 0
+        # the RDREQ goes out on the link
+        p["tx_ready"].v = 1
+        for _ in range(4):
+            self.tick()
+        p["tx_ready"].v = 0
 
     def send(self, f):
         """Present one beat flit until the interface takes it; returns the cycles it was held."""
@@ -215,6 +244,61 @@ ok7 = taken == 1 and emitted == 0 and held_busy == 1 and stream7 == data and (cr
 print(f"  I7 dead server (tx_state held in X_SERVE_RD): request taken (serve_busy {taken}), nothing emitted in 200 cycles ({emitted} valid), "
       f"still busy {held_busy}; released -> the {length}-word response and its CRC arrive intact -> {'PASS' if ok7 else 'FAIL'}")
 fails += not ok7
+
+# ---------------- I8/I9: fetch receive at entry rate (drop 0.30), 16x8 and 32x32 entries ----------------
+def entry_bytes(words, wpe):
+    return [(words[k // 4] >> (8 * (k % 4))) & 0xFF for k in range(4 * wpe)]
+
+
+def fetch_test(rows, cols, is_w, n_entries, seed, src=(1, 1)):
+    """A FETCH command for n_entries entries, the response as RDRSP beats of random sizes from `src`, then the CRC flit:
+    every entry lands at base + its index with the right bytes (and check value), one entry per cycle at most, the beat
+    held for ceil(words / WPE) cycles, flags clean, the fetch complete at the CRC flit."""
+    r = random.Random(seed)
+    nic = Nic(rows, cols)
+    wpe = nic.wpw if is_w else nic.wpa
+    words = [r.getrandbits(32) for _ in range(n_entries * wpe)]
+    base = 37
+    nic.fetch(2 if is_w else 1, src[0], src[1], 0x100, len(words), base)
+    pos, held = 0, []
+    while pos < len(words):
+        n = min(r.choice([1, 2, 5, 9, 16, 16, 16]), len(words) - pos)
+        held.append((n, nic.send(flit(T_RDRSP, words[pos:pos + n], src=src))))
+        pos += n
+    busy_before = nic.p["cmd_busy"].v
+    nic.send(flit(T_CRC, [(len(words) << 16) | crc16(words)], src=src))
+    nic.tick()
+    got = nic.wbuf if is_w else nic.abuf
+    exp = []
+    for e in range(n_entries):
+        ew = words[e * wpe:(e + 1) * wpe]
+        if is_w:
+            exp.append((base + e, entry_bytes(ew, wpe)[:cols], (ew[(cols * 8) // 32]) & ((1 << nic.wcw) - 1)))
+        else:
+            exp.append((base + e, entry_bytes(ew, wpe)[:rows]))
+    cycles_ok = all(h <= max(1, -(-n // wpe) + 1) for n, h in held)       # ceil(n / wpe) entry cycles, +1 when a leftover is staged alone
+    ok = (got == exp and busy_before == 1 and nic.p["cmd_busy"].v == 0 and nic.p["crc_err_sticky"].v == 0
+          and nic.p["lost_err_sticky"].v == 0 and (nic.abuf if is_w else nic.wbuf) == [] and cycles_ok)
+    return ok, len(words), len(held), max(h for _, h in held), wpe
+
+
+for rows, cols, label in ((16, 8, "I8"), (32, 32, "I9")):
+    oka, nw_a, nb_a, mx_a, wpa = fetch_test(rows, cols, False, 12, 100 + rows)
+    okw, nw_w, nb_w, mx_w, wpw = fetch_test(rows, cols, True, 7, 200 + rows)
+    print(f"  {label} fetch receive at {rows}x{cols}: {nw_a} activation words ({wpa} per entry) in {nb_a} beats of 1..16 words -> 12 entries at base + index, "
+          f"longest beat held {mx_a} cycles -> {'PASS' if oka else 'FAIL'}; {nw_w} weight words ({wpw} per entry) in {nb_w} beats -> 7 entries with check values, "
+          f"held at most {mx_w} cycles -> {'PASS' if okw else 'FAIL'}")
+    fails += not (oka and okw)
+
+# ---------------- I10: a response with no fetch outstanding is consumed and stored nowhere ----------------
+nic = Nic()
+words = [rng.getrandbits(32) for _ in range(20)]
+held = [nic.send(flit(T_RDRSP, words[:16])), nic.send(flit(T_RDRSP, words[16:]))]
+nic.send(flit(T_CRC, [(20 << 16) | crc16(words)]))
+nic.tick()
+ok10 = nic.abuf == [] and nic.wbuf == [] and held == [1, 1] and nic.p["crc_err_sticky"].v == 0 and nic.p["lost_err_sticky"].v == 0
+print(f"  I10 response with no fetch outstanding: 20 words in 2 beats taken in {held} cycle(s), no buffer write, CRC and count still checked clean -> {'PASS' if ok10 else 'FAIL'}")
+fails += not ok10
 
 # ---------------- I4/I5: packer -> unpacker wired back to back, 32 and 1 words per flit ----------------
 WRAP = """
