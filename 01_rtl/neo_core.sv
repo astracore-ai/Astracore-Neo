@@ -27,10 +27,15 @@ module neo_core #(
   input  logic                  abuf_we,
   input  logic [AW-1:0]         abuf_waddr,
   input  logic signed [XW-1:0]  abuf_wdata [ROWS],
+  input  logic                  abuf_we2,                 // the upper entry of the same pair, abuf_waddr even (drop 0.32)
+  input  logic signed [XW-1:0]  abuf_wdata2 [ROWS],
   input  logic                  wbuf_we,
   input  logic [WAW-1:0]        wbuf_waddr,
   input  logic signed [WW-1:0]  wbuf_wdata [COLS],
   input  logic signed [WCW-1:0] wcbuf_wdata,
+  input  logic                  wbuf_we2,                 // the upper entry of the same pair, wbuf_waddr even (drop 0.32)
+  input  logic signed [WW-1:0]  wbuf_wdata2 [COLS],
+  input  logic signed [WCW-1:0] wcbuf_wdata2,
   // layer descriptor
   input  logic signed [15:0]    cfg_h,
   input  logic signed [15:0]    cfg_w,
@@ -121,6 +126,7 @@ module neo_core #(
 
   wbuf_mem #(.COLS(COLS), .WW(WW), .WCW(WCW), .DEPTH(WBUF_DEPTH), .WAW(WAW)) u_wbuf (
     .clk(clk), .rst_n(rst_n), .we(wbuf_we), .waddr(wbuf_waddr), .wdata(wbuf_wdata), .wcdata(wcbuf_wdata),
+    .we2(wbuf_we2), .wdata2(wbuf_wdata2), .wcdata2(wcbuf_wdata2),
     .raddr(w_raddr), .rdata(w_in), .rcdata(wc_in),
     .err_clear(err_clear), .ecc_ce_sticky(wbuf_ce_sticky), .ecc_ue_sticky(wbuf_ue_sticky));
 
@@ -160,7 +166,7 @@ module neo_core #(
                      .ABUF_DEPTH(ABUF_DEPTH), .IDXW(IDXW), .AW(AW), .PE_LAT(PE_LAT),
                      .FAULT_ROW(FAULT_ROW), .FAULT_COL(FAULT_COL)) u_dp (
     .clk(clk), .rst_n(rst_n),
-    .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata),
+    .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(abuf_we2), .abuf_wdata2(abuf_wdata2),
     .cfg_h(cfg_h), .cfg_w(cfg_w), .cfg_ho(cfg_ho), .cfg_wo(cfg_wo), .cfg_oy0(cfg_oy0), .cfg_oy_n(cfg_oy_n), .cfg_iy0(cfg_iy0),
     .cfg_s(cfg_s), .cfg_p(cfg_p), .cfg_tile_pixels(cfg_tile_pixels), .cfg_regions_m1(cfg_regions_m1), .cfg_ct(f_ct), .cfg_ky(f_ky), .cfg_kx(f_kx), .acc_first(f_first),
     .start(f_start), .busy(f_busy),

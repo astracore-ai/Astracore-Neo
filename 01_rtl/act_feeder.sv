@@ -11,7 +11,11 @@
 //   see the same inputs and a comparator flags any disagreement on address, bounds, valid or
 //   row index (ctrl_err, sticky), because a consistently wrong input is invisible to ABFT.
 //   ctrl_fault_inject (DV only) corrupts bit 0 of the primary address to prove the comparator.
-//   In silicon abuf is an ECC SRAM macro with a one-cycle read; this is its behavioural model.
+//   In silicon abuf is an ECC SRAM macro with a one-cycle read; this is its behavioural model. Since drop 0.32 the
+//   buffer is organised in pairs of entries -- ABUF_DEPTH/2 words of two entries, the word address abuf_waddr[AW-1:1],
+//   the entry inside the word abuf_waddr[0] -- and its one write port is a word wide: abuf_we writes the entry at
+//   abuf_waddr, abuf_we2 the upper entry of the same word (entry abuf_waddr + 1; the DMA asserts it only at an even
+//   abuf_waddr), so a 16-word beat of two 8-word entries lands in one cycle. The read is one entry per cycle as before.
 module act_feeder #(
   parameter int ROWS       = 32,
   parameter int XW         = 8,
@@ -25,6 +29,8 @@ module act_feeder #(
   input  logic                 abuf_we,
   input  logic [AW-1:0]        abuf_waddr,
   input  logic signed [XW-1:0] abuf_wdata [ROWS],
+  input  logic                 abuf_we2,       // the upper entry of the same pair (abuf_waddr even), drop 0.32
+  input  logic signed [XW-1:0] abuf_wdata2 [ROWS],
   // configuration (static during a run)
   input  logic signed [15:0]   cfg_h,          // input tile height (rows of pixels)
   input  logic signed [15:0]   cfg_w,          // input tile width
@@ -56,7 +62,7 @@ module act_feeder #(
   output logic                 ctrl_err_sticky,
   input  logic                 ctrl_fault_inject
 );
-  logic signed [XW-1:0] abuf [ABUF_DEPTH][ROWS];
+  logic signed [XW-1:0] abuf [ABUF_DEPTH/2][2][ROWS];   // [pair][entry in pair][channel] (drop 0.32)
 
   // ---- primary address generator / run FSM ----
   logic                 running;
@@ -85,13 +91,16 @@ module act_feeder #(
 
   generate
     for (genvar c = 0; c < ROWS; c++) begin : g_out
-      assign x_vec[c] = (valid && inb) ? abuf[addr][c] : '0;
+      assign x_vec[c] = (valid && inb) ? abuf[addr[AW-1:1]][addr[0]][c] : '0;
     end
   endgenerate
 
   always_ff @(posedge clk) begin
     if (abuf_we) begin
-      for (int c = 0; c < ROWS; c++) abuf[abuf_waddr][c] <= abuf_wdata[c];
+      for (int c = 0; c < ROWS; c++) abuf[abuf_waddr[AW-1:1]][abuf_waddr[0]][c] <= abuf_wdata[c];
+    end
+    if (abuf_we2) begin                                   // the pair's upper entry, in the same cycle
+      for (int c = 0; c < ROWS; c++) abuf[abuf_waddr[AW-1:1]][1][c] <= abuf_wdata2[c];
     end
   end
 

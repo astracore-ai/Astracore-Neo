@@ -26,6 +26,8 @@ module neo_mac_core_v02 #(
   input  logic                  abuf_we,
   input  logic [AW-1:0]         abuf_waddr,
   input  logic signed [XW-1:0]  abuf_wdata [ROWS],
+  input  logic                  abuf_we2,                 // upper entry of the pair (drop 0.32)
+  input  logic signed [XW-1:0]  abuf_wdata2 [ROWS],
   // run configuration and control
   input  logic signed [15:0]    cfg_h,
   input  logic signed [15:0]    cfg_w,
@@ -82,7 +84,7 @@ module neo_mac_core_v02 #(
 
   act_feeder #(.ROWS(ROWS), .XW(XW), .ABUF_DEPTH(ABUF_DEPTH), .AW(AW), .IDXW(IDXW)) u_feeder (
     .clk(clk), .rst_n(rst_n),
-    .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata),
+    .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(abuf_we2), .abuf_wdata2(abuf_wdata2),
     .cfg_h(cfg_h), .cfg_w(cfg_w), .cfg_ho(cfg_ho), .cfg_wo(cfg_wo), .cfg_oy0(cfg_oy0), .cfg_oy_n(cfg_oy_n), .cfg_iy0(cfg_iy0),
     .cfg_s(cfg_s), .cfg_p(cfg_p), .cfg_tile_pixels(cfg_tile_pixels), .cfg_regions_m1(cfg_regions_m1), .cfg_ct(cfg_ct), .cfg_ky(cfg_ky), .cfg_kx(cfg_kx), .acc_first(acc_first),
     .start(start), .busy(busy),

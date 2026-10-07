@@ -17,10 +17,11 @@
 //   by its CRC flit alone (count 0: the requester completes cleanly; the toolchain refuses to emit one). A WRDATA beat is written as one
 //   row with the lanes it covers masked in, or as two rows (two cycles) when it crosses a row boundary; the receive CRC
 //   accumulates a whole beat per cycle (crc16_beat), the word count per word as before. Fetch responses (RDRSP) are
-//   received at entry rate (drop 0.30, stage 3): each cycle one activation entry (WPA words) or weight entry (WPW words)
-//   is assembled from the words staged from earlier beats plus the current beat and written to its buffer, so a 16-word
-//   beat is taken in ceil(words / WPE) cycles (two at 32x32) instead of sixteen; words that do not complete an entry are
-//   staged for the next beat. PSUM beats are taken whole (drop 0.31): up to 16 columns per cycle into the row under
+//   received at entry rate (drop 0.30, stage 3), two entries per cycle since drop 0.32: each cycle up to two activation
+//   entries (WPA words) or weight entries (WPW words) are assembled from the words staged from earlier beats plus the
+//   current beat and written to the buffer's word-wide port (a pair of entries at an even address; a single entry when
+//   the address is odd or only one entry's words are there -- the odd trailing entry), so a 16-word beat of two 8-word
+//   activation entries is taken in one cycle; words that do not complete an entry are staged for the next beat. PSUM beats are taken whole (drop 0.31): up to 16 columns per cycle into the row under
 //   assembly, the row handed to the reduce port in the cycle its check word arrives.
 //   Drain modes (drop 0.13): INT32 rows (COLS words + check word) for partial results and debug, or INT8 rows from the
 //   requantization stage packed 4 channels per word (COLS/4 words per row, no check word): with COLS == ROWS one INT8 row
@@ -86,10 +87,15 @@ module tile_nic #(
   output logic                  abuf_we,
   output logic [AW-1:0]         abuf_waddr,
   output logic signed [7:0]     abuf_wdata [ROWS],
+  output logic                  abuf_we2,                 // the entry at abuf_waddr + 1 (abuf_waddr even), drop 0.32
+  output logic signed [7:0]     abuf_wdata2 [ROWS],
   output logic                  wbuf_we,
   output logic [WAW-1:0]        wbuf_waddr,
   output logic signed [7:0]     wbuf_wdata [COLS],
   output logic signed [WCW-1:0] wcbuf_wdata,
+  output logic                  wbuf_we2,
+  output logic signed [7:0]     wbuf_wdata2 [COLS],
+  output logic signed [WCW-1:0] wcbuf_wdata2,
   // core reduce port
   output logic                  ext_valid,
   output logic [IDXW-1:0]       ext_idx,
@@ -237,17 +243,21 @@ module tile_nic #(
   assign b_wmask   = wb_phase ? wb_mask2 : wb_mask1;
   assign b_wdata   = wb_rot;
 
-  // ------------------------------------------------------------------ fetch receive at entry rate (drop 0.30)
-  // Each cycle one entry (WPE = WPA or WPW words) is assembled from the words staged from earlier beats followed by the
-  // current beat's words from rx_woff on; the entry's words from the beat (fx_k) advance rx_woff. When what is left of the
-  // beat still holds an entry the beat stays (fx_more); otherwise the leftover words are staged and the beat is consumed.
+  // ------------------------------------------------------------------ fetch receive at entry rate (drop 0.30; two entries per cycle, drop 0.32)
+  // Each cycle up to two entries (WPE = WPA or WPW words each) are assembled from the words staged from earlier beats
+  // followed by the current beat's words from rx_woff on, and written to the buffer's word-wide port: a pair when the
+  // entry address is even and the words of both are there, otherwise one entry (the odd trailing entry, or the first
+  // entry of a fetch at an odd base). The words taken from the beat (fx_k) advance rx_woff; when what is left of the
+  // beat still holds an entry the beat stays (fx_more), otherwise the leftover words are staged and the beat is consumed.
   // A response that arrives with no fetch outstanding (abandoned by the watchdog) is consumed without storing anything.
   logic          fx_act;                                  // an RDRSP beat is at the input
   logic [SW-1:0] fetch_wpe;                               // words per entry for the current fetch
   logic [CW:0]   fx_avail;                                // staged + unconsumed beat words
-  logic          fx_entry;                                // an entry is written this cycle
-  logic [CW-1:0] fx_k;                                    // beat words the entry takes
-  logic [CW:0]   fx_rem;                                  // beat words left after it
+  logic          fx_entry;                                // at least one entry is written this cycle
+  logic          fx_two;                                  // two entries are written this cycle
+  logic [CW:0]   fx_take;                                 // words the entries need in all: fetch_wpe or 2 * fetch_wpe
+  logic [CW-1:0] fx_k;                                    // beat words the entries take
+  logic [CW:0]   fx_rem;                                  // beat words left after them
   logic          fx_more;                                 // ... enough for another entry: stay on the beat
   logic          fx_stash;                                // ... fewer: they go to stage, the beat is consumed
   logic [SW-1:0] fx_dst;                                  // first stage slot written by the stash
@@ -256,24 +266,31 @@ module tile_nic #(
   logic [15:0]   fetch_entry;
   assign fx_act    = rx_valid && !rx_foreign && (rx_type == T_RDRSP);
   assign fetch_wpe = fetch_is_w ? SW'(WPW) : SW'(WPA);
+  assign fetch_entry = fetch_base + fetch_ent;
   assign fx_avail  = {1'b0, stage_cnt} + {1'b0, rx_nw} - {1'b0, rx_woff};
   assign fx_entry  = fx_act && fetch_busy && (fx_avail >= {1'b0, fetch_wpe});
-  assign fx_k      = CW'(fetch_wpe - stage_cnt);
+  assign fx_two    = fx_entry && !fetch_entry[0] && (fx_avail >= {1'b0, fetch_wpe} + {1'b0, fetch_wpe});
+  assign fx_take   = fx_two ? ({1'b0, fetch_wpe} + {1'b0, fetch_wpe}) : {1'b0, fetch_wpe};
+  assign fx_k      = CW'(fx_take - {1'b0, stage_cnt});
   assign fx_rem    = {1'b0, rx_nw} - {1'b0, rx_woff} - (fx_entry ? {1'b0, fx_k} : '0);
   assign fx_more   = fx_entry && (fx_rem >= {1'b0, fetch_wpe});
   assign fx_stash  = fx_act && fetch_busy && !fx_more;
   assign fx_dst    = fx_entry ? '0 : stage_cnt;
   assign fx_src    = fx_entry ? rx_woff + fx_k : rx_woff;
   assign fx_done   = !fetch_busy || !fx_more;
-  assign fetch_entry = fetch_base + fetch_ent;
 
-  // entry assembly: staged words first, then the beat's words from rx_woff
-  logic [31:0]   ent [EW];
-  logic [LW-1:0] ent_bi [EW];                             // beat word index for entry word w (meaningful for w >= stage_cnt)
+  // entry assembly: the first entry from the staged words then the beat's words from rx_woff; the second entry from the
+  // beat's words that follow (the staged words are fewer than one entry, so it never reaches into stage)
+  logic [31:0]   ent  [EW];
+  logic [31:0]   ent2 [EW];
+  logic [LW-1:0] ent_bi  [EW];                            // beat word index for entry word w (meaningful for w >= stage_cnt)
+  logic [LW-1:0] ent2_bi [EW];
   always_comb begin
     for (int w = 0; w < EW; w++) begin
-      ent_bi[w] = LW'(rx_woff + w - stage_cnt);
-      ent[w]    = (w < stage_cnt) ? stage[w] : rx_words[32 * ent_bi[w] +: 32];
+      ent_bi[w]  = LW'(rx_woff + w - stage_cnt);
+      ent[w]     = (w < stage_cnt) ? stage[w] : rx_words[32 * ent_bi[w] +: 32];
+      ent2_bi[w] = LW'(rx_woff + fetch_wpe + w - stage_cnt);
+      ent2[w]    = rx_words[32 * ent2_bi[w] +: 32];
     end
   end
 
@@ -300,15 +317,20 @@ module tile_nic #(
   crc16_beat #(.BW(BW)) u_rxcrc (.crc_in(crc_acc[rx_src]), .words(rx_words), .n(rx_nw), .crc_out(rx_crc_next));
   generate
     for (genvar c = 0; c < ROWS; c++) begin : g_a
-      assign abuf_wdata[c] = ent[c / 4][8 * (c % 4) +: 8];
+      assign abuf_wdata[c]  = ent[c / 4][8 * (c % 4) +: 8];
+      assign abuf_wdata2[c] = ent2[c / 4][8 * (c % 4) +: 8];
     end
     for (genvar j = 0; j < COLS; j++) begin : g_w
-      assign wbuf_wdata[j] = ent[j / 4][8 * (j % 4) +: 8];
+      assign wbuf_wdata[j]  = ent[j / 4][8 * (j % 4) +: 8];
+      assign wbuf_wdata2[j] = ent2[j / 4][8 * (j % 4) +: 8];
     end
   endgenerate
-  assign wcbuf_wdata = ent[(COLS * 8) / 32][WCW-1:0];
+  assign wcbuf_wdata  = ent[(COLS * 8) / 32][WCW-1:0];
+  assign wcbuf_wdata2 = ent2[(COLS * 8) / 32][WCW-1:0];
   assign abuf_we    = fx_entry && !fetch_is_w;
+  assign abuf_we2   = fx_two && !fetch_is_w;
   assign wbuf_we    = fx_entry && fetch_is_w;
+  assign wbuf_we2   = fx_two && fetch_is_w;
   assign abuf_waddr = fetch_entry[AW-1:0];
   assign wbuf_waddr = fetch_entry[WAW-1:0];
 
@@ -388,7 +410,7 @@ module tile_nic #(
       // flit, M9a -- so the next beat starts at word 0 again)
       if (!rx_valid) rx_woff <= '0;
       else if (fx_act) rx_woff <= fx_more ? rx_woff + fx_k : '0;
-      if (fx_entry) fetch_ent <= fetch_ent + 16'd1;
+      if (fx_entry) fetch_ent <= fetch_ent + (fx_two ? 16'd2 : 16'd1);
       if (fx_more) stage_cnt <= '0;
       else if (fx_stash) begin
         stage_cnt <= fx_dst + SW'(fx_rem);
