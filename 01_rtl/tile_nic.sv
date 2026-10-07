@@ -16,9 +16,11 @@
 //   a full row until the last, so a 4,095-word serve is 257 beats instead of 4,095 words; a zero-length request is answered
 //   by its CRC flit alone (count 0: the requester completes cleanly; the toolchain refuses to emit one). A WRDATA beat is written as one
 //   row with the lanes it covers masked in, or as two rows (two cycles) when it crosses a row boundary; the receive CRC
-//   accumulates a whole beat per cycle (crc16_beat), the word count per word as before. The fetch-response (RDRSP) and
-//   PSUM beats are consumed one word per cycle inside the interface -- entry assembly at the buffer write ports and row
-//   assembly for the reduce port are stage 3 (entry-rate receive).
+//   accumulates a whole beat per cycle (crc16_beat), the word count per word as before. Fetch responses (RDRSP) are
+//   received at entry rate (drop 0.30, stage 3): each cycle one activation entry (WPA words) or weight entry (WPW words)
+//   is assembled from the words staged from earlier beats plus the current beat and written to its buffer, so a 16-word
+//   beat is taken in ceil(words / WPE) cycles (two at 32x32) instead of sixteen; words that do not complete an entry are
+//   staged for the next beat. PSUM beats are still consumed one word per cycle (row assembly for the reduce port).
 //   Drain modes (drop 0.13): INT32 rows (COLS words + check word) for partial results and debug, or INT8 rows from the
 //   requantization stage packed 4 channels per word (COLS/4 words per row, no check word): with COLS == ROWS one INT8 row
 //   is exactly one activation entry of the next layer, so the written region is the next layer's input with no
@@ -170,9 +172,12 @@ module tile_nic #(
   logic                 fetch_is_w;
   logic [7:0]           fetch_src;                        // node serving our fetch
   logic [15:0]          fetch_base;
-  logic [11:0]          fetch_cnt;                        // words received
+  logic [15:0]          fetch_ent;                        // entries written by this fetch
   localparam int EW = (WPA > WPW) ? WPA : WPW;             // words of the largest entry (4 at 16x8, 9 at 32x32; drop 0.21)
-  logic [31:0]          stage [EW];                       // words of the entry under assembly
+  localparam int SW = $clog2(EW + 1);                      // staged word count 0..EW
+  logic [31:0]          stage [EW];                       // words of the entry under assembly, from earlier beats
+  logic [SW-1:0]        stage_cnt;
+  logic [CW-1:0]        rx_woff;                          // words of the current RDRSP beat already taken into entries
 
   // ext FIFO (reduced rows), depth 2
   logic                 efifo_valid [2];
@@ -229,21 +234,61 @@ module tile_nic #(
   assign b_wmask   = wb_phase ? wb_mask2 : wb_mask1;
   assign b_wdata   = wb_rot;
 
+  // ------------------------------------------------------------------ fetch receive at entry rate (drop 0.30)
+  // Each cycle one entry (WPE = WPA or WPW words) is assembled from the words staged from earlier beats followed by the
+  // current beat's words from rx_woff on; the entry's words from the beat (fx_k) advance rx_woff. When what is left of the
+  // beat still holds an entry the beat stays (fx_more); otherwise the leftover words are staged and the beat is consumed.
+  // A response that arrives with no fetch outstanding (abandoned by the watchdog) is consumed without storing anything.
+  logic          fx_act;                                  // an RDRSP beat is at the input
+  logic [SW-1:0] fetch_wpe;                               // words per entry for the current fetch
+  logic [CW:0]   fx_avail;                                // staged + unconsumed beat words
+  logic          fx_entry;                                // an entry is written this cycle
+  logic [CW-1:0] fx_k;                                    // beat words the entry takes
+  logic [CW:0]   fx_rem;                                  // beat words left after it
+  logic          fx_more;                                 // ... enough for another entry: stay on the beat
+  logic          fx_stash;                                // ... fewer: they go to stage, the beat is consumed
+  logic [SW-1:0] fx_dst;                                  // first stage slot written by the stash
+  logic [CW-1:0] fx_src;                                  // first beat word it takes
+  logic          fx_done;                                 // the beat is consumed this cycle
+  logic [15:0]   fetch_entry;
+  assign fx_act    = rx_valid && !rx_foreign && (rx_type == T_RDRSP);
+  assign fetch_wpe = fetch_is_w ? SW'(WPW) : SW'(WPA);
+  assign fx_avail  = {1'b0, stage_cnt} + {1'b0, rx_nw} - {1'b0, rx_woff};
+  assign fx_entry  = fx_act && fetch_busy && (fx_avail >= {1'b0, fetch_wpe});
+  assign fx_k      = CW'(fetch_wpe - stage_cnt);
+  assign fx_rem    = {1'b0, rx_nw} - {1'b0, rx_woff} - (fx_entry ? {1'b0, fx_k} : '0);
+  assign fx_more   = fx_entry && (fx_rem >= {1'b0, fetch_wpe});
+  assign fx_stash  = fx_act && fetch_busy && !fx_more;
+  assign fx_dst    = fx_entry ? '0 : stage_cnt;
+  assign fx_src    = fx_entry ? rx_woff + fx_k : rx_woff;
+  assign fx_done   = !fetch_busy || !fx_more;
+  assign fetch_entry = fetch_base + fetch_ent;
+
+  // entry assembly: staged words first, then the beat's words from rx_woff
+  logic [31:0]   ent [EW];
+  logic [LW-1:0] ent_bi [EW];                             // beat word index for entry word w (meaningful for w >= stage_cnt)
+  always_comb begin
+    for (int w = 0; w < EW; w++) begin
+      ent_bi[w] = LW'(rx_woff + w - stage_cnt);
+      ent[w]    = (w < stage_cnt) ? stage[w] : rx_words[32 * ent_bi[w] +: 32];
+    end
+  end
+
   // ------------------------------------------------------------------ RX handshake
-  // RDRSP and PSUM beats are consumed one word per cycle (rx_wfire); the other types, and a WRDATA beat once its last
-  // row write is on the port, are consumed whole (rx_fire).
+  // PSUM beats are consumed one word per cycle (rx_wfire); RDRSP beats at entry rate (fx_done); the other types, and a
+  // WRDATA beat once its last row write is on the port, are consumed whole (rx_fire).
   logic rx_serial;
   logic rx_waccept;
   logic rx_wfire;
   logic rx_fire;
-  assign rx_serial  = (rx_type == T_RDRSP) || (rx_type == T_PSUM);
+  assign rx_serial  = (rx_type == T_PSUM);
   assign rx_waccept = !(rx_is_psum_last && efifo_full);
   always_comb begin
     if (rx_foreign) rx_ready = 1'b1;                       // dropped
     else begin
       case (rx_type)
         T_RDREQ:  rx_ready = !serve_busy;
-        T_RDRSP:  rx_ready = rx_wlast;
+        T_RDRSP:  rx_ready = fx_done;
         T_PSUM:   rx_ready = rx_wlast && rx_waccept;
         T_WRDATA: rx_ready = !wb_cross || wb_phase;
         default:  rx_ready = 1'b1;
@@ -253,29 +298,15 @@ module tile_nic #(
   assign rx_wfire = rx_valid && !rx_foreign && rx_serial && rx_waccept;
   assign rx_fire  = rx_valid && rx_ready && !rx_foreign;
 
-  // CRC update for what is received this cycle: the whole WRDATA beat, otherwise the word presented
+  // CRC update for what is received this cycle: the whole WRDATA or RDRSP beat, otherwise the word presented
   logic [VW-1:0] rx_crc_words;
   logic [CW-1:0] rx_crc_n;
   logic [15:0]   rx_crc_next;
-  assign rx_crc_words = (rx_type == T_WRDATA) ? rx_words : VW'(rx_word);
-  assign rx_crc_n     = (rx_type == T_WRDATA) ? rx_nw : CW'(1);
+  logic          rx_beat_crc;
+  assign rx_beat_crc  = (rx_type == T_WRDATA) || (rx_type == T_RDRSP);
+  assign rx_crc_words = rx_beat_crc ? rx_words : VW'(rx_word);
+  assign rx_crc_n     = rx_beat_crc ? rx_nw : CW'(1);
   crc16_beat #(.BW(BW)) u_rxcrc (.crc_in(crc_acc[rx_src]), .words(rx_crc_words), .n(rx_crc_n), .crc_out(rx_crc_next));
-
-  // which word of the entry is this
-  logic [11:0] fetch_wpe;                                  // words per entry for the current fetch
-  assign fetch_wpe = fetch_is_w ? WPW : WPA;
-  logic        fetch_last_word;
-  logic [11:0] fetch_word_in_entry;
-  logic [15:0] fetch_entry;
-  assign fetch_word_in_entry = fetch_cnt % fetch_wpe;
-  assign fetch_entry = fetch_base + fetch_cnt / fetch_wpe;
-  assign fetch_last_word = (fetch_word_in_entry == fetch_wpe - 1);
-
-  // entry assembly: the last word arrives on the wire, earlier words sit in stage[]
-  logic [31:0] ent [EW];
-  always_comb begin
-    for (int w = 0; w < EW; w++) ent[w] = (w == fetch_word_in_entry) ? rx_word : stage[w];
-  end
   generate
     for (genvar c = 0; c < ROWS; c++) begin : g_a
       assign abuf_wdata[c] = ent[c / 4][8 * (c % 4) +: 8];
@@ -285,8 +316,8 @@ module tile_nic #(
     end
   endgenerate
   assign wcbuf_wdata = ent[(COLS * 8) / 32][WCW-1:0];
-  assign abuf_we    = rx_wfire && (rx_type == T_RDRSP) && fetch_busy && !fetch_is_w && fetch_last_word;
-  assign wbuf_we    = rx_wfire && (rx_type == T_RDRSP) && fetch_busy && fetch_is_w && fetch_last_word;
+  assign abuf_we    = fx_entry && !fetch_is_w;
+  assign wbuf_we    = fx_entry && fetch_is_w;
   assign abuf_waddr = fetch_entry[AW-1:0];
   assign wbuf_waddr = fetch_entry[WAW-1:0];
 
@@ -297,16 +328,20 @@ module tile_nic #(
         if (!rst_n) begin
           wr_ptr[s] <= '0; crc_acc[s] <= 16'hFFFF; rx_cnt[s] <= '0; prow[s] <= '0;
         end else if (rx_src == s) begin
-          if (rx_wfire) begin                                // RDRSP and PSUM: one word per cycle
+          if (rx_wfire) begin                                // PSUM: one word per cycle
             crc_acc[s] <= rx_crc_next;
             rx_cnt[s]  <= rx_cnt[s] + 16'd1;
-            if ((rx_type == T_PSUM) && (rx_col < COLS)) prow[s][PW * rx_col +: PW] <= rx_word;
+            if (rx_col < COLS) prow[s][PW * rx_col +: PW] <= rx_word;
           end
           if (rx_fire) begin
             case (rx_type)
               T_WRHDR:  wr_ptr[s] <= rx_word[BAW-1:0];
               T_WRDATA: begin                                // the whole beat, after its last row write
                 wr_ptr[s]  <= wr_ptr[s] + BAW'(rx_nw);
+                crc_acc[s] <= rx_crc_next;
+                rx_cnt[s]  <= rx_cnt[s] + 16'(rx_nw);
+              end
+              T_RDRSP: begin                                 // the whole beat, after its last entry
                 crc_acc[s] <= rx_crc_next;
                 rx_cnt[s]  <= rx_cnt[s] + 16'(rx_nw);
               end
@@ -325,8 +360,9 @@ module tile_nic #(
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       lost_err_sticky <= 1'b0; fetch_timeout_sticky <= 1'b0; fetch_timer <= '0; iso_err_sticky <= 1'b0;
-      fetch_busy <= 1'b0; fetch_is_w <= 1'b0; fetch_base <= '0; fetch_cnt <= '0; fetch_src <= '0;
+      fetch_busy <= 1'b0; fetch_is_w <= 1'b0; fetch_base <= '0; fetch_ent <= '0; fetch_src <= '0;
       for (int w = 0; w < EW; w++) stage[w] <= '0;
+      stage_cnt <= '0; rx_woff <= '0;
       efifo_valid[0] <= 1'b0; efifo_valid[1] <= 1'b0; efifo_wr <= 1'b0; efifo_rd <= 1'b0;
       efifo_idx[0] <= '0; efifo_idx[1] <= '0; efifo_chk[0] <= '0; efifo_chk[1] <= '0;
       for (int j = 0; j < COLS; j++) begin efifo_y[0][j] <= '0; efifo_y[1][j] <= '0; end
@@ -346,7 +382,7 @@ module tile_nic #(
       end
       // fetch command
       if (cmd_valid && (cmd_op == 3'd1 || cmd_op == 3'd2) && !fetch_busy) begin
-        fetch_busy <= 1'b1; fetch_is_w <= (cmd_op == 3'd2); fetch_base <= cmd_base; fetch_cnt <= '0;
+        fetch_busy <= 1'b1; fetch_is_w <= (cmd_op == 3'd2); fetch_base <= cmd_base; fetch_ent <= '0; stage_cnt <= '0;
         fetch_src  <= cmd_y * NX + cmd_x;
       end
       // ext FIFO pop
@@ -359,13 +395,18 @@ module tile_nic #(
       if (!rx_valid) rx_widx <= '0;
       else if (rx_wfire) rx_widx <= rx_wlast ? '0 : rx_widx + CW'(1);
       wb_phase <= wb_active && wb_cross && !wb_phase;
+      // fetch receive: entries out, leftovers staged (the beat position resets if the beat vanishes, as rx_widx does)
+      if (!rx_valid) rx_woff <= '0;
+      else if (fx_act) rx_woff <= fx_more ? rx_woff + fx_k : '0;
+      if (fx_entry) fetch_ent <= fetch_ent + 16'd1;
+      if (fx_more) stage_cnt <= '0;
+      else if (fx_stash) begin
+        stage_cnt <= fx_dst + SW'(fx_rem);
+        for (int w = 0; w < EW; w++)
+          if (w >= fx_dst && w < fx_dst + fx_rem) stage[w] <= rx_words[32 * LW'(fx_src + w - fx_dst) +: 32];
+      end
       if (rx_wfire) begin
-        if (rx_type == T_RDRSP) begin
-          if (fetch_busy) begin
-            stage[fetch_word_in_entry] <= rx_word;
-            fetch_cnt <= fetch_cnt + 1;
-          end
-        end else if (rx_col >= COLS) begin                 // PSUM check word: the row is complete
+        if (rx_col >= COLS) begin                          // PSUM check word: the row is complete
           efifo_valid[efifo_wr] <= 1'b1;
           efifo_idx[efifo_wr]   <= rx_tag[IDXW-1:0];
           efifo_chk[efifo_wr]   <= rx_word;
