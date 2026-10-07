@@ -11,6 +11,8 @@ bank port). tile_nic alone, its link side driven with beats and its bank side mo
   I8/I9 fetch receive at entry rate (drop 0.30) at 16x8 and 32x32: activation and weight entries assembled from beats of random
      sizes land at base + index with the right bytes and check values, a beat held ceil(words / WPE) cycles, flags clean
   I10 a response with no fetch outstanding is consumed in one cycle per beat and stored nowhere
+  I11 PSUM rows into the reduce port at beat rate (drop 0.31): beats of random column counts, the FIFO-full stall on the check word
+  I12 the drain in 16-word beats (drop 0.31): INT32 rows as 16 + 16 + 1, INT8 rows, PSUM rows with tags and column headers
   I4/I5 link_packer -> link_unpacker back to back at 32 and 1 words per flit: random beats, PSUM rows and single-word
      types come out as the words, columns and types that went in, no flit wider than WPF"""
 import os, random, sys
@@ -62,6 +64,10 @@ class Nic:
                   "cmd_int8", "cmd_busy", "fetch_timeout_sticky"):
             self.p[n] = d.cell_of(n)
         self.abuf_wdata, self.wbuf_wdata = d.array_of("abuf_wdata"), d.array_of("wbuf_wdata")
+        for n in ("ext_valid", "ext_idx", "ext_chk", "rd_chk", "drain_busy"):
+            self.p[n] = d.cell_of(n)
+        self.ext_y, self.rd_data, self.rq_q = d.array_of("ext_y"), d.array_of("rd_data"), d.array_of("rq_q")
+        self.ext_rows = []                               # rows popped from the reduce port: (idx, [cols], chk)
         for n in ("rx_valid", "tx_ready", "b_rvalid", "ext_ready", "rd_valid", "rq_valid", "cmd_valid", "err_clear", "rdy_clear", "partition",
                   "cmd_op", "cmd_x", "cmd_y", "cmd_addr", "cmd_len", "cmd_base", "cmd_int8"):
             self.p[n].v = 0
@@ -75,6 +81,8 @@ class Nic:
         (abuf_we / wbuf_we) are recorded as (address, bytes[, check]) in self.abuf / self.wbuf."""
         p = self.p
         self.d.settle()
+        if p["ext_valid"].v and p["ext_ready"].v:
+            self.ext_rows.append((p["ext_idx"].v, [c.v & 0xFFFFFFFF for c in self.ext_y], p["ext_chk"].v & 0xFFFFFFFF))
         if p["abuf_we"].v:
             self.abuf.append((p["abuf_waddr"].v, [c.v & 0xFF for c in self.abuf_wdata]))
         if p["wbuf_we"].v:
@@ -299,6 +307,109 @@ nic.tick()
 ok10 = nic.abuf == [] and nic.wbuf == [] and held == [1, 1] and nic.p["crc_err_sticky"].v == 0 and nic.p["lost_err_sticky"].v == 0
 print(f"  I10 response with no fetch outstanding: 20 words in 2 beats taken in {held} cycle(s), no buffer write, CRC and count still checked clean -> {'PASS' if ok10 else 'FAIL'}")
 fails += not ok10
+
+# ---------------- I11: PSUM rows into the reduce port at beat rate (drop 0.31) ----------------
+def psum_rx_test(rows, cols, seed):
+    """Three partial-sum rows (COLS columns + check) arrive as PSUM beats of random sizes, consecutive columns, one row per
+    tag; the reduce port is read with ext_ready held low for a while so the two-entry FIFO fills: every row comes out
+    with its columns and check value in order, a beat that carries the check word waits while the FIFO is full, every
+    other beat is taken in one cycle, flags clean."""
+    r = random.Random(seed)
+    nic = Nic(rows, cols)
+    psum = [[r.getrandbits(32) for _ in range(cols + 1)] for _ in range(3)]
+    held = []
+    nic.p["ext_ready"].v = 0                               # the owner's reduce port is closed for the first two rows
+    for row, ws in enumerate(psum):
+        col = 0
+        while col <= cols:
+            n = min(r.choice([1, 3, 7, 16, 16]), cols + 1 - col)
+            if row == 2 and col + n > cols:
+                nic.p["ext_ready"].v = 1                   # open it as the third row's check word arrives
+            held.append((row, col, n, nic.send(flit(T_PSUM, ws[col:col + n], hdr=col, tag=5 + row))))
+            col += n
+    nic.send(flit(T_CRC, [(3 * (cols + 1) << 16) | crc16([w for ws in psum for w in ws])]))
+    for _ in range(6):
+        nic.tick()
+    nic.p["ext_ready"].v = 0
+    got = [(idx, ys, chk) for idx, ys, chk in nic.ext_rows]
+    exp = [(5 + row, ws[:cols], ws[cols]) for row, ws in enumerate(psum)]
+    # the beat with row 2's check word was held while the FIFO was full (two rows in it); every other beat took one cycle
+    waits = [(row, h) for row, col, n, h in held if h > 1]
+    ok = (got == exp and all(row == 2 for row, _ in waits) and len(waits) <= 1
+          and nic.p["crc_err_sticky"].v == 0 and nic.p["lost_err_sticky"].v == 0)
+    return ok, len(held), waits
+
+
+for rows, cols, label in ((16, 8, "I11"), (32, 32, "I11b")):
+    ok, nb, waits = psum_rx_test(rows, cols, 300 + rows)
+    print(f"  {label} PSUM rows into the reduce port at {rows}x{cols}: 3 rows of {cols}+1 words in {nb} beats of 1..16 columns, FIFO full for the "
+          f"first two rows: rows out in order with their check values, {'the check-word beat of row 2 held ' + str(waits[0][1]) + ' cycles' if waits else 'no beat held'}, "
+          f"every other beat one cycle -> {'PASS' if ok else 'FAIL'}")
+    fails += not ok
+
+# ---------------- I12: the drain in 16-word beats (drop 0.31) ----------------
+def drain_test(rows, cols, mode, seed):
+    """Rows pushed into the drain FIFO (rd_valid / rq_valid as the core does), a DRAIN_WR (INT32 or INT8) or DRAIN_PSUM
+    command: the beats on the link carry the rows' words in order with the right counts (16 + 16 + 1 for a 33-word row),
+    WRHDR before a bank drain, PSUM beats with the row index as tag and the column of word 0 in hdr, the CRC flit's count
+    and CRC over the model's word stream."""
+    r = random.Random(seed)
+    nic = Nic(rows, cols)
+    p = nic.p
+    nrows = 3
+    data = [[r.getrandbits(32) for _ in range(cols)] for _ in range(nrows)]
+    chks = [r.getrandbits(32) for _ in range(nrows)]
+    q = [[r.randrange(-128, 128) for _ in range(cols)] for _ in range(nrows)]
+    op = 4 if mode == "psum" else 3
+    p["cmd_valid"].v = 1; p["cmd_op"].v = op; p["cmd_x"].v = 1; p["cmd_y"].v = 1; p["cmd_addr"].v = 0x3C0; p["cmd_len"].v = nrows
+    p["cmd_int8"].v = 1 if mode == "int8" else 0
+    nic.tick(); p["cmd_valid"].v = 0
+    for i in range(nrows):
+        if mode == "int8":
+            for j, c in enumerate(nic.rq_q): c.v = q[i][j] & 0xFF
+            p["rq_valid"].v = 1
+        else:
+            for j, c in enumerate(nic.rd_data): c.v = data[i][j]
+            p["rd_chk"].v = chks[i]; p["rd_valid"].v = 1
+        nic.tick()
+        p["rq_valid"].v = 0; p["rd_valid"].v = 0
+    beats, cycles = nic.collect()
+    if mode == "int8":
+        words = [sum((q[i][4 * k + b] & 0xFF) << (8 * b) for b in range(4)) for i in range(nrows) for k in range(cols // 4)]
+        row_len = cols // 4
+    else:
+        words = [w for i in range(nrows) for w in data[i] + [chks[i]]]
+        row_len = cols + 1
+    exp_sizes = []
+    for i in range(nrows):
+        left = row_len
+        while left > 0:
+            exp_sizes.append(min(16, left)); left -= min(16, left)
+    data_beats = [b for b in beats if b[0] in (T_WRDATA, T_PSUM)]
+    stream = [w for b in data_beats for w in b[3]]
+    sizes = [len(b[3]) for b in data_beats]
+    crcf = beats[-1]
+    ok = (stream == words and sizes == exp_sizes and crcf[0] == T_CRC and (crcf[3][0] >> 16) == len(words)
+          and (crcf[3][0] & 0xFFFF) == crc16(words) and all(((b[1] >> 8) & 0x3F) == len(b[3]) - 1 for b in data_beats)
+          and nic.p["drain_busy"].v == 0)
+    if mode == "psum":
+        cols_ok, k = True, 0
+        for i in range(nrows):
+            c = 0
+            while c < row_len:
+                b = data_beats[k]; cols_ok &= (b[2] == i and (b[1] & 0xFF) == c); c += len(b[3]); k += 1
+        ok = ok and cols_ok and beats[0][0] == T_PSUM
+    else:
+        ok = ok and beats[0][0] == T_WRHDR and beats[0][3][0] == 0x3C0
+    return ok, sizes, cycles
+
+
+for rows, cols in ((16, 8), (32, 32)):
+    res = {m: drain_test(rows, cols, m, 400 + rows + len(m)) for m in ("int32", "int8", "psum")}
+    ok = all(r_[0] for r_ in res.values())
+    print(f"  I12 drain in beats at {rows}x{cols}: 3 INT32 rows as beats {res['int32'][1]} ({res['int32'][2]} cycles), 3 INT8 rows as {res['int8'][1]}, "
+          f"3 PSUM rows as {res['psum'][1]} with row tags and column headers; words, counts, WRHDR and CRC flits vs the model -> {'PASS' if ok else 'FAIL'}")
+    fails += not ok
 
 # ---------------- I4/I5: packer -> unpacker wired back to back, 32 and 1 words per flit ----------------
 WRAP = """
