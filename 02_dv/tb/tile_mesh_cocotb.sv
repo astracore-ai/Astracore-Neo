@@ -11,7 +11,10 @@
 //   hierarchical block admits no references into it. The semantics are the tile's: the backdoor writes at the rising edge
 //   and reads combinationally; faults are applied at the FALLING clock edge, so they never race the design's own
 //   rising-edge updates: the corrupted value is what the design samples at the next rising edge, exactly as the neosim
-//   M-tests poke a cell between two ticks. (A comment must not begin with the simulator's name: it would be read as a directive.)
+//   M-tests poke a cell between two ticks. The two router hooks are the exception since drop 0.38: they act on the flit
+//   the output register loads at a RISING edge (a falling-edge write of a register whose reader is the neighbouring tile
+//   reached that tile a cycle late in the flat 32x32 build -- the simulator orders the tile-to-tile copies once per edge).
+//   (A comment must not begin with the simulator's name: it would be read as a directive.)
 module tile_mesh_cocotb #(
   parameter int NX = 2, NY = 2, ROWS = 16, COLS = 8, PW = 32,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
@@ -49,13 +52,16 @@ module tile_mesh_cocotb #(
   input  logic [38:0]   bd_wdata,
   output logic [38:0]   bd_rdata,
   // fault injection into node fi_node, applied at every falling edge while fi_en is high (a one-clock pulse of fi_en
-  // applies it exactly once):
+  // applies it exactly once) -- except the router selectors 5 and 6, which act on the flit a rising edge loads (see below):
   //   fi_sel 1  bank word fi_idx OR fi_mask[38:0]            (a stuck-at bit; hold fi_en for the duration)
   //          2  program memory word fi_idx lane 0 XOR fi_mask[38:0]
   //          3  descriptor register cfg[fi_idx] XOR fi_mask[15:0]   (the primary copy only)
   //          4  primary DMA engine pc XOR fi_mask[3:0]
-  //          5  router output register out_flit[fi_idx] XOR fi_mask  (payload bits, any of the WPF words; fi_idx = port, 4 = local)
-  //          6  router output register out_valid[fi_idx] cleared     (the flit vanishes)
+  //          5  router output register out_flit[fi_idx] loaded with its flit XOR fi_mask  (payload bits, any of the WPF words;
+  //                                                                 fi_idx = port, 4 = local; drop 0.38: applied to the flit the
+  //                                                                 register LOADS at a rising edge while fi_en is high -- hold
+  //                                                                 fi_en until the flit has arrived, release it the same cycle)
+  //          6  router output register out_valid[fi_idx] left low as the flit is loaded (the flit vanishes; drop 0.38, as 5)
   //          7  NIC transmit engine held in X_SERVE_RD (4'd2)        (a dead server: a request is taken and its response never
 //                                                                 comes, whatever the request's length; hold fi_en. Drop 0.29:
 //                                                                 was serve_busy held at 1, which only starved the requester
