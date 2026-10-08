@@ -86,12 +86,16 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     for _ in range(3): await RisingEdge(dut.clk)
     dut.rst_n.value = 1
     await RisingEdge(dut.clk)
-    # a requantization table for every column (odd parity stored with each entry), so the table check has something to check
+    # a requantization table for every column (odd parity stored with each entry), so the table check has something to check.
+    # Shift 26 (drop 0.38; was 20): the comparator of the duplicated requantization sees the INT8 outputs, so C2's input fault
+    # (bit 12 of column 0 flipped) is visible only where the output does not saturate -- at shift 20 every column-0 value of
+    # the 32x32 core's run (80 input channels, accumulators in the 100,000s) saturated and run 126 saw no rq_err; at 26 the
+    # outputs sit within +-128 and the flip moves each one by 4096 x 30000 / 2^26 = 1.8, at least one LSB, in every row
     for c in range(COLS):
         dut.rq_tbl_we.value = 1
         dut.rq_tbl_addr.value = c
         dut.rq_tbl_mult.value = 30000 + c
-        dut.rq_tbl_shift.value = 20
+        dut.rq_tbl_shift.value = 26
         dut.rq_tbl_zp.value = bits(-3, 8)
         await RisingEdge(dut.clk)
     dut.rq_tbl_we.value = 0

@@ -394,28 +394,23 @@ async def m2_ksplit_rdy(dut):
 
 
 async def corrupt_local_response(mesh, dut, sel, mask, tag):
-    """Wait for a fetch-response flit in tile 0's router local-port output register, apply fault `sel` to it at that
-    cycle's falling edge (before the NIC takes it), then let the program finish. Returns the clock count."""
-    mesh.fault_arm(0, sel, idx=4, mask=mask)
+    """Apply fault `sel` to the first fetch-response flit that tile 0's router loads into its local-port output register,
+    then let the program finish. Returns the clock count. The router hooks act on the flit a rising edge loads while fi_en
+    is high (drop 0.38), so the fault is held from before the response and released in the cycle the flit shows in the
+    register -- the next flit loads clean. Nothing but the response reaches the local port of a tile that only fetches,
+    and the register shows the flit (its type) whether or not the hook left its valid low."""
+    mesh.fault_hold(0, sel, idx=4, mask=mask)
     applied, n = False, 0
     while True:
         await RisingEdge(dut.clk)
-        if applied:
-            dut.fi_en.value = 0                                   # the fault was applied at the last falling edge
         if mesh.prog_done(0):
             break
-        # the first response flit at the port (drop 0.32: the old `n > 40` guard found nothing once a response is consumed
-        # at two entries per cycle -- the whole 16x8 response can be gone before cycle 40)
-        if not applied and mesh.router_valid(4) and ((mesh.router_flit4() >> TYPE_SHIFT) & 7) == T_RDRSP:
-            if sel == FI_FLIT_XOR:
-                # a packed flit stays in the register for WPF cycles and the unpacker has taken word 0 by the time the fault
-                # lands: aim the mask at the flit's last word, which is still to be consumed (word 0 with one word per flit)
-                last = (mesh.router_flit4() >> CNT_SHIFT) & 0x3F
-                dut.fi_mask.value = mask << (32 * last)
-            dut.fi_en.value = 1
+        if not applied and ((mesh.router_flit4() >> TYPE_SHIFT) & 7) == T_RDRSP:    # the first response flit was loaded at this edge
+            mesh.fault_release()
             applied = True
         n += 1
         assert n < 20000, f"{tag}: fetch did not complete"
+    mesh.fault_release()
     assert applied, f"{tag}: no fetch-response flit observed at tile 0's local port"
     return n
 
@@ -767,28 +762,27 @@ async def m15_register_readback(dut):
 
 @cocotb.test()
 async def m16_link_parity(dut):
-    """A flit corrupted on a mesh link: a bit flipped in tile (0,1)'s router north output register while the fetch response to
-    tile (0,0) sits in it fails the parity check at (0,0)'s router input -- the flit is dropped and parity flagged there, the
+    """A flit corrupted on a mesh link: the fetch response's first flit is loaded corrupted (a payload bit flipped) into tile
+    (0,1)'s router north output register and fails the parity check at (0,0)'s router input -- the flit is dropped and parity flagged there, the
     CRC flit then counts the words short (lost, and the CRC differs) and the fetch completes (drop 0.36: the parity bin).
     The response from (1,1) to (0,0) travels west to (0,1), then north: nothing else crosses that link during the fetch."""
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
     await mesh.load_bank(N11, act, wts)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_END)])
+    mesh.fault_hold(N01, FI_FLIT_XOR, idx=0, mask=1 << 5)                  # port 0: the north output of (0,1), toward (0,0)
     await mesh.start([0])
-    mesh.fault_arm(N01, FI_FLIT_XOR, idx=0, mask=1 << 5)                   # port 0: the north output of (0,1), toward (0,0)
     applied, n = False, 0
     while True:
         await RisingEdge(dut.clk)
-        if applied:
-            dut.fi_en.value = 0
         if mesh.prog_done(0):
             break
-        if not applied and mesh.router_valid(0):                           # the response's first flit leaves (0,1) northbound
-            dut.fi_en.value = 1
+        if not applied and mesh.router_valid(0):                           # the response's first flit was loaded northbound at this
+            mesh.fault_release()                                           # edge, corrupted (drop 0.38: the hook acts on the load)
             applied = True
         n += 1
         assert n < FETCH_TIMEOUT + 500, "M16: the fetch did not complete"
+    mesh.fault_release()
     assert applied, "M16: no flit observed on (0,1)'s north output during the fetch"
     await mesh.tick(5)
     c = await mesh.causes()
