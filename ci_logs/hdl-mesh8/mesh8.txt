@@ -50,3 +50,10 @@ MODULE=test_tile_mesh TESTCASE=m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_t
  76391.01ns INFO     cocotb.tile_mesh_cocotb            M12: program-memory ECC, duplicated descriptors and lockstep DMA each flagged their fault
  76391.01ns INFO     cocotb.regression                  m12_control_path_protection passed
  76391.01ns INFO     cocotb.regression                  running m13_partitions (9/11)
+109319.01ns INFO     cocotb.tile_mesh_cocotb            M13: cross-partition fetch dropped and flagged, requester timed out; same fetch inside a partition clean
+109319.01ns INFO     cocotb.regression                  m13_partitions passed
+109319.01ns INFO     cocotb.regression                  running m16_link_parity (10/11)
+                                                          A flit corrupted on a mesh link: the fetch response's first flit is loaded corrupted (a payload bit flipped) into tile
+                                                          (0,1)'s router north output register and fails the parity check at (0,0)'s router input -- the flit is dropped and parity flagged there, the
+                                                          CRC flit then counts the words short (lost, and the CRC differs) and the fetch completes (drop 0.36: the parity bin).
+                                                          The response from (1,1) to (0,0) travels west to (0,1), then north: nothing else crosses that link during the fetch.
