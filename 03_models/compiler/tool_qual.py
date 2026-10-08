@@ -147,6 +147,54 @@ def main():
           and ins(OP_FETCH_W, 1, 1, 5, MAX_FETCH, 7) >> 60 == OP_FETCH_W
     results.append(dict(id="TQ5-000", kind="encoder rejects invalid fetches", shape=dict(cases=5), ok=ok5,
                         detail=f"rejected {len(rejected)}/5" + (f", accepted {accepted}" if accepted else "") + "; len 1 and MAX_FETCH accepted"))
+    # ---- TQ6: the bank allocator (drop 0.33) ----
+    import neo_alloc as na
+    from neo_backend import compile_network
+    t6 = []
+    # (a) a tensor larger than one bank goes into bands that cover every window exactly; every region starts on a bank row
+    al = na.BankAllocator(2, 2, bank_words=4096)                        # four tiny banks of 256 rows
+    t = al.place_tensor(2, 40, 16, 8, align_rows=4, name="t")           # 40 rows x 128 words = 5,120 words per channel tile
+    cover_ok = True
+    for ct in range(2):
+        rows_covered = sorted((r.y0, r.y0 + r.rows) for r in t.regions[ct])
+        cover_ok &= rows_covered[0][0] == 0 and rows_covered[-1][1] == 40 and all(rows_covered[i][1] == rows_covered[i + 1][0] for i in range(len(rows_covered) - 1))
+        cover_ok &= all(r.base % na.ROW == 0 and r.base + r.words <= 4096 and r.rows % 4 == 0 or r.y0 + r.rows == 40 for r in t.regions[ct])
+        for y_lo, y_hi in ((0, 2), (3, 9), (10, 39), (0, 39)):
+            segs = t.segments(ct, y_lo, y_hi)
+            cover_ok &= segs[0][2] == y_lo and segs[-1][3] == y_hi and all(segs[i][3] + 1 == segs[i + 1][2] for i in range(len(segs) - 1))
+            cover_ok &= all(a - r.y0 >= 0 for (_, _, a, _), r in zip(segs, [next(rr for rr in t.regions[ct] if rr.y0 <= a < rr.y0 + rr.rows) for (_, _, a, _) in segs]))
+    bands = sum(len(r) for r in t.regions.values())
+    t6.append(("bands cover every window", cover_ok and bands >= 4))
+    # (b) a group's output rows never straddle a band (bands aligned to the chunk)
+    try:
+        for y0 in range(0, 40, 4):
+            t.region_of(0, y0, 4)
+        t6.append(("output rows inside one band", True))
+    except ValueError:
+        t6.append(("output rows inside one band", False))
+    # (c) release returns the rows and the space is reused
+    before = sum(f.total_free() for f in al.banks.values())
+    al.release_tensor(t)
+    after = sum(f.total_free() for f in al.banks.values())
+    t2 = al.place_tensor(2, 40, 16, 8, align_rows=4, name="t2")
+    t6.append(("release and reuse", after == before + sum(r.words for rs in t.regions.values() for r in rs) // na.ROW and t2.words == t.words))
+    # (d) the exclusion mask: excluded banks never hold anything, and the mesh compile honours it for owners too
+    al2 = na.BankAllocator(2, 2, bank_words=4096, exclude=[(1, 1)])
+    t3 = al2.place_tensor(1, 40, 16, 8, align_rows=4)
+    w3 = al2.place_weights(500)
+    t6.append(("exclusion mask on banks", (1, 1) not in al2.banks and (1, 1) not in t3.banks() and w3[0] != (1, 1)))
+    stx, alx = compile_network(h=64, w=64, nx=8, ny=8, rows=ROWS, cols=COLS, exclude=[(1, 1), (2, 2)], bank_words=na.BANK_WORDS)
+    t6.append(("exclusion mask on the mesh compile", sum(x["bad"] for x in stx) == 0 and (1, 1) not in alx.banks and (2, 2) not in alx.banks))
+    # (e) the whole network at 640x640 on 8x8: every group placed, every program within the program memory, every fetch
+    #     address inside its bank
+    st, alf = compile_network(h=640, w=640, nx=8, ny=8, rows=ROWS, cols=COLS)
+    t6.append(("YOLOv8-m 640x640 every group placed", sum(x["bad"] for x in st) == 0 and sum(x["too_long"] for x in st) == 0
+                and sum(x["groups"] for x in st) == 6263 and max(pk for _, pk in alf.occupancy().values()) <= na.BANK_WORDS // na.ROW))
+    # (f) with a tile taken out, every group still places
+    st2, _ = compile_network(h=640, w=640, nx=8, ny=8, rows=ROWS, cols=COLS, exclude=[(3, 3)])
+    t6.append(("640x640 with tile (3,3) excluded", sum(x["bad"] for x in st2) == 0 and sum(x["too_long"] for x in st2) == 0))
+    for i, (name, ok6) in enumerate(t6):
+        results.append(dict(id=f"TQ6-{i:03d}", kind="bank allocator: " + name, shape=dict(), ok=ok6, detail="PASS" if ok6 else "FAIL"))
     # ---- TQ4: requantization model vs the RTL arithmetic ----
     bad = 0
     for i in range(20000):
@@ -155,7 +203,7 @@ def main():
             bad += 1
     results.append(dict(id="TQ4-000", kind="requant model vs RTL arithmetic", shape=dict(samples=20000), ok=bad == 0, detail=f"{bad} mismatches"))
     passed = sum(r["ok"] for r in results)
-    report = dict(tool="neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)", version="drop 0.29",
+    report = dict(tool="neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)", version="drop 0.33",
                   date=time.strftime("%Y-%m-%d"), cases=len(results), passed=passed, seconds=round(time.time() - t0, 1),
                   tcl_argument="TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model "
                                "(lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool "
