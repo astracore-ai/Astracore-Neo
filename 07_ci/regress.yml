@@ -1,4 +1,5 @@
-# Neo regression on GitHub Actions (drop 0.24, repository layout = handoff package; drop 0.34: the mesh job measured and sized to the runner).
+# Neo regression on GitHub Actions (drop 0.24, repository layout = handoff package; drop 0.34: the mesh job measured; drop 0.35: the
+# 64-tile mesh of 32x32 cores built hierarchically -- the tile verilated once -- and the lint step a full -Wall gate).
 # Every job builds the flat layout from the numbered folders with plain copies, then writes its logs to its own
 # branch ci-logs-<job> (ci_logs/<job>/*.txt), so results can be read from the repository and jobs never
 # overwrite each other's results.
@@ -90,22 +91,23 @@ jobs:
   hdl-mesh8:
     runs-on: ubuntu-latest
     timeout-minutes: 300
-    # the build knobs, the one place to set them (drop 0.34). Run 111's job ended 3 min 51 s after it started with exit code
-    # 143 (SIGTERM to the step: the runner itself was shut down), i.e. during the verilation of the 64-tile model of 32x32
-    # cores, long before any C++ compile -- MESH8_BUILD_JOBS / MESH8_CFLAGS (drop 0.33) never came into play; every earlier
-    # attempt (runs 74, 85, 90, 96, 104) left the same single "started" line. The model does not verilate in the runner's
-    # 16 GB (4 cores, 145 GB disk), so the job builds MESH8_VARIANT=mesh8s by default: the 8x8 mesh on 16x8 cores with the
-    # silicon depths and links, the mesh-level tests (the 32x32 core and depths are proven on tile32 in hdl-sim). And it
-    # measures: GNU time around every build (build_stats.txt), a memory sampler whose log is pushed every two minutes while
-    # the build runs (mem.txt: the branch shows the memory trajectory even when the runner dies), the 16x8 suite built with
-    # and without --public-flat-rw first (tile_np.txt: the flag's share of a build), and, with MESH8_PROBE 1, a bounded
-    # attempt at the 32x32 mesh after the variant's own results are published -- expected to end the job the way run 111
-    # ended, with the trajectory on the branch. MESH8_PROBE 0 keeps the job green on the variant alone.
+    # the build knobs, the one place to set them (drop 0.34). Drop 0.35: the mesh builds verilate hierarchically -- neo_tile
+    # is a hierarchical block, verilated once and instantiated 64 times -- so the silicon mesh (MESH8_VARIANT=mesh8: 8x8
+    # tiles of 32x32 cores, silicon depths, 1024-bit links) is the default again. Run 115 measured the flat builds: the
+    # 16x8-core variant's verilation peaked at 14.0 GB of the runner's 16 GB and wrote 791 MB of C++; the 32x32 mesh never
+    # verilated flat (runs 74-111, exit 143 within minutes). Hierarchically, measured with the same Verilator 5.020: mesh8
+    # 36 s and 0.76 GB, 105 MB of C++; mesh8s 21 s and 0.44 GB. MESH8_BUILD_JOBS now reaches the C++ compile (make -j);
+    # run 115's compile ran one file at a time. MESH8_CFLAGS is empty: Verilator's own split (-Os on the model's fast path,
+    # -O0 on the slow path) as in every hdl-sim build -- "-CFLAGS -O1" (the drop-0.33 memory fallback) also optimised the
+    # block's 6.5 MB VPI symbol table (20,000 registrations in one function, cocotb's --public-flat-rw inside the block),
+    # the long pole of the compile at >20 min on one core; at -O0 it is minutes. The measurements stay: GNU time around
+    # every build (build_stats.txt), the memory sampler pushed every two minutes (mem.txt). MESH8_PROBE 1 would add the
+    # bounded flat attempt at the 32x32 mesh after a mesh8s run (read in run 115; off). mesh8s remains the fallback variant.
     env:
-      MESH8_VARIANT: mesh8s
-      MESH8_BUILD_JOBS: 2
-      MESH8_CFLAGS: "-CFLAGS -O1"
-      MESH8_PROBE: "1"
+      MESH8_VARIANT: mesh8
+      MESH8_BUILD_JOBS: 4
+      MESH8_CFLAGS: ""
+      MESH8_PROBE: "0"
     # its own group (drop 0.30): a push cancels only this job's own predecessor, and the job is not held by the regress
     # group while python-regress / hdl-sim of the same run are still on it
     concurrency:
@@ -126,7 +128,7 @@ jobs:
           cp 07_ci/Makefile Makefile
           mkdir -p ci_logs/hdl-mesh8 && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-mesh8/RUN.txt
           { echo "cores $(nproc)"; free -m | sed -n 2,3p; df -h / | tail -1; } | tee -a ci_logs/hdl-mesh8/RUN.txt
-          echo "variant ${MESH8_VARIANT-mesh8s}, ${MESH8_BUILD_JOBS-2} build jobs, CFLAGS [${MESH8_CFLAGS--CFLAGS -O1}], probe of the 32x32 mesh ${MESH8_PROBE-0}" | tee -a ci_logs/hdl-mesh8/RUN.txt
+          echo "variant ${MESH8_VARIANT-mesh8}, ${MESH8_BUILD_JOBS-4} build jobs, CFLAGS [${MESH8_CFLAGS-}], hierarchical, probe of the 32x32 mesh ${MESH8_PROBE-0}" | tee -a ci_logs/hdl-mesh8/RUN.txt
       # heartbeat (drop 0.30): the job publishes RUN.txt as soon as it starts; the job then stays on the orphan branch, the
       # working tree keeps every file, and every later publish commits onto it (all of them through one lock, drop 0.34)
       - name: publish heartbeat
@@ -162,19 +164,14 @@ jobs:
           nohup bash ci_publisher.sh ${{ github.run_number }} >/dev/null 2>&1 &
           echo $! > ci_publisher.pid
           sleep 25 && cat ci_logs/hdl-mesh8/mem.txt
-      # the flag's share of a build (drop 0.34): the 16x8 suite built and run with and without --public-flat-rw, each under
-      # GNU time; the two results are reported (tile_np.txt) and do not gate the job
-      - name: the 16x8 suite with and without --public-flat-rw (timed)
+      # (the drop-0.34 A/B of the 16x8 suite with and without --public-flat-rw is gone: cocotb's own Makefile.verilator passes
+      # the flag on every build, so run 115 timed two identical builds -- 890,656 and 890,648 KB)
+      - name: build the 8x8 mesh (MESH8_VARIANT; MESH8_BUILD_JOBS build jobs, MESH8_CFLAGS; hierarchical since drop 0.35)
         run: |
           set -o pipefail
-          make cocotb_tile_np STATS=ci_logs/hdl-mesh8/build_stats.txt 2>&1 | tee ci_logs/hdl-mesh8/tile_np.txt
-          { echo "tile / tile_np done $(date -u)"; cat ci_logs/hdl-mesh8/build_stats.txt; } | tee -a ci_logs/hdl-mesh8/RUN.txt
-      - name: build the 8x8 mesh (MESH8_VARIANT; MESH8_BUILD_JOBS build jobs, MESH8_CFLAGS)
-        run: |
-          set -o pipefail
-          V=${MESH8_VARIANT-mesh8s}
+          V=${MESH8_VARIANT-mesh8}
           echo "build of $V starts $(date -u)" | tee -a ci_logs/hdl-mesh8/RUN.txt
-          make cocotb_${V}_build STATS=ci_logs/hdl-mesh8/build_stats.txt MESH8_BUILD_JOBS=${MESH8_BUILD_JOBS-2} MESH8_CFLAGS="${MESH8_CFLAGS--CFLAGS -O1}" 2>&1 | tee ci_logs/hdl-mesh8/build.txt
+          make cocotb_${V}_build STATS=ci_logs/hdl-mesh8/build_stats.txt MESH8_BUILD_JOBS=${MESH8_BUILD_JOBS-4} MESH8_CFLAGS="${MESH8_CFLAGS-}" 2>&1 | tee ci_logs/hdl-mesh8/build.txt
           { echo "built $(date -u)"; free -m | sed -n 2p; df -h / | tail -1; du -sh dv/cocotb/sim_build_$V 2>/dev/null || true; tail -1 ci_logs/hdl-mesh8/build_stats.txt; } | tee -a ci_logs/hdl-mesh8/RUN.txt
       - name: publish heartbeat after the build
         run: |
@@ -182,19 +179,19 @@ jobs:
       - name: cocotb on the 8x8 mesh
         run: |
           set -o pipefail
-          make cocotb_${MESH8_VARIANT-mesh8s}_run STATS=ci_logs/hdl-mesh8/build_stats.txt 2>&1 | tee ci_logs/hdl-mesh8/mesh8.txt
+          make cocotb_${MESH8_VARIANT-mesh8}_run STATS=ci_logs/hdl-mesh8/build_stats.txt 2>&1 | tee ci_logs/hdl-mesh8/mesh8.txt
           { echo "run done $(date -u)"; tail -1 ci_logs/hdl-mesh8/build_stats.txt; } | tee -a ci_logs/hdl-mesh8/RUN.txt
       - name: publish the variant's results
         run: |
           flock -w 120 .ci_publish.lock -c 'git add -f ci_logs && git commit -q -m "hdl-mesh8 ${{ env.MESH8_VARIANT }} results run ${{ github.run_number }}" && git push -q origin ci-logs-hdl-mesh8 --force'
-      # the probe (drop 0.34): the 32x32 mesh's verilation under the sampler, bounded to 30 min -- a measurement of where it
-      # dies, taken only after the variant's results are on the branch; it needs no C++ compile to be informative
+      # the probe (drop 0.34): the 32x32 mesh's FLAT verilation under the sampler, bounded to 30 min -- a measurement of where
+      # it dies, taken only after a mesh8s variant's results are on the branch (read in run 115; off since drop 0.35)
       - name: probe the 32x32 mesh under the sampler (MESH8_PROBE)
         if: env.MESH8_PROBE == '1' && env.MESH8_VARIANT != 'mesh8'
         run: |
           set -o pipefail
           echo "probe of the 32x32 mesh starts $(date -u)" | tee -a ci_logs/hdl-mesh8/RUN.txt
-          timeout 30m make cocotb_mesh8_build STATS=ci_logs/hdl-mesh8/build_stats.txt MESH8_BUILD_JOBS=${MESH8_BUILD_JOBS-2} MESH8_CFLAGS="${MESH8_CFLAGS--CFLAGS -O1}" 2>&1 | tee ci_logs/hdl-mesh8/probe.txt || echo "probe ended with status $? (124 = the 30 min bound)" | tee -a ci_logs/hdl-mesh8/RUN.txt
+          timeout 30m make cocotb_mesh8_build STATS=ci_logs/hdl-mesh8/build_stats.txt MESH8_BUILD_JOBS=${MESH8_BUILD_JOBS-2} MESH8_CFLAGS="${MESH8_CFLAGS--CFLAGS -O1}" MESH8_HIER= 2>&1 | tee ci_logs/hdl-mesh8/probe.txt || echo "probe ended with status $? (124 = the 30 min bound)" | tee -a ci_logs/hdl-mesh8/RUN.txt
           { echo "probe done $(date -u)"; tail -1 ci_logs/hdl-mesh8/build_stats.txt; } | tee -a ci_logs/hdl-mesh8/RUN.txt
       - name: publish logs
         if: always()

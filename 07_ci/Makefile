@@ -4,7 +4,7 @@
 # make xrun       : Cadence Xcelium simulation of tb_neo_mac_core
 # make iverilog   : Icarus Verilog simulation (open source)
 # make verilator  : Verilator simulation (open source)
-# make lint       : Verilator lint of the RTL only
+# make lint       : Verilator lint of the RTL: four -Wall passes, nothing waived, every warning fails (drop 0.35)
 # make sim        : run the RTL under neosim (built-in subset simulator; no install needed)
 # make compile    : compiler v1 lowering verification + YOLOv8-m performance report
 # make conv       : whole convolutions on the v0.2 core RTL under neosim (feeder + accumulator + ABFT)
@@ -25,9 +25,9 @@
 # make two_layer  : M10: two layers back to back on the mesh with INT8 handoff through the bank
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
 # make verilator  : Verilator: streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then cocotb: M1-M13 and M10 at 16x8/8x8, M1-M13 and C1 on the 32x32 silicon configuration (drop 0.21)
-# make cocotb_mesh8 : cocotb on Verilator: the mesh-level tests on the silicon mesh, 8x8 tiles of 32x32 cores with 2 MB banks (drop 0.24; its own CI job)
+# make cocotb_mesh8 : cocotb on Verilator: the mesh-level tests on the silicon mesh, 8x8 tiles of 32x32 cores with 2 MB banks (drop 0.24; its own CI job;
+#                   hierarchical verilation since drop 0.35: the tile verilated once, 64 instances -- 0.76 GB instead of >16 GB)
 # make cocotb_coverage : the coverage report (drop 0.26): 16x8 suite, M10 and C1 with Verilator line/toggle coverage + functional covergroups
-# make cocotb_tile_np : the 16x8 suite with and without --public-flat-rw, each build under GNU time (drop 0.34: sizes the flag's share of a build)
 # make perf2      : 64-core event model with mesh and bank contention (compiler/neo_perf_v2.py)
 # make regress    : everything above that is self-checking (model, RTL v0.1/v0.2/core/NoC, compiler); hours under neosim
 # make regress_ci : the subset that finishes in minutes (drop 0.24); CI's python-regress job runs this -- the whole-convolution
@@ -50,7 +50,7 @@ TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wra
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_tile_np cocotb_coverage
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage
 
 all: regress model
 
@@ -198,16 +198,17 @@ verilator: vectors vectors_core
 # STATS; the hdl-sim job publishes the file, and the hdl-mesh8 job's numbers (STATS=ci_logs/hdl-mesh8/build_stats.txt) size
 # the 64-tile builds against the runner's 16 GB. Without GNU time the builds run as before.
 TIME_BIN := $(shell command -v /usr/bin/time 2>/dev/null)
+MESH8_BUILD_JOBS ?= 4
 STATS ?= ci_logs/hdl-sim/build_stats.txt
 timed = $(if $(TIME_BIN),mkdir -p $(dir $(STATS)) && $(TIME_BIN) -f "$(1): %e s wall; peak RSS %M KB; exit %x" -a -o $(STATS),)   # no commas: $(if) would split on them
 cocotb_tiles:
 	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"   # cocotb 2.x needs Verilator >= 5.036; Ubuntu ships 5.020
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
-	-$(call timed,tile) $(MAKE) -C dv/cocotb tile
-	-$(call timed,tile8) $(MAKE) -C dv/cocotb tile8
-	-$(call timed,tile32) $(MAKE) -C dv/cocotb tile32
-	-$(call timed,core32) $(MAKE) -C dv/cocotb core32
-	-$(call timed,coverage) $(MAKE) cocotb_coverage
+	-$(call timed,tile) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile
+	-$(call timed,tile8) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile8
+	-$(call timed,tile32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32
+	-$(call timed,core32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core32
+	-$(call timed,coverage) $(MAKE) -j$(MESH8_BUILD_JOBS) cocotb_coverage
 	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml
 
 # the coverage report (drop 0.26, item 5): the 16x8 suite, M10 and C1 rebuilt with Verilator line/toggle coverage and the
@@ -224,10 +225,13 @@ cocotb_mesh8:
 	-$(MAKE) -C dv/cocotb mesh8
 	python3 dv/cocotb/check_results.py dv/cocotb/results_mesh8.xml
 # the same in two halves for CI (drop 0.30): build the model, publish a heartbeat, then run on the built model (no clean)
+# the C++ compile in parallel (drop 0.35): cocotb's own `make -f Vtop.mk` inherits -j from here through MAKEFLAGS, which
+# --build-jobs alone never gave it (that only splits the generated C++ into more files); run 115's mesh8s compile ran one
+# file at a time on the 4-core runner
 cocotb_mesh8_build:
 	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
-	$(call timed,mesh8 build) $(MAKE) -C dv/cocotb mesh8_build
+	$(call timed,mesh8 build) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb mesh8_build
 cocotb_mesh8_run:
 	-$(call timed,mesh8 run) $(MAKE) -C dv/cocotb mesh8
 	python3 dv/cocotb/check_results.py dv/cocotb/results_mesh8.xml
@@ -236,32 +240,23 @@ cocotb_mesh8_run:
 cocotb_mesh8s_build:
 	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
-	$(call timed,mesh8s build) $(MAKE) -C dv/cocotb mesh8s_build
+	$(call timed,mesh8s build) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb mesh8s_build
 cocotb_mesh8s_run:
 	-$(call timed,mesh8s run) $(MAKE) -C dv/cocotb mesh8s
 	python3 dv/cocotb/check_results.py dv/cocotb/results_mesh8s.xml
-# the 16x8 suite with and without --public-flat-rw (drop 0.34), each build under GNU time, so the flag's share of a build's
-# time and memory is on record before the 64-tile builds are sized; the two results are reported and do not gate the job
-cocotb_tile_np:
-	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
-	-$(call timed,tile with --public-flat-rw) $(MAKE) -C dv/cocotb tile
-	-$(call timed,tile_np without --public-flat-rw) $(MAKE) -C dv/cocotb tile_np
-	-python3 dv/cocotb/check_results.py dv/cocotb/results.xml
-	-python3 dv/cocotb/check_results.py dv/cocotb/results_tile_np.xml
-
-LINTW := -Wall -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-WIDTHEXPAND -Wno-UNSIGNED -Wno-TIMESCALEMOD
-# the three waived passes are the gate. The fourth, -Wall on the whole tile mesh with nothing waived, is informational since drop 0.34:
-# Verilator exits nonzero on any warning, and the pass had 102 in run 111 (50 WIDTHEXPAND, 19 WIDTHTRUNC, 24 UNUSEDSIGNAL, 5 UNUSEDPARAM,
-# 2 UNSIGNED, 2 DECLFILENAME; 45 of them in tile_nic.sv, the beat-path arithmetic of drops 0.29-0.32), so `make lint` failed the hdl-sim
-# job's lint step -- and the job -- on every run while its simulations passed. The pass still prints every warning and a count; clearing
-# the width warnings is RTL work for a session with Verilator at hand (backlog, drop log 0.34).
+# drop 0.35: every pass is -Wall with nothing waived and every warning fails the step (Verilator exits nonzero on any
+# warning). The 102 warnings of run 111 (50 WIDTHEXPAND, 19 WIDTHTRUNC, 24 UNUSEDSIGNAL, 5 UNUSEDPARAM, 2 UNSIGNED,
+# 2 DECLFILENAME) are cleared in the RTL: explicit widths on the beat-path arithmetic (tile_nic), the source index at its
+# own width, coordinates as ports (the router's constant comparisons), unused-bit sinks named unused_* (Verilator's
+# --unused-regexp default), and lint_off DECLFILENAME on the two files that hold two modules by design. LINTW stays for
+# a local run that wants to waive something (make lint LINTW=-Wno-UNUSEDSIGNAL).
+LINTW ?=
 lint:
-	verilator --lint-only $(LINTW) --top-module neo_core $(RTL)
-	verilator --lint-only $(LINTW) --top-module noc_mesh $(NOC)
-	verilator --lint-only $(LINTW) -Wno-WIDTHTRUNC --top-module neo_tile_axil $(TILE) rtl/host_axil.sv rtl/neo_tile_axil.sv
-	@mkdir -p build; verilator --lint-only -Wall --top-module tile_mesh $(TILE) > build/lint_strict.txt 2>&1; \
-	  n=$$(grep -c '^%Warning' build/lint_strict.txt || true); cat build/lint_strict.txt; \
-	  echo "strict -Wall lint of tile_mesh: $$n warning(s) -- informational (drop 0.34); the three waived passes above are the gate"
+	verilator --lint-only -Wall $(LINTW) --top-module neo_core $(RTL)
+	verilator --lint-only -Wall $(LINTW) --top-module noc_mesh $(NOC)
+	verilator --lint-only -Wall $(LINTW) --top-module neo_tile_axil $(TILE) rtl/host_axil.sv rtl/neo_tile_axil.sv
+	verilator --lint-only -Wall $(LINTW) --top-module tile_mesh $(TILE)
+	@echo "lint: four -Wall passes, nothing waived, clean"
 
 clean:
 	rm -rf build obj_dir xcelium.d xrun.history xrun.log *.vcd
