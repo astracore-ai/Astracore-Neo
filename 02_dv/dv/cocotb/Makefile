@@ -49,6 +49,10 @@ export NEO_WPF := $(WPF)
 ifeq ($(VCOV),1)
   EXTRA_ARGS += --coverage --coverage-line --coverage-toggle
   export NEO_FUNCOV=1
+  # the functional-coverage export of a tile build goes to its own file (drop 0.33): tile_cov and tile32_cov both run
+  # test_tile_mesh.py, and the second would otherwise overwrite the first's funcov_tile_mesh.yml
+  NEO_FUNCOV_FILE ?=
+  export NEO_FUNCOV_FILE
 endif
 ifeq ($(TARGET),tile)
   VERILOG_SOURCES = $(TILE_SRCS) $(abspath ../../tb/tile_mesh_cocotb.sv)
@@ -114,7 +118,7 @@ tile8_cov:
 # builds; a subset of the suite keeps the coverage job within its time (the whole tile32 suite is in `tile32`)
 TILE32_COV_TESTS ?= m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m13_partitions
 tile32_cov:
-	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 TESTCASE=$(TILE32_COV_TESTS) VCOV=1 SIM_BUILD=sim_build_cov_tile32 COCOTB_RESULTS_FILE=results_cov_tile32.xml
+	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 TESTCASE=$(TILE32_COV_TESTS) VCOV=1 SIM_BUILD=sim_build_cov_tile32 COCOTB_RESULTS_FILE=results_cov_tile32.xml NEO_FUNCOV_FILE=funcov_tile_mesh32.yml
 	$(call keep_cov,sim_build_cov_tile32,coverage_tile32.dat)
 coverage: core_cov tile_cov tile8_cov tile32_cov
 	python3 coverage_report.py --dat "coverage_*.dat" --funcov "funcov_*.yml" --out coverage_report.md

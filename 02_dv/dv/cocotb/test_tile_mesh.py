@@ -719,7 +719,7 @@ async def m13_partitions(dut):
     await mesh.wait_prog(0)
     await expect_clean(mesh)
     fc.sample_flag("iso")
-    fc.report("funcov_tile_mesh.yml")
+    fc.report(os.environ.get("NEO_FUNCOV_FILE") or "funcov_tile_mesh.yml")   # one file per coverage build (drop 0.33)
     dut._log.info("M13: cross-partition fetch dropped and flagged, requester timed out; same fetch inside a partition clean")
 
 
