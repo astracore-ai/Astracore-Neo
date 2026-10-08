@@ -44,3 +44,9 @@ MODULE=test_tile_mesh TESTCASE=m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_t
  39106.50ns INFO     cocotb.tile_mesh_cocotb            M7: two M-chunks with partial activation fetch, concatenated bit-exact
  39106.51ns INFO     cocotb.regression                  m7_mchunks_partial_fetch passed
  39106.51ns INFO     cocotb.regression                  running m9_lost_flit_and_timeout (7/11)
+ 76366.01ns INFO     cocotb.tile_mesh_cocotb            M9: dropped flit flagged (lost + crc); starved request timed out after 65539 clocks and completed
+ 76366.01ns INFO     cocotb.regression                  m9_lost_flit_and_timeout passed
+ 76366.01ns INFO     cocotb.regression                  running m12_control_path_protection (8/11)
+ 76391.01ns INFO     cocotb.tile_mesh_cocotb            M12: program-memory ECC, duplicated descriptors and lockstep DMA each flagged their fault
+ 76391.01ns INFO     cocotb.regression                  m12_control_path_protection passed
+ 76391.01ns INFO     cocotb.regression                  running m13_partitions (9/11)
