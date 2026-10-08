@@ -1,10 +1,10 @@
 {
  "tool": "neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)",
- "version": "drop 0.29",
- "date": "2026-10-06",
- "cases": 123,
- "passed": 123,
- "seconds": 2.2,
+ "version": "drop 0.33",
+ "date": "2026-10-07",
+ "cases": 130,
+ "passed": 130,
+ "seconds": 3.2,
  "tcl_argument": "TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model (lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool error cannot reach silicon undetected; the compiler itself therefore needs no further qualification beyond this kit and the project's configuration management (ISO 26262-8 11.4.5).",
  "results": [
   {
@@ -2062,6 +2062,55 @@
    },
    "ok": true,
    "detail": "rejected 5/5; len 1 and MAX_FETCH accepted"
+  },
+  {
+   "id": "TQ6-000",
+   "kind": "bank allocator: bands cover every window",
+   "shape": {},
+   "ok": true,
+   "detail": "PASS"
+  },
+  {
+   "id": "TQ6-001",
+   "kind": "bank allocator: output rows inside one band",
+   "shape": {},
+   "ok": true,
+   "detail": "PASS"
+  },
+  {
+   "id": "TQ6-002",
+   "kind": "bank allocator: release and reuse",
+   "shape": {},
+   "ok": true,
+   "detail": "PASS"
+  },
+  {
+   "id": "TQ6-003",
+   "kind": "bank allocator: exclusion mask on banks",
+   "shape": {},
+   "ok": true,
+   "detail": "PASS"
+  },
+  {
+   "id": "TQ6-004",
+   "kind": "bank allocator: exclusion mask on the mesh compile",
+   "shape": {},
+   "ok": true,
+   "detail": "PASS"
+  },
+  {
+   "id": "TQ6-005",
+   "kind": "bank allocator: YOLOv8-m 640x640 every group placed",
+   "shape": {},
+   "ok": true,
+   "detail": "PASS"
+  },
+  {
+   "id": "TQ6-006",
+   "kind": "bank allocator: 640x640 with tile (3,3) excluded",
+   "shape": {},
+   "ok": true,
+   "detail": "PASS"
   },
   {
    "id": "TQ4-000",
