@@ -1,4 +1,4 @@
-# Neo regression on GitHub Actions (drop 0.24, repository layout = handoff package).
+# Neo regression on GitHub Actions (drop 0.24, repository layout = handoff package; drop 0.34: the mesh job measured and sized to the runner).
 # Every job builds the flat layout from the numbered folders with plain copies, then writes its logs to its own
 # branch ci-logs-<job> (ci_logs/<job>/*.txt), so results can be read from the repository and jobs never
 # overwrite each other's results.
@@ -58,7 +58,7 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install numpy
       - name: install simulators
-        run: sudo apt-get update && sudo apt-get install -y iverilog verilator && verilator --version && iverilog -V | head -1
+        run: sudo apt-get update && sudo apt-get install -y iverilog verilator time && verilator --version && iverilog -V | head -1   # GNU time: per-build statistics (drop 0.34)
       - name: flat layout
         run: |
           cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
@@ -90,14 +90,22 @@ jobs:
   hdl-mesh8:
     runs-on: ubuntu-latest
     timeout-minutes: 300
-    # the build knobs (drop 0.33), the one place to set them: run 104 (4 jobs, Verilator's default optimisation) had not
-    # reached "built" after 1 h 48 min, so the defaults are the conservative 2 build jobs at -O1. The faster build again
-    # is `MESH8_BUILD_JOBS: 4` / `MESH8_CFLAGS: ""` here, nothing else to edit (the build step's `${VAR-default}` fallbacks
-    # apply only when a variable is unset, i.e. when this block is removed; an empty MESH8_CFLAGS stays empty). Behind
-    # these, the 8x8 mesh on 16x8 cores: make cocotb_mesh8s_build / cocotb_mesh8s_run in the two steps below
+    # the build knobs, the one place to set them (drop 0.34). Run 111's job ended 3 min 51 s after it started with exit code
+    # 143 (SIGTERM to the step: the runner itself was shut down), i.e. during the verilation of the 64-tile model of 32x32
+    # cores, long before any C++ compile -- MESH8_BUILD_JOBS / MESH8_CFLAGS (drop 0.33) never came into play; every earlier
+    # attempt (runs 74, 85, 90, 96, 104) left the same single "started" line. The model does not verilate in the runner's
+    # 16 GB (4 cores, 145 GB disk), so the job builds MESH8_VARIANT=mesh8s by default: the 8x8 mesh on 16x8 cores with the
+    # silicon depths and links, the mesh-level tests (the 32x32 core and depths are proven on tile32 in hdl-sim). And it
+    # measures: GNU time around every build (build_stats.txt), a memory sampler whose log is pushed every two minutes while
+    # the build runs (mem.txt: the branch shows the memory trajectory even when the runner dies), the 16x8 suite built with
+    # and without --public-flat-rw first (tile_np.txt: the flag's share of a build), and, with MESH8_PROBE 1, a bounded
+    # attempt at the 32x32 mesh after the variant's own results are published -- expected to end the job the way run 111
+    # ended, with the trajectory on the branch. MESH8_PROBE 0 keeps the job green on the variant alone.
     env:
+      MESH8_VARIANT: mesh8s
       MESH8_BUILD_JOBS: 2
       MESH8_CFLAGS: "-CFLAGS -O1"
+      MESH8_PROBE: "1"
     # its own group (drop 0.30): a push cancels only this job's own predecessor, and the job is not held by the regress
     # group while python-regress / hdl-sim of the same run are still on it
     concurrency:
@@ -108,8 +116,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install numpy
-      - name: install simulator
-        run: sudo apt-get update && sudo apt-get install -y verilator && verilator --version
+      - name: install simulator and GNU time
+        run: sudo apt-get update && sudo apt-get install -y verilator time && verilator --version && /usr/bin/time --version
       - name: flat layout
         run: |
           cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
@@ -117,45 +125,89 @@ jobs:
           cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
           cp 07_ci/Makefile Makefile
           mkdir -p ci_logs/hdl-mesh8 && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-mesh8/RUN.txt
-          { echo "cores $(nproc)"; free -m | sed -n 2p; df -h / | tail -1; } | tee -a ci_logs/hdl-mesh8/RUN.txt
-      # heartbeat (drop 0.30): runs 74 and 85 left nothing on the log branch, not even the timeout publish, so the job
-      # publishes RUN.txt as soon as it starts and again after the build -- whatever happens later, the branch shows how
-      # far it got
+          { echo "cores $(nproc)"; free -m | sed -n 2,3p; df -h / | tail -1; } | tee -a ci_logs/hdl-mesh8/RUN.txt
+          echo "variant ${MESH8_VARIANT-mesh8s}, ${MESH8_BUILD_JOBS-2} build jobs, CFLAGS [${MESH8_CFLAGS--CFLAGS -O1}], probe of the 32x32 mesh ${MESH8_PROBE-0}" | tee -a ci_logs/hdl-mesh8/RUN.txt
+      # heartbeat (drop 0.30): the job publishes RUN.txt as soon as it starts; the job then stays on the orphan branch, the
+      # working tree keeps every file, and every later publish commits onto it (all of them through one lock, drop 0.34)
       - name: publish heartbeat
         run: |
           git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
           echo "started $(date -u)" >> ci_logs/hdl-mesh8/RUN.txt
           git checkout --orphan ci-logs-hdl-mesh8 && git rm -rfq --cached . 2>/dev/null || true
           git add -f ci_logs && git commit -q -m "hdl-mesh8 heartbeat run ${{ github.run_number }}" && git push -q origin ci-logs-hdl-mesh8 --force
-      # (the job stays on the orphan branch: the working tree keeps every file, and the final publish commits onto it)
-      # the runner's own toolchains are removed first (~10 GB of the 14 GB disk): the cancelled run-86 job published its
-      # "finished" line, so a cancel or a timeout does publish -- runs 74 and 85 left nothing, i.e. the runner itself died
-      # during the build, out of disk or memory being the usual cause
-      # drop 0.33: 2 build jobs at -O1 by default (the job env above; the cocotb Makefile's MESH8_BUILD_JOBS / MESH8_CFLAGS
-      # knobs); the `${VAR-default}` fallbacks below apply only when the env block is removed
-      - name: build the 8x8 silicon mesh (Verilator, MESH8_BUILD_JOBS build jobs, MESH8_CFLAGS)
+      # the memory sampler (drop 0.34): one line every 20 s into mem.txt -- memory used / available, swap, the size of the
+      # build directories, the largest process -- and a publisher that pushes the log directory every two minutes. Both run
+      # in the background across the following steps (a step's background processes outlive the step) and are stopped by
+      # the final publish. A runner that dies mid-build leaves the trajectory up to its last push on the branch.
+      - name: start the memory sampler
+        run: |
+          cat > ci_sampler.sh <<'EOF'
+          #!/bin/bash
+          while true; do
+            top=$(ps -eo rss=,comm= --sort=-rss | awk 'NR==1 {printf "%s %d MB", $2, $1 / 1024}')
+            build=$(du -sm dv/cocotb/sim_build* 2>/dev/null | awk '{s += $1} END {print s + 0}')
+            echo "$(date -u +%H:%M:%S) $(free -m | awk 'NR==2 {printf "used %d MB, avail %d MB", $3, $7} NR==3 {printf ", swap %d MB", $3}'), build dirs $build MB, largest $top" >> ci_logs/hdl-mesh8/mem.txt
+            sleep 20
+          done
+          EOF
+          cat > ci_publisher.sh <<'EOF'
+          #!/bin/bash
+          while true; do
+            sleep 120
+            flock -w 60 .ci_publish.lock -c "git add -f ci_logs && git commit -q -m 'hdl-mesh8 progress run $1' && git push -q -f origin ci-logs-hdl-mesh8" >/dev/null 2>&1 || true
+          done
+          EOF
+          nohup bash ci_sampler.sh >/dev/null 2>&1 &
+          echo $! > ci_sampler.pid
+          nohup bash ci_publisher.sh ${{ github.run_number }} >/dev/null 2>&1 &
+          echo $! > ci_publisher.pid
+          sleep 25 && cat ci_logs/hdl-mesh8/mem.txt
+      # the flag's share of a build (drop 0.34): the 16x8 suite built and run with and without --public-flat-rw, each under
+      # GNU time; the two results are reported (tile_np.txt) and do not gate the job
+      - name: the 16x8 suite with and without --public-flat-rw (timed)
         run: |
           set -o pipefail
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost 2>/dev/null || true
-          { echo "disk after cleanup:"; df -h / | tail -1; } | tee -a ci_logs/hdl-mesh8/RUN.txt
-          echo "build: ${MESH8_BUILD_JOBS-2} jobs, CFLAGS [${MESH8_CFLAGS--CFLAGS -O1}]" | tee -a ci_logs/hdl-mesh8/RUN.txt
-          make cocotb_mesh8_build MESH8_BUILD_JOBS=${MESH8_BUILD_JOBS-2} MESH8_CFLAGS="${MESH8_CFLAGS--CFLAGS -O1}" 2>&1 | tee ci_logs/hdl-mesh8/build.txt
-          { echo "built $(date -u)"; free -m | sed -n 2p; df -h / | tail -1; du -sh dv/cocotb/sim_build_mesh8 2>/dev/null || true; } | tee -a ci_logs/hdl-mesh8/RUN.txt
+          make cocotb_tile_np STATS=ci_logs/hdl-mesh8/build_stats.txt 2>&1 | tee ci_logs/hdl-mesh8/tile_np.txt
+          { echo "tile / tile_np done $(date -u)"; cat ci_logs/hdl-mesh8/build_stats.txt; } | tee -a ci_logs/hdl-mesh8/RUN.txt
+      - name: build the 8x8 mesh (MESH8_VARIANT; MESH8_BUILD_JOBS build jobs, MESH8_CFLAGS)
+        run: |
+          set -o pipefail
+          V=${MESH8_VARIANT-mesh8s}
+          echo "build of $V starts $(date -u)" | tee -a ci_logs/hdl-mesh8/RUN.txt
+          make cocotb_${V}_build STATS=ci_logs/hdl-mesh8/build_stats.txt MESH8_BUILD_JOBS=${MESH8_BUILD_JOBS-2} MESH8_CFLAGS="${MESH8_CFLAGS--CFLAGS -O1}" 2>&1 | tee ci_logs/hdl-mesh8/build.txt
+          { echo "built $(date -u)"; free -m | sed -n 2p; df -h / | tail -1; du -sh dv/cocotb/sim_build_$V 2>/dev/null || true; tail -1 ci_logs/hdl-mesh8/build_stats.txt; } | tee -a ci_logs/hdl-mesh8/RUN.txt
       - name: publish heartbeat after the build
         run: |
-          git add -f ci_logs && git commit -q -m "hdl-mesh8 built run ${{ github.run_number }}" && git push -q origin ci-logs-hdl-mesh8 --force
-      - name: cocotb on the 8x8 silicon mesh
-        run: set -o pipefail; make cocotb_mesh8_run 2>&1 | tee ci_logs/hdl-mesh8/mesh8.txt
+          flock -w 120 .ci_publish.lock -c 'git add -f ci_logs && git commit -q -m "hdl-mesh8 built run ${{ github.run_number }}" && git push -q origin ci-logs-hdl-mesh8 --force'
+      - name: cocotb on the 8x8 mesh
+        run: |
+          set -o pipefail
+          make cocotb_${MESH8_VARIANT-mesh8s}_run STATS=ci_logs/hdl-mesh8/build_stats.txt 2>&1 | tee ci_logs/hdl-mesh8/mesh8.txt
+          { echo "run done $(date -u)"; tail -1 ci_logs/hdl-mesh8/build_stats.txt; } | tee -a ci_logs/hdl-mesh8/RUN.txt
+      - name: publish the variant's results
+        run: |
+          flock -w 120 .ci_publish.lock -c 'git add -f ci_logs && git commit -q -m "hdl-mesh8 ${{ env.MESH8_VARIANT }} results run ${{ github.run_number }}" && git push -q origin ci-logs-hdl-mesh8 --force'
+      # the probe (drop 0.34): the 32x32 mesh's verilation under the sampler, bounded to 30 min -- a measurement of where it
+      # dies, taken only after the variant's results are on the branch; it needs no C++ compile to be informative
+      - name: probe the 32x32 mesh under the sampler (MESH8_PROBE)
+        if: env.MESH8_PROBE == '1' && env.MESH8_VARIANT != 'mesh8'
+        run: |
+          set -o pipefail
+          echo "probe of the 32x32 mesh starts $(date -u)" | tee -a ci_logs/hdl-mesh8/RUN.txt
+          timeout 30m make cocotb_mesh8_build STATS=ci_logs/hdl-mesh8/build_stats.txt MESH8_BUILD_JOBS=${MESH8_BUILD_JOBS-2} MESH8_CFLAGS="${MESH8_CFLAGS--CFLAGS -O1}" 2>&1 | tee ci_logs/hdl-mesh8/probe.txt || echo "probe ended with status $? (124 = the 30 min bound)" | tee -a ci_logs/hdl-mesh8/RUN.txt
+          { echo "probe done $(date -u)"; tail -1 ci_logs/hdl-mesh8/build_stats.txt; } | tee -a ci_logs/hdl-mesh8/RUN.txt
       - name: publish logs
         if: always()
         run: |
+          for p in ci_sampler.pid ci_publisher.pid; do [ -f $p ] && kill $(cat $p) 2>/dev/null || true; done
           git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
           mkdir -p ci_logs/hdl-mesh8 && echo "finished $(date -u)" >> ci_logs/hdl-mesh8/RUN.txt
-          git checkout --orphan ci-logs-hdl-mesh8 2>/dev/null || git checkout ci-logs-hdl-mesh8
-          git rm -rfq --cached . 2>/dev/null || true
-          git add -f ci_logs
-          git commit -m "hdl-mesh8 logs run ${{ github.run_number }}" || true
-          git push origin ci-logs-hdl-mesh8 --force
+          flock -w 120 .ci_publish.lock -c '
+            git checkout --orphan ci-logs-hdl-mesh8 2>/dev/null || git checkout ci-logs-hdl-mesh8
+            git rm -rfq --cached . 2>/dev/null || true
+            git add -f ci_logs
+            git commit -m "hdl-mesh8 logs run ${{ github.run_number }}" || true
+            git push origin ci-logs-hdl-mesh8 --force'
   tiles:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
