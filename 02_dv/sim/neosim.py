@@ -13,7 +13,7 @@ the sign-off simulator. If neosim and Xcelium ever disagree, Xcelium is right.
 Supported subset
   module ... endmodule, #(parameter int P = expr), ANSI ports
   input/output logic [signed] [W-1:0] name [N] ..., localparam, logic declarations
-  assign, always_ff @(posedge clk [or negedge rst_n]), always_comb
+  assign, always_ff @(posedge clk [or negedge rst_n]), always_ff @(negedge clk), always_comb
   if/else, for (int|genvar), begin/end with labels, generate for/if
   module instantiation with #(.P(v)) and .port(expr); unpacked-array ports connected
   whole or per element
@@ -21,7 +21,9 @@ Supported subset
   concatenation {a,b}, replication {N{a}}, size casts N'(x), fill literals '0 '1,
   sized/unsized literals, $clog2, $signed, $unsigned
 Not supported: tasks, initial, delays, strings, part-selects [a:b] on vectors,
-interfaces, packages, multiple clocks (one clock named by the always_ff is assumed).
+interfaces, packages, multiple clocks (one clock named by the always_ff is assumed; a
+negedge-clocked always_ff -- the testbench hooks of drop 0.35 -- runs at the falling edge
+of that same clock, i.e. after the rising edge within one tick()).
 
 Semantics implemented (IEEE 1800 essentials): expression signedness is signed only if
 every operand is signed; operands are extended to the assignment context; arithmetic is
@@ -92,7 +94,7 @@ def lex(src: str, fname: str = "") -> List[Tok]:
 #   ('assign', lvalue, expr, blocking)
 # module items
 #   ('localparam', name, expr) ('decl', signed, rng, [(name, dims)]) ('assign', lv, e)
-#   ('always_ff', clk, rst, stmt) ('always_comb', stmt)
+#   ('always_ff', clk, rst, stmt) ('always_ffn', clk, stmt) ('always_comb', stmt)
 #   ('genfor', var, init, cond, step, label, items) ('genif', cond, lbl1, items1, lbl2, items2)
 #   ('inst', modname, [(p, e)], instname, [(port, e)])
 # ----------------------------------------------------------------------------
@@ -240,6 +242,10 @@ class Parser:
             self.i += 1
             self.expect("@")
             self.expect("(")
+            if self.accept("negedge"):                     # falling-edge block (drop 0.35: the testbench hooks)
+                clk = self.ident()
+                self.expect(")")
+                return [("always_ffn", clk, self.parse_stmt())]
             self.expect("posedge")
             clk = self.ident()
             rst = None
@@ -632,6 +638,7 @@ class Design:
         self.comb: List[Tuple[Any, Any, int]] = []      # (lvalue_resolved, expr_resolved, line)
         self.comb_blocks: List[Any] = []                   # resolved stmts
         self.ff_blocks: List[Tuple[Any, Any, Any]] = []    # (clk_hier, rst_hier, stmt)
+        self.ffn_blocks: List[Tuple[Any, Any]] = []        # (clk_hier, stmt): falling-edge blocks
         self.top_ports: Dict[str, str] = {}                # port name -> hier
 
     # -- entry --
@@ -754,6 +761,8 @@ class Design:
                 clk = scope.lookup(it[1])
                 rst = scope.lookup(it[2]) if it[2] else None
                 self.ff_blocks.append((clk, rst, self._resolve_stmt(it[3], scope)))
+            elif kind == "always_ffn":
+                self.ffn_blocks.append((scope.lookup(it[1]), self._resolve_stmt(it[2], scope)))
             elif kind == "always_comb":
                 self.comb_blocks.append(self._resolve_stmt(it[1], scope))
             elif kind == "genfor":
@@ -886,6 +895,9 @@ class Design:
         self.ff_nodes = []
         for clk, rst, st in self.ff_blocks:
             self.ff_nodes.append(self._compile_stmt(st, blocking=False))
+        self.ffn_nodes = []
+        for clk, st in self.ffn_blocks:
+            self.ffn_nodes.append(self._compile_stmt(st, blocking=False))
 
     def cell_of(self, hier_or_port: str, *idx) -> Cell:
         hier = self.top_ports.get(hier_or_port, hier_or_port)
@@ -1255,11 +1267,9 @@ class Design:
                 return
         raise RuntimeError("combinational logic did not settle (loop?)")
 
-    def tick(self):
-        """One clock: settle combinational logic, evaluate every always_ff, commit, settle."""
-        self.settle()
+    def _edge(self, nodes):
         pending: List[Tuple[Cell, Any]] = []
-        for f in self.ff_nodes:
+        for f in nodes:
             f({}, pending)
         for c, v in pending:
             if isinstance(v, tuple):
@@ -1268,6 +1278,15 @@ class Design:
             else:
                 c.v = v
         self.settle()
+
+    def tick(self):
+        """One clock: settle combinational logic, evaluate every always_ff, commit, settle; then the falling edge
+        (the negedge-clocked blocks, if any), so what the testbench pokes or the hooks change after a tick is what
+        the next rising edge samples."""
+        self.settle()
+        self._edge(self.ff_nodes)
+        if self.ffn_nodes:
+            self._edge(self.ffn_nodes)
 
 
 # ----------------------------------------------------------------------------

@@ -54,10 +54,10 @@ class Nic:
         self.rows, self.cols = rows, cols
         self.wcw = 8 + (rows - 1).bit_length() + 1
         self.wpa, self.wpw = rows * 8 // 32, (cols * 8 + self.wcw + 31) // 32
-        self.d.elaborate("tile_nic", {"XW": XW, "YW": YW, "NX": NX, "NSRC": NX * NY, "BW": BW, "MY_X": 0, "MY_Y": 0,
+        self.d.elaborate("tile_nic", {"XW": XW, "YW": YW, "NX": NX, "NSRC": NX * NY, "BW": BW,
                                        "ROWS": rows, "COLS": cols, "IDXW": 6, "AW": 8, "WAW": 9, "BAW": BAW, "DFD": 64, "FETCH_TIMEOUT": 8192})
         d = self.d
-        self.p = {n: d.cell_of(n) for n in ("rst_n", "rx_valid", "rx_flit", "rx_ready", "tx_valid", "tx_flit", "tx_ready", "b_we", "b_wrow",
+        self.p = {n: d.cell_of(n) for n in ("rst_n", "my_x", "my_y", "rx_valid", "rx_flit", "rx_ready", "tx_valid", "tx_flit", "tx_ready", "b_we", "b_wrow",
                                            "b_wmask", "b_wdata", "b_re", "b_rrow", "b_rdata", "b_rvalid", "ext_ready", "rd_valid", "rq_valid",
                                            "cmd_valid", "cmd_op", "err_clear", "rdy_clear", "partition", "crc_err_sticky", "lost_err_sticky",
                                            "iso_err_sticky")}
@@ -74,6 +74,7 @@ class Nic:
         for n in ("rx_valid", "tx_ready", "b_rvalid", "ext_ready", "rd_valid", "rq_valid", "cmd_valid", "err_clear", "rdy_clear", "partition",
                   "cmd_op", "cmd_x", "cmd_y", "cmd_addr", "cmd_len", "cmd_base", "cmd_int8"):
             self.p[n].v = 0
+        self.p["my_x"].v = 0; self.p["my_y"].v = 0       # the tile under test sits at (0,0): coordinates are ports since drop 0.35
         self.mem = {}                                   # word address -> word (the bank, as the row port sees it)
         self.abuf, self.wbuf = [], []                   # buffer writes seen (address, bytes[, check])
         self.p["rst_n"].v = 0; d.tick(); d.tick(); self.p["rst_n"].v = 1; d.tick()
