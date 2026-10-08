@@ -182,4 +182,9 @@ NoC N1–N2; requantization; K-split K1–K2; SECDED exhaustive; MBIST B1–B3; 
 K-split with RDY, end-to-end CRC, region refill, bank ECC, compiler-emitted programs, M-chunks with partial fetch,
 register-driven ESM/watchdog/self-test, lost flit and timeout, MBIST through registers); two-layer INT8 handoff
 M10; C driver identical to the Python backend. All under neosim; Xcelium testbenches provided for the streaming
-core, the core and the tile mesh.
+core, the core and the tile mesh. Under cocotb on Verilator in CI (drops 0.21–0.36): M1–M9, M11–M13 on 16×8 and
+32×32 cores, M10 on 8×8 cores, M14 and M16 on the 8×8 mesh, C1 and C2 (the core's own fault hooks: feeder control,
+lockstep sequencer, duplicated requantization, table parity) on the 16×8 and 32×32 cores, M15 (register read-back),
+M16 (link parity), M17 (double-bit bank error), M18 (descriptor sweep: kernel 1/3/5, stride 1/2, one to four channel
+tiles) and M19 (INT8 drain against the requantization model) since drop 0.36; functional coverage over the
+descriptor space, DMA ops, drain modes and every safety flag (`coverage_report.md` on the hdl-sim log branch).
