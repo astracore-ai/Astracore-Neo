@@ -57,8 +57,9 @@ module neo_tile #(
   // testbench hooks (drop 0.35; DV_HOOKS = 1), as ports so that the tile is a hierarchical block of the Verilator build
   // (one tile verilated once, instantiated NX*NY times; a hierarchical block admits no hierarchical references):
   // the bank backdoor, the fault injection of the cocotb wrapper (dv_fi_sel 1 bank word OR, 2 program memory XOR, 3 cfg XOR,
-  // 4 DMA pc XOR, 5 router out_flit XOR, 6 router out_valid cleared, 7 NIC transmit engine held; at the falling edge while
-  // dv_fi_en) and the observation of the router's output registers
+  // 4 DMA pc XOR, 7 NIC transmit engine held -- at the falling edge while dv_fi_en; 5 router output register loaded with its
+  // flit XOR the mask, 6 loaded without the valid, so the flit vanishes -- at the rising edge that loads the flit while
+  // dv_fi_en, drop 0.38) and the observation of the router's output registers
   input  logic          dv_bd_we,
   input  logic [BAW-1:0] dv_bd_addr,
   input  logic [38:0]   dv_bd_wdata,

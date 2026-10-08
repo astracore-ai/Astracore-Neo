@@ -25,7 +25,11 @@ module noc_router #(
   input  logic          out_ready [5],
   input  logic          err_clear,
   output logic          parity_err_sticky,
-  // testbench hooks (drop 0.35; DV_HOOKS = 1), at the falling edge: out_flit[dv_port] XOR dv_mask, out_valid[dv_port] cleared
+  // testbench hooks (drop 0.35; DV_HOOKS = 1), applied to the flit that output dv_port LOADS at a rising edge while the hook
+  // is high: the register is written with the flit XOR dv_mask (dv_flit_flip), or written without its valid, so the flit
+  // vanishes (dv_valid_clear). Drop 0.38: load-time, no longer a falling-edge write of the register -- a value written on the
+  // other clock edge reached the neighbouring tile a cycle late in Verilator's flat build (the mesh link crosses the tile
+  // boundary; run 126, M16 at 32x32), while the loaded value is an ordinary register update that every simulator orders
   input  logic          dv_flit_flip,
   input  logic          dv_valid_clear,
   input  logic [2:0]    dv_port,
@@ -84,15 +88,13 @@ module noc_router #(
     end
   end
 
+  // the hooks, as terms of the output register's load (zero when DV_HOOKS = 0: the terms vanish with the constant)
+  logic          dv_flip_o  [5];     // output o loads its flit XOR dv_mask
+  logic          dv_clear_o [5];     // output o loads its flit without the valid
   generate
-    if (DV_HOOKS != 0) begin : g_dv
-      always_ff @(negedge clk) begin
-        if (dv_flit_flip)  out_flit[dv_port]  <= out_flit[dv_port] ^ dv_mask;
-        if (dv_valid_clear) out_valid[dv_port] <= 1'b0;
-      end
-    end else begin : g_nodv
-      logic unused_dv;
-      assign unused_dv = ^{dv_flit_flip, dv_valid_clear, dv_port, dv_mask};
+    for (genvar o = 0; o < 5; o++) begin : g_dv
+      assign dv_flip_o[o]  = (DV_HOOKS != 0) && dv_flit_flip  && (dv_port == 3'(o));
+      assign dv_clear_o[o] = (DV_HOOKS != 0) && dv_valid_clear && (dv_port == 3'(o));
     end
   endgenerate
 
@@ -116,8 +118,8 @@ module noc_router #(
         else if (!(in_valid[i] && in_ready[i]) && pop[i]) count[i] <= count[i] - 2'd1;
         // output stage
         if (fire[i]) begin
-          out_valid[i] <= 1'b1;
-          out_flit[i]  <= head[sel[i]];
+          out_valid[i] <= !dv_clear_o[i];
+          out_flit[i]  <= head[sel[i]] ^ (dv_flip_o[i] ? dv_mask : FW'(0));
           rr[i]        <= sel[i];
         end else if (out_valid[i] && out_ready[i]) begin
           out_valid[i] <= 1'b0;
