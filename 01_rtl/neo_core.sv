@@ -19,7 +19,8 @@ module neo_core #(
   parameter int WAW        = $clog2(WBUF_DEPTH),
   parameter int PE_LAT     = 2,
   parameter int FAULT_ROW  = 0,
-  parameter int FAULT_COL  = 0
+  parameter int FAULT_COL  = 0,
+  parameter int DV_HOOKS   = 0                  // 1: the weight-buffer fault hook exists (drop 0.37); the tile leaves it at 0
 )(
   input  logic                  clk,
   input  logic                  rst_n,
@@ -99,7 +100,11 @@ module neo_core #(
   input  logic                  ctrl_fault_inject,
   input  logic                  seq_fault_inject,     // flips bit 0 of the primary sequencer's drain index
   input  logic                  rq_fault_inject,      // flips bit 12 of column 0 into the primary requant
-  input  logic                  rq_tbl_fault_inject   // flips bit 0 of column 0's requant multiplier (table parity)
+  input  logic                  rq_tbl_fault_inject,  // flips bit 0 of column 0's requant multiplier (table parity)
+  input  logic                  dv_wbuf_flip,         // drop 0.37 (DV_HOOKS = 1): a stored weight codeword's lane XOR a mask at the falling edge
+  input  logic [WAW-1:0]        dv_wbuf_addr,
+  input  logic [3:0]            dv_wbuf_lane,
+  input  logic [38:0]           dv_wbuf_mask
 );
   logic signed [15:0]    f_ct, f_ky, f_kx;
   logic                  f_first, f_start, f_busy;
@@ -124,11 +129,12 @@ module neo_core #(
   assign ext_gated = ext_valid && reduce_ready;
   assign ext_ready = acc_ext_ready && reduce_ready;
 
-  wbuf_mem #(.COLS(COLS), .WW(WW), .WCW(WCW), .DEPTH(WBUF_DEPTH), .WAW(WAW)) u_wbuf (
+  wbuf_mem #(.COLS(COLS), .WW(WW), .WCW(WCW), .DEPTH(WBUF_DEPTH), .WAW(WAW), .DV_HOOKS(DV_HOOKS)) u_wbuf (
     .clk(clk), .rst_n(rst_n), .we(wbuf_we), .waddr(wbuf_waddr), .wdata(wbuf_wdata), .wcdata(wcbuf_wdata),
     .we2(wbuf_we2), .wdata2(wbuf_wdata2), .wcdata2(wcbuf_wdata2),
     .raddr(w_raddr), .rdata(w_in), .rcdata(wc_in),
-    .err_clear(err_clear), .ecc_ce_sticky(wbuf_ce_sticky), .ecc_ue_sticky(wbuf_ue_sticky));
+    .err_clear(err_clear), .ecc_ce_sticky(wbuf_ce_sticky), .ecc_ue_sticky(wbuf_ue_sticky),
+    .dv_fi_flip(dv_wbuf_flip), .dv_fi_addr(dv_wbuf_addr), .dv_fi_lane(dv_wbuf_lane), .dv_fi_mask(dv_wbuf_mask));
 
   core_seq #(.ROWS(ROWS), .COLS(COLS), .IDXW(IDXW), .WBUF_DEPTH(WBUF_DEPTH), .WAW(WAW),
              .PE_LAT(PE_LAT)) u_seq (

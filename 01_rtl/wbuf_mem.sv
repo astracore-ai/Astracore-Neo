@@ -13,7 +13,8 @@ module wbuf_mem #(
   parameter int DEPTH = 1024,
   parameter int WAW   = $clog2(DEPTH),
   parameter int EW    = COLS * WW + WCW,            // entry width in bits
-  parameter int LANES = (EW + 31) / 32
+  parameter int LANES = (EW + 31) / 32,
+  parameter int DV_HOOKS = 0                        // 1: the testbench hook below exists (drop 0.37); 0: the silicon buffer, ports tied off
 )(
   input  logic                  clk,
   input  logic                  rst_n,
@@ -29,7 +30,13 @@ module wbuf_mem #(
   output logic signed [WCW-1:0] rcdata,
   input  logic                  err_clear,
   output logic                  ecc_ce_sticky,
-  output logic                  ecc_ue_sticky
+  output logic                  ecc_ue_sticky,
+  // testbench hook (drop 0.37; DV_HOOKS = 1): lane dv_fi_lane of the entry at dv_fi_addr XOR dv_fi_mask at the falling edge
+  // while dv_fi_flip -- a stored-codeword fault for the ECC flags (neosim's C9 pokes the cells directly)
+  input  logic                  dv_fi_flip,
+  input  logic [WAW-1:0]        dv_fi_addr,
+  input  logic [3:0]            dv_fi_lane,
+  input  logic [38:0]           dv_fi_mask
 );
   localparam int PW_ = LANES * 32;
   logic [PW_-1:0]  wflat, wflat2;                    // entries packed into lanes
@@ -89,6 +96,17 @@ module wbuf_mem #(
       for (int l = 0; l < LANES; l++) mem[waddr[WAW-1:1]][1][l] <= {wop2[l], wp2[l], wflat2[l*32 +: 32]};
     end
   end
+  generate
+    if (DV_HOOKS != 0) begin : g_dv
+      localparam int LIW = (LANES > 1) ? $clog2(LANES) : 1;
+      always_ff @(negedge clk)
+        if (dv_fi_flip && (32'(dv_fi_lane) < LANES))
+          mem[dv_fi_addr[WAW-1:1]][dv_fi_addr[0]][dv_fi_lane[LIW-1:0]] <= mem[dv_fi_addr[WAW-1:1]][dv_fi_addr[0]][dv_fi_lane[LIW-1:0]] ^ dv_fi_mask;
+    end else begin : g_nodv
+      logic unused_dv;
+      assign unused_dv = ^{dv_fi_flip, dv_fi_addr, dv_fi_lane, dv_fi_mask};
+    end
+  endgenerate
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       ecc_ce_sticky <= 1'b0; ecc_ue_sticky <= 1'b0;

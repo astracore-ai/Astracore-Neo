@@ -295,5 +295,6 @@ module neo_tile #(
     .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky),
     .wbuf_ce_sticky(wbuf_ce), .wbuf_ue_sticky(wbuf_ue), .rq_tbl_perr_sticky(rq_tbl_perr),
-    .fault_inject(selftest_inject), .ctrl_fault_inject(1'b0), .seq_fault_inject(1'b0), .rq_fault_inject(1'b0), .rq_tbl_fault_inject(1'b0));
+    .fault_inject(selftest_inject), .ctrl_fault_inject(1'b0), .seq_fault_inject(1'b0), .rq_fault_inject(1'b0), .rq_tbl_fault_inject(1'b0),
+    .dv_wbuf_flip(1'b0), .dv_wbuf_addr('0), .dv_wbuf_lane('0), .dv_wbuf_mask('0));   // the core's hooks are reached from the core-level test
 endmodule
