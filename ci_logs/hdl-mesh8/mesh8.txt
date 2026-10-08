@@ -57,3 +57,11 @@ MODULE=test_tile_mesh TESTCASE=m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_t
                                                           (0,1)'s router north output register and fails the parity check at (0,0)'s router input -- the flit is dropped and parity flagged there, the
                                                           CRC flit then counts the words short (lost, and the CRC differs) and the fetch completes (drop 0.36: the parity bin).
                                                           The response from (1,1) to (0,0) travels west to (0,1), then north: nothing else crosses that link during the fetch.
+113736.51ns INFO     cocotb.tile_mesh_cocotb            M16: flit corrupted on the (0,1)->(0,0) link dropped at the parity check and flagged; lost + crc at the requester, fetch complete in 41 clocks
+113736.51ns INFO     cocotb.regression                  m16_link_parity passed
+113736.51ns INFO     cocotb.regression                  running m14_bank_contention (11/11)
+                                                          M7-style contention made a test (drop 0.24): as many tiles as the build's watchdog admits (14 at 65,535, up to 15) each
+                                                          fetch a maximal chunk from the far corner's bank at the same time. The server takes the requests one at a time, so the
+                                                          last one waits behind all the others; the silicon rule FETCH_TIMEOUT >= NX*NY*(4,095 + H) is what makes any such queue,
+                                                          up to every tile of the mesh, complete without a timeout. Every requester must end with its program done and no cause
+                                                          raised anywhere (the end-to-end CRC and the lost-flit count cover the data). H is budgeted at 400 cycles per request.
