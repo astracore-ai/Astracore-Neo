@@ -1,3 +1,4 @@
+/* verilator lint_off DECLFILENAME */        // two modules, link_packer and link_unpacker, in one file by design
 // link_pack.sv -- wide links (drop 0.25): WPF words per flit on the router side. Since drop 0.29 the tile interface moves
 //   beats of up to BW = 16 words (one bank row) on its side, so the two modules here re-block between the two widths:
 //   link_packer takes beats and emits link flits of up to WPF words, link_unpacker takes link flits and presents beats.
@@ -52,6 +53,8 @@ module link_packer #(
   assign in_words = core_flit[VWB-1:0];
   assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
   assign in_n     = in_data ? CWB'(in_hdr[13:8]) + CWB'(1) : CWB'(1);
+  logic unused_core_parity;                                // the flit's parity is the router's business (lint)
+  assign unused_core_parity = core_flit[FWB-1];
 
   generate
     if (WPF >= BW) begin : g_merge
@@ -121,9 +124,9 @@ module link_packer #(
       logic [VWL-1:0] cvec;
       logic [19:0]    hdr_out;
       logic [FWL-2:0] body;
-      assign base    = idx * WPF;
+      assign base    = CWB'(32'(idx) * WPF);
       assign left    = in_n - base;                         // words from this chunk on
-      assign last    = (left <= WPF);
+      assign last    = (32'(left) <= WPF);
       assign cn      = last ? left : CWB'(WPF);
       assign sh      = in_words >> (32 * base);
       always_comb begin
@@ -131,7 +134,7 @@ module link_packer #(
         for (int w = 0; w < WPF; w++)
           if (w < cn) cvec[32*w +: 32] = sh[32*w +: 32];
       end
-      assign hdr_out = in_data ? {in_hdr[19:14], 6'(cn - 1), (in_type == T_PSUM) ? in_hdr[7:0] + 8'(base) : in_hdr[7:0]} : in_hdr;
+      assign hdr_out = in_data ? {in_hdr[19:14], 6'(cn) - 6'd1, (in_type == T_PSUM) ? in_hdr[7:0] + 8'(base) : in_hdr[7:0]} : in_hdr;
       assign body    = {in_head, in_type, in_tag, hdr_out, cvec};
       assign link_flit  = {^body, body};
       assign link_valid = core_valid;
@@ -187,13 +190,15 @@ module link_unpacker #(
   assign l_data  = (l_type == T_RDRSP) || (l_type == T_WRDATA) || (l_type == T_PSUM);
   assign n_words = l_data ? CWL'(l_hdr[13:8]) + CWL'(1) : CWL'(1);
   assign l_words = link_flit[VWL-1:0];
-  assign base    = idx * BW;
+  assign base    = CWL'(32'(idx) * BW);
   assign left    = n_words - base;                          // words from this beat on
-  assign last    = (left <= BW);
+  assign last    = (32'(left) <= BW);
   assign bn      = last ? left : CWL'(BW);
   assign sh      = l_words >> (32 * base);
   assign bvec    = VWB'(sh);                                // positions above bn are not read by the interface
-  assign hdr_out = l_data ? {l_hdr[19:14], 6'(bn - 1), (l_type == T_PSUM) ? l_hdr[7:0] + 8'(base) : l_hdr[7:0]} : l_hdr;
+  assign hdr_out = l_data ? {l_hdr[19:14], 6'(bn) - 6'd1, (l_type == T_PSUM) ? l_hdr[7:0] + 8'(base) : l_hdr[7:0]} : l_hdr;
+  logic unused_link_parity;                                 // the flit's parity is the router's business (lint)
+  assign unused_link_parity = link_flit[FWL-1];
   assign body    = {l_head, l_type, l_tag, hdr_out, bvec};
   assign core_flit  = {^body, body};
   assign core_valid = link_valid;

@@ -27,7 +27,8 @@
 //   for MBIST.done after a write to 0x0A.
 module host_if #(
   parameter int IDXW = 6,
-  parameter int PAW = 5                      // program entry index width (drop 0.22: 32 entries)
+  parameter int PAW = 5,                     // program entry index width (drop 0.22: 32 entries)
+  parameter int DV_HOOKS = 0                 // 1: the descriptor fault hook below exists (drop 0.35)
 )(
   input  logic        clk,
   input  logic        rst_n,
@@ -70,7 +71,11 @@ module host_if #(
   input  logic        prog_done,
   input  logic        drain_busy,
   input  logic        core_done,
-  input  logic [8:0]  flags            // parity, crc, array, acc, ctrl, seq, rq, ecc_ue, ecc_ce
+  input  logic [8:0]  flags,           // parity, crc, array, acc, ctrl, seq, rq, ecc_ue, ecc_ce
+  // testbench hook (drop 0.35; DV_HOOKS = 1): cfg[dv_cfg_idx] XOR dv_cfg_mask (the primary copy only) at the falling edge
+  input  logic        dv_cfg_flip,
+  input  logic [4:0]  dv_cfg_idx,
+  input  logic [15:0] dv_cfg_mask
 );
   logic [31:0] prog_lo;
   logic        done_latched;
@@ -104,7 +109,7 @@ module host_if #(
           8'h31: rq_tbl_addr <= h_wdata[4:0];
           8'h32: rq_relu <= h_wdata[0];
           default: begin
-            if (h_addr >= 8'h10 && h_addr < 8'h24) begin cfg[h_addr - 8'h10] <= h_wdata[15:0]; cfg_dup[h_addr - 8'h10] <= h_wdata[15:0]; end
+            if (h_addr >= 8'h10 && h_addr < 8'h24) begin cfg[5'(h_addr - 8'h10)] <= h_wdata[15:0]; cfg_dup[5'(h_addr - 8'h10)] <= h_wdata[15:0]; end
             if (h_addr == 8'h24) begin cfg_m <= h_wdata[IDXW-1:0]; cfg_m_dup <= h_wdata[IDXW-1:0]; end
           end
         endcase
@@ -119,11 +124,19 @@ module host_if #(
           8'h0A: h_rdata <= {bist_fail_addr, 8'd0, bist_fail_ce, bist_fail, bist_done, bist_active};
           8'h03: h_rdata <= prog_lo;
           8'h24: h_rdata <= {{(32-IDXW){1'b0}}, cfg_m};
-          default: h_rdata <= (h_addr >= 8'h10 && h_addr < 8'h24) ? {16'd0, cfg[h_addr - 8'h10]} : 32'd0;
+          default: h_rdata <= (h_addr >= 8'h10 && h_addr < 8'h24) ? {16'd0, cfg[5'(h_addr - 8'h10)]} : 32'd0;
         endcase
       end
     end
   end
+  generate
+    if (DV_HOOKS != 0) begin : g_dv
+      always_ff @(negedge clk) if (dv_cfg_flip) cfg[dv_cfg_idx] <= cfg[dv_cfg_idx] ^ dv_cfg_mask;
+    end else begin : g_nodv
+      logic unused_dv;
+      assign unused_dv = ^{dv_cfg_flip, dv_cfg_idx, dv_cfg_mask};
+    end
+  endgenerate
   always_comb begin
     cfg_err = (cfg_m != cfg_m_dup);
     for (int i = 0; i < 20; i++) if (cfg[i] != cfg_dup[i]) cfg_err = 1'b1;

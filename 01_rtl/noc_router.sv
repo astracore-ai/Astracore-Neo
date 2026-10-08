@@ -11,11 +11,12 @@ module noc_router #(
   parameter int YW = 3,
   parameter int DW = 32,
   parameter int FW = 1 + 2 * (XW + YW) + 8 + DW,
-  parameter int MY_X = 0,
-  parameter int MY_Y = 0
+  parameter int DV_HOOKS = 0     // 1: the output-register fault hooks below exist (drop 0.35)
 )(
   input  logic          clk,
   input  logic          rst_n,
+  input  logic [XW-1:0] my_x,          // this router's mesh coordinates (drop 0.35: ports strapped by the mesh, not parameters)
+  input  logic [YW-1:0] my_y,
   input  logic          in_valid  [5],
   input  logic [FW-1:0] in_flit   [5],
   output logic          in_ready  [5],
@@ -23,7 +24,12 @@ module noc_router #(
   output logic [FW-1:0] out_flit  [5],
   input  logic          out_ready [5],
   input  logic          err_clear,
-  output logic          parity_err_sticky
+  output logic          parity_err_sticky,
+  // testbench hooks (drop 0.35; DV_HOOKS = 1), at the falling edge: out_flit[dv_port] XOR dv_mask, out_valid[dv_port] cleared
+  input  logic          dv_flit_flip,
+  input  logic          dv_valid_clear,
+  input  logic [2:0]    dv_port,
+  input  logic [FW-1:0] dv_mask
 );
   // ---- input FIFOs (depth 2) ----
   logic [FW-1:0] fifo [5][2];
@@ -46,10 +52,10 @@ module noc_router #(
       assign dx = head[i][FW-2-YW -: XW];
       assign dy = head[i][FW-2 -: YW];
       always_comb begin
-        if (dx > MY_X)      req[i] = 3'd1;            // E
-        else if (dx < MY_X) req[i] = 3'd3;            // W
-        else if (dy > MY_Y) req[i] = 3'd2;            // S
-        else if (dy < MY_Y) req[i] = 3'd0;            // N
+        if (dx > my_x)      req[i] = 3'd1;            // E
+        else if (dx < my_x) req[i] = 3'd3;            // W
+        else if (dy > my_y) req[i] = 3'd2;            // S
+        else if (dy < my_y) req[i] = 3'd0;            // N
         else                req[i] = 3'd4;            // local
       end
     end
@@ -66,17 +72,29 @@ module noc_router #(
     for (int o = 0; o < 5; o++) begin
       sel[o] = 3'd5;
       for (int k = 0; k < 5; k++) begin
-        int c;
-        c = (rr[o] + 1 + k) % 5;
-        if (sel[o] == 3'd5 && head_valid[c] && !head_bad[c] && req[c] == o) sel[o] = c[2:0];
+        logic [2:0] c;
+        c = 3'((32'(rr[o]) + 1 + k) % 5);
+        if (sel[o] == 3'd5 && head_valid[c] && !head_bad[c] && req[c] == 3'(o)) sel[o] = c;
       end
       fire[o] = (sel[o] != 3'd5) && (!out_valid[o] || out_ready[o]);
     end
     for (int i = 0; i < 5; i++) begin
       drop[i] = head_valid[i] && head_bad[i];
-      pop[i]  = drop[i] || (fire[req[i]] && (sel[req[i]] == i));
+      pop[i]  = drop[i] || (fire[req[i]] && (sel[req[i]] == 3'(i)));
     end
   end
+
+  generate
+    if (DV_HOOKS != 0) begin : g_dv
+      always_ff @(negedge clk) begin
+        if (dv_flit_flip)  out_flit[dv_port]  <= out_flit[dv_port] ^ dv_mask;
+        if (dv_valid_clear) out_valid[dv_port] <= 1'b0;
+      end
+    end else begin : g_nodv
+      logic unused_dv;
+      assign unused_dv = ^{dv_flit_flip, dv_valid_clear, dv_port, dv_mask};
+    end
+  endgenerate
 
   // ---- state ----
   always_ff @(posedge clk or negedge rst_n) begin

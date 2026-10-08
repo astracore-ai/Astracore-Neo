@@ -44,8 +44,6 @@ module tile_nic #(
   parameter int BW    = 16,                 // words per beat = lanes of a bank row (drop 0.29)
   parameter int DW    = 32 + 32 * BW,       // beat payload
   parameter int FW    = 1 + 2 * (XW + YW) + 8 + DW,
-  parameter int MY_X  = 0,
-  parameter int MY_Y  = 0,
   parameter int ROWS  = 16,
   parameter int COLS  = 8,
   parameter int WCW   = 8 + $clog2(ROWS) + 1,
@@ -59,6 +57,7 @@ module tile_nic #(
   parameter int WPA   = ROWS * 8 / 32,      // words per activation entry
   parameter int WPW   = (COLS * 8 + WCW + 31) / 32,   // words per weight entry
   parameter int DFD   = 64,                 // drain FIFO rows
+  parameter int DV_HOOKS = 0,               // 1: the dead-server hook below exists (drop 0.35)
   parameter int FETCH_TIMEOUT = 1048575     // cycles a fetch may wait for its response. Silicon rule (drop 0.24): every tile has at
                                             // most one fetch outstanding and a fetch is at most 4,095 words, so the longest wait at one
                                             // bank is (NX*NY - 1) queued maximal fetches plus its own: FETCH_TIMEOUT >= NX*NY*(4,095 + H),
@@ -67,6 +66,8 @@ module tile_nic #(
 )(
   input  logic                  clk,
   input  logic                  rst_n,
+  input  logic [XW-1:0]         my_x,         // this tile's mesh coordinates (drop 0.35: ports strapped by the mesh, not
+  input  logic [YW-1:0]         my_y,         // parameters, so every tile is the same module -- one elaboration, 64 instances)
   // link side: beats of up to BW words (link_unpacker / link_packer in neo_tile)
   input  logic                  rx_valid,
   input  logic [FW-1:0]         rx_flit,
@@ -127,7 +128,9 @@ module tile_nic #(
   input  logic [3:0]            partition,           // spatial partition of this tile (drop 0.16)
   output logic                  iso_err_sticky,      // a flit from another partition arrived and was dropped
   output logic                  lost_err_sticky,     // word count at the CRC flit differed from the words received
-  output logic                  fetch_timeout_sticky // a fetch response did not complete within FETCH_TIMEOUT cycles
+  output logic                  fetch_timeout_sticky, // a fetch response did not complete within FETCH_TIMEOUT cycles
+  input  logic                  dv_tx_hold           // testbench hook (drop 0.35; DV_HOOKS = 1): the transmit engine held in
+                                                     // X_SERVE_RD at every falling edge while high -- a dead server
 );
   localparam logic [2:0] T_RDREQ = 3'd1, T_RDRSP = 3'd2, T_WRHDR = 3'd3, T_WRDATA = 3'd4,
                          T_PSUM = 3'd5, T_CRC = 3'd6, T_RDY = 3'd7;
@@ -149,7 +152,8 @@ module tile_nic #(
   logic [51:0]     rx_data;                               // the one-word view {hdr, word}: the fields of RDREQ, WRHDR, CRC
   logic [XW-1:0]   rx_src_x;
   logic [YW-1:0]   rx_src_y;
-  logic [7:0]      rx_src;                                // source node index
+  localparam int SRCW = (NSRC > 1) ? $clog2(NSRC) : 1;    // source node index width (drop 0.35: was a fixed 8 bits)
+  logic [SRCW-1:0] rx_src;                                // source node index
   assign rx_type  = rx_flit[DW-1 -: 3];
   assign rx_tag   = rx_flit[DW-4 -: 9];
   assign rx_hdr   = rx_flit[DW-13 -: 20];
@@ -160,7 +164,7 @@ module tile_nic #(
   assign rx_data  = {rx_hdr, rx_word};
   assign rx_src_x = rx_flit[SRCX_LO +: XW];
   assign rx_src_y = rx_flit[SRCY_LO +: YW];
-  assign rx_src   = rx_src_y * NX + rx_src_x;
+  assign rx_src   = SRCW'(32'(rx_src_y) * NX + 32'(rx_src_x));
 
   // per-source receive state (each source's registers in its own block, g_src below)
   logic [BAW-1:0]       wr_ptr  [NSRC];
@@ -173,7 +177,7 @@ module tile_nic #(
   // outstanding fetch
   logic                 fetch_busy;
   logic                 fetch_is_w;
-  logic [7:0]           fetch_src;                        // node serving our fetch
+  logic [SRCW-1:0]      fetch_src;                        // node serving our fetch
   logic [15:0]          fetch_base;
   logic [15:0]          fetch_ent;                        // entries written by this fetch
   localparam int EW = (WPA > WPW) ? WPA : WPW;             // words of the largest entry (4 at 16x8, 9 at 32x32; drop 0.21)
@@ -252,32 +256,37 @@ module tile_nic #(
   // A response that arrives with no fetch outstanding (abandoned by the watchdog) is consumed without storing anything.
   logic          fx_act;                                  // an RDRSP beat is at the input
   logic [SW-1:0] fetch_wpe;                               // words per entry for the current fetch
-  logic [CW:0]   fx_avail;                                // staged + unconsumed beat words
+  localparam int AVW = CW + 1;                            // width of the beat-word sums below (0..2*BW)
+  logic [AVW-1:0] fx_avail;                               // staged + unconsumed beat words
   logic          fx_entry;                                // at least one entry is written this cycle
   logic          fx_two;                                  // two entries are written this cycle
-  logic [CW:0]   fx_take;                                 // words the entries need in all: fetch_wpe or 2 * fetch_wpe
+  logic [AVW-1:0] fx_take;                                // words the entries need in all: fetch_wpe or 2 * fetch_wpe
   logic [CW-1:0] fx_k;                                    // beat words the entries take
-  logic [CW:0]   fx_rem;                                  // beat words left after them
+  logic [AVW-1:0] fx_rem;                                 // beat words left after them
   logic          fx_more;                                 // ... enough for another entry: stay on the beat
   logic          fx_stash;                                // ... fewer: they go to stage, the beat is consumed
   logic [SW-1:0] fx_dst;                                  // first stage slot written by the stash
-  logic [CW-1:0] fx_src;                                  // first beat word it takes
+  logic [LW-1:0] fx_src;                                  // first beat word it takes (read only when fx_rem > 0, so it is below BW)
   logic          fx_done;                                 // the beat is consumed this cycle
   logic [15:0]   fetch_entry;
   assign fx_act    = rx_valid && !rx_foreign && (rx_type == T_RDRSP);
   assign fetch_wpe = fetch_is_w ? SW'(WPW) : SW'(WPA);
   assign fetch_entry = fetch_base + fetch_ent;
-  assign fx_avail  = {1'b0, stage_cnt} + {1'b0, rx_nw} - {1'b0, rx_woff};
-  assign fx_entry  = fx_act && fetch_busy && (fx_avail >= {1'b0, fetch_wpe});
-  assign fx_two    = fx_entry && !fetch_entry[0] && (fx_avail >= {1'b0, fetch_wpe} + {1'b0, fetch_wpe});
-  assign fx_take   = fx_two ? ({1'b0, fetch_wpe} + {1'b0, fetch_wpe}) : {1'b0, fetch_wpe};
-  assign fx_k      = CW'(fx_take - {1'b0, stage_cnt});
-  assign fx_rem    = {1'b0, rx_nw} - {1'b0, rx_woff} - (fx_entry ? {1'b0, fx_k} : '0);
-  assign fx_more   = fx_entry && (fx_rem >= {1'b0, fetch_wpe});
+  assign fx_avail  = AVW'(stage_cnt) + AVW'(rx_nw) - AVW'(rx_woff);
+  assign fx_entry  = fx_act && fetch_busy && (fx_avail >= AVW'(fetch_wpe));
+  assign fx_two    = fx_entry && !fetch_entry[0] && (fx_avail >= AVW'(fetch_wpe) + AVW'(fetch_wpe));
+  assign fx_take   = fx_two ? (AVW'(fetch_wpe) + AVW'(fetch_wpe)) : AVW'(fetch_wpe);
+  assign fx_k      = CW'(fx_take - AVW'(stage_cnt));
+  assign fx_rem    = AVW'(rx_nw) - AVW'(rx_woff) - (fx_entry ? AVW'(fx_k) : '0);
+  assign fx_more   = fx_entry && (fx_rem >= AVW'(fetch_wpe));
   assign fx_stash  = fx_act && fetch_busy && !fx_more;
   assign fx_dst    = fx_entry ? '0 : stage_cnt;
-  assign fx_src    = fx_entry ? rx_woff + fx_k : rx_woff;
+  assign fx_src    = fx_entry ? LW'(rx_woff + fx_k) : LW'(rx_woff);
   assign fx_done   = !fetch_busy || !fx_more;
+  // bits the interface does not read (lint): the flit's parity and destination (the router's), seq[7:4], the tag above
+  // IDXW, the header half of the one-word view, the entry index above the buffer address widths
+  logic unused_nic_bits;
+  assign unused_nic_bits = ^{rx_flit[FW-1 -: 1 + XW + YW], rx_flit[SEQ_LO + 4 +: 4], rx_tag, rx_data, fetch_entry};
 
   // entry assembly: the first entry from the staged words then the beat's words from rx_woff; the second entry from the
   // beat's words that follow (the staged words are fewer than one entry, so it never reaches into stage)
@@ -287,9 +296,9 @@ module tile_nic #(
   logic [LW-1:0] ent2_bi [EW];
   always_comb begin
     for (int w = 0; w < EW; w++) begin
-      ent_bi[w]  = LW'(rx_woff + w - stage_cnt);
-      ent[w]     = (w < stage_cnt) ? stage[w] : rx_words[32 * ent_bi[w] +: 32];
-      ent2_bi[w] = LW'(rx_woff + fetch_wpe + w - stage_cnt);
+      ent_bi[w]  = LW'(rx_woff) + LW'(w) - LW'(stage_cnt);                       // modulo BW, as the beat index is
+      ent[w]     = (w < 32'(stage_cnt)) ? stage[w] : rx_words[32 * ent_bi[w] +: 32];
+      ent2_bi[w] = LW'(rx_woff) + LW'(fetch_wpe) + LW'(w) - LW'(stage_cnt);
       ent2[w]    = rx_words[32 * ent2_bi[w] +: 32];
     end
   end
@@ -357,7 +366,7 @@ module tile_nic #(
                 crc_acc[s] <= rx_crc_next;
                 rx_cnt[s]  <= rx_cnt[s] + 16'(rx_nw);
                 for (int j = 0; j < COLS; j++)
-                  if ((j >= ps_col0) && (j < ps_end)) prow[s][PW * j +: PW] <= rx_words[32 * LW'(j - ps_col0) +: 32];
+                  if ((j >= 32'(ps_col0)) && (j < 32'(ps_end))) prow[s][PW * j +: PW] <= rx_words[32 * LW'(LW'(j) - LW'(ps_col0)) +: 32];
               end
               T_CRC: begin
                 crc_acc[s] <= 16'hFFFF;
@@ -390,14 +399,14 @@ module tile_nic #(
       // fetch watchdog: a response that does not complete in time is flagged and abandoned
       if (fetch_busy) begin
         fetch_timer <= fetch_timer + 1;
-        if (fetch_timer == FETCH_TIMEOUT - 1) begin fetch_timeout_sticky <= 1'b1; fetch_busy <= 1'b0; end
+        if (fetch_timer == FTW'(FETCH_TIMEOUT - 1)) begin fetch_timeout_sticky <= 1'b1; fetch_busy <= 1'b0; end
       end else begin
         fetch_timer <= '0;
       end
       // fetch command
       if (cmd_valid && (cmd_op == 3'd1 || cmd_op == 3'd2) && !fetch_busy) begin
         fetch_busy <= 1'b1; fetch_is_w <= (cmd_op == 3'd2); fetch_base <= cmd_base; fetch_ent <= '0; stage_cnt <= '0;
-        fetch_src  <= cmd_y * NX + cmd_x;
+        fetch_src  <= SRCW'(32'(cmd_y) * NX + 32'(cmd_x));
       end
       // ext FIFO pop
       if (ext_valid && ext_ready) begin
@@ -415,24 +424,24 @@ module tile_nic #(
       else if (fx_stash) begin
         stage_cnt <= fx_dst + SW'(fx_rem);
         for (int w = 0; w < EW; w++)
-          if (w >= fx_dst && w < fx_dst + fx_rem) stage[w] <= rx_words[32 * LW'(fx_src + w - fx_dst) +: 32];
+          if (w >= 32'(fx_dst) && w < 32'(fx_dst) + 32'(fx_rem)) stage[w] <= rx_words[32 * LW'(fx_src + LW'(w) - LW'(fx_dst)) +: 32];
       end
       if (rx_fire && ps_has_chk) begin                     // PSUM check word: the row is complete -- the columns this
         efifo_valid[efifo_wr] <= 1'b1;                     // beat brings are taken from the beat, the rest from prow
         efifo_idx[efifo_wr]   <= rx_tag[IDXW-1:0];
         efifo_chk[efifo_wr]   <= rx_words[32 * ps_chk_idx +: 32];
         for (int j = 0; j < COLS; j++)
-          efifo_y[efifo_wr][j] <= ((j >= ps_col0) && (j < ps_end)) ? rx_words[32 * LW'(j - ps_col0) +: 32] : prow[rx_src][PW * j +: PW];
+          efifo_y[efifo_wr][j] <= ((j >= 32'(ps_col0)) && (j < 32'(ps_end))) ? rx_words[32 * LW'(LW'(j) - LW'(ps_col0)) +: 32] : prow[rx_src][PW * j +: PW];
         efifo_wr <= !efifo_wr;
       end
       if (rx_fire) begin
         case (rx_type)
           T_RDREQ: begin
             serve_busy <= 1'b1;
-            serve_y    <= rx_data[39:36];
-            serve_x    <= rx_data[35:32];
+            serve_y    <= YW'(rx_data[39:36]);                 // the request carries 4-bit coordinates and a 20-bit address
+            serve_x    <= XW'(rx_data[35:32]);
             serve_len  <= rx_data[31:20];
-            serve_addr <= rx_data[19:0];
+            serve_addr <= BAW'(rx_data[19:0]);
           end
           T_RDY: rdy_seen <= 1'b1;
           T_CRC: begin
@@ -505,6 +514,7 @@ module tile_nic #(
   assign serve_last = (s_rem == {8'd0, s_n});
   assign serve_beat = serve_cur >> (32 * s_off);
   localparam int DWW = $clog2(COLS + 1);                 // row word index width: 0..COLS (drop 0.21)
+  localparam int CIW = (COLS > 1) ? $clog2(COLS) : 1;    // column index width
   logic [DWW-1:0] dword;                                  // first word of the beat within the drain row (0..COLS = check; INT8: 0..COLS/4-1)
   logic        drain_int8;
   logic [DWW-1:0] last_word;
@@ -519,8 +529,8 @@ module tile_nic #(
   logic [31:0]    d_word [BW];
   logic [VW-1:0]  drain_beat;
   assign d_left     = {1'b0, last_word} - {1'b0, dword} + 1'b1;
-  assign d_n        = (d_left < BW) ? CW'(d_left) : CW'(BW);
-  assign d_row_done = (d_left <= BW);
+  assign d_n        = (32'(d_left) < BW) ? CW'(d_left) : CW'(BW);
+  assign d_row_done = (32'(d_left) <= BW);
   always_comb begin
     drain_beat = '0;
     for (int i = 0; i < BW; i++) begin
@@ -531,7 +541,7 @@ module tile_nic #(
           d_word[i] = {dfifo_y[dfifo_rd][d_wi[i] * 4 + 3][7:0], dfifo_y[dfifo_rd][d_wi[i] * 4 + 2][7:0],
                        dfifo_y[dfifo_rd][d_wi[i] * 4 + 1][7:0], dfifo_y[dfifo_rd][d_wi[i] * 4][7:0]};
         else
-          d_word[i] = (d_wi[i] < COLS) ? dfifo_y[dfifo_rd][d_wi[i]] : dfifo_chk[dfifo_rd];
+          d_word[i] = (32'(d_wi[i]) < COLS) ? dfifo_y[dfifo_rd][CIW'(d_wi[i])] : dfifo_chk[dfifo_rd];
         drain_beat[32 * i +: 32] = d_word[i];
       end
     end
@@ -561,7 +571,7 @@ module tile_nic #(
     case (tx_state)
       X_REQ: begin
         tx_type = T_RDREQ; tx_dx = req_x; tx_dy = req_y;
-        tx_hdr = {12'd0, 4'(MY_Y), 4'(MY_X)}; tx_words = VW'({req_len, req_addr});
+        tx_hdr = {12'd0, 4'(my_y), 4'(my_x)}; tx_words = VW'({req_len, req_addr});
         tx_valid = 1'b1;
       end
       X_SERVE_SEND: begin
@@ -590,7 +600,7 @@ module tile_nic #(
       end
       default: ;
     endcase
-    tx_body = {tx_dy, tx_dx, YW'(MY_Y), XW'(MY_X), 4'd0, partition, tx_type, tx_tag, tx_hdr, tx_words};
+    tx_body = {tx_dy, tx_dx, my_y, my_x, 4'd0, partition, tx_type, tx_tag, tx_hdr, tx_words};
   end
   assign tx_flit = {^tx_body, tx_body};                   // even parity over the whole flit
 
@@ -604,6 +614,15 @@ module tile_nic #(
   // one beat per cycle while the link accepts; the row read last is held in serve_row while it does not)
   assign b_re   = (tx_state == X_SERVE_RD) || ((tx_state == X_SERVE_SEND) && tx_fire && !serve_last);
   assign b_rrow = (tx_state == X_SERVE_RD) ? s_row : s_row + BRAW'(1);
+
+  generate
+    if (DV_HOOKS != 0) begin : g_dv
+      always_ff @(negedge clk) if (dv_tx_hold) tx_state <= X_SERVE_RD;
+    end else begin : g_nodv
+      logic unused_dv;
+      assign unused_dv = dv_tx_hold;
+    end
+  endgenerate
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -627,10 +646,10 @@ module tile_nic #(
       end
       // drain FIFO push (no backpressure: sized for a full accumulator drain)
       if (drain_push) begin
-        dfifo_idx[dfifo_wr] <= drain_sent + dfifo_cnt;    // rows arrive in order 0..M-1
+        dfifo_idx[dfifo_wr] <= IDXW'(drain_sent) + IDXW'(dfifo_cnt);   // rows arrive in order 0..M-1 (the index wraps at the FIFO's depth)
         for (int j = 0; j < COLS; j++) dfifo_y[dfifo_wr][j] <= drain_int8 ? PW'(rq_q[j]) : rd_data[j];
         dfifo_chk[dfifo_wr] <= rd_chk;
-        dfifo_wr <= (dfifo_wr == DFD - 1) ? '0 : dfifo_wr + 1;
+        dfifo_wr <= (dfifo_wr == DFW'(DFD - 1)) ? '0 : dfifo_wr + 1;
       end
       if (drain_push && !(tx_state == X_DRAIN_WORD && tx_fire && d_row_done))      dfifo_cnt <= dfifo_cnt + 1;
       else if (!drain_push && (tx_state == X_DRAIN_WORD && tx_fire && d_row_done)) dfifo_cnt <= dfifo_cnt - 1;
@@ -682,7 +701,7 @@ module tile_nic #(
             tx_cnt <= tx_cnt + 16'(d_n);
             if (d_row_done) begin
               dword <= '0;
-              dfifo_rd <= (dfifo_rd == DFD - 1) ? '0 : dfifo_rd + 1;
+              dfifo_rd <= (dfifo_rd == DFW'(DFD - 1)) ? '0 : dfifo_rd + 1;
               drain_sent <= drain_sent + 1;
               if (drain_sent + 1 == drain_rows) tx_state <= X_DRAIN_CRC;
               else if (dfifo_cnt == 1) tx_state <= X_IDLE;   // wait for more rows (message stays open)

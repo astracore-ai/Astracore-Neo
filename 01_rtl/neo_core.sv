@@ -130,7 +130,7 @@ module neo_core #(
     .raddr(w_raddr), .rdata(w_in), .rcdata(wc_in),
     .err_clear(err_clear), .ecc_ce_sticky(wbuf_ce_sticky), .ecc_ue_sticky(wbuf_ue_sticky));
 
-  core_seq #(.ROWS(ROWS), .COLS(COLS), .WW(WW), .WCW(WCW), .IDXW(IDXW), .WBUF_DEPTH(WBUF_DEPTH), .WAW(WAW),
+  core_seq #(.ROWS(ROWS), .COLS(COLS), .IDXW(IDXW), .WBUF_DEPTH(WBUF_DEPTH), .WAW(WAW),
              .PE_LAT(PE_LAT)) u_seq (
     .clk(clk), .rst_n(rst_n),
     .cfg_k(cfg_k), .cfg_ct_n(cfg_ct_n), .cfg_ct0(cfg_ct0), .cfg_ky0(cfg_ky0), .cfg_kx0(cfg_kx0),
@@ -143,7 +143,7 @@ module neo_core #(
   assign rd_idx = rd_idx_p ^ {{(IDXW-1){1'b0}}, seq_fault_inject};
 
   // R10: a second sequencer in lockstep, same inputs, compared every cycle
-  core_seq #(.ROWS(ROWS), .COLS(COLS), .WW(WW), .WCW(WCW), .IDXW(IDXW), .WBUF_DEPTH(WBUF_DEPTH), .WAW(WAW),
+  core_seq #(.ROWS(ROWS), .COLS(COLS), .IDXW(IDXW), .WBUF_DEPTH(WBUF_DEPTH), .WAW(WAW),
              .PE_LAT(PE_LAT)) u_seq_dup (
     .clk(clk), .rst_n(rst_n),
     .cfg_k(cfg_k), .cfg_ct_n(cfg_ct_n), .cfg_ct0(cfg_ct0), .cfg_ky0(cfg_ky0), .cfg_kx0(cfg_kx0),
@@ -214,4 +214,9 @@ module neo_core #(
     else if (err_clear) rq_err_sticky <= 1'b0;
     else if (rq_err)    rq_err_sticky <= 1'b1;
   end
+  // outputs of the duplicates and the datapath that nothing reads (lint): the duplicate sequencer's busy / ct_free /
+  // ct_free_idx (its compared outputs are in seq_err), the duplicate requant's parity flag, the unlatched ABFT and
+  // control errors (their sticky versions are the outputs)
+  logic unused_core_bits;
+  assign unused_core_bits = ^{d_busy, d_ct_free, d_ct_free_idx, array_abft_err, ctrl_err, rq_tbl_perr_d};
 endmodule

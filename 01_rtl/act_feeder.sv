@@ -62,6 +62,8 @@ module act_feeder #(
   output logic                 ctrl_err_sticky,
   input  logic                 ctrl_fault_inject
 );
+  logic unused_cfg_ho;                              // the layer's output height is not needed here: cfg_oy0 / cfg_oy_n bound the run (lint)
+  assign unused_cfg_ho = ^cfg_ho;
   logic signed [XW-1:0] abuf [ABUF_DEPTH/2][2][ROWS];   // [pair][entry in pair][channel] (drop 0.32)
 
   // ---- primary address generator / run FSM ----

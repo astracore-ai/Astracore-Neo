@@ -36,7 +36,8 @@ module mbist #(
   localparam logic [2:0] S_IDLE = 3'd0, S_W = 3'd1, S_R = 3'd2, S_CHK = 3'd3, S_DONE = 3'd4;
   logic [2:0]    state;
   logic [3:0]    elem;            // 0..5 for background 0, 6..11 for background 0x55
-  logic [RAW:0]  idx;             // position within the element (rows)
+  localparam int IW = RAW + 1;    // idx width: 0..ROWS
+  logic [IW-1:0] idx;             // position within the element (rows)
   logic [RAW-1:0] addr;
   logic [LANES-1:0] lane_bad;     // lanes whose data mismatched this read
   logic [LANES-1:0] lane_hit;     // lanes that failed by mismatch or by correction
@@ -60,7 +61,7 @@ module mbist #(
       default: begin has_write = 1'b0; exp_rd = bg; end          // up: r0
     endcase
   end
-  assign addr   = up ? idx[RAW-1:0] : RAW'(ROWS - 1 - idx);
+  assign addr   = up ? idx[RAW-1:0] : RAW'(ROWS - 1 - 32'(idx));
   assign active = (state != S_IDLE) && (state != S_DONE);
   assign done   = (state == S_DONE);
   assign re     = (state == S_R);
@@ -89,14 +90,14 @@ module mbist #(
           end
           state <= has_write ? S_W : S_IDLE;                    // S_IDLE here means "advance" (see below)
           if (!has_write) begin
-            if (idx == ROWS - 1) begin
+            if (idx == IW'(ROWS - 1)) begin
               if (elem == 4'd11) state <= S_DONE;
               else begin elem <= elem + 1; idx <= '0; state <= ((elem + 1) % 6 == 0) ? S_W : S_R; end
             end else begin idx <= idx + 1; state <= S_R; end
           end
         end
         S_W: begin
-          if (idx == ROWS - 1) begin
+          if (idx == IW'(ROWS - 1)) begin
             if (elem == 4'd11) state <= S_DONE;
             else begin elem <= elem + 1; idx <= '0; state <= ((elem + 1) % 6 == 0) ? S_W : S_R; end
           end else begin idx <= idx + 1; state <= has_read ? S_R : S_W; end

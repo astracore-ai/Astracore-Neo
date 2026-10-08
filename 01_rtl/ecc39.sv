@@ -1,3 +1,4 @@
+/* verilator lint_off DECLFILENAME */        // two modules, ecc39_enc and ecc39_dec, in one file by design
 // ecc39.sv -- (39,32) SECDED: Hamming (38,32) with six check bits at codeword positions
 //   1, 2, 4, 8, 16, 32 and data bits at the other positions 3..38, plus one overall parity bit.
 //   ecc39_enc: data -> {op, p[5:0]}.  ecc39_dec: data', p', op' -> corrected data, ce (single

@@ -15,8 +15,6 @@
 module core_seq #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
-  parameter int WW         = 8,
-  parameter int WCW        = WW + $clog2(ROWS) + 1,
   parameter int IDXW       = 9,
   parameter int WBUF_DEPTH = 1024,
   parameter int WAW        = $clog2(WBUF_DEPTH),
@@ -75,14 +73,14 @@ module core_seq #(
   logic signed [15:0]  rcnt;                // runs started so far
   logic signed [31:0]  ext_cnt;             // partial-sum rows accepted
 
-  logic signed [31:0]  laddr;
-  assign laddr = ltile * ROWS + (ROWS - 1 - lcnt);
+  logic [WAW-1:0]      laddr;               // weight-buffer row of the load: tile ltile, row ROWS-1-lcnt (in the buffer's address width)
+  assign laddr = WAW'(32'(ltile) * ROWS + (ROWS - 1 - 32'(lcnt)));
   logic                ct_free_q;
   logic signed [15:0]  ct_free_idx_q;
   assign ct_free     = ct_free_q;
   assign ct_free_idx = ct_free_idx_q;
 
-  assign w_raddr = laddr[WAW-1:0];
+  assign w_raddr = laddr;
   assign w_load  = loading;
 
   assign f_ct      = ct;
@@ -124,7 +122,7 @@ module core_seq #(
       ct_free_q <= 1'b0;
       // shadow-load engine: ROWS cycles once started
       if (loading) begin
-        if (lcnt == ROWS - 1) begin
+        if (lcnt == 16'(ROWS - 1)) begin
           loading <= 1'b0;
           loaded  <= 1'b1;
         end else begin
@@ -152,7 +150,7 @@ module core_seq #(
         end
         S_RUN: begin
           tcnt <= tcnt + 1;
-          if (has_next && !loaded && !loading && tcnt == LAT + 1) begin
+          if (has_next && !loaded && !loading && tcnt == 16'(LAT + 1)) begin
             ltile   <= rcnt;                  // local tile index of the next run
             lcnt    <= '0;
             loading <= 1'b1;
@@ -174,7 +172,7 @@ module core_seq #(
         end
         S_WAIT: begin
           wcnt <= wcnt + 1;
-          if (wcnt == LAT + 3) begin
+          if (wcnt == 16'(LAT + 3)) begin
             dcnt  <= '0;
             state <= (cfg_contrib_n > 0) ? S_REDUCE : S_DRAIN;
           end

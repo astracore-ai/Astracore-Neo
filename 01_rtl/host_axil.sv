@@ -34,6 +34,8 @@ module host_axil #(
   output logic [31:0]   h_wdata,
   input  logic [31:0]   h_rdata
 );
+  logic unused_byte_lanes;                          // the word-aligned window: ADDR[1:0] select nothing (lint)
+  assign unused_byte_lanes = ^{s_awaddr[1:0], s_araddr[1:0]};
   // ---- write channel: accept address and data together, pulse h_we for one cycle, then respond ----
   logic wr_pend;
   assign s_awready = !wr_pend && !s_bvalid && s_awvalid && s_wvalid;

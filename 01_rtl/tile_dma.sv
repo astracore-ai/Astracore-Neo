@@ -22,7 +22,8 @@ module tile_dma #(
   parameter int XW = 2,
   parameter int YW = 2,
   parameter int PDEPTH = 32,                 // program memory entries (drop 0.22: 32, was 16)
-  parameter int PAW = $clog2(PDEPTH)
+  parameter int PAW = $clog2(PDEPTH),
+  parameter int DV_HOOKS = 0                 // 1: the pc fault hook below exists (drop 0.35)
 )(
   input  logic          clk,
   input  logic          rst_n,
@@ -51,7 +52,10 @@ module tile_dma #(
   input  logic          rdy_seen,
   output logic          rdy_clear,
   input  logic          ntf_busy,
-  output logic signed [15:0] tiles_ready
+  output logic signed [15:0] tiles_ready,
+  // testbench hook (drop 0.35; DV_HOOKS = 1): pc XOR dv_pc_mask at the falling edge while dv_pc_flip
+  input  logic          dv_pc_flip,
+  input  logic [PAW-1:0] dv_pc_mask
 );
   localparam logic [3:0] S_IDLE = 4'd0, S_FETCH = 4'd1, S_ISSUE = 4'd2, S_WAITCMD = 4'd3,
                          S_WAITFREE = 4'd4, S_WAITDONE = 4'd5, S_END = 4'd6, S_WAITRDY = 4'd7, S_WAITRED = 4'd8,
@@ -68,8 +72,8 @@ module tile_dma #(
   assign fsm_err = (state > S_WAITNTF);
 
   assign op       = ins[63:60];
-  assign cmd_x    = ins[59:56];
-  assign cmd_y    = ins[55:52];
+  assign cmd_x    = XW'(ins[59:56]);               // 4-bit coordinate fields in the instruction
+  assign cmd_y    = YW'(ins[55:52]);
   assign cmd_addr = ins[51:32];
   assign cmd_len  = ins[31:20];
   assign cmd_base = ins[19:4];
@@ -82,6 +86,14 @@ module tile_dma #(
   assign prog_busy = (state != S_IDLE) && (state != S_END);
   assign tiles_ready = ready_q;
 
+  generate
+    if (DV_HOOKS != 0) begin : g_dv
+      always_ff @(negedge clk) if (dv_pc_flip) pc <= pc ^ dv_pc_mask;
+    end else begin : g_nodv
+      logic unused_dv;
+      assign unused_dv = ^{dv_pc_flip, dv_pc_mask};
+    end
+  endgenerate
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state <= S_IDLE; pc <= '0; ins <= '0; tiles_freed <= '0; done_seen <= 1'b0; ready_q <= '0;

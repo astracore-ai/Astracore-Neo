@@ -1,7 +1,7 @@
 // prog_mem.sv -- the DMA program memory with SECDED (drop 0.16; 32 entries since drop 0.22): DEPTH x 64-bit instructions stored as two
 //   (39,32) lanes; every fetch is corrected (prog_ce) or flagged uncorrectable (prog_ue), both sticky.
 //   Shared by the lockstep pair of DMA engines in neo_tile.
-module prog_mem #(parameter int DEPTH = 32, AW = $clog2(DEPTH)) (
+module prog_mem #(parameter int DEPTH = 32, AW = $clog2(DEPTH), DV_HOOKS = 0) (
   input  logic          clk,
   input  logic          rst_n,
   input  logic          we,
@@ -11,7 +11,11 @@ module prog_mem #(parameter int DEPTH = 32, AW = $clog2(DEPTH)) (
   output logic [63:0]   rdata,
   input  logic          err_clear,
   output logic          prog_ce_sticky,
-  output logic          prog_ue_sticky
+  output logic          prog_ue_sticky,
+  // testbench hook (drop 0.35; DV_HOOKS = 1): lane 0 of entry dv_fi_idx XOR dv_fi_mask at the falling edge while dv_fi_flip
+  input  logic          dv_fi_flip,
+  input  logic [AW-1:0] dv_fi_idx,
+  input  logic [38:0]   dv_fi_mask
 );
   logic [38:0] mem [DEPTH][2];
   logic [5:0]  wp [2];
@@ -29,6 +33,14 @@ module prog_mem #(parameter int DEPTH = 32, AW = $clog2(DEPTH)) (
       mem[waddr][1] <= {wop[1], wp[1], wdata[63:32]};
     end
   end
+  generate
+    if (DV_HOOKS != 0) begin : g_dv
+      always_ff @(negedge clk) if (dv_fi_flip) mem[dv_fi_idx][0] <= mem[dv_fi_idx][0] ^ dv_fi_mask;
+    end else begin : g_nodv
+      logic unused_dv;
+      assign unused_dv = ^{dv_fi_flip, dv_fi_idx, dv_fi_mask};
+    end
+  endgenerate
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin prog_ce_sticky <= 1'b0; prog_ue_sticky <= 1'b0; end
     else begin

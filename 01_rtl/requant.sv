@@ -103,10 +103,12 @@ module requant #(
         logic signed [PW+MW:0] bias;
         logic signed [PW+MW:0] r;
         logic signed [PW+MW:0] v;
+        logic signed [PW+MW:0] zpx;                         // the column's zero point at the product width
         bias = (BW'(1) <<< sh1[j]) >>> 1;                   // 2^(shift-1), or 0 when shift == 0
         r    = (prod[j] + bias) >>> sh1[j];
-        v    = r + zp1[j];
-        if (relu && (v < zp1[j])) v = zp1[j];
+        zpx  = BW'(zp1[j]);
+        v    = r + zpx;
+        if (relu && (v < zpx)) v = zpx;
         if (v > 127)       out_q[j] <= 8'sd127;
         else if (v < -128) out_q[j] <= -8'sd128;
         else               out_q[j] <= v[7:0];

@@ -30,11 +30,12 @@ module noc_mesh #(
     for (genvar y = 0; y < NY; y++) begin : g_y
       for (genvar x = 0; x < NX; x++) begin : g_x
         localparam int n = y * NX + x;
-        noc_router #(.XW(XW), .YW(YW), .DW(DW), .FW(FW), .MY_X(x), .MY_Y(y)) u_r (
-          .clk(clk), .rst_n(rst_n),
+        noc_router #(.XW(XW), .YW(YW), .DW(DW), .FW(FW)) u_r (
+          .clk(clk), .rst_n(rst_n), .my_x(XW'(x)), .my_y(YW'(y)),
           .in_valid(i_valid[n]), .in_flit(i_flit[n]), .in_ready(i_ready[n]),
           .out_valid(o_valid[n]), .out_flit(o_flit[n]), .out_ready(o_ready[n]),
-          .err_clear(err_clear), .parity_err_sticky(parity_err[n]));
+          .err_clear(err_clear), .parity_err_sticky(parity_err[n]),
+          .dv_flit_flip(1'b0), .dv_valid_clear(1'b0), .dv_port('0), .dv_mask('0));    // no testbench hooks on the bare mesh
         // local port 4
         assign i_valid[n][4]   = l_in_valid[n];
         assign i_flit[n][4]    = l_in_flit[n];

@@ -30,7 +30,7 @@ module mac_pe #(
   output logic signed [PW-1:0] p_out,
   input  logic                 fault_inject
 );
-  localparam int PE_LAT = 2;                        // psum latency through this PE
+  // psum latency through this PE: 2 (stage 1 product, stage 2 add); the sequencer's PE_LAT parameter states it
 
   logic signed [WW-1:0] w_q;      // active weight
   logic signed [WW-1:0] w_sh;     // shadow weight
