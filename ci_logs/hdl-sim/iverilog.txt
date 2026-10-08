@@ -1,0 +1,73 @@
+python3 model/systolic_ref.py --rows 32 --cols 32 --m 64 --seed 1 --out vectors
+neo_mac_core reference model: ROWS=32 COLS=32 (+1 ABFT column), M=64 rows, seed=1
+  T1 dataflow  : Y == X@W for 64x32 outputs and check column -> PASS
+  T1 latency   : first valid output at step 97 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS+1 = 97 -> PASS
+  T1 ABFT      : 0 rows flagged on clean data (expect 0) -> PASS
+  T2 data-PE fault at PE(5,7), cycle 28: output (10,7) off by +1 only -> PASS; ABFT flags exactly row 10 -> PASS
+  T3 check-column fault: data untouched, ABFT flags exactly row 10 -> PASS
+  T4 weight bit-flip at W[3][4]: ABFT flags 64/64 rows (expect 64) -> PASS
+  T5 double-buffer: tile A (130 rows, W) then tile B (64 rows, W2 loaded during A) back to back, no drain -> PASS
+  vectors written to /home/runner/work/Astracore-Neo/Astracore-Neo/vectors (x.hex, w.hex, wc.hex, y_exp.hex, yc_exp.hex, params.vh)
+RESULT: ALL PASS
+mkdir -p build
+iverilog -g2012 -I vectors -o build/sim.vvp rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv rtl/systolic_array.sv rtl/abft_checker.sv rtl/neo_mac_core.sv rtl/act_feeder.sv rtl/acc_bank.sv rtl/neo_mac_core_v02.sv rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv tb/tb_neo_mac_core.sv
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+vvp build/sim.vvp +VECDIR=vectors
+tb_neo_mac_core: ROWS=32 COLS=32 (+1 ABFT column) M=64 LATENCY=96 vectors=vectors
+PEMON cycle 44: tb valid_in=1 swap_in=0 x_in[0]=0 | PE(0,0) s_in=x v_in=1 x_in=x w_q=0 w_sh=50 prod_q=0 p_out=0 | PE(1,0) s_in=x v_in=0 x_in=x w_q=0 | skew s_row[1]=0
+PEMON cycle 45: tb valid_in=1 swap_in=0 x_in[0]=-7 | PE(0,0) s_in=x v_in=1 x_in=x w_q=0 w_sh=50 prod_q=x p_out=0 | PE(1,0) s_in=x v_in=0 x_in=x w_q=0 | skew s_row[1]=1
+PEMON cycle 46: tb valid_in=1 swap_in=0 x_in[0]=122 | PE(0,0) s_in=x v_in=1 x_in=x w_q=0 w_sh=50 prod_q=x p_out=x | PE(1,0) s_in=x v_in=1 x_in=x w_q=0 | skew s_row[1]=0
+PEMON cycle 47: tb valid_in=1 swap_in=0 x_in[0]=-20 | PE(0,0) s_in=x v_in=1 x_in=x w_q=0 w_sh=50 prod_q=x p_out=x | PE(1,0) s_in=x v_in=1 x_in=x w_q=0 | skew s_row[1]=0
+PEMON cycle 48: tb valid_in=1 swap_in=0 x_in[0]=-115 | PE(0,0) s_in=x v_in=1 x_in=x w_q=0 w_sh=50 prod_q=x p_out=x | PE(1,0) s_in=x v_in=1 x_in=x w_q=0 | skew s_row[1]=0
+PEMON cycle 49: tb valid_in=1 swap_in=0 x_in[0]=-23 | PE(0,0) s_in=x v_in=1 x_in=x w_q=0 w_sh=50 prod_q=x p_out=x | PE(1,0) s_in=x v_in=1 x_in=x w_q=0 | skew s_row[1]=0
+PEMON cycle 140: valid_out row 0 y[0]=x y[1]=x y_chk=x expected y[0]=31256 yc=-130732
+  MM row 0 col 0: got x expected 31256 (abft_err=x)
+  MM row 0 col 1: got x expected -2283 (abft_err=x)
+  MM row 0 col 2: got x expected 28748 (abft_err=x)
+  MM row 0 col 3: got x expected -19368 (abft_err=x)
+  MM row 0 col 4: got x expected -13796 (abft_err=x)
+  MM row 0 col 5: got x expected -98 (abft_err=x)
+  MM row 0 col 6: got x expected -24621 (abft_err=x)
+  MM row 0 col 7: got x expected 12567 (abft_err=x)
+PEMON cycle 141: valid_out row 1 y[0]=x y[1]=x y_chk=x expected y[0]=68703 yc=-34392
+T1 dataflow  : rows=64/64 mismatches=2112 err_rows=0 sticky=0 -> FAIL (first mismatch row 63 col 32 delta -13214)
+PEMON cycle 306: valid_out row 0 y[0]=x y[1]=x y_chk=x expected y[0]=31256 yc=-130732
+  MM row 0 col 0: got x expected 31256 (abft_err=x)
+  MM row 0 col 1: got x expected -2283 (abft_err=x)
+  MM row 0 col 2: got x expected 28748 (abft_err=x)
+  MM row 0 col 3: got x expected -19368 (abft_err=x)
+  MM row 0 col 4: got x expected -13796 (abft_err=x)
+  MM row 0 col 5: got x expected -98 (abft_err=x)
+  MM row 0 col 6: got x expected -24621 (abft_err=x)
+  MM row 0 col 7: got x expected 12567 (abft_err=x)
+PEMON cycle 307: valid_out row 1 y[0]=x y[1]=x y_chk=x expected y[0]=68703 yc=-34392
+T2 MAC fault : mismatches=2112 first(row 63 col 32 delta -13214) err_rows=0 err_at[10]=0 sticky=0 -> FAIL
+T3 clear     : abft_err_sticky cleared -> PASS
+RESULT: 2 FAILURES
+tb/tb_neo_mac_core.sv:218: $finish called at 375000 (1ps)

@@ -1,0 +1,26 @@
+python3 sim/run_conv_core.py --dump vectors_core
+vectors for tb_neo_core.sv written to /home/runner/work/Astracore-Neo/Astracore-Neo/vectors_core
+mkdir -p build
+iverilog -g2012 -I vectors_core -o build/sim_core.vvp rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv rtl/systolic_array.sv rtl/abft_checker.sv rtl/neo_mac_core.sv rtl/act_feeder.sv rtl/acc_bank.sv rtl/neo_mac_core_v02.sv rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv tb/tb_neo_core.sv
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:55: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+rtl/ecc39.sv:24: warning: always_comb process has no sensitivities.
+vvp build/sim_core.vvp +VECDIR=vectors_core
+tb_neo_core: ROWS=16 COLS=8 conv 48x6x6 k3 s1 p1 -> M=36 rows, 3 channel tiles
+XMON cycle 568: feeder x_vec[0] is X while f_valid=1 (seq state 3, addr 0)
+VMON cycle 568: first feeder vector x_vec[0..3] = x x x x (seq state 3, ct 0 ky 0 kx 0); abuf entry 0 bytes 0..3 = -21 119 -17 -118
+XMON cycle 608: array y[0] is X while valid_out=1
+VMON cycle 608: first array output y[0..7] = x x x x x x x x y_chk = x (sum of y = x), idx_d=0 first_d=1
+  mismatch row 0 col 0: got x expected 4533
+  mismatch row 0 col 1: got x expected 41758
+  mismatch row 0 col 2: got x expected -23522
+  mismatch row 0 col 3: got x expected -34382
+  mismatch row 0 col 4: got x expected 7155
+RESULT: FAIL (rows=36/36 mismatches=288 acc_flags=0 sticky array/acc/ctrl=0/0/0)
+tb/tb_neo_core.sv:222: $finish called at 2248000 (1ps)
