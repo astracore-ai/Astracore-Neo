@@ -65,3 +65,41 @@ MODULE=test_tile_mesh TESTCASE=m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_t
                                                           last one waits behind all the others; the silicon rule FETCH_TIMEOUT >= NX*NY*(4,095 + H) is what makes any such queue,
                                                           up to every tile of the mesh, complete without a timeout. Every requester must end with its program done and no cause
                                                           raised anywhere (the end-to-end CRC and the lost-flit count cover the data). H is budgeted at 400 cycles per request.
+117755.01ns INFO     cocotb.tile_mesh_cocotb            M14: 14 maximal fetches (4088 words each) queued at one bank: first done at 292 clocks, last at 3697, 0.065 clocks per word, no cause raised (FETCH_TIMEOUT 65535)
+117755.01ns INFO     cocotb.regression                  m14_bank_contention passed
+117755.01ns INFO     cocotb.regression                  ****************************************************************************************************
+                                                        ** TEST                                        STATUS  SIM TIME (ns)  REAL TIME (s)  RATIO (ns/s) **
+                                                        ****************************************************************************************************
+                                                        ** test_tile_mesh.m1_fetch_compute_writeback    PASS        7316.00         184.76         39.60  **
+                                                        ** test_tile_mesh.m2_ksplit_rdy                 PASS        6235.50         157.92         39.49  **
+                                                        ** test_tile_mesh.m3_end_to_end_crc             PASS        4417.50         112.33         39.33  **
+                                                        ** test_tile_mesh.m5_bank_ecc_in_flight         PASS        7318.50         181.92         40.23  **
+                                                        ** test_tile_mesh.m6_compiler_program           PASS        6241.00         157.15         39.71  **
+                                                        ** test_tile_mesh.m7_mchunks_partial_fetch      PASS        7578.00         189.18         40.06  **
+                                                        ** test_tile_mesh.m9_lost_flit_and_timeout      PASS       37259.50         877.53         42.46  **
+                                                        ** test_tile_mesh.m12_control_path_protection   PASS          25.00           0.62         40.06  **
+                                                        ** test_tile_mesh.m13_partitions                PASS       32928.00         767.87         42.88  **
+                                                        ** test_tile_mesh.m16_link_parity               PASS        4417.50         112.54         39.25  **
+                                                        ** test_tile_mesh.m14_bank_contention           PASS        4018.50         102.51         39.20  **
+                                                        ****************************************************************************************************
+                                                        ** TESTS=11 PASS=11 FAIL=0 SKIP=0                         117755.01        2844.46         41.40  **
+                                                        ****************************************************************************************************
+                                                        
+- :0: Verilog $finish
+make[3]: Leaving directory '/home/runner/work/Astracore-Neo/Astracore-Neo/dv/cocotb'
+make[2]: Leaving directory '/home/runner/work/Astracore-Neo/Astracore-Neo/dv/cocotb'
+make[1]: Leaving directory '/home/runner/work/Astracore-Neo/Astracore-Neo/dv/cocotb'
+python3 dv/cocotb/check_results.py dv/cocotb/results_mesh8.xml
+cocotb results
+  results_mesh8.xml    m1_fetch_compute_writeback   PASS    184.7626187801361 s
+  results_mesh8.xml    m2_ksplit_rdy                PASS    157.9204604625702 s
+  results_mesh8.xml    m3_end_to_end_crc            PASS    112.33070635795593 s
+  results_mesh8.xml    m5_bank_ecc_in_flight        PASS    181.9155821800232 s
+  results_mesh8.xml    m6_compiler_program          PASS    157.14819073677063 s
+  results_mesh8.xml    m7_mchunks_partial_fetch     PASS    189.17985916137695 s
+  results_mesh8.xml    m9_lost_flit_and_timeout     PASS    877.529584646225 s
+  results_mesh8.xml    m12_control_path_protection  PASS    0.6240441799163818 s
+  results_mesh8.xml    m13_partitions               PASS    767.873096704483 s
+  results_mesh8.xml    m16_link_parity              PASS    112.54170942306519 s
+  results_mesh8.xml    m14_bank_contention          PASS    102.50690984725952 s
+  11 passed, 0 failed/missing, 0 skipped, 11 total
