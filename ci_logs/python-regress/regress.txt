@@ -1,0 +1,190 @@
+python3 model/systolic_ref.py --rows 32 --cols 32 --m 64 --seed 1 --out vectors
+neo_mac_core reference model: ROWS=32 COLS=32 (+1 ABFT column), M=64 rows, seed=1
+  T1 dataflow  : Y == X@W for 64x32 outputs and check column -> PASS
+  T1 latency   : first valid output at step 97 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS+1 = 97 -> PASS
+  T1 ABFT      : 0 rows flagged on clean data (expect 0) -> PASS
+  T2 data-PE fault at PE(5,7), cycle 28: output (10,7) off by +1 only -> PASS; ABFT flags exactly row 10 -> PASS
+  T3 check-column fault: data untouched, ABFT flags exactly row 10 -> PASS
+  T4 weight bit-flip at W[3][4]: ABFT flags 64/64 rows (expect 64) -> PASS
+  T5 double-buffer: tile A (130 rows, W) then tile B (64 rows, W2 loaded during A) back to back, no drain -> PASS
+  vectors written to /home/runner/work/Astracore-Neo/Astracore-Neo/vectors (x.hex, w.hex, wc.hex, y_exp.hex, yc_exp.hex, params.vh)
+RESULT: ALL PASS
+python3 model/systolic_ref.py --rows 8 --cols 16 --m 20 --seed 7 --fault-row 2 --fault-col 9 --out build/v816
+neo_mac_core reference model: ROWS=8 COLS=16 (+1 ABFT column), M=20 rows, seed=7
+  T1 dataflow  : Y == X@W for 20x16 outputs and check column -> PASS
+  T1 latency   : first valid output at step 33 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS+1 = 33 -> PASS
+  T1 ABFT      : 0 rows flagged on clean data (expect 0) -> PASS
+  T2 data-PE fault at PE(2,9), cycle 24: output (10,9) off by +1 only -> PASS; ABFT flags exactly row 10 -> PASS
+  T3 check-column fault: data untouched, ABFT flags exactly row 10 -> PASS
+  T4 weight bit-flip at W[3][4]: ABFT flags 20/20 rows (expect 20) -> PASS
+  T5 double-buffer: tile A (42 rows, W) then tile B (20 rows, W2 loaded during A) back to back, no drain -> PASS
+  vectors written to /home/runner/work/Astracore-Neo/Astracore-Neo/build/v816 (x.hex, w.hex, wc.hex, y_exp.hex, yc_exp.hex, params.vh)
+RESULT: ALL PASS
+python3 sim/run_mac_core.py --vectors build/v816
+neosim: elaborated neo_mac_core ROWS=8 COLS=16 (+1 ABFT column) M=20: 5078 cells, 343 comb nodes, 442 always_ff blocks, 0.1 s
+  T1 dataflow  : 20 rows x 16 outputs + check column vs golden, 0 mismatches, 0 ABFT flags, sticky=0 -> PASS
+  T1 latency   : first valid_out after tick 32 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS = 32 -> PASS
+  T2 MAC fault : PE(2,9) fault at stream cycle 24: mismatches=[(10, 9, 1)], flags on rows [10], sticky=1 -> PASS
+  T3 clear     : abft_err_sticky after clear = 0 -> PASS
+  T4 double-buf: tile A (42 rows, W) with W2 loading from tick 32, tile B (20 rows, W2) with no drain: 62 rows out, A ok, B ok, flags 0 -> PASS
+  simulated 227 clocks in 0.4 s
+RESULT: ALL PASS
+python3 sim/run_mac_core.py --vectors vectors
+neosim: elaborated neo_mac_core ROWS=32 COLS=32 (+1 ABFT column) M=64: 38502 cells, 2335 comb nodes, 4562 always_ff blocks, 1.1 s
+  T1 dataflow  : 64 rows x 32 outputs + check column vs golden, 0 mismatches, 0 ABFT flags, sticky=0 -> PASS
+  T1 latency   : first valid_out after tick 96 (token at 0, row 0 at 1), expected PE_LAT*ROWS+COLS = 96 -> PASS
+  T2 MAC fault : PE(5,7) fault at stream cycle 28: mismatches=[(10, 7, 1)], flags on rows [10], sticky=1 -> PASS
+  T3 clear     : abft_err_sticky after clear = 0 -> PASS
+  T4 double-buf: tile A (130 rows, W) with W2 loading from tick 96, tile B (64 rows, W2) with no drain: 194 rows out, A ok, B ok, flags 0 -> PASS
+  simulated 663 clocks in 16.2 s
+RESULT: ALL PASS
+python3 compiler/neo_compile.py --verify
+Lowering verification (accumulated tile outputs vs direct numpy convolution):
+  lowering on cycle model, 32x32 core     : conv 5x6x6 -> 7x6x6 k3 = GEMM M=36 K=45 N=7, 2x1 tiles of 32x32, 2 passes -> PASS
+  lowering on cycle model, 16x8 core      : conv 5x6x6 -> 7x6x6 k3 = GEMM M=36 K=45 N=7, 3x1 tiles of 16x8, 3 passes -> PASS
+  lowering on RTL under neosim, 16x8 core : conv 5x6x6 -> 7x6x6 k3 = GEMM M=36 K=45 N=7, 3x1 tiles of 16x8, 3 passes -> PASS
+RESULT: ALL PASS
+python3 compiler/neo_backend.py --check
+YOLOv8-m class at 640x640 compiled for an 8x8 mesh of 32x32 cores:
+  83 layers, 6263 groups, 24549 tile programs, 240529 program words (1924 KB of descriptors), K-split shares per layer: min 1, max 9
+  DMA traffic per frame: fetch 828 MB, partial sums 414 MB, outputs 187 MB
+  hardware limits: 0 of 24549 tile programs exceed the 32-word program memory (longest 24 words); 0 groups not emitted; fetches are split at the 12-bit length field, at most 12 FETCH_A per tile program
+  per-layer balance (max tile load / mean): worst 2.46, mean 1.16; every layer but the last drains INT8 for the next
+  bank allocator (drop 0.33): 64 banks of 32768 rows (2 MB): peak occupancy 32640 rows (99.6 %) in bank (0, 0), resident weights 36.5 MB, in use at the end 36.7 MB; 28 layers take their input from a freshly placed tensor (the image and the concat/skip inputs the chain model does not carry), the rest from the previous layer's bands
+  layer                groups shares programs  fetch MB  psum MB  balance in bands/banks  in MB out bands/banks  out MB   w MB peak rows  bad
+  b0.conv                 400      1      400     28.68     0.00     1.12           7/7*   12.5             4/4     6.2    0.0     32640    0
+  b1.conv                 150      2      300     24.55     9.50     1.07            4/4    6.2             3/3     2.3    0.1     32640    0
+  b2.c2f.cv1              150      1      150      7.43     0.00     1.28            3/3    2.3             3/3     2.3    0.0     32640    0
+  b2.c2f.m0.cv1           100      3      300     12.27    12.67     1.07           2/2*    1.6             2/2     1.6    0.0     32640    0
+  b2.c2f.m0.cv2           100      3      300     12.27    12.67     1.07            2/2    1.6             2/2     1.6    0.0     32640    0
+  b2.c2f.m1.cv1           100      3      300     12.27    12.67     1.07            2/2    1.6             2/2     1.6    0.0     32640    0
+  b2.c2f.m1.cv2           100      3      300     12.27    12.67     1.07            2/2    1.6             2/2     1.6    0.0     32640    0
+  b2.c2f.cv2              150      2      300     14.86     9.50     1.07           6/6*    4.7             3/3     2.3    0.0     32640    0
+  b3.conv                  78      3      234     17.91     9.88     1.09            3/3    2.3             6/6     1.2    0.2     32640    0
+  b4.c2f.cv1               78      2      156      7.73     4.94     1.23            6/6    1.2             6/6     1.2    0.0     32640    0
+  b4.c2f.m0.cv1            66      3      198      4.56     4.18     1.29           3/3*    0.6             3/3     0.6    0.1     32640    0
+  b4.c2f.m0.cv2            66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  b4.c2f.m1.cv1            66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  b4.c2f.m1.cv2            66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  b4.c2f.m2.cv1            66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  b4.c2f.m2.cv2            66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  b4.c2f.m3.cv1            66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  b4.c2f.m3.cv2            66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  b4.c2f.cv2               78      3      234     23.18     9.88     1.09         18/18*    3.5             6/6     1.2    0.1     32640    0
+  b5.conv                  72      6      432     18.67    11.40     1.04            6/6    1.2           12/11     0.6    0.7     32640    0
+  b6.c2f.cv1               72      3      216      7.63     4.56     1.19          12/11    0.6           12/12     0.6    0.2     32640    0
+  b6.c2f.m0.cv1            66      6      396      6.59     5.23     1.13           6/6*    0.3             6/6     0.3    0.4     32640    0
+  b6.c2f.m0.cv2            66      6      396      6.59     5.23     1.13            6/6    0.3             6/6     0.3    0.4     32640    0
+  b6.c2f.m1.cv1            66      6      396      6.59     5.23     1.13            6/6    0.3             6/6     0.3    0.4     32640    0
+  b6.c2f.m1.cv2            66      6      396      6.59     5.23     1.13            6/6    0.3             6/6     0.3    0.4     32640    0
+  b6.c2f.m2.cv1            66      6      396      6.59     5.23     1.13            6/6    0.3             6/6     0.3    0.4     32640    0
+  b6.c2f.m2.cv2            66      6      396      6.59     5.23     1.13            6/6    0.3             6/6     0.3    0.4     32640    0
+  b6.c2f.m3.cv1            66      6      396      6.59     5.23     1.13            6/6    0.3             6/6     0.3    0.4     32640    0
+  b6.c2f.m3.cv2            66      6      396      6.59     5.23     1.13            6/6    0.3             6/4     0.3    0.4     32640    0
+  b6.c2f.cv2               72      6      432     22.89    11.40     1.04         36/19*    1.8           12/11     0.6    0.5     32640    0
+  b7.conv                  72      6      432     22.97     5.70     1.04          12/11    0.6            24/4     0.3    2.8     32640    0
+  b8.c2f.cv1               72      4      288      8.63     3.42     1.11           24/4    0.3            24/8     0.3    0.6     32640    0
+  b8.c2f.m0.cv1            72      6      432     11.63     2.85     1.04          12/7*    0.1            12/5     0.1    1.4     32640    0
+  b8.c2f.m0.cv2            72      6      432     11.63     2.85     1.04           12/5    0.1            12/4     0.1    1.4     32640    0
+  b8.c2f.m1.cv1            72      6      432     11.63     2.85     1.04           12/4    0.1            12/4     0.1    1.4     32640    0
+  b8.c2f.m1.cv2            72      6      432     11.63     2.85     1.04           12/4    0.1            12/3     0.1    1.4     32640    0
+  b8.c2f.cv2               72      6      432     17.25     5.70     1.04          48/6*    0.6            24/7     0.3    1.3     32640    0
+  b9.sppf.cv1              72      3      216      5.31     1.14     1.19           24/7    0.3            12/3     0.1    0.3     32640    0
+  b9.sppf.cv2              72      6      432     17.25     5.70     1.04          48/9*    0.6           24/12     0.3    1.3     32640    0
+  h12.c2f.cv1              72      6      432     22.89    11.40     1.04         36/16*    1.8            12/9     0.6    0.5     32640    0
+  h12.c2f.m0.cv1           66      6      396      6.59     5.23     1.13           6/3*    0.3             6/5     0.3    0.4     32640    0
+  h12.c2f.m0.cv2           66      6      396      6.59     5.23     1.13            6/5    0.3             6/4     0.3    0.4     32640    0
+  h12.c2f.m1.cv1           66      6      396      6.59     5.23     1.13            6/4    0.3             6/4     0.3    0.4     32640    0
+  h12.c2f.m1.cv2           66      6      396      6.59     5.23     1.13            6/4    0.3             6/4     0.3    0.4     32640    0
+  h12.c2f.cv2              72      4      288     15.26     6.84     1.11         24/13*    1.2            12/9     0.6    0.3     32640    0
+  h15.c2f.cv1              78      3      234     23.18     9.88     1.09         18/18*    3.5             6/6     1.2    0.1     32640    0
+  h15.c2f.m0.cv1           66      3      198      4.56     4.18     1.29           3/3*    0.6             3/3     0.6    0.1     32640    0
+  h15.c2f.m0.cv2           66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  h15.c2f.m1.cv1           66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  h15.c2f.m1.cv2           66      3      198      4.56     4.18     1.29            3/3    0.6             3/3     0.6    0.1     32640    0
+  h15.c2f.cv2              78      3      234     15.46     9.88     1.09         12/12*    2.3             6/6     1.2    0.1     32640    0
+  h16.conv                 66      6      396     11.11     5.23     1.13            6/6    1.2             6/5     0.3    0.4     32640    0
+  h18.c2f.cv1              72      3      216     11.45     4.56     1.19         18/10*    0.9           12/11     0.6    0.2     32640    0
+  h18.c2f.m0.cv1           66      6      396      6.59     5.23     1.13           6/5*    0.3             6/5     0.3    0.4     32640    0
+  h18.c2f.m0.cv2           66      6      396      6.59     5.23     1.13            6/5    0.3             6/3     0.3    0.4     32640    0
+  h18.c2f.m1.cv1           66      6      396      6.59     5.23     1.13            6/3    0.3             6/4     0.3    0.4     32640    0
+  h18.c2f.m1.cv2           66      6      396      6.59     5.23     1.13            6/4    0.3             6/5     0.3    0.4     32640    0
+  h18.c2f.cv2              72      4      288     15.26     6.84     1.11         24/15*    1.2            12/6     0.6    0.3     32640    0
+  h19.conv                 72      6      432     16.52     2.85     1.04           12/6    0.6            12/3     0.1    1.4     32640    0
+  h21.c2f.cv1              72      4      288     12.94     3.42     1.11          36/7*    0.4           24/10     0.3    0.9     32640    0
+  h21.c2f.m0.cv1           72      6      432     11.63     2.85     1.04          12/4*    0.1            12/3     0.1    1.4     32640    0
+  h21.c2f.m0.cv2           72      6      432     11.63     2.85     1.04           12/3    0.1            12/3     0.1    1.4     32640    0
+  h21.c2f.m1.cv1           72      6      432     11.63     2.85     1.04           12/3    0.1            12/2     0.1    1.4     32640    0
+  h21.c2f.m1.cv2           72      6      432     11.63     2.85     1.04           12/2    0.1            12/2     0.1    1.4     32640    0
+  h21.c2f.cv2              72      6      432     17.25     5.70     1.04         48/10*    0.6            24/9     0.3    1.3     32640    0
+  det.p3.cv2.0             64      1       64      7.88     0.00     1.00           6/6*    1.2             2/2     0.4    0.1     32640    0
+  det.p3.cv2.1             64      1       64      2.63     0.00     1.00            2/2    0.4             2/2     0.4    0.0     32640    0
+  det.p3.cv2.2             64      1       64      0.80     0.00     1.00            2/2    0.4             2/2     0.4    0.0     32640    0
+  det.p3.cv3.0             78      4      312     17.51    14.83     1.22           6/6*    1.2             6/6     1.2    0.4     32640    0
+  det.p3.cv3.1             78      4      312     17.51    14.83     1.20            6/6    1.2             6/6     1.2    0.4     32640    0
+  det.p3.cv3.2             66      2      132      3.50     2.09     1.45            6/6    1.2             3/3     0.6    0.0     32640    0
+  det.p4.cv2.0             64      1       64     10.88     0.00     1.00          12/7*    0.6             2/2     0.1    0.2     32640    0
+  det.p4.cv2.1             64      1       64      1.81     0.00     1.00            2/2    0.1             2/2     0.1    0.0     32640    0
+  det.p4.cv2.2             64      1       64      0.31     0.00     1.00            2/2    0.1             2/1     0.1    0.0     32640    0
+  det.p4.cv3.0             66      9      594     15.68     8.36     1.08          12/7*    0.6             6/5     0.3    0.7     32640    0
+  det.p4.cv3.1             66      6      396      6.59     5.23     1.13            6/5    0.3             6/4     0.3    0.4     32640    0
+  det.p4.cv3.2             66      2      132      0.96     0.35     1.45            6/4    0.3             3/3     0.1    0.0     32640    0
+  det.p5.cv2.0             26      7      182      7.93     0.41     1.40          24/4*    0.3             2/1     0.0    0.5     32640    0
+  det.p5.cv2.1             26      2       52      0.64     0.07     1.23            2/1    0.0             2/1     0.0    0.0     32640    0
+  det.p5.cv2.2             26      1       26      0.09     0.00     2.46            2/1    0.0             2/1     0.0    0.0     32640    0
+  det.p5.cv3.0             66      8      528     19.37     1.22     1.09          24/3*    0.3             6/2     0.1    1.4     32640    0
+  det.p5.cv3.1             66      3      198      4.84     0.35     1.29            6/2    0.1             6/2     0.1    0.4     32640    0
+  det.p5.cv3.2             39      1       39      0.42     0.00     1.64            6/2    0.1             3/2     0.2    0.0     32640    0
+  (* = input placed afresh: the image, or a concat/skip input the chain model does not carry)
+  bank occupancy, peak rows of 32768 per bank (2 MB), x across, y down:
+     32640  32640  32640  32640  32640  32640  10490  11988
+     12258  32640  18560  32640  18560  10220  13124  13124
+     12908  12908  12908  12800  13286  13286  13286  10530
+     10530   9504   9504   9216   9216  10044  10044   9882
+      9882   9882   9882  10044  10044  10044  10044  10044
+     10044  10868   8384   9180  11016  10800   9180   8910
+      8622   7962   9450   9450   9450  10206  10206  10348
+     10004   8328  10328   7452   7452  10328   8328   9248
+RESULT: ALL PLACED
+python3 sim/run_noc.py
+noc_mesh 3x3, 41-bit flits, XY routing, 2-entry input FIFOs, registered outputs (neosim):
+  N1 random traffic: 108 packets from 9 nodes, 60 % injection, 70 % sink ready: 108/108 delivered in 92 cycles, mean latency 7.1 cycles, max 19; in-order per pair, payload intact, no spurious parity flags -> PASS (0.8 s, 1506 cells)
+  N2 parity fault: node 0's 4th flit injected with wrong parity: 71/71 good packets delivered, corrupted flit dropped, parity_err raised on node 0 only -> PASS
+RESULT: ALL PASS
+python3 sim/run_requant.py
+  Q1 linear: 256 rows x 8 columns vs fixed-point model -> PASS
+  Q3 float sanity: max |q - float requantization| = 0 LSB (expect <= 1) -> PASS
+  Q2 relu: 256 rows x 8 columns vs fixed-point model -> PASS
+RESULT: ALL PASS
+python3 sim/run_mbist.py
+  B1 clean bank, 64 words, 12 March elements: done in 120 cycles, fail=0, ecc_ue=0 -> PASS
+  B2 stuck-at-1 at word 37 bit 5: fail=1, fail_addr=37 (expect 37), found by the ECC (fail_ce=1: the data read back correct because SECDED corrected it, so the correction itself is the finding) -> PASS
+  B2b two stuck bits in word 37: fail=1, fail_addr=37, by data mismatch (fail_ce=0), ecc_ue=1 -> PASS
+  B3 functional access after MBIST (row port, lane 9): wrote 0xC0FFEE11 at word 9, read 0xc0ffee11, ecc clean -> PASS
+RESULT: ALL PASS
+python3 sim/run_nic.py
+  I1 writeback: 200 words in 21 beats of 1..16 words from word 291 (lane 3): every word at its address, no spill outside the range, max 2 cycles per beat (2 = crossing a row), flags clean -> PASS; a dropped beat -> lost_err 1, crc_err 1 -> PASS
+  I2 serve: 77 words from word 709 (lane 5) in beats [11, 16, 16, 16, 16, 2] (expect [11, 16, 16, 16, 16, 2]), words in order, CRC flit count 77 / crc 0x6027 vs model 0x6027, 9 cycles -> PASS
+  I3 serve with back-pressure (link accepts every third cycle): same words and CRC, 21 cycles -> PASS
+  I6 zero-length request: 1 flit(s) back, type 6 (6 = CRC) with count 0 and crc 0xffff (the initial 0xFFFF), 2 cycles -> PASS
+  I7 dead server (tx_state held in X_SERVE_RD): request taken (serve_busy 1), nothing emitted in 200 cycles (0 valid), still busy 1; released -> the 77-word response and its CRC arrive intact -> PASS
+  I8 fetch receive at 16x8: 48 activation words (4 per entry) in 5 beats of 1..16 words -> 12 entries at even base + index, 6 cycles wrote a pair, longest beat held 2 cycles -> PASS; 21 weight words (3 per entry) in 2 beats -> 7 entries at odd base + index with check values (a single entry first, then pairs: 3), held at most 2 cycles -> PASS
+  I8b full 16-word beats at an even base: 64 activation words -> 16 entries, every beat taken in 2 cycle(s) (expect 2), 8 pair writes (expect 8); 48 weight words -> 16 entries, beats held at most 3 cycles, 7 pair writes -> PASS
+  I9 fetch receive at 32x32: 96 activation words (8 per entry) in 12 beats of 1..16 words -> 12 entries at even base + index, 3 cycles wrote a pair, longest beat held 2 cycles -> PASS; 63 weight words (9 per entry) in 9 beats -> 7 entries at odd base + index with check values (a single entry first, then pairs: 0), held at most 2 cycles -> PASS
+  I9b full 16-word beats at an even base: 128 activation words -> 16 entries, every beat taken in 1 cycle(s) (expect 1), 8 pair writes (expect 8); 144 weight words -> 16 entries, beats held at most 2 cycles, 4 pair writes -> PASS
+  I10 response with no fetch outstanding: 20 words in 2 beats taken in [1, 1] cycle(s), no buffer write, CRC and count still checked clean -> PASS
+  I11 PSUM rows into the reduce port at 16x8: 3 rows of 8+1 words in 6 beats of 1..16 columns, FIFO full for the first two rows: rows out in order with their check values, the check-word beat of row 2 held 2 cycles, every other beat one cycle -> PASS
+  I11b PSUM rows into the reduce port at 32x32: 3 rows of 32+1 words in 17 beats of 1..16 columns, FIFO full for the first two rows: rows out in order with their check values, the check-word beat of row 2 held 2 cycles, every other beat one cycle -> PASS
+  I12 drain in beats at 16x8: 3 INT32 rows as beats [9, 9, 9] (5 cycles), 3 INT8 rows as [2, 2, 2], 3 PSUM rows as [9, 9, 9] with row tags and column headers; words, counts, WRHDR and CRC flits vs the model -> PASS
+  I12 drain in beats at 32x32: 3 INT32 rows as beats [16, 16, 1, 16, 16, 1, 16, 16, 1] (11 cycles), 3 INT8 rows as [8, 8, 8], 3 PSUM rows as [16, 16, 1, 16, 16, 1, 16, 16, 1] with row tags and column headers; words, counts, WRHDR and CRC flits vs the model -> PASS
+  I4 packer -> unpacker at 32 words per flit: 90-word serve in mixed beats, 40 drain words, two PSUM rows, single-word types in between, output accepted at random: 13 link flits (widest 32), every word, column and type in order -> PASS (85 cycles)
+  I5 packer -> unpacker at 1 words per flit: 90-word serve in mixed beats, 40 drain words, two PSUM rows, single-word types in between, output accepted at random: 153 link flits (widest 1), every word, column and type in order -> PASS (269 cycles)
+RESULT: ALL PASS
+make cdriver
+make[1]: Entering directory '/home/runner/work/Astracore-Neo/Astracore-Neo'
+mkdir -p build
+gcc -std=c99 -Wall -Wextra -O2 -o build/test_backend sw/neo_host.c sw/test_backend.c
+./build/test_backend > build/c_backend.txt
+python3 sim/check_c_backend.py
+C host driver vs Python backend: 4 tile programs compared (descriptors, cfg_m, every program word) -> ALL PASS
+make[1]: Leaving directory '/home/runner/work/Astracore-Neo/Astracore-Neo'
