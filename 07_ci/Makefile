@@ -17,6 +17,7 @@
 # make ecc        : (39,32) SECDED exhaustive single-flip and random double-flip test
 # make perf2      : 64-core event model (add --ksplit --layout dist64 --link 128 for spec v2.1)
 # make perf3      : v3 model: v2.1 fabric, K-split, dataflow across layers (spec v2.1 workload numbers)
+# make backend_check: every YOLOv8-m group placed by the bank allocator, every program within the program memory (drop 0.33)
 # make backend    : compiler backend: static compilation of YOLOv8-m to tile programs on the 8x8 mesh
 # make cdriver    : build the C host driver and check it emits the Python backend's programs word for word
 # make mbist      : March C- MBIST on an ECC bank (standalone) -- the tile-level version is M11 in run_tiles.py
@@ -48,7 +49,7 @@ TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wra
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage
 
 all: regress model
 
@@ -108,6 +109,9 @@ cdriver:
 
 backend:
 	python3 compiler/neo_backend.py
+# every group of YOLOv8-m at 640x640 placed by the bank allocator and every program within the program memory (drop 0.33)
+backend_check:
+	python3 compiler/neo_backend.py --check
 
 perf3:
 	python3 compiler/neo_perf_v3.py --ksplit --no-affinity
@@ -138,6 +142,7 @@ regress: vectors
 	python3 sim/run_mac_core.py --vectors build/v816
 	python3 sim/run_mac_core.py --vectors $(VECDIR)
 	python3 compiler/neo_compile.py --verify
+	python3 compiler/neo_backend.py --check
 	python3 sim/run_conv_v02.py --skip32
 	python3 sim/run_conv_core.py
 	python3 sim/run_conv_core.py --late
@@ -153,6 +158,7 @@ regress_ci: vectors
 	python3 sim/run_mac_core.py --vectors build/v816
 	python3 sim/run_mac_core.py --vectors $(VECDIR)
 	python3 compiler/neo_compile.py --verify
+	python3 compiler/neo_backend.py --check
 	python3 sim/run_noc.py
 	python3 sim/run_requant.py
 	python3 sim/run_mbist.py
