@@ -41,6 +41,19 @@ EXTRA_ARGS += $(BUILD_JOBS_ARG)
 # crosses the block boundary)
 HIER_ARGS ?=
 EXTRA_ARGS += $(HIER_ARGS)
+# VERILATOR_ROOT for the hierarchical builds (drop 0.37): every hier block is verilated by a relaunch of the `verilator`
+# wrapper from the generated Vtop_hier.mk, with VERILATOR_ROOT in the environment (verilator_bin exports its compiled-in
+# default), and the wrapper then takes verilator_bin from $VERILATOR_ROOT/bin. A packaged Verilator splits the install --
+# Ubuntu's 5.020: /usr/bin/verilator_bin, include/ under /usr/share/verilator, the compiled-in root -- and the relaunch
+# died with "exec: /usr/share/verilator/verilator_bin: not found" (run 126, the first hierarchical build in CI). vroot.sh
+# prints a root that holds both (the environment's or the compiled-in one when complete, else a directory of symbolic
+# links, sim_build_vroot); it is exported for the hierarchical builds only, a flat build never consults it.
+ifneq ($(findstring --hierarchical,$(EXTRA_ARGS)),)
+VROOT := $(shell sh $(abspath $(dir $(firstword $(MAKEFILE_LIST)))vroot.sh))
+ifneq ($(VROOT),)
+export VERILATOR_ROOT := $(VROOT)
+endif
+endif
 # geometry, depths and fetch watchdog; the tests read the geometry from the environment
 NX ?= 2
 NY ?= 2
@@ -145,4 +158,4 @@ coverage: core_cov tile_cov tile8_cov tile32_cov
 	-verilator_coverage --annotate coverage_annotated --annotate-min 1 coverage_*.dat > /dev/null 2>&1
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
-	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_mesh8s sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
