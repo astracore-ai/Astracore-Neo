@@ -90,6 +90,14 @@ jobs:
   hdl-mesh8:
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    # the build knobs (drop 0.33), the one place to set them: run 104 (4 jobs, Verilator's default optimisation) had not
+    # reached "built" after 1 h 48 min, so the defaults are the conservative 2 build jobs at -O1. The faster build again
+    # is `MESH8_BUILD_JOBS: 4` / `MESH8_CFLAGS: ""` here, nothing else to edit (the build step's `${VAR-default}` fallbacks
+    # apply only when a variable is unset, i.e. when this block is removed; an empty MESH8_CFLAGS stays empty). Behind
+    # these, the 8x8 mesh on 16x8 cores: make cocotb_mesh8s_build / cocotb_mesh8s_run in the two steps below
+    env:
+      MESH8_BUILD_JOBS: 2
+      MESH8_CFLAGS: "-CFLAGS -O1"
     # its own group (drop 0.30): a push cancels only this job's own predecessor, and the job is not held by the regress
     # group while python-regress / hdl-sim of the same run are still on it
     concurrency:
@@ -109,7 +117,7 @@ jobs:
           cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
           cp 07_ci/Makefile Makefile
           mkdir -p ci_logs/hdl-mesh8 && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-mesh8/RUN.txt
-          nproc; free -m; df -h / | tail -1
+          { echo "cores $(nproc)"; free -m | sed -n 2p; df -h / | tail -1; } | tee -a ci_logs/hdl-mesh8/RUN.txt
       # heartbeat (drop 0.30): runs 74 and 85 left nothing on the log branch, not even the timeout publish, so the job
       # publishes RUN.txt as soon as it starts and again after the build -- whatever happens later, the branch shows how
       # far it got
@@ -123,13 +131,16 @@ jobs:
       # the runner's own toolchains are removed first (~10 GB of the 14 GB disk): the cancelled run-86 job published its
       # "finished" line, so a cancel or a timeout does publish -- runs 74 and 85 left nothing, i.e. the runner itself died
       # during the build, out of disk or memory being the usual cause
-      - name: build the 8x8 silicon mesh (Verilator, 4 build jobs)
+      # drop 0.33: 2 build jobs at -O1 by default (the job env above; the cocotb Makefile's MESH8_BUILD_JOBS / MESH8_CFLAGS
+      # knobs); the `${VAR-default}` fallbacks below apply only when the env block is removed
+      - name: build the 8x8 silicon mesh (Verilator, MESH8_BUILD_JOBS build jobs, MESH8_CFLAGS)
         run: |
           set -o pipefail
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost 2>/dev/null || true
-          df -h / | tail -1
-          make cocotb_mesh8_build 2>&1 | tee ci_logs/hdl-mesh8/build.txt
-          echo "built $(date -u)" >> ci_logs/hdl-mesh8/RUN.txt; free -m; df -h / | tail -1; du -sh dv/cocotb/sim_build_mesh8 2>/dev/null || true
+          { echo "disk after cleanup:"; df -h / | tail -1; } | tee -a ci_logs/hdl-mesh8/RUN.txt
+          echo "build: ${MESH8_BUILD_JOBS-2} jobs, CFLAGS [${MESH8_CFLAGS--CFLAGS -O1}]" | tee -a ci_logs/hdl-mesh8/RUN.txt
+          make cocotb_mesh8_build MESH8_BUILD_JOBS=${MESH8_BUILD_JOBS-2} MESH8_CFLAGS="${MESH8_CFLAGS--CFLAGS -O1}" 2>&1 | tee ci_logs/hdl-mesh8/build.txt
+          { echo "built $(date -u)"; free -m | sed -n 2p; df -h / | tail -1; du -sh dv/cocotb/sim_build_mesh8 2>/dev/null || true; } | tee -a ci_logs/hdl-mesh8/RUN.txt
       - name: publish heartbeat after the build
         run: |
           git add -f ci_logs && git commit -q -m "hdl-mesh8 built run ${{ github.run_number }}" && git push -q origin ci-logs-hdl-mesh8 --force
