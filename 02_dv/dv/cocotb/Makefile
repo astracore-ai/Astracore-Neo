@@ -9,6 +9,9 @@
 #                               # on -> coverage_report.md (drop 0.26)
 #   make -C dv/cocotb mesh8     # the silicon mesh: 8x8 tiles of 32x32 cores with the silicon depths and 2 MB banks; the mesh-level
 #                               # tests M1-M3, M5-M7, M9, M12-M14 (M4, M8, M11 are tile-local and proven on tile32); own build directory
+#   make -C dv/cocotb mesh8s    # the 8x8 mesh on 16x8 cores with the silicon depths and links, the same tests (drop 0.32; the CI
+#                               # default since drop 0.34: the 32x32 mesh does not verilate in a 16 GB runner)
+#   make -C dv/cocotb tile_np   # the 16x8 suite without --public-flat-rw (drop 0.34): sizes the flag's share of a build
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -21,7 +24,12 @@ export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH
 # --unroll-count 1024 (drop 0.27) did not get the 8x8 build past the NIC's reset loop over NX*NY sources (BLKLOOPINIT, run 68);
 # drop 0.29 keeps each source's receive state in its own generate block instead, so no procedural loop scales with the mesh.
 # The raised limit stays: it is harmless and covers the COLS-wide loops of the 32x32 builds with margin.
-EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN --public-flat-rw --unroll-count 1024
+# PUBLIC_ARGS (drop 0.34): --public-flat-rw keeps every signal of the model public, i.e. unoptimised and addressable. The
+# tests touch only the wrapper's ports (tile_mesh_cocotb.sv routes every internal access and fault through ports and
+# hierarchical references, which need no public flag), so the flag is a legacy of the pre-wrapper tests and a candidate
+# for the memory the 64-tile build needs; `make tile_np` builds the 16x8 suite without it, timed by the hdl-mesh8 job
+PUBLIC_ARGS ?= --public-flat-rw
+EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN $(PUBLIC_ARGS) --unroll-count 1024
 # BUILD_JOBS_ARG: set by a target that wants Verilator's C++ compile on several cores (the mesh8 build, drop 0.30)
 BUILD_JOBS_ARG ?=
 EXTRA_ARGS += $(BUILD_JOBS_ARG)
@@ -75,6 +83,8 @@ core32:
 	$(MAKE) TARGET=core $(SILICON) SIM_BUILD=sim_build_core32 COCOTB_RESULTS_FILE=results_core32.xml
 tile:
 	$(MAKE) TARGET=tile
+tile_np:                           # the same suite built without --public-flat-rw (drop 0.34): its result and build size vs `tile`
+	$(MAKE) TARGET=tile PUBLIC_ARGS= SIM_BUILD=sim_build_tile_np COCOTB_RESULTS_FILE=results_tile_np.xml
 tile8:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer SIM_BUILD=sim_build_tile8 COCOTB_RESULTS_FILE=results_tile8.xml
 tile32:
@@ -125,4 +135,4 @@ coverage: core_cov tile_cov tile8_cov tile32_cov
 	-verilator_coverage --annotate coverage_annotated --annotate-min 1 coverage_*.dat > /dev/null 2>&1
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
-	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_mesh8s sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_tile_np sim_build_mesh8 sim_build_mesh8s sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_tile_np.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
