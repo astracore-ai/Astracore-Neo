@@ -8,10 +8,10 @@
 #   make -C dv/cocotb coverage  # core, tile and tile8 again with Verilator line/toggle coverage and the functional covergroups
 #                               # on -> coverage_report.md (drop 0.26)
 #   make -C dv/cocotb mesh8     # the silicon mesh: 8x8 tiles of 32x32 cores with the silicon depths and 2 MB banks; the mesh-level
-#                               # tests M1-M3, M5-M7, M9, M12-M14 (M4, M8, M11 are tile-local and proven on tile32); own build directory
+#                               # tests M1-M3, M5-M7, M9, M12-M14 (M4, M8, M11 are tile-local and proven on tile32); own build directory;
+#                               # hierarchical verilation (drop 0.35): the tile once as a library, 64 instances -- 36 s / 0.76 GB
 #   make -C dv/cocotb mesh8s    # the 8x8 mesh on 16x8 cores with the silicon depths and links, the same tests (drop 0.32; the CI
-#                               # default since drop 0.34: the 32x32 mesh does not verilate in a 16 GB runner)
-#   make -C dv/cocotb tile_np   # the 16x8 suite without --public-flat-rw (drop 0.34): sizes the flag's share of a build
+#                               # default of drop 0.34, when the 32x32 mesh did not verilate flat in 16 GB; 21 s / 0.44 GB hierarchically)
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -24,15 +24,23 @@ export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH
 # --unroll-count 1024 (drop 0.27) did not get the 8x8 build past the NIC's reset loop over NX*NY sources (BLKLOOPINIT, run 68);
 # drop 0.29 keeps each source's receive state in its own generate block instead, so no procedural loop scales with the mesh.
 # The raised limit stays: it is harmless and covers the COLS-wide loops of the 32x32 builds with margin.
-# PUBLIC_ARGS (drop 0.34): --public-flat-rw keeps every signal of the model public, i.e. unoptimised and addressable. The
-# tests touch only the wrapper's ports (tile_mesh_cocotb.sv routes every internal access and fault through ports and
-# hierarchical references, which need no public flag), so the flag is a legacy of the pre-wrapper tests and a candidate
-# for the memory the 64-tile build needs; `make tile_np` builds the 16x8 suite without it, timed by the hdl-mesh8 job
-PUBLIC_ARGS ?= --public-flat-rw
-EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN $(PUBLIC_ARGS) --unroll-count 1024
+# --public-flat-rw is cocotb's own (Makefile.verilator adds `--vpi --public-flat-rw` to every build, for VPI access): the
+# drop-0.34 A/B that built the 16x8 suite with and without it measured two identical builds (890,656 vs 890,648 KB), and the
+# knob is gone (drop 0.35). The flag is not what the 64-tile build needs anyway: Verilator flattens every instance in
+# V3Scope whatever the flags, so the way to a 64-tile model is HIER_ARGS below.
+EXTRA_ARGS += --timing -Wno-fatal -Wno-WIDTH -Wno-UNOPTFLAT -Wno-TIMESCALEMOD -Wno-MULTIDRIVEN --unroll-count 1024
 # BUILD_JOBS_ARG: set by a target that wants Verilator's C++ compile on several cores (the mesh8 build, drop 0.30)
 BUILD_JOBS_ARG ?=
 EXTRA_ARGS += $(BUILD_JOBS_ARG)
+# HIER_ARGS (drop 0.35): --hierarchical verilates neo_tile (marked /*verilator hier_block*/) once as its own library and
+# instantiates it NX*NY times; the flat build clones and flattens every tile (Verilator's V3Scope copies each block per
+# instance), which is why 64 tiles did not fit 16 GB: measured, the 8x8 mesh of 32x32 cores verilates in 36 s / 0.76 GB
+# hierarchically against >16 GB flat, the 16x8-core variant in 21 s / 0.44 GB against 14 GB. The mesh targets set it;
+# the 2x2 builds stay flat (0.87 GB, and the flat model simulates faster). The tests see no difference: everything they
+# touch goes through the wrapper's ports (the hooks are ports of the tile since drop 0.35, so no hierarchical reference
+# crosses the block boundary)
+HIER_ARGS ?=
+EXTRA_ARGS += $(HIER_ARGS)
 # geometry, depths and fetch watchdog; the tests read the geometry from the environment
 NX ?= 2
 NY ?= 2
@@ -83,32 +91,32 @@ core32:
 	$(MAKE) TARGET=core $(SILICON) SIM_BUILD=sim_build_core32 COCOTB_RESULTS_FILE=results_core32.xml
 tile:
 	$(MAKE) TARGET=tile
-tile_np:                           # the same suite built without --public-flat-rw (drop 0.34): its result and build size vs `tile`
-	$(MAKE) TARGET=tile PUBLIC_ARGS= SIM_BUILD=sim_build_tile_np COCOTB_RESULTS_FILE=results_tile_np.xml
 tile8:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer SIM_BUILD=sim_build_tile8 COCOTB_RESULTS_FILE=results_tile8.xml
 tile32:
 	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 SIM_BUILD=sim_build_tile32 COCOTB_RESULTS_FILE=results_tile32.xml
 MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_bank_ecc_in_flight,m6_compiler_program,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m12_control_path_protection,m13_partitions,m14_bank_contention
-# --build-jobs 4: the 64-tile model's C++ is compiled on four cores (drop 0.30: run 85's mesh8 job had not reported after an
-# hour, so the single-core compile of 64 tiles of 32x32 cores is the suspect; the hdl-sim job's 2x2 builds take ~50 min)
-# MESH8_BUILD_JOBS / MESH8_CFLAGS (drop 0.32): the fallbacks for a build that kills the runner are a one-line change in the
-# workflow -- `make cocotb_mesh8_build MESH8_BUILD_JOBS=2 MESH8_CFLAGS="-CFLAGS -O1"` -- and, below, a mesh8 variant on
-# 16x8 cores with the silicon depths (mesh-level tests only; the tile32 suite proves the 32x32 core)
+# --build-jobs: the model's C++ compiled on several cores (drop 0.30). MESH8_BUILD_JOBS / MESH8_CFLAGS (drop 0.32) pass through
+# from the workflow. Both mesh variants verilate hierarchically (drop 0.35, HIER_ARGS): the flat 64-tile model of 32x32 cores
+# never verilated in the runner's 16 GB (runs 74-111 died in the verilation, exit 143), the 16x8-core variant reached
+# 14.0 GB and 791 MB of C++ (run 115); hierarchically the two take 0.76 GB / 105 MB and 0.44 GB / 56 MB.
 MESH8_BUILD_JOBS ?= 4
 MESH8_CFLAGS ?=
-MESH8_MAKE := $(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)"
+MESH8_HIER ?= --hierarchical       # MESH8_HIER= builds a mesh variant flat (the drop-0.34 probe of where the flat 32x32 model dies)
+MESH8_MAKE := $(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)" HIER_ARGS="$(MESH8_HIER)"
+# the '+' marks the recipe as a recursive make, so a parent's -j (the jobserver) reaches the C++ compile (drop 0.35): make
+# does not see $(MAKE) inside the := variable and would run the sub-make with -j1
 mesh8:
-	$(MESH8_MAKE)
+	+$(MESH8_MAKE)
 mesh8_build:                       # the model only (sim_build_mesh8/Vtop), so CI can publish a heartbeat between build and run
-	$(MESH8_MAKE) sim_build_mesh8/Vtop
+	+$(MESH8_MAKE) sim_build_mesh8/Vtop
 # the small-core 8x8 mesh: 64 tiles of 16x8 cores, silicon depths and links, the mesh tests (the model is ~16x smaller)
 SMALL_SILICON := ROWS=16 COLS=8 ACC_ROWS=512 ABUF_DEPTH=2048 WBUF_DEPTH=1024
-MESH8S_MAKE := $(MAKE) TARGET=tile $(SMALL_SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8s COCOTB_RESULTS_FILE=results_mesh8s.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)"
+MESH8S_MAKE := $(MAKE) TARGET=tile $(SMALL_SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8s COCOTB_RESULTS_FILE=results_mesh8s.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)" HIER_ARGS="$(MESH8_HIER)"
 mesh8s:
-	$(MESH8S_MAKE)
+	+$(MESH8S_MAKE)
 mesh8s_build:
-	$(MESH8S_MAKE) sim_build_mesh8s/Vtop
+	+$(MESH8S_MAKE) sim_build_mesh8s/Vtop
 # coverage builds (drop 0.26, item 5): the same tests with Verilator line/toggle coverage and the functional covergroups on,
 # in their own build directories; each run's coverage.dat is renamed after it so the three merge into one report
 define keep_cov
@@ -135,4 +143,4 @@ coverage: core_cov tile_cov tile8_cov tile32_cov
 	-verilator_coverage --annotate coverage_annotated --annotate-min 1 coverage_*.dat > /dev/null 2>&1
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
-	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_tile_np sim_build_mesh8 sim_build_mesh8s sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_tile_np.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_mesh8s sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
