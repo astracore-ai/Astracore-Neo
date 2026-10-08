@@ -20,6 +20,16 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
   M14 bank contention (meshes of 16 tiles or more): as many tiles as the build's fetch watchdog admits (14 at 65,535, up to 15)
       fetch a maximal entry-aligned chunk each from one bank at the same time; every fetch completes with no cause raised,
       and the longest wait is reported against the watchdog
+  M15 register read-back (drop 0.36): PROG_ADDR, PROG_LO, ERR_MASK, PARTITION, cfg_m and the whole descriptor window read back
+      what was written; STATUS and MBIST idle
+  M16 link parity (drop 0.36): a flit corrupted in a router's output register fails the parity check at the next router, is
+      dropped and flagged there; the lost word is counted at the CRC flit and the fetch completes
+  M17 bank ECC, two bits (drop 0.36): a double-bit error in the source bank is reported uncorrectable (ecc_ue, no ecc_ce) on
+      the serving tile when the fetch reads it; the run completes
+  M18 descriptor sweep (drop 0.36): single-tile convolutions at (k, s) = (1,1), (1,2), (3,2), (5,1), (5,2) with one, two
+      and four channel tiles, each bit-exact, weights fetched in entry-aligned chunks of at most 4,095 words
+  M19 INT8 drain (drop 0.36): the requantization tables loaded through the registers, the result drained as packed INT8
+      rows and checked against the requantization model (on the 16x8 and the 32x32 builds)
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
      make -C dv/cocotb tile32 (the silicon core and depths: 32x32 cores, ACC_ROWS 512, ABUF 2048, WBUF 1024, 2 MB banks,
                               FETCH_TIMEOUT 65535: two 4,095-word fetches queued at one bank take more than 8,192 cycles)
@@ -478,6 +488,7 @@ async def m6_compiler_program(dut):
     for tp in lp.tiles:
         n = tp.tile[1] * NX + tp.tile[0]
         nodes.append(n)
+        fc.sample_descriptor(tp.descriptor)
         for name, v in tp.descriptor.items():
             await mesh.set_cfg(n, name, v)
         await mesh.program(n, tp.program)
@@ -504,6 +515,7 @@ async def m7_mchunks_partial_fetch(dut):
         for tp in lp.tiles:
             n = tp.tile[1] * NX + tp.tile[0]
             nodes.append(n)
+            fc.sample_descriptor(tp.descriptor)                     # the partial-rows descriptors (drop 0.36: the bin was never sampled)
             for name, v in tp.descriptor.items():
                 await mesh.set_cfg(n, name, v)
             await mesh.program(n, tp.program)
@@ -550,6 +562,9 @@ async def m8_registers_selftest_watchdog(dut):
     c_st = await mesh.reg_read(0, REG_ERR_CAUSE)
     pin_st = mesh.pins()[0]
     assert (c_st >> 2) & 1 == 1 and pin_st == 1, f"M8 self-test cause 0x{c_st:05x} pin {pin_st}"
+    fc.sample_flag("array_abft")                                           # what the self-test raises (drop 0.36: sampled)
+    if (c_st >> 3) & 1:
+        fc.sample_flag("acc_abft")
     await mesh.reg_write(0, REG_SELFTEST, 0)
     await mesh.clear_errors(0)
     c_cl = await mesh.reg_read(0, REG_ERR_CAUSE)
@@ -719,8 +734,195 @@ async def m13_partitions(dut):
     await mesh.wait_prog(0)
     await expect_clean(mesh)
     fc.sample_flag("iso")
-    fc.report(os.environ.get("NEO_FUNCOV_FILE") or "funcov_tile_mesh.yml")   # one file per coverage build (drop 0.33)
+    fc.report(os.environ.get("NEO_FUNCOV_FILE") or "funcov_tile_mesh.yml")   # one file per coverage build (drop 0.33); M19 rewrites it with M15-M19's samples
     dut._log.info("M13: cross-partition fetch dropped and flagged, requester timed out; same fetch inside a partition clean")
+
+
+
+@cocotb.test()
+async def m15_register_readback(dut):
+    """Every readable register of host_if reads back what was written (drop 0.36: the read-back lines PROG_ADDR, PROG_LO,
+    ERR_MASK, PARTITION, cfg_m and the descriptor window, which no test had reached), and STATUS / MBIST read idle."""
+    mesh = await setup(dut)
+    checks = [(REG_PROG_ADDR, 0x15, 0x1F, "PROG_ADDR"), (REG_PROG_LO, 0xC0FFEE11, 0xFFFFFFFF, "PROG_LO"),
+              (REG_ERR_MASK, 0x5A5A5, 0x7FFFF, "ERR_MASK"), (REG_PARTITION, 0xA, 0xF, "PARTITION"), (REG_CFG_M, 37, 0x3F, "cfg_m")]
+    for addr, v, m, name in checks:
+        await mesh.reg_write(N11, addr, v)
+        rb = await mesh.reg_read(N11, addr)
+        assert rb == (v & m), f"M15 {name} (0x{addr:02x}): wrote 0x{v:x}, read 0x{rb:x}, expected 0x{v & m:x}"
+    for i in range(20):                                                    # the window 0x10..0x23: twenty 16-bit registers
+        await mesh.reg_write(N11, REG_CFG_BASE + i, 0x1000 * i + 7)
+    for i in range(20):
+        rb = await mesh.reg_read(N11, REG_CFG_BASE + i)
+        assert rb == ((0x1000 * i + 7) & 0xFFFF), f"M15 cfg[{i}]: read 0x{rb:x}"
+    st = await mesh.reg_read(N11, REG_STATUS)
+    bist = await mesh.reg_read(N11, REG_MBIST)
+    assert (st & 0x7) == 0 and (bist & 0xF) == 0, f"M15 STATUS 0x{st:08x} MBIST 0x{bist:08x}: expected idle"
+    unknown = await mesh.reg_read(N11, 0x3F)                               # an unmapped address reads zero
+    assert unknown == 0, f"M15 unmapped register reads 0x{unknown:x}"
+    await mesh.reg_write(N11, REG_PARTITION, 0)
+    await mesh.reg_write(N11, REG_ERR_MASK, 0)
+    dut._log.info("M15: PROG_ADDR, PROG_LO, ERR_MASK, PARTITION, cfg_m and the 20-register descriptor window read back, STATUS and MBIST idle")
+
+
+@cocotb.test()
+async def m16_link_parity(dut):
+    """A flit corrupted on a mesh link: a bit flipped in tile (0,1)'s router north output register while the fetch response to
+    tile (0,0) sits in it fails the parity check at (0,0)'s router input -- the flit is dropped and parity flagged there, the
+    CRC flit then counts the words short (lost, and the CRC differs) and the fetch completes (drop 0.36: the parity bin).
+    The response from (1,1) to (0,0) travels west to (0,1), then north: nothing else crosses that link during the fetch."""
+    mesh = await setup(dut)
+    x, wgt, ref, act, wts = conv_data()
+    await mesh.load_bank(N11, act, wts)
+    await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_END)])
+    await mesh.start([0])
+    mesh.fault_arm(N01, FI_FLIT_XOR, idx=0, mask=1 << 5)                   # port 0: the north output of (0,1), toward (0,0)
+    applied, n = False, 0
+    while True:
+        await RisingEdge(dut.clk)
+        if applied:
+            dut.fi_en.value = 0
+        if mesh.prog_done(0):
+            break
+        if not applied and mesh.router_valid(0):                           # the response's first flit leaves (0,1) northbound
+            dut.fi_en.value = 1
+            applied = True
+        n += 1
+        assert n < FETCH_TIMEOUT + 500, "M16: the fetch did not complete"
+    assert applied, "M16: no flit observed on (0,1)'s north output during the fetch"
+    await mesh.tick(5)
+    c = await mesh.causes()
+    assert (c[N00] & 1) == 1, f"M16: parity not flagged at (0,0): {causes_str(c)}"
+    assert (c[N00] >> CAUSE_LOST) & 1 == 1 and (c[N00] >> 1) & 1 == 1, f"M16: the dropped flit not counted at the CRC: {causes_str(c)}"
+    assert all(c[k] == 0 for k in range(mesh.N) if k != N00), f"M16: causes elsewhere: {causes_str(c)}"
+    fc.sample_flag("parity")
+    dut._log.info(f"M16: flit corrupted on the (0,1)->(0,0) link dropped at the parity check and flagged; lost + crc at the requester, fetch complete in {n} clocks")
+
+
+@cocotb.test()
+async def m17_bank_ecc_double(dut):
+    """Two bits flipped in one word of the source bank: the (39,32) decoder reports it uncorrectable when the fetch reads the
+    word -- ecc_ue on the serving tile, no ecc_ce, nothing elsewhere -- and the run still completes (drop 0.36: the ecc_ue bin)."""
+    mesh = await setup(dut)
+    x, wgt, ref, act, wts = conv_data()
+    await mesh.load_bank(N11, act, wts)
+    await mesh.bank_flip(N11, A0 + 40, 13)
+    await mesh.bank_flip(N11, A0 + 40, 20)
+    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
+    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
+    prog += fetch_weights(1, 1) + [ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+    await mesh.program(0, prog)
+    await mesh.start([0])
+    n = await mesh.wait_prog(0)
+    await mesh.tick(40)
+    c = await mesh.causes()
+    assert (c[N11] >> 7) & 1 == 1 and (c[N11] >> 8) & 1 == 0, f"M17: ecc_ue expected on the source tile: {causes_str(c)}"
+    assert all(c[k] == 0 for k in range(mesh.N) if k != N11), f"M17: causes elsewhere: {causes_str(c)}"
+    fc.sample_flag("ecc_ue")
+    dut._log.info(f"M17: double-bit error in the source bank reported uncorrectable on that tile only; run complete in {n} clocks")
+
+
+def fetch_weights_chunks(x, y, w0, ct_n, k):
+    """FETCH_W instructions for ct_n channel tiles of k*k runs: one per channel tile when it fits the 12-bit length field,
+    else entry-aligned chunks of at most 4,095 words (a 32x32 tile of 25 runs is 7,200 words); weight-buffer entry base =
+    ct * k * k * ROWS + entries already fetched."""
+    per_tile = k * k * ROWS * WPW
+    chunk = (4095 // WPW) * WPW
+    prog = []
+    for ct in range(ct_n):
+        off = 0
+        while off < per_tile:
+            n = min(chunk, per_tile - off)
+            prog.append(ins(OP_FETCH_W, x, y, w0 + ct * per_tile + off, n, ct * k * k * ROWS + off // WPW))
+            off += n
+    return prog
+
+
+@cocotb.test()
+async def m18_descriptor_sweep(dut):
+    """Single-tile convolutions over the descriptor space the suite had not covered (drop 0.36): kernel 1 and 5, stride 2,
+    two and four channel tiles -- (k, s, ct_n) = (1,1,4), (1,2,1), (3,2,2), (5,1,1), (5,2,1) on 6x6 inputs with 7 output
+    channels -- each bit-exact against the reference convolution. The weight buffer bounds the runs per tile (32 at both
+    core sizes), so k = 5 runs on one channel tile and four channel tiles pair with k = 1."""
+    mesh = await setup(dut)
+    rng = np.random.default_rng(29)
+    for k, s, ct_n in ((1, 1, 4), (1, 2, 1), (3, 2, 2), (5, 1, 1), (5, 2, 1)):
+        p = k // 2
+        cin = ct_n * ROWS
+        x = rng.integers(-128, 128, size=(cin, 6, 6), dtype=np.int64)
+        wgt = rng.integers(-128, 128, size=(7, cin, k, k), dtype=np.int64)
+        ref = direct_conv(x, wgt, s, p)
+        ho, wo = ref.shape[1], ref.shape[2]
+        M = ho * wo
+        act, wts = pack_words(x, wgt, ct_n, k, 7, rows=ROWS, cols=COLS)
+        a0 = 0
+        w0 = _align(a0 + len(act))
+        r0 = _align(w0 + len(wts))
+        assert r0 + M * (COLS + 1) <= (1 << 12) or ROWS == 32, f"M18 k{k} s{s} ct{ct_n}: bank layout overflows the small bank"
+        await mesh.reset()
+        await mesh.load_words(N11, a0, act)
+        await mesh.load_words(N11, w0, wts)
+        await mesh.descriptor(0, 6, 6, ho, wo, s, p, k, ct_n, 0, ct_n * k * k, 0, M)
+        prog = [ins(OP_FETCH_A, 1, 1, a0 + ct * APT, APT, ct * 36) for ct in range(ct_n)]
+        prog += fetch_weights_chunks(1, 1, w0, ct_n, k)
+        prog += [ins(OP_DRAIN_WR, 1, 0, r0, M), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+        await mesh.program(0, prog)
+        await mesh.start([0])
+        n = await mesh.wait_prog(0)
+        await mesh.tick(40)
+        got = to_image(await mesh.read_rows(N10, r0, M), ref, M, wo=wo)
+        await check_result(mesh, got, ref, f"M18 k{k} s{s} ct{ct_n}")
+        await expect_clean(mesh)
+        dut._log.info(f"M18: k={k} s={s} p={p} channel tiles {ct_n}: {M} rows bit-exact in {n} clocks")
+    dut._log.info("M18: descriptor sweep (k 1/3/5, stride 1/2, 1/2/4 channel tiles) bit-exact")
+
+
+def rq_model(acc, mult, shift, zp, relu):
+    r = (int(acc) * int(mult) + ((1 << int(shift)) >> 1)) >> int(shift)
+    v = r + int(zp)
+    if relu and v < zp:
+        v = zp
+    return max(-128, min(127, v))
+
+
+@cocotb.test()
+async def m19_int8_drain(dut):
+    """The M1 convolution drained as INT8 (drop 0.36): per-column requantization tables (multiplier, shift, zero point) loaded
+    through RQ_ADDR / RQ_TBL, ReLU on, DRAIN_WR with the INT8 flag; the packed rows (four channels per word, COLS / 4
+    words per row) are checked against the requantization model -- on the 16x8 build and on the 32x32 build, where an
+    INT8 row of 8 words is one beat (test_two_layer.py covers the 8x8-core build)."""
+    mesh = await setup(dut)
+    x, wgt, ref, act, wts = conv_data()
+    rng = np.random.default_rng(31)
+    mult = rng.integers(20000, 60000, size=COLS); shift = np.full(COLS, 21); zp = rng.integers(-8, 9, size=COLS)
+    await mesh.load_bank(N11, act, wts)
+    for c in range(COLS):
+        await mesh.reg_write(0, REG_RQ_ADDR, c)
+        await mesh.reg_write(0, REG_RQ_TBL, ((int(zp[c]) & 0xFF) << 24) | (int(shift[c]) << 16) | int(mult[c]))
+    await mesh.reg_write(0, REG_RQ_RELU, 1)
+    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
+    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
+    prog += fetch_weights(1, 1) + [ins(OP_DRAIN_WR, 1, 0, R0, 36, arg=1), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+    await mesh.program(0, prog)
+    await mesh.start([0])
+    n = await mesh.wait_prog(0)
+    await mesh.tick(40)
+    wpr = COLS // 4                                                        # words per INT8 row
+    exp = np.zeros((36, wpr), dtype=np.int64)
+    for m in range(36):
+        for c in range(COLS):
+            accv = int(ref[c, m // 6, m % 6]) if c < 7 else 0
+            q = rq_model(accv, mult[c], shift[c], zp[c], 1)
+            exp[m, c // 4] |= (q & 0xFF) << (8 * (c % 4))
+    got = np.zeros_like(exp)
+    for m in range(36):
+        for i in range(wpr):
+            got[m, i] = await mesh.bank_read(N10, R0 + m * wpr + i)
+    await check_result(mesh, got, exp, "M19 INT8 rows")
+    await expect_clean(mesh)
+    fc.sample_drain("int8")
+    fc.report(os.environ.get("NEO_FUNCOV_FILE") or "funcov_tile_mesh.yml")   # the export again from the last test of the file: M15-M19
+    dut._log.info(f"M19: 36 INT8 rows ({wpr} words each) bit-exact against the requantization model in {n} clocks")   # run after M13's export
 
 
 MAX_FETCH_WORDS = (4095 // WPA) * WPA                # the longest entry-aligned fetch one DMA instruction can issue (4,088 at 8 words per entry)

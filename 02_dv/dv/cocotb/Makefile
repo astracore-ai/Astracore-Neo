@@ -1,7 +1,7 @@
 # cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.28). Requires: pip install cocotb numpy; verilator >= 5.0.
-#   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core (16x8), bit-exact vs the golden model
+#   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core (16x8), bit-exact vs the golden model; C2 the core's fault hooks
 #   make -C dv/cocotb core32    # the same on the silicon core: 32x32, ACC_ROWS 512, ABUF 2048, WBUF 1024
-#   make -C dv/cocotb tile      # test_tile_mesh.py: M1-M13 through the register bus on tile_mesh (2x2, 16x8 cores)
+#   make -C dv/cocotb tile      # test_tile_mesh.py: M1-M13 and M15-M19 through the register bus on tile_mesh (2x2, 16x8 cores)
 #   make -C dv/cocotb tile8     # test_two_layer.py: M10, two-layer INT8 handoff on 8x8 cores (own build directory)
 #   make -C dv/cocotb tile32    # M1-M13 on the silicon core and depths: 2x2 mesh of 32x32 cores, 2 MB (512K-word) banks, 1024-bit links,
 #                               # FETCH_TIMEOUT 65535 (two 4,095-word fetches queued at one bank exceed 8,192; the silicon value is 2^20-1)
@@ -80,7 +80,8 @@ else
   VERILOG_SOURCES = $(CORE_SRCS)
   TOPLEVEL = neo_core
   MODULE ?= test_neo_core
-  EXTRA_ARGS += -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) -GWBUF_DEPTH=$(WBUF_DEPTH)
+  # DV_HOOKS=1: the core's weight-buffer fault hook exists in the core-level build (drop 0.37; the tile builds set it in the wrapper)
+  EXTRA_ARGS += -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) -GWBUF_DEPTH=$(WBUF_DEPTH) -GDV_HOOKS=1
 endif
 include $(shell cocotb-config --makefiles)/Makefile.sim
 SILICON := ROWS=32 COLS=32 ACC_ROWS=512 ABUF_DEPTH=2048 WBUF_DEPTH=1024
@@ -95,7 +96,7 @@ tile8:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer SIM_BUILD=sim_build_tile8 COCOTB_RESULTS_FILE=results_tile8.xml
 tile32:
 	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 SIM_BUILD=sim_build_tile32 COCOTB_RESULTS_FILE=results_tile32.xml
-MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_bank_ecc_in_flight,m6_compiler_program,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m12_control_path_protection,m13_partitions,m14_bank_contention
+MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_bank_ecc_in_flight,m6_compiler_program,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m12_control_path_protection,m13_partitions,m14_bank_contention,m16_link_parity
 # --build-jobs: the model's C++ compiled on several cores (drop 0.30). MESH8_BUILD_JOBS / MESH8_CFLAGS (drop 0.32) pass through
 # from the workflow. Both mesh variants verilate hierarchically (drop 0.35, HIER_ARGS): the flat 64-tile model of 32x32 cores
 # never verilated in the runner's 16 GB (runs 74-111 died in the verilation, exit 143), the 16x8-core variant reached
@@ -133,8 +134,9 @@ tile8_cov:
 	$(call keep_cov,sim_build_cov_tile8,coverage_tile8.dat)
 # tile32_cov (drop 0.32): the 32x32 silicon configuration at 32 words per flit, so the beat paths of the tile interface
 # (two entries per cycle, 16-column PSUM beats, 16 + 16 + 1 drains, merged flits) are measured, not only the one-word
-# builds; a subset of the suite keeps the coverage job within its time (the whole tile32 suite is in `tile32`)
-TILE32_COV_TESTS ?= m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m13_partitions
+# builds; a subset of the suite keeps the coverage job within its time (the whole tile32 suite is in `tile32`). Drop 0.36
+# adds M4 (WAIT_FREE, DMA op 6, two regions) and M19 (the INT8 drain: an 8-word row as one beat) to the subset.
+TILE32_COV_TESTS ?= m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m4_region_refill,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m13_partitions,m19_int8_drain
 tile32_cov:
 	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 TESTCASE=$(TILE32_COV_TESTS) VCOV=1 SIM_BUILD=sim_build_cov_tile32 COCOTB_RESULTS_FILE=results_cov_tile32.xml NEO_FUNCOV_FILE=funcov_tile_mesh32.yml
 	$(call keep_cov,sim_build_cov_tile32,coverage_tile32.dat)
