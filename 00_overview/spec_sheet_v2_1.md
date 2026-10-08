@@ -175,7 +175,7 @@ Lint (drop 0.35): `make lint` runs Verilator 5.020 `-Wall` with nothing waived o
 beat-path arithmetic, source and column indices at their own widths, unused-bit sinks named `unused_*`, dead parameters removed).
 Testbench hooks (`DV_HOOKS = 1` on the cocotb and SV builds only): bank backdoor, fault injection into bank word / program
 memory / descriptor register / DMA pc / router output register / NIC transmit engine, router observation — ports of the tile,
-so the tile is a hierarchical block of the Verilator build; the cocotb wrapper packs every per-tile port, the twelve sticky flags included (`flags`, drop 0.37).
+so the tile is a hierarchical block of the Verilator build; the cocotb wrapper packs every per-tile port, the twelve sticky flags included (`flags`, drop 0.37). The tile-internal hooks write at the falling edge; the two router hooks act on the flit the output register loads at the rising edge (drop 0.38: the register's reader is the neighbouring tile, and a falling-edge write crossed that boundary a cycle late in the flat 32×32 build).
 
 Streaming core T1–T5 at 32×32 and 8×16; whole convolutions C1–C10 on the core with ten fault-injection cases;
 NoC N1–N2; requantization; K-split K1–K2; SECDED exhaustive; MBIST B1–B3; tile mesh M1–M11 (DMA programs,
