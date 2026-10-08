@@ -73,6 +73,7 @@ module tb_neo_core;
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky),
     .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject),
     .seq_fault_inject(seq_fault_inject), .rq_fault_inject(rq_fault_inject), .rq_tbl_fault_inject(rq_tbl_fault_inject),
+    .dv_wbuf_flip(1'b0), .dv_wbuf_addr('0), .dv_wbuf_lane('0), .dv_wbuf_mask('0),          // the weight-buffer hook (drop 0.37), tied off
     .wbuf_ce_sticky(wbuf_ce_sticky), .wbuf_ue_sticky(wbuf_ue_sticky), .rq_tbl_perr_sticky(rq_tbl_perr_sticky));
 
   // vectors
