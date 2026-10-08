@@ -16,12 +16,16 @@ module tb_tile_mesh;
   logic        seq_err_sticky [N], rq_err_sticky [N], ecc_ce [N], ecc_ue [N], wbuf_ce [N], wbuf_ue [N], rq_tbl_perr [N];
   logic        lost_err [N], fetch_timeout [N];
 
+  localparam int FWL = 1 + 2 * (2 + 2) + 8 + 64;            // tile_mesh's link flit at its defaults (XW = YW = 2, WPF = 1)
+  logic [38:0] dv_bd_rdata; logic [4:0] dv_rt_valid; logic [FWL-1:0] dv_rt_flit4;   // the testbench hooks (drop 0.35), tied off here
   tile_mesh #(.NX(NX), .NY(NY), .ROWS(ROWS), .COLS(COLS), .ACC_ROWS(64), .ABUF_DEPTH(256), .WBUF_DEPTH(512), .BANK_DEPTH(4096)) dut (
     .clk(clk), .rst_n(rst_n), .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata), .err_pin(err_pin),
     .prog_done(prog_done), .drain_busy(drain_busy), .done(done), .parity_err(parity_err), .crc_err(crc_err),
     .array_abft_sticky(array_abft_sticky), .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky), .ecc_ce(ecc_ce), .ecc_ue(ecc_ue),
-    .wbuf_ce(wbuf_ce), .wbuf_ue(wbuf_ue), .rq_tbl_perr(rq_tbl_perr), .lost_err(lost_err), .fetch_timeout(fetch_timeout));
+    .wbuf_ce(wbuf_ce), .wbuf_ue(wbuf_ue), .rq_tbl_perr(rq_tbl_perr), .lost_err(lost_err), .fetch_timeout(fetch_timeout),
+    .dv_bd_node('0), .dv_bd_we(1'b0), .dv_bd_addr('0), .dv_bd_wdata('0), .dv_bd_rdata(dv_bd_rdata),
+    .dv_fi_node('0), .dv_fi_sel('0), .dv_fi_en(1'b0), .dv_fi_idx('0), .dv_fi_mask('0), .dv_rt_valid(dv_rt_valid), .dv_rt_flit4(dv_rt_flit4));
 
   logic [15:0] cfg_v [19];
   logic [63:0] prog_v [16];
