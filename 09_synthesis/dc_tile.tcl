@@ -5,7 +5,7 @@ set CORNER  [expr {[info exists ::env(NEO_CORNER)] ? $::env(NEO_CORNER) : "ss0p6
 set search_path [concat $search_path $LIB_DIR]
 set target_library [glob $LIB_DIR/*${CORNER}*.db]
 set link_library   [concat "*" $target_library]
-set RTL [list delay_line mac_pe skew_in deskew_out systolic_array abft_checker neo_mac_core act_feeder acc_bank \
+set RTL [list delay_line mac_pe skew_in deskew_out systolic_array abft_checker neo_mem neo_mac_core act_feeder acc_bank \
   neo_mac_core_v02 core_seq ecc39 wbuf_mem requant neo_core noc_router sram_bank mbist bank_bist_wrap crc16_word crc16_beat link_pack \
   tile_nic tile_dma prog_mem host_if esm neo_tile host_axil neo_tile_axil]
 foreach f $RTL { analyze -format sverilog rtl/$f.sv }
