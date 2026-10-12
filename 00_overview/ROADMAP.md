@@ -1,4 +1,4 @@
-# AstraCore Neo — roadmap from drop 0.38 to handoff (11 Oct 2026)
+# AstraCore Neo — roadmap from drop 0.38 to handoff (11 Oct 2026; §5 status 12 Oct, drop 0.40)
 
 Scope: what can be done with the assistant, the GitHub runners (ubuntu-latest: 4 cores, 16 GB, 6 h per job, apt/pip/GitHub reachable)
 and the sandbox (2 cores, 8 GB, GitHub reachable, apt/PyPI not), using open-source tools only, taking the design from "proven in
@@ -118,6 +118,34 @@ read of the RTL serves both).
   (compare cell counts with and without), the PE count equals ROWS × (COLS + 1).
 - Expected first findings: the requant pipeline (49-bit product, shift, saturate) and the NIC's beat assembly as the long paths; the
   router's 5×5 arbitration; the ecc39 decode on the bank read path (combinational over 39 bits before the data is used).
+
+**Status after drop 0.40 (the first drop of the phase).** The job exists as planned, with two differences the sandbox forced
+and that are better anyway: the design is synthesized as *units* (one Yosys run per module at its silicon parameters, the
+child units black-boxed and regrouped by parameters — slang reads one module in seconds where one read of the tile is beyond
+8 GB in Yosys's own front end; sv2v is not used), and OpenSTA runs per unit with the children as extracted timing models
+(`write_timing_model`), since a flat read of the tile's 2.5 M cells needs more than 6 GB. The memories are black-boxed at
+the two leaf modules of `01_rtl/neo_mem.sv` (`neo_mem_sp`, `neo_mem_rf`) rather than at instance paths. The gates run as
+planned (plus the hierarchy check); timing is reported, not gated. The expected first findings were right on requant and the
+NIC's beat path and wrong on the router (its `% 5` round-robin arithmetic, not the 5×5 arbitration or the parity tree) and
+on the ECC decode (inside the budget behind the macro's access time). What drops 0.41 and 0.42 take up, in the order of the
+measured damage (ASAP7 SS figures in spec §9):
+
+- **0.41 — the NIC and the arrays' read ports.** A parallel 16-word beat CRC (a 16-input XOR matrix per CRC bit, two
+  pipeline stages at most) on the transmit side (`tx_crc`, 7.7 ns) and the receive side (`crc_acc`, 5.5 ns), the beat
+  path registered where the bank's read data and the core's drain data enter it; `prow`, the per-source partial-sum row
+  under assembly (64 × 1,024 bits = 65,536 flops, 91 % of the NIC's flops), as a `neo_mem_rf` leaf or sized to the sources
+  that can be mid-row at once; the activation buffer's and the weight buffer's reads registered with the address a stage
+  earlier (the feeder's channel-tile-to-array path, 3.43 ns; `memories.md`), the accumulator's read-modify-write across two
+  cycles (port A registered), the drain FIFO's head read registered; the sequencer's pipeline adjusted and the cocotb /
+  neosim figures re-baselined (the latency changes).
+- **0.42 — the arithmetic stages, the router, the constraints.** Requant in three stages (product | round and shift, the
+  rounding bias as a carry-in after the shift | zero point, ReLU, saturate), its 32×16 product pipelined if the proxy still
+  shows it over 1.5 × the PE's stage; the accumulator's 33-operand ABFT sum as a two-stage tree (the flag is sticky, so a
+  stage costs nothing functionally); the router's grant from a one-hot rotating mask (no modulo) with the parity bit computed
+  at FIFO entry; the link packer's merge registered; the descriptor fields (`cfg_*`) declared static during a run
+  (`set_multicycle_path` / case constraints in `constraints.sdc` and the block SDCs) so the input paths stop masking the
+  register-to-register ones; then the Nangate45 run as the second data point and the PE's product stage judged on both
+  (the one path the design cannot restructure without changing PE_LAT).
 
 ## 6. Formal and fault campaign (phase 6 plan)
 
