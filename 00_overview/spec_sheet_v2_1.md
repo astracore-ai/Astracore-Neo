@@ -263,9 +263,12 @@ Synthesis (drop 0.40): the `synth` job (`07_ci/synth`, `ci-logs-synth`) synthesi
 (slang front end) on ASAP7 and times each with OpenSTA, the children as extracted timing models; its gates — every unit
 synthesizes, no latch, no multiply-driven net, a consistent hierarchy, the PE count 1,056 / 144, no `dv_*` logic at
 `DV_HOOKS = 0` anywhere in the tree, every timing run complete — passed on the sandbox run of all 37 units (47 min); timing is
-reported in §9, not gated. The leaf arrays changed no simulation result: cocotb core 3 of 3 at 7,890.00 ns and tile 17 + M14
-skipped at 46,282.52 ns (run 133's figures), Icarus and Verilator SV testbenches, neosim `regress_ci`, `run_nic`, M3 / M5 /
-M11 all pass on the leaves in the sandbox; the first CI run of the job is pending.
+reported in §9, not gated. The leaf arrays changed no simulation result — run 146 (fix37 on main): hdl-sim green with every
+figure of run 133 (cocotb tile 17 + M14 skipped at 46,282.52 ns, tile32 17 + M14 skipped at 162,147.02 ns, core32 3 of 3 at
+16,290.00 ns, tile8 1 of 1, the coverage builds with 53 of 53 functional bins, the Verilator SV testbenches, the lint gate),
+hdl-mesh8 11 of 11 on the 64-tile silicon mesh, python-regress green; the `synth` job's first run stopped in its OpenSTA
+build on the runner (fix38 makes that build diagnosable and non-fatal), so the §9 figures are the sandbox run's until the
+job's first green run.
 
 Streaming core T1–T5 at 32×32 and 8×16; whole convolutions C1–C10 on the core with ten fault-injection cases;
 NoC N1–N2; requantization; K-split K1–K2; SECDED exhaustive; MBIST B1–B3; tile mesh M1–M11 (DMA programs,
