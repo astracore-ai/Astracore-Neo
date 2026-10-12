@@ -1,36 +1,79 @@
-# AstraCore Neo — Spec Sheet v2.1 (as implemented, handoff v0.14, 2026-10-05)
+# AstraCore Neo — Spec Sheet v2.1 (as implemented, drop 0.39, 2026-10-11)
 
 Every value below is read from the code in the package: RTL parameters and encodings from `01_rtl/`, the
 compiler and backend from `03_models/compiler/`, the driver from `04_software/`, model numbers from
-`03_models/` reports, and verification status from `logs/`. Where the silicon configuration differs from the
-configuration that was simulated, both are given and the delta is named in section 10.
+`03_models/` reports, and verification status from `logs/` and the CI log branches. Where the silicon configuration
+differs from the configuration that was simulated, both are given and the delta is named in section 10.
+
+**Status tags (drop 0.39).** Every headline row carries one of four tags, so that a reader can tell what the RTL in
+this package backs from what is a plan, a licensed block or a model figure:
+
+| Tag | Meaning |
+| --- | --- |
+| **RTL-proven** | in `01_rtl/` and exercised by a named test at the stated scale — the 2×2 meshes of 16×8 and 32×32 cores and the 8×8 silicon mesh of 32×32 cores under cocotb on Verilator in CI (run 133, every job green), neosim, and the Verilator SV testbenches |
+| **planned** | not in the RTL; a design and a phase exist in `ROADMAP.md` (the phase is given) — the figure is a target of that phase, not a capability of this package |
+| **IP** | a licensed block outside the RTL by design (PHYs, controllers, the safety island's CPUs, the PCIe host interface, DFT insertion); phase 2 defines the RTL side of each interface |
+| **model** | a figure from the feasibility or performance model, or an analytical safety claim — not measured; the row names what replaces it |
+
+## 0. Claims ledger (drop 0.39)
+
+What the spec and the datasheet claim, against what the RTL backs today. The ledger is kept with the spec; a row moves
+when its phase lands (the drop log records the move).
+
+| Claim | Status | What backs it / what replaces it |
+| --- | --- | --- |
+| 262 TOPS dense INT8: 65,536 MACs, 64 tiles of 32×32 | **RTL-proven** (the MAC count and the mesh) × **model** (the 2.0 GHz clock) | the silicon mesh — 8×8 tiles of 32×32 cores, silicon depths, 1024-bit links — simulated at full scale in CI (hdl-mesh8, run 133, 11 of 11); the clock is a feasibility figure until phase 1 |
+| 524 TOPS with 2:4 structured sparsity | **planned** (phase 3, drops 0.46–0.49) | no sparse PE, index path, compressed weight format, compiler packer or test exists in this package; the design is `ROADMAP.md` §2 (2:4 along K on PE pairs). The figure is struck from every headline until the engine is in the RTL and measured |
+| INT4 LLM figures (8B decode 13 ms/token, prefill 512 tokens 52 ms) | **struck** (drop 0.39); INT4 weight-only storage **planned** (phase 4) | the datapath is INT8 only and no RTL endpoint provides the external-memory bandwidth the figures assumed; the figures return as measured numbers when phase 4's INT4 path and phase 2's bridges exist |
+| 2.0 GHz worst case / 2.4 GHz typical | **model** → synthesized (phase 1, drops 0.40–0.42) | the PE pipeline was sized for the corner; the open-PDK synthesis job reports the critical paths against 500 ps on the ASAP7 proxy, the ratio to N5A documented |
+| ~56 W typical, ~80 W peak, TDP SKUs 65 / 30 / 15 W, always-on island ≤ 2 W | **model**; the mechanisms **planned** (phase 5), activity-based power (phase 7) | no clock gating, power gating or DVFS logic is in the RTL; phase 5 adds `clk_en` per block, tile power-gating hooks and telemetry; phase 7 computes power from recorded switching activity |
+| Family 262 / 196 / 131 / 65 by fusing tiles at test | **planned** (phase 2: tile-enable registers); the fuse source **IP** | partition isolation exists (`REG_PARTITION`, the iso cause) and the compiler's tile-exclusion mask places around excluded tiles; no fuse or disable map exists in the RTL |
+| LBIST | **IP** (tool-inserted at synthesis; the licensee's DFT flow); the hooks **RTL-proven** | SELFTEST register and the FTTI-windowed watchdog (M8); scan insertion and ATPG are outside the open tools |
+| PCIe Gen5 ×8 host, ASIL-D safety island (2 × R52+ lockstep), HSM, ISP, PHYs, memory controllers | **IP** | outside the RTL by design; phase 2's chip top defines the RTL side of every interface (AXI bridges, the control plane, the error vector into the island) |
+| 128 MB shared SRAM, 512-bit bank ports, SECDED, MBIST | **RTL-proven** at the silicon depth (2 MB banks on tile32 and mesh8); the macro area **model** | bank per tile with 16 SECDED lanes and March C− over rows (M5, M11, M17); the arrays are inferred (`09_synthesis/memories.md`) — macro area from the macro table until a compiler run, black-boxed in phase 1's synthesis |
+| 1024-bit mesh links, parity, CRC, timeouts, partitions | **RTL-proven** | WPF = 32 on every 32×32 build; M3, M9, M13, M14, M16 |
+| Safety mechanisms (ABFT, duplication, lockstep, SECDED, ECC, parity, CRC, watchdog, self-test) | **RTL-proven**, each by fault injection | §8 names the test per mechanism; measured diagnostic coverage comes from phase 6's fault campaign |
+| FMEDA SPFM 99.9 %, 62 FIT | **model** (analytical, each row naming its test) → FMEDA v2 (phase 6) | the fault campaign replaces the per-row claims with measured detected / masked / dangerous-undetected fractions |
+| YOLOv8-m 1.90 ms at 1280×736, 0.99 ms at 640² | **model** (perf model v3 calibrated with the RTL's endpoint rates) → measured (phase 8) | a layer group of the network on the simulated mesh with cycle counts in the repository |
+| Compiler, backend, C driver bit-exact with the RTL | **RTL-proven** | `--verify`, `--check`, M6 / M7 / M10 / M18 / M19, C driver vs backend ALL PASS in every CI run |
 
 ## 1. Product
 
-| Item | Value |
-| --- | --- |
-| Device | AstraCore Neo, automotive ADAS inference accelerator with ASIL-D safety island, host-attached |
-| Family | Neo 262 (64 tiles), Neo 196 (48), Neo 131 (32), Neo 65 (16): one die, tiles fused at test; gen 1.5 two-die package; gen 2 Neo-L |
-| Host interface | PCIe Gen5 ×8 (IP, not in RTL); per-tile host register bus (in RTL, section 7) |
-| Process | TSMC N5A |
-| Qualification | AEC-Q100 Grade 2 (Ta −40..+105 °C), Tj −40..+125 °C, 15-year mission profile |
-| Compliance | developed to ISO 26262 ASIL-D process; island ASIL-D HW metrics; accelerator ASIL-B(D); item ASIL-D by decomposition with a diverse monitor |
+| Item | Value | Status |
+| --- | --- | --- |
+| Device | AstraCore Neo, automotive ADAS inference accelerator with ASIL-D safety island, host-attached | **RTL-proven**: the accelerator (tile mesh); **IP**: the island, the host attach |
+| Family | Neo 262 (64 tiles), Neo 196 (48), Neo 131 (32), Neo 65 (16): one die, tiles fused at test; gen 1.5 two-die package; gen 2 Neo-L | **planned** (phase 2: tile-enable registers; the fuse source is IP); the bins are a product plan — the RTL has partition isolation and the compiler a tile-exclusion mask, no fuse map |
+| Host interface | PCIe Gen5 ×8 (IP, not in RTL); per-tile host register bus (in RTL, section 7) | **IP** (PCIe); **RTL-proven** (the register bus, M8 / M15); the aggregation of 64 register buses behind one host port is phase 2 |
+| Process | TSMC N5A | **model** (a target; the open-PDK synthesis of phase 1 is a proxy, not this node) |
+| Qualification | AEC-Q100 Grade 2 (Ta −40..+105 °C), Tj −40..+125 °C, 15-year mission profile | **model** (target; nothing in the package measures it) |
+| Compliance | developed to ISO 26262 ASIL-D process; island ASIL-D HW metrics; accelerator ASIL-B(D); item ASIL-D by decomposition with a diverse monitor | **model** (the safety concept and FMEDA v1); the island is **IP**; the mechanisms it rests on are **RTL-proven** (§8) |
 
 ## 2. Compute
 
-| Item | Silicon configuration | As simulated (tests) | Source |
-| --- | --- | --- | --- |
-| Tiles | 64, 8×8 mesh (NX = NY = 8) | 4, 2×2 mesh | `tile_mesh.sv` parameters NX, NY |
-| Core array | 32×32 weight-stationary systolic + 1 ABFT check column (ROWS = COLS = 32) | 16×8 (core and mesh tests), 8×8 (two-layer test), 32×32 (streaming tests T1–T4, C3) | `neo_mac_core.sv` |
-| MACs | 65,536 INT8 MACs + 2,048 check-column MACs | — | 64 × 32 × 32 |
-| PE | INT8 × INT8 products, INT32 partial sums, 2-stage pipeline (PE_LAT = 2), double-buffered weight with swap token | same | `mac_pe.sv` |
-| Core latency | PE_LAT·ROWS + COLS = 96 cycles (32×32) | 40 (16×8), 24 (8×8) | `neo_mac_core.sv` LATENCY |
-| Clock | 2.0 GHz worst-case (SS, 125 °C, aged), 2.4 GHz typical | — | feasibility model |
-| Peak throughput | 262 TOPS dense INT8; 524 TOPS 2:4-sparse (sparsity engine not in RTL) | — | 65,536 × 2 × 2.0 GHz |
-| Check weight width | WCW = 8 + log2(ROWS) + 1 = 14 bits (32×32) | 13 (16 rows), 12 (8 rows) | `neo_mac_core.sv` |
-| Fault hook | one PE (FAULT_ROW, FAULT_COL) adds 1 to its product while `fault_inject` is high; used by the island's checker self-test | same | `systolic_array.sv`, `host_if` SELFTEST |
+The compute headline splits into three facts of different standing: the MAC count and the mesh are **RTL-proven** at full
+scale (the 8×8 mesh of 32×32 cores is simulated in CI since drop 0.37), the clock is a **model** figure until phase 1's
+synthesis reports the critical paths, and the sparse figure is **planned** — the 2:4 sparsity engine does not exist in this
+package, so **262 TOPS dense INT8 at 2.0 GHz is the only throughput headline the RTL backs**.
+
+| Item | Silicon configuration | As simulated (tests) | Source | Status |
+| --- | --- | --- | --- | --- |
+| Tiles | 64, 8×8 mesh (NX = NY = 8) | 64, 8×8 (mesh8: M1–M3, M5–M7, M9, M12–M14, M16 in the hdl-mesh8 job); 4, 2×2 (tile, tile32) | `tile_mesh.sv` parameters NX, NY | **RTL-proven** at 64 tiles (run 133, 11 of 11) |
+| Core array | 32×32 weight-stationary systolic + 1 ABFT check column (ROWS = COLS = 32) | 32×32 (tile32, core32, mesh8, streaming tests T1–T4), 16×8 (tile, core), 8×8 (two-layer test) | `neo_mac_core.sv` | **RTL-proven** |
+| MACs | 65,536 INT8 MACs + 2,048 check-column MACs | the same array in every 32×32 build | 64 × 32 × 32 | **RTL-proven** (the count is the parameterization; phase 1's synthesis gates on PE count = ROWS × (COLS + 1) per core) |
+| PE | INT8 × INT8 products, INT32 partial sums, 2-stage pipeline (PE_LAT = 2), double-buffered weight with swap token | same | `mac_pe.sv` | **RTL-proven** (T1–T5, C1) |
+| Core latency | PE_LAT·ROWS + COLS = 96 cycles (32×32) | 96 (32×32), 40 (16×8), 24 (8×8) | `neo_mac_core.sv` LATENCY | **RTL-proven** |
+| Clock | 2.0 GHz worst-case (SS, 125 °C, aged), 2.4 GHz typical | — | feasibility model | **model** → the open-PDK synthesis (phase 1): critical paths against 500 ps on the ASAP7 proxy, the ratio to N5A documented |
+| Peak throughput, dense | 262 TOPS dense INT8 = 65,536 × 2 × 2.0 GHz | — | the MAC count (RTL) × the clock (model) | **RTL-proven** count × **model** clock |
+| Peak throughput, sparse | 524 TOPS with 2:4 structured sparsity | — | `ROADMAP.md` §2 (the design: 2:4 along K on PE pairs, two ABFT check columns, compressed weight entries) | **planned** (phase 3, drops 0.46–0.49): no sparse PE, index path, compressed weight format, compiler packer or test exists; the figure is a phase-3 target and appears in no other headline of this package |
+| Check weight width | WCW = 8 + log2(ROWS) + 1 = 14 bits (32×32) | 13 (16 rows), 12 (8 rows) | `neo_mac_core.sv` | **RTL-proven** |
+| Fault hook | one PE (FAULT_ROW, FAULT_COL) adds 1 to its product while `fault_inject` is high; used by the island's checker self-test | same | `systolic_array.sv`, `host_if` SELFTEST | **RTL-proven** (T2–T4, M8) |
+| Other datatypes | INT4 / MXFP4 (2×), FP8, FP16 / BF16 (½×) | — | spec v2.1 feature list | **planned**: INT4 weight-only storage expanded at the weight-buffer load in phase 4 (no throughput multiplier — the datapath stays INT8); FP8 / BF16 arithmetic is a gen-2 study, decided with phase 1's area numbers (`ROADMAP.md` §7) |
 
 ## 3. Core blocks (per tile)
+
+Status: every block of this table is **RTL-proven** — each is exercised by the core suite (C1–C3 under cocotb at 16×8 and
+32×32, C1–C10 under neosim) and the mesh suites, and every safety flag it raises has a fault-injection test (§8) and a
+functional-coverage bin (53 of 53 covered, run 133).
 
 | Block | Function | Parameters as implemented |
 | --- | --- | --- |
@@ -48,32 +91,38 @@ cfg_tile_pixels, cfg_regions_m1, (2 reserved), cfg_m` (rows to drain). A descrip
 
 ## 4. Memory system
 
-| Item | Silicon configuration | As simulated | Source |
-| --- | --- | --- | --- |
-| Shared SRAM | 128 MB as 64 banks × 2 MB, one bank per tile on its router's local port. **Bank port (drop 0.28): 512 bits, 64 B per cycle each way** — the bandwidth the performance model assumes; a row holds 16 words, addressed by row with a 16-lane write mask; word address = row × 16 + lane | 4 banks × 4,096 words (256 rows) | `sram_bank.sv` DEPTH, LANES; `bank_bist_wrap.sv` |
-| Word protection | (39,32) SECDED per 32-bit word, 16 ECC lanes per 624-bit row: every write encodes the lanes it writes, every read decodes all 16 — single-bit corrected on read (`ecc_ce`), double detected (`ecc_ue`), both sticky, `ce_lane` for the MBIST | same | `ecc39.sv` (Hamming positions 1..38 + overall parity) |
-| MBIST | March C− with backgrounds 0x00000000/0xFFFFFFFF and 0x55555555/0xAAAAAAAA (12 elements) over rows, the background in every lane, all 16 lanes checked in parallel (drop 0.28: 16× fewer steps — 32,768 rows for a 2 MB bank); owns the bank ports while active; reports the word address of the first failing lane; a lane corrected by ECC during the sweep is reported as a fault (`fail_ce`) | BIST_WORDS = BANK_DEPTH (16 words = one row in M11 for speed) | `mbist.sv` |
-| Activation layout in a bank | row-major per channel tile: entry = ROWS channels as bytes (channel c in byte c mod 4 of word c div 4), WPA = ROWS/4 words per pixel | WPA = 4 (16 rows), 2 (8 rows) | `pack_words`, `tile_nic` fetch assembly |
-| Weight layout in a bank | per run (ct, ky, kx), ROWS entries of COLS weight bytes followed by the check weight; WPW = ⌈(COLS·8 + WCW)/32⌉ words per entry | WPW = 9 (32×32), 3 (16×8 and 8×8) | same |
-| Result layout | INT32: COLS words + check word per output row; INT8: COLS/4 words per row (= one activation entry when COLS = ROWS) | — | `tile_nic` drain modes |
-| External memory | 384-bit LPDDR5X-8533, 410 GB/s raw, inline ECC (IP, not in RTL; decision 5 open against 256-bit) | — | spec |
+| Item | Silicon configuration | As simulated | Source | Status |
+| --- | --- | --- | --- | --- |
+| Shared SRAM | 128 MB as 64 banks × 2 MB, one bank per tile on its router's local port. **Bank port (drop 0.28): 512 bits, 64 B per cycle each way** — the bandwidth the performance model assumes; a row holds 16 words, addressed by row with a 16-lane write mask; word address = row × 16 + lane | 64 banks × 524,288 words (2 MB, the silicon depth) on mesh8; 4 × 524,288 on tile32; 4 × 4,096 words (256 rows) on the small builds | `sram_bank.sv` DEPTH, LANES; `bank_bist_wrap.sv` | **RTL-proven** at the silicon depth and count (mesh8); the array is inferred — its macro (`09_synthesis/memories.md`) and area are **model** until a memory-compiler run; phase 1 black-boxes it with the macro table's area |
+| Word protection | (39,32) SECDED per 32-bit word, 16 ECC lanes per 624-bit row: every write encodes the lanes it writes, every read decodes all 16 — single-bit corrected on read (`ecc_ce`), double detected (`ecc_ue`), both sticky, `ce_lane` for the MBIST | same | `ecc39.sv` (Hamming positions 1..38 + overall parity) | **RTL-proven** (ecc39 exhaustive single-flip; M5, M17) |
+| MBIST | March C− with backgrounds 0x00000000/0xFFFFFFFF and 0x55555555/0xAAAAAAAA (12 elements) over rows, the background in every lane, all 16 lanes checked in parallel (drop 0.28: 16× fewer steps — 32,768 rows for a 2 MB bank); owns the bank ports while active; reports the word address of the first failing lane; a lane corrected by ECC during the sweep is reported as a fault (`fail_ce`) | BIST_WORDS = BANK_DEPTH (16 words = one row in M11 for speed) | `mbist.sv` | **RTL-proven** (B1–B3, M11) on the inferred array; the macro's own BIST interface is an **IP** item of the memory compiler |
+| Activation layout in a bank | row-major per channel tile: entry = ROWS channels as bytes (channel c in byte c mod 4 of word c div 4), WPA = ROWS/4 words per pixel | WPA = 8 (32 rows), 4 (16 rows), 2 (8 rows) | `pack_words`, `tile_nic` fetch assembly | **RTL-proven** (M1, M6, M18) |
+| Weight layout in a bank | per run (ct, ky, kx), ROWS entries of COLS weight bytes followed by the check weight; WPW = ⌈(COLS·8 + WCW)/32⌉ words per entry | WPW = 9 (32×32), 3 (16×8 and 8×8) | same | **RTL-proven** |
+| Result layout | INT32: COLS words + check word per output row; INT8: COLS/4 words per row (= one activation entry when COLS = ROWS) | — | `tile_nic` drain modes | **RTL-proven** (M1, M19) |
+| External memory | 384-bit LPDDR5X-8533, 410 GB/s raw, inline ECC (IP, not in RTL; decision 5 open against 256-bit) | — | spec | **IP**; the bank-filling path from it (an AXI bridge on an edge tile position) is **planned** (phase 2) — until then no RTL endpoint moves data between the banks and anything outside the mesh |
 
 ## 5. Interconnect and tile interface
 
-| Item | As implemented | Source |
-| --- | --- | --- |
-| Topology | 2-D mesh, 5-port routers (N, S, E, W, local), XY dimension-order routing, 2-entry input FIFO per port, round-robin arbitration per output, registered outputs with ready/valid. A router's (and a tile's) coordinates are input ports (`my_x`, `my_y`), strapped by the mesh from the generate indices (drop 0.35): every tile of the mesh is the same module — one elaboration, one hard macro — rather than a parameterization per position. The tile's four mesh links are packed vectors (port p at bit p / bits [p·FW +: FW]) | `noc_router.sv`, `noc_mesh.sv`, `neo_tile.sv`, `tile_mesh.sv` |
-| Flit | FW = 1 + 2·(XW + YW) + 8 + DWL bits = {even parity, dst_y, dst_x, src_y, src_x, seq[7:0], payload[DWL−1:0]}; DWL = 32 + 32·WPF with WPF words per flit: WPF = 32 (DWL = 1056, the 1024-bit links; FW = 1077 on 8×8 with XW = YW = 3) in silicon and on the 32×32 builds since drop 0.25, WPF = 1 (DWL = 64, FW = 81 on 2×2) on the 16×8 and 8×8-core builds | `noc_router.sv`, `link_pack.sv` |
-| Parity | even parity over the whole flit checked at the head of every input FIFO; a bad flit is dropped and flagged (`parity_err`) | `noc_router.sv` |
-| Payload | {type[2:0], tag[8:0], hdr[19:0], words[32·WPF−1:0]}; RDRSP/WRDATA/PSUM flits carry 1..WPF words (hdr[13:8] = words − 1; on PSUM hdr[7:0] is the column of word 0 and word i carries column + i, so a 33-word row is two flits); RDREQ, WRHDR, CRC and RDY are one-word flits. The tile interface moves **beats of up to BW = 16 words (one bank row)** in the same payload shape (drop 0.29): `link_packer` merges consecutive data beats of one stream (same destination, type, tag, hdr[19:14], PSUM columns consecutive) into a flit while they fit — full, or flushed by the next beat that cannot join; a data stream always ends with its CRC flit — and a beat that cannot join starts the next flit in the cycle the pending one leaves (a 32-word flit every second cycle); a beat is never split across flits, so a serve that starts inside a row produces one 17..31-word flit after its partial first beat. `link_unpacker` presents a flit as ceil(words / 16) beats. With WPF = 1 the packer sends a beat as single-word flits, so the small builds put the same flits on the link as before | `link_pack.sv`, `tile_nic.sv` |
-| Message types | 1 RDREQ (addr[19:0], len[11:0]), 2 RDRSP (word), 3 WRHDR (bank address), 4 WRDATA (word), 5 PSUM (row index in tag, word index in data), 6 CRC ({count[15:0], crc16[15:0]}), 7 RDY | `tile_nic.sv` |
-| Message protection | CRC-16-CCITT over the data words of every stream, plus the word count: receiver flags `crc_err` on mismatch and `lost_err` on a count mismatch; one message in flight per sending tile; receiver keeps CRC and count state per source (each source's write pointer, accumulator, count and partial-sum row in its own register block, drop 0.29). The accumulator takes a whole 16-word beat per cycle (`crc16_beat`: 16 chained word stages; the parallel form of the polynomial is the synthesis-time replacement); the count is per word, so a lost flit of any width is caught | `crc16_word.sv`, `crc16_beat.sv`, `tile_nic.sv` |
-| Fetch engine | RDREQ to any bank; responses assembled into activation entries (WPA words) or weight entries (WPW words) from a base entry — at entry rate since drop 0.30, two entries per cycle since drop 0.32: up to two entries per cycle from the words staged from earlier beats plus the current 16-word beat, written through the buffer's word-wide port as a pair at an even entry address (a single entry at an odd address or when only one entry's words are there — the odd trailing entry), so a 16-word beat of two 8-word activation entries is taken in one cycle at 32×32 (weights, 9 words per entry, pair up when 18 words are at hand), the leftover words staged for the next beat, the CRC over the whole beat; `fetch_timeout` after FETCH_TIMEOUT cycles abandons the fetch and raises the flag. **Sizing rule (hard constraint, drop 0.24):** a tile has at most one fetch outstanding and a fetch is at most 4,095 words, so the longest wait at any bank is NX·NY − 1 queued maximal fetches plus the requester's own: FETCH_TIMEOUT ≥ NX·NY·(4,095 / R + H), R the per-flow rate in words per cycle and H the per-request overhead (request flit, response header and CRC, routing; well under 1,000 cycles on 8×8). R was 1 up to drop 0.29 (a response was consumed one word per cycle, whatever the bank and link widths); since drop 0.30 R = 8 for activations and 9 for weights at 32×32 (the receiver is the slowest stage: server 16 words per cycle, link 16, receiver one entry), so a maximal fetch is served in ~512 + H cycles and 64 queued ones in ~33,000 + 64·H. The constants are kept: 2^20 − 1 in silicon (now a 16× margin), 65,535 on the 32×32 builds, 8,192 on the small builds. The constraint is met in hardware, not by placement: the timer is as wide as the parameter needs (`$clog2(FETCH_TIMEOUT + 1)` bits) and the silicon value is 2^20 − 1 = 1,048,575 cycles (0.52 ms at 2 GHz; covers 64 tiles with H up to 12,000), so the compiler is free to put any number of requesters on one bank; a lost fetch is still flagged well inside the FTTI. Simulation builds pass 8,192 (16×8, 8×8 cores) and 65,535 (the 32×32 suites) so the timeout tests stay short; M14 queues as many maximal fetches at one bank as the build's value admits (14 at 65,535) and requires every one to complete without a cause | `tile_nic.sv` |
-| Bank server | serves RDREQ sequentially from the bank's row port: 16 words per cycle while the link accepts (pipelined row read, the row read last held while the link stalls), the first beat starting at the request's word offset inside its row (16 − offset words), every later beat a full row until the last; a 4,095-word serve is 257 beats; closes with the CRC flit (drop 0.29). A zero-length request is answered by its CRC flit alone (count 0), so a requester completes cleanly; the toolchain refuses to emit one (`ins()`, the C driver's `emit()`) | `tile_nic.sv` |
-| Drain | INT32 rows or INT8 requantized rows to a bank address (WRHDR + WRDATA + CRC), or PSUM rows to an owner's reduce port; drain FIFO DFD = ACC_ROWS rows; RDY notification from an owner gates a contributor's PSUM stream (flow control). The drain sends 16-word beats (drop 0.31): an INT32 row of COLS + 1 words is 16 + 16 + 1 at 32×32, an INT8 row of COLS / 4 words one beat; the packer merges beats into flits. The receiving tile writes each WRDATA beat into its bank as one row with the covered lanes masked in, or as two rows in two cycles when the beat crosses a row boundary (drop 0.29); an owner takes a PSUM beat whole — up to 16 columns per cycle into the row under assembly, the row handed to the reduce port in the cycle its check word arrives, that beat held only while the two-entry FIFO is full (drop 0.31) | `tile_nic.sv` |
-| Link width | 1024-bit links (128 B/cycle/direction) as spec v2.1 calls for: WPF = 32 words per flit on the router side (drop 0.25), 16-word beats on the tile interface side (drop 0.29); the serve, fetch and drain paths all cross the packer/unpacker. Per flow every endpoint now moves the 16-word beat, 64 B/cycle: the bank port on the serve and writeback paths (drop 0.29), the drain and the owner's reduce port (drop 0.31), the fetch into the activation and weight buffers through their word-wide (two-entry) write ports (drop 0.32). The link carries two such flows; the performance model with these rates is in section 9 | `link_pack.sv`, `tile_nic.sv`, `act_feeder.sv`, `wbuf_mem.sv` |
+Status: every row of this table is **RTL-proven** on the 1024-bit links (WPF = 32 on tile32 and on the 8×8 mesh) and on the
+64-bit links of the small builds; the status cell names the tests.
+
+| Item | As implemented | Source | Status |
+| --- | --- | --- | --- |
+| Topology | 2-D mesh, 5-port routers (N, S, E, W, local), XY dimension-order routing, 2-entry input FIFO per port, round-robin arbitration per output, registered outputs with ready/valid. A router's (and a tile's) coordinates are input ports (`my_x`, `my_y`), strapped by the mesh from the generate indices (drop 0.35): every tile of the mesh is the same module — one elaboration, one hard macro — rather than a parameterization per position. The tile's four mesh links are packed vectors (port p at bit p / bits [p·FW +: FW]) | `noc_router.sv`, `noc_mesh.sv`, `neo_tile.sv`, `tile_mesh.sv` | **RTL-proven** (N1–N2 at 3×3 under neosim; every mesh test; the same tile module in all 64 positions of mesh8) |
+| Flit | FW = 1 + 2·(XW + YW) + 8 + DWL bits = {even parity, dst_y, dst_x, src_y, src_x, seq[7:0], payload[DWL−1:0]}; DWL = 32 + 32·WPF with WPF words per flit: WPF = 32 (DWL = 1056, the 1024-bit links; FW = 1077 on 8×8 with XW = YW = 3) in silicon and on the 32×32 builds since drop 0.25, WPF = 1 (DWL = 64, FW = 81 on 2×2) on the 16×8 and 8×8-core builds | `noc_router.sv`, `link_pack.sv` | **RTL-proven** (M3, M16 at WPF 32) |
+| Parity | even parity over the whole flit checked at the head of every input FIFO; a bad flit is dropped and flagged (`parity_err`) | `noc_router.sv` | **RTL-proven** (N2, M16: the corrupted flit dropped at the receiving router and flagged) |
+| Payload | {type[2:0], tag[8:0], hdr[19:0], words[32·WPF−1:0]}; RDRSP/WRDATA/PSUM flits carry 1..WPF words (hdr[13:8] = words − 1; on PSUM hdr[7:0] is the column of word 0 and word i carries column + i, so a 33-word row is two flits); RDREQ, WRHDR, CRC and RDY are one-word flits. The tile interface moves **beats of up to BW = 16 words (one bank row)** in the same payload shape (drop 0.29): `link_packer` merges consecutive data beats of one stream (same destination, type, tag, hdr[19:14], PSUM columns consecutive) into a flit while they fit — full, or flushed by the next beat that cannot join; a data stream always ends with its CRC flit — and a beat that cannot join starts the next flit in the cycle the pending one leaves (a 32-word flit every second cycle); a beat is never split across flits, so a serve that starts inside a row produces one 17..31-word flit after its partial first beat. `link_unpacker` presents a flit as ceil(words / 16) beats. With WPF = 1 the packer sends a beat as single-word flits, so the small builds put the same flits on the link as before | `link_pack.sv`, `tile_nic.sv` | **RTL-proven** (M1–M3, M18 at WPF 32 and WPF 1) |
+| Message types | 1 RDREQ (addr[19:0], len[11:0]), 2 RDRSP (word), 3 WRHDR (bank address), 4 WRDATA (word), 5 PSUM (row index in tag, word index in data), 6 CRC ({count[15:0], crc16[15:0]}), 7 RDY | `tile_nic.sv` | **RTL-proven** |
+| Message protection | CRC-16-CCITT over the data words of every stream, plus the word count: receiver flags `crc_err` on mismatch and `lost_err` on a count mismatch; one message in flight per sending tile; receiver keeps CRC and count state per source (each source's write pointer, accumulator, count and partial-sum row in its own register block, drop 0.29). The accumulator takes a whole 16-word beat per cycle (`crc16_beat`: 16 chained word stages; the parallel form of the polynomial is the synthesis-time replacement); the count is per word, so a lost flit of any width is caught | `crc16_word.sv`, `crc16_beat.sv`, `tile_nic.sv` | **RTL-proven** (M3 end-to-end CRC, M9a lost-flit count) |
+| Fetch engine | RDREQ to any bank; responses assembled into activation entries (WPA words) or weight entries (WPW words) from a base entry — at entry rate since drop 0.30, two entries per cycle since drop 0.32: up to two entries per cycle from the words staged from earlier beats plus the current 16-word beat, written through the buffer's word-wide port as a pair at an even entry address (a single entry at an odd address or when only one entry's words are there — the odd trailing entry), so a 16-word beat of two 8-word activation entries is taken in one cycle at 32×32 (weights, 9 words per entry, pair up when 18 words are at hand), the leftover words staged for the next beat, the CRC over the whole beat; `fetch_timeout` after FETCH_TIMEOUT cycles abandons the fetch and raises the flag. **Sizing rule (hard constraint, drop 0.24):** a tile has at most one fetch outstanding and a fetch is at most 4,095 words, so the longest wait at any bank is NX·NY − 1 queued maximal fetches plus the requester's own: FETCH_TIMEOUT ≥ NX·NY·(4,095 / R + H), R the per-flow rate in words per cycle and H the per-request overhead (request flit, response header and CRC, routing; well under 1,000 cycles on 8×8). R was 1 up to drop 0.29 (a response was consumed one word per cycle, whatever the bank and link widths); since drop 0.30 R = 8 for activations and 9 for weights at 32×32 (the receiver is the slowest stage: server 16 words per cycle, link 16, receiver one entry), so a maximal fetch is served in ~512 + H cycles and 64 queued ones in ~33,000 + 64·H. The constants are kept: 2^20 − 1 in silicon (now a 16× margin), 65,535 on the 32×32 builds, 8,192 on the small builds. The constraint is met in hardware, not by placement: the timer is as wide as the parameter needs (`$clog2(FETCH_TIMEOUT + 1)` bits) and the silicon value is 2^20 − 1 = 1,048,575 cycles (0.52 ms at 2 GHz; covers 64 tiles with H up to 12,000), so the compiler is free to put any number of requesters on one bank; a lost fetch is still flagged well inside the FTTI. Simulation builds pass 8,192 (16×8, 8×8 cores) and 65,535 (the 32×32 suites) so the timeout tests stay short; M14 queues as many maximal fetches at one bank as the build's value admits (14 at 65,535) and requires every one to complete without a cause | `tile_nic.sv` | **RTL-proven**, the sizing rule measured at 64 tiles (M14 on mesh8: 14 maximal fetches queued at one bank, 0.065 clocks per queued word, no cause; M9b timeout against a dead server) |
+| Bank server | serves RDREQ sequentially from the bank's row port: 16 words per cycle while the link accepts (pipelined row read, the row read last held while the link stalls), the first beat starting at the request's word offset inside its row (16 − offset words), every later beat a full row until the last; a 4,095-word serve is 257 beats; closes with the CRC flit (drop 0.29). A zero-length request is answered by its CRC flit alone (count 0), so a requester completes cleanly; the toolchain refuses to emit one (`ins()`, the C driver's `emit()`) | `tile_nic.sv` | **RTL-proven** (M1, M14; `nic` under neosim at 16 words per cycle) |
+| Drain | INT32 rows or INT8 requantized rows to a bank address (WRHDR + WRDATA + CRC), or PSUM rows to an owner's reduce port; drain FIFO DFD = ACC_ROWS rows; RDY notification from an owner gates a contributor's PSUM stream (flow control). The drain sends 16-word beats (drop 0.31): an INT32 row of COLS + 1 words is 16 + 16 + 1 at 32×32, an INT8 row of COLS / 4 words one beat; the packer merges beats into flits. The receiving tile writes each WRDATA beat into its bank as one row with the covered lanes masked in, or as two rows in two cycles when the beat crosses a row boundary (drop 0.29); an owner takes a PSUM beat whole — up to 16 columns per cycle into the row under assembly, the row handed to the reduce port in the cycle its check word arrives, that beat held only while the two-entry FIFO is full (drop 0.31) | `tile_nic.sv` | **RTL-proven** (M1 INT32, M19 INT8, M2 / M7 partial sums with RDY flow control) |
+| Link width | 1024-bit links (128 B/cycle/direction) as spec v2.1 calls for: WPF = 32 words per flit on the router side (drop 0.25), 16-word beats on the tile interface side (drop 0.29); the serve, fetch and drain paths all cross the packer/unpacker. Per flow every endpoint now moves the 16-word beat, 64 B/cycle: the bank port on the serve and writeback paths (drop 0.29), the drain and the owner's reduce port (drop 0.31), the fetch into the activation and weight buffers through their word-wide (two-entry) write ports (drop 0.32). The link carries two such flows; the performance model with these rates is in section 9 | `link_pack.sv`, `tile_nic.sv`, `act_feeder.sv`, `wbuf_mem.sv` | **RTL-proven** at 1024 bits (every 32×32 build); the per-flow 64 B/cycle ceiling is a design fact the performance model carries (§9) |
 
 ## 6. DMA program engine (per tile)
+
+Status: **RTL-proven** — every op below is executed by the mesh suites (M1–M19 through the register-loaded programs and, in M6 / M7 /
+M10 / M18, the compiler-emitted ones), the DMA engine runs in lockstep pairs, and the DMA-op coverage bins are all hit (run 133).
 
 32 entries × 64-bit instructions (drop 0.22; 16 before): `op[63:60], x[59:56], y[55:52], addr[51:32], len[31:20], base[19:4], arg[3:0]`. `len` is 12 bits: the compiler and the host driver split a longer fetch into instructions of at most 4,095 words on entry boundaries (drop 0.21).
 
@@ -95,6 +144,9 @@ The sequencer starts the first run of channel tile ct only when `tiles_ready > c
 2-region activation buffer refilled behind the running core safe.
 
 ## 7. Host register interface (per tile, 8-bit word address, 32-bit data)
+
+Status: **RTL-proven** per tile (M8 ESM / watchdog / self-test, M11 MBIST, M15 read-back of every register, `host_if.sv` at 100 % line
+coverage); the address decode that puts 64 of these buses behind one host port is **planned** (phase 2, the control plane).
 
 | Address | Register | Function |
 | --- | --- | --- |
@@ -121,27 +173,40 @@ watchdog; `err_pin` = any unmasked cause; cleared together by error clear.
 
 ## 8. Safety
 
-| Item | Value |
-| --- | --- |
-| Decomposition | item ASIL-D = accelerator ASIL-B(D) + independent diverse monitor ASIL-B(D); safety island (2 × Cortex-R52+ lockstep, IP) ASIL-D |
-| FTTI budget | detect ≤ 10 ms, react ≤ 20 ms (item FTTI from the lead OEM; 100 ms assumed) |
-| Mechanisms proven on RTL by fault injection | ABFT check column (T2–T4, C4); ABFT at drain over the reduction (K2); duplicated feeder control (C5); lockstep sequencer (C7); duplicated requantization (C8); weight-buffer ECC (C9); requant table parity (C10); link parity (N2); end-to-end CRC (M3); bank ECC in flight (M5); lost-flit count (M9a); fetch timeout against a dead server, its transmit engine held in the serve-read state so the taken request is never answered (M9b; drop 0.29); reduction flow control (M2); ESM, error pin, watchdog, checker self-test (M8); MBIST (B1–B3, M11); SECDED code exhaustive (ecc39) |
-| Not in RTL | LBIST (tool-inserted; SELFTEST register and FTTI-windowed watchdog are its hooks) |
-| FMEDA v1 | core SPFM 99.9 %, LFM ≈ 100 %, PMHF 0.43 FIT per core; chip PMHF 62.3 FIT first-order, dominated by shared-SRAM SER (600 FIT/Mbit assumed, foundry data required); every row's coverage claim names its proving test; fault-simulation campaign on Xcelium replaces the claims at RTL freeze |
+| Item | Value | Status |
+| --- | --- | --- |
+| Decomposition | item ASIL-D = accelerator ASIL-B(D) + independent diverse monitor ASIL-B(D); safety island (2 × Cortex-R52+ lockstep, IP) ASIL-D | **model** (the safety concept); the island is **IP**; the accelerator-side mechanisms the decomposition rests on are **RTL-proven** (next rows) |
+| FTTI budget | detect ≤ 10 ms, react ≤ 20 ms (item FTTI from the lead OEM; 100 ms assumed) | **model** (an assumption until the lead OEM's item definition); the watchdog window and the detection latencies of the mechanisms are **RTL-proven** (M8, M9) |
+| Mechanisms proven on RTL by fault injection | ABFT check column (T2–T4, C4); ABFT at drain over the reduction (K2); duplicated feeder control (C5); lockstep sequencer (C7); duplicated requantization (C8); weight-buffer ECC (C9); requant table parity (C10); link parity (N2); end-to-end CRC (M3); bank ECC in flight (M5); lost-flit count (M9a); fetch timeout against a dead server, its transmit engine held in the serve-read state so the taken request is never answered (M9b; drop 0.29); reduction flow control (M2); ESM, error pin, watchdog, checker self-test (M8); MBIST (B1–B3, M11); SECDED code exhaustive (ecc39) | **RTL-proven** — each mechanism by its named test, every flag bin covered (53 of 53, run 133); the diagnostic coverage *fractions* are **model** until phase 6's fault campaign measures them |
+| Not in RTL | LBIST (tool-inserted; SELFTEST register and FTTI-windowed watchdog are its hooks) | **IP** (LBIST is inserted by the licensee's / the implementation team's DFT flow); its hooks — SELFTEST and the FTTI-windowed watchdog — are **RTL-proven** (M8) |
+| FMEDA v1 | core SPFM 99.9 %, LFM ≈ 100 %, PMHF 0.43 FIT per core; chip PMHF 62.3 FIT first-order, dominated by shared-SRAM SER (600 FIT/Mbit assumed, foundry data required); every row's coverage claim names its proving test; fault-simulation campaign on Xcelium replaces the claims at RTL freeze | **model** (analytical, every row naming its test) → FMEDA v2 from the fault campaign (phase 6, drops 0.59–0.63): detected / masked / dangerous-undetected measured per block |
 
 ## 9. Performance, power, physical (models)
 
-| Item | Value | Source |
-| --- | --- | --- |
-| YOLOv8-m class, 1280×736, one camera | 1.32 ms (56.7 % MAC utilization, busiest link 17 %, busiest bank 14 %); compute floor 0.93 ms | perf model v3, 64 tiles, 64 banks, 128 B/cycle links, K-split, dataflow across layers |
-| YOLOv8-m class, 640² | 0.66 ms | same |
-| **The same model with the RTL's endpoint rates** | **After drop 0.32 (fetch two entries per cycle, drain in 16-word beats, partial sums a beat per cycle — every endpoint at the 16-word beat, `--rx 64 --tx 64 --psum 64`): 1.90 ms at 1280×736 (39.6 % MAC utilization), 0.99 ms at 640² (32.9 %), at the 2 GHz clock.** After drop 0.31 (`--rx 32`, one entry per cycle) it was 2.89 ms (26.0 %) and 1.56 ms (20.9 %); after drop 0.30 (`--rx 32 --tx 4 --psum 4`) 11.1 ms (6.7 %) and 7.2 ms (4.5 %); attribution at 640² then: the serial partial-sum path alone took the frame from 0.65 to 6.7 ms, the entry-rate fetch alone to 1.48 ms, the one-word-per-beat drain alone to 0.70 ms. What remains between these figures and the superseded 1.31 / 0.65 ms is the per-flow ceiling of the tile interface itself — 64 B/cycle, the 16-word beat and the bank row, against the 128 B/cycle link that carries two such flows — an architectural limit, not a stage left to close. Without K-split the 640² frame is 1.45 ms at the drop-0.30 rates (0.63 ms with the old assumption) | perf model v3 with the endpoint rates; the pre-0.30 rows above assumed every endpoint absorbs a full 128 B/cycle link and are superseded |
-| Static compile of YOLOv8-m, 640², 8×8 mesh | 83 layers, 6,263 groups — **every one placed by the bank allocator (drop 0.33)** — 24,549 tile programs (1.9 MB of descriptors, longest 24 of the 32 words, at most 12 FETCH_A per program), K-split shares 1–9, balance mean 1.16 (worst 2.46), per frame: 828 MB activation fetch, 414 MB partial sums, 187 MB outputs. Memory: activations in bands of rows per channel tile, each band one contiguous region of one 2 MB bank in 16-word rows (the image's 12.5 MB in 7 banks), weights resident per output tile (36.5 MB over the mesh), a layer's input released once it is compiled; peak occupancy 99.6 % of one bank, 36.7 MB in use at the end; a tile-exclusion mask (`--exclude`) takes tiles out of the owner pool and their banks out of the allocator and every group still places with (3,3) excluded. Before drop 0.33, 430 groups of the three 640-wide layers could not be emitted (a channel tile placed whole exceeded the address field) | `neo_backend.py`, `neo_alloc.py`; `make backend_check` in CI |
-| Other workloads (first-order roofline) | DMS 0.01 ms; 6-camera YOLOv8-m 6.4 ms; BEV fusion 12.4 ms; radar+lidar occupancy 1.3 ms; 8B INT4 LLM decode 13 ms/token, prefill 512 tokens 52 ms | feasibility model |
-| Power | ~56 W typical at 60 % utilization (0.45 pJ/MAC system-level at 0.75 V, 11 W uncore, 9.8 W leakage); ~80 W at 100 %; TDP SKUs 65 / 30 / 15 W; always-on island ≤ 2 W | feasibility model |
-| Die, package, cost (±30 %) | ~210 mm² N5A; FCBGA ~45×45 mm, ~2,000 balls; ~$105–130 at volume | feasibility model |
+Status of the whole section: **model**. Nothing in it is measured on the RTL yet — the YOLOv8-m figures come from the
+performance model (its endpoint rates calibrated against the RTL's, drop 0.32), the power and physical figures from the
+feasibility model, and the static-compile row is the one **RTL-proven** entry (the compiler's output runs bit-exactly on the
+mesh in M6 / M7 / M18). Each row names the phase that replaces it: phase 1 (synthesized area and critical paths on the open proxy
+PDK, written into this section as "synthesized, ASAP7 proxy"), phase 5 (the power mechanisms), phase 7 (routed blocks, power from
+recorded activity), phase 8 (a layer group measured on the simulated mesh). **Struck in drop 0.39:** the INT4 LLM figures (8B
+decode 13 ms/token, prefill 512 tokens 52 ms) — the datapath is INT8 only and no RTL endpoint provides the external-memory
+bandwidth they assumed; they return as measured numbers with phase 4's INT4 weight path and phase 2's bridges.
+
+| Item | Value | Source | Status |
+| --- | --- | --- | --- |
+| YOLOv8-m class, 1280×736, one camera | 1.32 ms (56.7 % MAC utilization, busiest link 17 %, busiest bank 14 %); compute floor 0.93 ms | perf model v3, 64 tiles, 64 banks, 128 B/cycle links, K-split, dataflow across layers | **model** (superseded by the next-but-one row's endpoint-rate figures; kept as the fabric's ceiling) → phase 8 |
+| YOLOv8-m class, 640² | 0.66 ms | same | **model** (superseded likewise) → phase 8 |
+| **The same model with the RTL's endpoint rates** | **After drop 0.32 (fetch two entries per cycle, drain in 16-word beats, partial sums a beat per cycle — every endpoint at the 16-word beat, `--rx 64 --tx 64 --psum 64`): 1.90 ms at 1280×736 (39.6 % MAC utilization), 0.99 ms at 640² (32.9 %), at the 2 GHz clock.** After drop 0.31 (`--rx 32`, one entry per cycle) it was 2.89 ms (26.0 %) and 1.56 ms (20.9 %); after drop 0.30 (`--rx 32 --tx 4 --psum 4`) 11.1 ms (6.7 %) and 7.2 ms (4.5 %); attribution at 640² then: the serial partial-sum path alone took the frame from 0.65 to 6.7 ms, the entry-rate fetch alone to 1.48 ms, the one-word-per-beat drain alone to 0.70 ms. What remains between these figures and the superseded 1.31 / 0.65 ms is the per-flow ceiling of the tile interface itself — 64 B/cycle, the 16-word beat and the bank row, against the 128 B/cycle link that carries two such flows — an architectural limit, not a stage left to close. Without K-split the 640² frame is 1.45 ms at the drop-0.30 rates (0.63 ms with the old assumption) | perf model v3 with the endpoint rates; the pre-0.30 rows above assumed every endpoint absorbs a full 128 B/cycle link and are superseded | **model**, calibrated: the endpoint rates are the RTL's (M1 / M14 / M19 measure them), the layer schedule and link contention are the model's → phase 8 measures a layer group on the simulated mesh |
+| Static compile of YOLOv8-m, 640², 8×8 mesh | 83 layers, 6,263 groups — **every one placed by the bank allocator (drop 0.33)** — 24,549 tile programs (1.9 MB of descriptors, longest 24 of the 32 words, at most 12 FETCH_A per program), K-split shares 1–9, balance mean 1.16 (worst 2.46), per frame: 828 MB activation fetch, 414 MB partial sums, 187 MB outputs. Memory: activations in bands of rows per channel tile, each band one contiguous region of one 2 MB bank in 16-word rows (the image's 12.5 MB in 7 banks), weights resident per output tile (36.5 MB over the mesh), a layer's input released once it is compiled; peak occupancy 99.6 % of one bank, 36.7 MB in use at the end; a tile-exclusion mask (`--exclude`) takes tiles out of the owner pool and their banks out of the allocator and every group still places with (3,3) excluded. Before drop 0.33, 430 groups of the three 640-wide layers could not be emitted (a channel tile placed whole exceeded the address field) | `neo_backend.py`, `neo_alloc.py`; `make backend_check` in CI | **RTL-proven** in its contract (the emitted descriptors and programs run bit-exactly: M6, M7, M18; `--check` ALL PLACED in every CI run); the per-frame byte counts are the compiler's accounting |
+| Other workloads (first-order roofline) | DMS 0.01 ms; 6-camera YOLOv8-m 6.4 ms; BEV fusion 12.4 ms; radar+lidar occupancy 1.3 ms; ~~8B INT4 LLM decode 13 ms/token, prefill 512 tokens 52 ms~~ (struck, drop 0.39: no INT4 datapath or storage, no external-memory endpoint in the RTL) | feasibility model | **model** (first-order roofline; the transformer and BEV figures need phase 4's vector unit and attention tiling to be more than a roofline); the INT4 LLM figures are **struck** (phase 4) |
+| Power | ~56 W typical at 60 % utilization (0.45 pJ/MAC system-level at 0.75 V, 11 W uncore, 9.8 W leakage); ~80 W at 100 %; TDP SKUs 65 / 30 / 15 W; always-on island ≤ 2 W | feasibility model | **model**; no clock gating, power gating or DVFS logic is in the RTL — the mechanisms are **planned** (phase 5), activity-based power **planned** (phase 7); the TDP SKUs and the island's ≤ 2 W are product targets |
+| Die, package, cost (±30 %) | ~210 mm² N5A; FCBGA ~45×45 mm, ~2,000 balls; ~$105–130 at volume | feasibility model | **model** → phase 1 (synthesized tile area on the proxy PDK, the macro table for the arrays), phase 7 (routed 32×32 core and tile, a chip-level floorplan sketch); package and cost stay model figures |
 
 ## 10. Deltas between the simulated RTL and the silicon configuration
+
+Status: the geometry, link, bank and address rows are **closed** — the silicon mesh is simulated as such in CI; the remaining rows
+are **IP** (island, PHYs, controllers, HSM, ISP; LBIST insertion) and **planned** (sparsity engine, INT4 storage, transformer
+operators, vector unit — phases 3 and 4 of `ROADMAP.md`).
 
 | Delta | As simulated | Silicon | What closes it |
 | --- | --- | --- | --- |
@@ -150,12 +215,16 @@ watchdog; `err_pin` = any unmasked cause; cleared together by error clear.
 | Bank port width (found while closing the link delta) | stage 1 closed in drop 0.28 (512-bit bank, 16 SECDED lanes, MBIST over rows); stage 2 in drop 0.29 (serve and writeback at 16 words per cycle, CRC over a beat, `bank_word_port` removed); stage 3 in drop 0.30 (fetch receive at entry rate; the performance model re-run with the RTL's endpoint rates); the drain in beats and the partial sums at beat rate in drop 0.31; the fetch two entries per cycle through word-wide buffer ports in drop 0.32 | closed: every endpoint of a flow moves the 16-word beat (64 B/cycle), the design's per-flow ceiling | — (a wider beat would be a new link/bank decision, not a stage of this item) |
 | Bank size, accumulator depth | 4,096 words; ACC_ROWS 64 | 512K words (2 MB); ACC_ROWS 512 | parameters BANK_DEPTH, ACC_ROWS (module default already 512) |
 | Address widths | addr[19:0], len[11:0], base[15:0] in the DMA instruction | sized for 2 MB banks and 512-row chunks | instruction field widths (addr needs 19 bits for 512K words: fits); the bank allocator (drop 0.33) keeps every region inside its bank, so no address ever exceeds the field |
-| Safety island, PHYs, controllers, HSM, ISP | not in RTL | licensed IP per the RFQ pack | integration |
-| LBIST | not in RTL | inserted by Modus | DFT |
-| Sparsity engine, FP8/INT4 modes, transformer ops, vector DSP | not in RTL (INT8 dense only) | spec v2.1 features | RTL to be written against the same core and tile contracts |
+| Safety island, PHYs, controllers, HSM, ISP | not in RTL | licensed IP per the RFQ pack | integration (**IP**); the RTL side of each interface — AXI bridges on edge tile positions, the control plane, the error vector — is **planned** (phase 2, `ROADMAP.md` §4) |
+| LBIST | not in RTL | inserted by Modus | DFT (**IP** / implementation item; the SELFTEST and watchdog hooks are RTL-proven, M8) |
+| Sparsity engine, FP8/INT4 modes, transformer ops, vector DSP | not in RTL (INT8 dense only) | spec v2.1 features | **planned**: the 2:4 sparsity engine in phase 3 (`ROADMAP.md` §2), the vector unit, attention tiling and INT4 weight-only storage in phase 4 (§3), written against the same core and tile contracts; FP8 / BF16 arithmetic is a gen-2 study decided with phase 1's area numbers. Until then the 524 sparse TOPS and every INT4 figure are targets, not capabilities of this package |
 | Simulator | neosim (SystemVerilog subset) | Xcelium sign-off | `make xrun`, `make xrun_core`, `make xrun_tiles` first |
 
 ## 11. Software contract
+
+Status: **RTL-proven** — the compiler's descriptors and programs run bit-exactly on the mesh (M6, M7, M10, M18, M19), the C
+driver matches the Python backend word for word in every CI run, and the reference semantics are the comparators of every
+test; the ONNX importer, post-training quantization and the runtime over the chip top's queues are **planned** (phase 8).
 
 - Compiler: `neo_compile.py` lowers a convolution to GEMM tiles and (output tile, M-chunk) groups, chooses the
   K-split factor by makespan; `neo_backend.py` places owners by longest-processing-time balance and contributors
@@ -169,6 +238,12 @@ watchdog; `err_pin` = any unmasked cause; cleared together by error clear.
   both bit-exact against the RTL in the regressions.
 
 ## 12. Verification status (see `logs/` and the package README)
+
+Status of the record: CI run 133 (8 Oct 2026, main c4e0740) is the proof behind every **RTL-proven** tag of this document — the
+hdl-sim job (lint gate, the Icarus and Verilator SV testbenches, cocotb tile / tile8 / tile32 / core32, the coverage builds with 53 of
+53 functional bins and 97.7 / 96.3 / 97.4 % line / branch / toggle), the hdl-mesh8 job (the silicon mesh, 11 of 11) and
+python-regress (neosim, compiler, tool_qual 130 / 130) all green; the logs are on the `ci-logs-<job>` branches and the per-drop
+read-outs in `drop_log.md`.
 
 Lint (drop 0.35): `make lint` runs Verilator 5.020 `-Wall` with nothing waived on `neo_core`, `noc_mesh`, `neo_tile_axil` and
 `tile_mesh`, 0 warnings, every warning fails the hdl-sim job (102 warnings cleared in the RTL: explicit widths on the
