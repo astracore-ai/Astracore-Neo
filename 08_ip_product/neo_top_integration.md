@@ -126,13 +126,15 @@ over the data words[15:0]}, the receiver keeping CRC and count per source.
   back-pressured by the mesh, never buffered beyond the FIFO. Then the CRC flit. An R response other than OKAY sets `axi`
   in the bridge's ERR and sends the CRC inverted, so the requesting tile flags `crc_err`: the error reaches the consumer of
   the data. A zero-length request is answered by its CRC flit alone. Throughput: one AXI beat per aclk cycle within a burst
-  (a 16-word row per 512 / `AXI_DW` cycles), plus the AR-to-first-R latency once per burst.
+  (a 16-word row per 512 / `AXI_DW` cycles), plus per burst the AR-to-first-R latency and one cycle to size the burst,
+  plus two cycles per request to form its address (the address arithmetic is registered, so AR comes from registers).
 - *WRHDR + WRDATA + CRC (a tile's drain into the window).* Per source, as the NIC: each source's write pointer, CRC and word
   count in its own registers, so drains from several tiles may interleave beat by beat. **Every WRDATA beat is written as
   it arrives** — one AXI burst of the 1..5 beats its words touch, byte strobes on exactly its words, split in two at a 4 KB
   boundary — and leaves the bridge's input when its write response is back; the CRC flit then checks the source's CRC and
   count (`crc`, `lost` in ERR); a write response other than OKAY sets `axi`. Throughput: one WRDATA beat (≤ 16 words) per
-  AXI write round trip (AW and W together, then B). *(The brief asked for the burst to be written after the CRC checks and
+  AXI write round trip (AW and W together, then B) plus two cycles (the source's write pointer, then the bursts it makes,
+  are registered before AW). *(The brief asked for the burst to be written after the CRC checks and
   dropped on a bad CRC. Messages from different tiles interleave at the bridge beat by beat — each (source, destination)
   stream is in order on the XY mesh, sources interleave, which is why the NIC keeps per-source state — so holding a message
   until its CRC would take a buffer per source of the longest drain (64 × 512 rows of 33 words in silicon), or a rule that
@@ -145,11 +147,13 @@ over the data words[15:0]}, the receiver keeping CRC and count per source.
 - *Write.* WRHDR (the first written word) + one WRDATA beat per AXI beat — its strobed words: whole words, one contiguous
   run per beat (leading / trailing words of a beat may be off; a run that does not continue the previous beat's starts a new
   WRHDR, which the tile's receiver takes inside the same message) + the CRC flit. A beat with a partial-word strobe or two
-  runs is not written and the burst answers SLVERR. **BRESP is posted**: it is returned when the CRC flit has entered the
-  bridge's FIFO toward the mesh. A read through the same bridge to the same tile follows the same XY route and is served
+  runs is not written and the burst answers SLVERR. Each W beat is taken into a register with its strobes decoded and sent
+  from there, one beat per cycle. **BRESP is posted**: it is returned when the CRC flit has entered the bridge's FIFO toward
+  the mesh. A read through the same bridge to the same tile follows the same XY route and is served
   after the writes — the fence a host uses before starting a tile on data it just wrote (`test_neo_top.py` does).
 - *Read.* One RDREQ for the burst's beats (whole beats from the beat-aligned start, ≤ 4,095 words: any legal burst), the
-  RDRSP beats assembled into R beats as they arrive (a 32-word stage; the host must accept R data — a held RREADY back-
+  RDRSP beats assembled into R beats as they arrive (a 32-word stage that takes a beat while it has room for a whole one —
+  one R beat per cycle at 512 bits, where a read starts at a bank row; the host must accept R data — a held RREADY back-
   pressures the bridge's whole input). The last R beat waits for the CRC flit and carries its verdict: OKAY, or SLVERR when
   the CRC, the count or the length disagree. No complete response within `HOST_TIMEOUT` aclk cycles (a disabled or dead
   tile): the remaining beats are SLVERR and `timeout` is set in ERR; late beats of that response are dropped.
