@@ -7,7 +7,10 @@
 //   check column += ext_chk, so the drain-time ABFT also covers the reduction transfer. The local
 //   write has priority (ext_ready = !wr_valid); the sequencer gates acceptance to its reduce state.
 //   Drain: rd_en reads row rd_idx one cycle later with rd_valid; abft_err flags a mismatch.
-//   In silicon this is a 64 KB ECC SRAM with a two-cycle read-modify-write; behavioural model.
+//   In silicon this is a 64 KB ECC SRAM with a two-cycle read-modify-write; behavioural model. Drop 0.40: the rows live
+//   in a neo_mem_rf leaf of ACC_ROWS words x (COLS + 1) x PW bits (the check column is the top word): port A, the
+//   asynchronous read at the written row, feeds the accumulate; port B, registered, is the drain read. The leaf is what
+//   the synthesis flow black-boxes and a memory compiler replaces; the adders and the ABFT check stay here.
 module acc_bank #(
   parameter int COLS     = 32,
   parameter int PW       = 32,
@@ -35,37 +38,50 @@ module acc_bank #(
   output logic                 abft_err,
   output logic                 abft_err_sticky
 );
-  logic signed [PW-1:0] acc     [ACC_ROWS][COLS];
-  logic signed [PW-1:0] acc_chk [ACC_ROWS];
+  localparam int RW = (COLS + 1) * PW;              // a row: COLS partial sums and the check sum
+  logic [RW-1:0]        row_old;                    // port A: the row at acc_idx, before this cycle's write
+  logic [RW-1:0]        row_new;                    // what the write stores
+  logic [RW-1:0]        row_rd;                     // port B: the drained row
+  logic [IDXW-1:0]      acc_idx;
+  logic                 acc_we;
+  logic                 unused_bd;
+  logic [RW-1:0]        unused_bd_rd;
 
   assign ext_ready = !wr_valid;
+  assign acc_idx   = wr_valid ? wr_idx : ext_idx;   // the local write has priority
+  assign acc_we    = wr_valid || ext_valid;
 
-  always_ff @(posedge clk) begin
-    if (wr_valid) begin
-      for (int j = 0; j < COLS; j++) begin
-        acc[wr_idx][j] <= (wr_first ? PW'(0) : acc[wr_idx][j]) + wr_y[j];
-      end
-      acc_chk[wr_idx] <= (wr_first ? PW'(0) : acc_chk[wr_idx]) + wr_chk;
-    end else if (ext_valid) begin
-      for (int j = 0; j < COLS; j++) begin
-        acc[ext_idx][j] <= acc[ext_idx][j] + ext_y[j];
-      end
-      acc_chk[ext_idx] <= acc_chk[ext_idx] + ext_chk;
+  // the accumulate: a local write adds wr_y to the row (or to zero on wr_first), a partial-sum row adds ext_y to it
+  always_comb begin
+    for (int j = 0; j < COLS; j++) begin
+      logic signed [PW-1:0] old_j;
+      old_j = (wr_valid && wr_first) ? PW'(0) : row_old[j*PW +: PW];
+      row_new[j*PW +: PW] = old_j + (wr_valid ? wr_y[j] : ext_y[j]);
+    end
+    begin
+      logic signed [PW-1:0] old_c;
+      old_c = (wr_valid && wr_first) ? PW'(0) : row_old[COLS*PW +: PW];
+      row_new[COLS*PW +: PW] = old_c + (wr_valid ? wr_chk : ext_chk);
     end
   end
 
+  neo_mem_rf #(.W(RW), .D(ACC_ROWS), .G(1), .RB(1), .DV_HOOKS(0)) u_mem (
+    .clk(clk),
+    .we(acc_we), .waddr(acc_idx), .wdata(row_new),
+    .ra_addr(acc_idx), .ra_data(row_old),
+    .rb_en(rd_en), .rb_addr(rd_idx), .rb_data(row_rd),
+    .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_bd_rd),
+    .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
+  assign unused_bd = ^unused_bd_rd;
+
+  always_comb begin
+    for (int j = 0; j < COLS; j++) rd_data[j] = row_rd[j*PW +: PW];
+    rd_chk = row_rd[COLS*PW +: PW];
+  end
+
   always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      rd_valid <= 1'b0;
-      rd_chk   <= '0;
-      for (int j = 0; j < COLS; j++) rd_data[j] <= '0;
-    end else begin
-      rd_valid <= rd_en;
-      if (rd_en) begin
-        for (int j = 0; j < COLS; j++) rd_data[j] <= acc[rd_idx][j];
-        rd_chk <= acc_chk[rd_idx];
-      end
-    end
+    if (!rst_n) rd_valid <= 1'b0;
+    else        rd_valid <= rd_en;
   end
 
   abft_checker #(.COLS(COLS), .PW(PW)) u_abft (

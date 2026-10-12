@@ -105,21 +105,27 @@ module neo_tile #(
   endgenerate
 
   // the testbench hooks, one per fault selector (drop 0.35)
+  // the hooks' decode (DV_HOOKS = 1); at DV_HOOKS = 0 every select is a constant and the ports are tied off (the
+  // silicon tile carries none of it -- the synthesis job's DV_HOOKS gate, drop 0.40)
   logic dv_bank_or, dv_prog_flip, dv_cfg_flip, dv_pc_flip, dv_rt_flip, dv_rt_clear, dv_tx_hold;
-  assign dv_bank_or   = dv_fi_en && (dv_fi_sel == 3'd1);
-  assign dv_prog_flip = dv_fi_en && (dv_fi_sel == 3'd2);
-  assign dv_cfg_flip  = dv_fi_en && (dv_fi_sel == 3'd3);
-  assign dv_pc_flip   = dv_fi_en && (dv_fi_sel == 3'd4);
-  assign dv_rt_flip   = dv_fi_en && (dv_fi_sel == 3'd5);
-  assign dv_rt_clear  = dv_fi_en && (dv_fi_sel == 3'd6);
-  assign dv_tx_hold   = dv_fi_en && (dv_fi_sel == 3'd7);
   generate
     if (DV_HOOKS != 0) begin : g_dv_ob
+      assign dv_bank_or   = dv_fi_en && (dv_fi_sel == 3'd1);
+      assign dv_prog_flip = dv_fi_en && (dv_fi_sel == 3'd2);
+      assign dv_cfg_flip  = dv_fi_en && (dv_fi_sel == 3'd3);
+      assign dv_pc_flip   = dv_fi_en && (dv_fi_sel == 3'd4);
+      assign dv_rt_flip   = dv_fi_en && (dv_fi_sel == 3'd5);
+      assign dv_rt_clear  = dv_fi_en && (dv_fi_sel == 3'd6);
+      assign dv_tx_hold   = dv_fi_en && (dv_fi_sel == 3'd7);
       assign dv_rt_valid = {r_out_valid[4], r_out_valid[3], r_out_valid[2], r_out_valid[1], r_out_valid[0]};
       assign dv_rt_flit4 = r_out_flit[4];
     end else begin : g_nodv_ob
+      assign dv_bank_or = 1'b0; assign dv_prog_flip = 1'b0; assign dv_cfg_flip = 1'b0; assign dv_pc_flip = 1'b0;
+      assign dv_rt_flip = 1'b0; assign dv_rt_clear = 1'b0; assign dv_tx_hold = 1'b0;
       assign dv_rt_valid = '0;
       assign dv_rt_flit4 = '0;
+      logic unused_dv_sel;
+      assign unused_dv_sel = ^{dv_fi_en, dv_fi_sel};
     end
   endgenerate
 

@@ -16,6 +16,9 @@
 //   the entry inside the word abuf_waddr[0] -- and its one write port is a word wide: abuf_we writes the entry at
 //   abuf_waddr, abuf_we2 the upper entry of the same word (entry abuf_waddr + 1; the DMA asserts it only at an even
 //   abuf_waddr), so a 16-word beat of two 8-word entries lands in one cycle. The read is one entry per cycle as before.
+//   Drop 0.40: the buffer is a neo_mem_rf leaf of ABUF_DEPTH/2 words, each a pair of entries (2 x ROWS x XW bits) with one
+//   write-enable group per entry and an asynchronous read of the pair -- the module the synthesis flow black-boxes and a
+//   memory compiler replaces; the address generators, the entry select and the comparator stay here.
 module act_feeder #(
   parameter int ROWS       = 32,
   parameter int XW         = 8,
@@ -64,7 +67,12 @@ module act_feeder #(
 );
   logic unused_cfg_ho;                              // the layer's output height is not needed here: cfg_oy0 / cfg_oy_n bound the run (lint)
   assign unused_cfg_ho = ^cfg_ho;
-  logic signed [XW-1:0] abuf [ABUF_DEPTH/2][2][ROWS];   // [pair][entry in pair][channel] (drop 0.32)
+  localparam int EWB = ROWS * XW;                   // one entry: ROWS channels
+  localparam int BWD = 2 * EWB;                     // one word of the leaf: the pair of entries
+  logic [BWD-1:0] pair_wdata, pair_rdata;           // the leaf's write word and the pair read at the entry's pair
+  logic [1:0]     pair_we;
+  logic [EWB-1:0] ent_rd;                           // the entry read (addr[0] selects it inside the pair)
+  logic [BWD-1:0] unused_rb, unused_bd;             // the leaf's unused read ports (RB = 0, no hooks here)
 
   // ---- primary address generator / run FSM ----
   logic                 running;
@@ -91,20 +99,33 @@ module act_feeder #(
   assign row_idx = m;
   assign first   = first_q;
 
+  // the leaf (drop 0.40): abuf_we writes the entry abuf_waddr[0] of the pair abuf_waddr[AW-1:1], abuf_we2 the pair's
+  // upper entry in the same cycle (the upper entry takes abuf_we2's data when both address it, as before). The two
+  // entries are packed in their own blocks, each variable with exactly one driver and a default (the pack / unpack
+  // pattern of wbuf_mem: a loop that assigns slices of one vector from an unpacked array port is what every simulator
+  // evaluates alike).
+  logic [EWB-1:0] ent_w, ent_w2;                    // the two entries packed
   generate
-    for (genvar c = 0; c < ROWS; c++) begin : g_out
-      assign x_vec[c] = (valid && inb) ? abuf[addr[AW-1:1]][addr[0]][c] : '0;
+    for (genvar c = 0; c < ROWS; c++) begin : g_pack
+      assign ent_w[c*XW +: XW]  = abuf_wdata[c];
+      assign ent_w2[c*XW +: XW] = abuf_wdata2[c];
     end
   endgenerate
-
-  always_ff @(posedge clk) begin
-    if (abuf_we) begin
-      for (int c = 0; c < ROWS; c++) abuf[abuf_waddr[AW-1:1]][abuf_waddr[0]][c] <= abuf_wdata[c];
+  assign pair_wdata = {abuf_we2 ? ent_w2 : ent_w, ent_w};
+  assign pair_we    = {abuf_we2 || (abuf_we && abuf_waddr[0]), abuf_we && !abuf_waddr[0]};
+  neo_mem_rf #(.W(BWD), .D(ABUF_DEPTH/2), .G(2), .RB(0), .DV_HOOKS(0)) u_mem (
+    .clk(clk),
+    .we(pair_we), .waddr(abuf_waddr[AW-1:1]), .wdata(pair_wdata),
+    .ra_addr(addr[AW-1:1]), .ra_data(pair_rdata),
+    .rb_en(1'b0), .rb_addr('0), .rb_data(unused_rb),
+    .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_bd),
+    .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
+  assign ent_rd = addr[0] ? pair_rdata[BWD-1:EWB] : pair_rdata[EWB-1:0];
+  generate
+    for (genvar c = 0; c < ROWS; c++) begin : g_out
+      assign x_vec[c] = (valid && inb) ? ent_rd[c*XW +: XW] : '0;
     end
-    if (abuf_we2) begin                                   // the pair's upper entry, in the same cycle
-      for (int c = 0; c < ROWS; c++) abuf[abuf_waddr[AW-1:1]][1][c] <= abuf_wdata2[c];
-    end
-  end
+  endgenerate
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin

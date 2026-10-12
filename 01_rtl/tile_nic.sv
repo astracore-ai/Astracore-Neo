@@ -467,9 +467,15 @@ module tile_nic #(
   assign cmd_busy = fetch_busy;
 
   // ------------------------------------------------------------------ drain FIFO (rows from the core)
-  logic [IDXW-1:0]      dfifo_idx [DFD];
-  logic signed [PW-1:0] dfifo_y   [DFD][COLS];
-  logic signed [PW-1:0] dfifo_chk [DFD];
+  // Drop 0.40: the rows live in a neo_mem_rf leaf of DFD words -- {index, check sum, COLS partial sums}, an asynchronous read at
+  // the head pointer -- the module the synthesis flow black-boxes and a memory compiler replaces (DFD = ACC_ROWS rows of
+  // 1,065 bits in silicon: 545 kbit, which the synthesis of drop 0.40 found as flops); the pointers and the count stay here.
+  localparam int DFWD = IDXW + (COLS + 1) * PW;            // a FIFO row: {idx, chk, y[COLS-1] .. y[0]}
+  logic [DFWD-1:0]      dfifo_wrow, dfifo_head;            // the row written on a push; the row at the head pointer
+  logic [DFWD-1:0]      unused_dfifo_rb, unused_dfifo_bd;  // the leaf's unused read ports (RB = 0, no hooks here)
+  logic [IDXW-1:0]      dfifo_head_idx;
+  logic signed [PW-1:0] dfifo_head_y [COLS];
+  logic signed [PW-1:0] dfifo_head_chk;
   localparam int DFW = $clog2(DFD);                       // pointer width from the depth (drop 0.21)
   logic [DFW-1:0]       dfifo_wr;
   logic [DFW-1:0]       dfifo_rd;
@@ -538,13 +544,33 @@ module tile_nic #(
       d_word[i] = '0;
       if (i < d_n) begin                                  // inside the row (the indices below stay in range)
         if (drain_int8)
-          d_word[i] = {dfifo_y[dfifo_rd][d_wi[i] * 4 + 3][7:0], dfifo_y[dfifo_rd][d_wi[i] * 4 + 2][7:0],
-                       dfifo_y[dfifo_rd][d_wi[i] * 4 + 1][7:0], dfifo_y[dfifo_rd][d_wi[i] * 4][7:0]};
+          d_word[i] = {dfifo_head_y[d_wi[i] * 4 + 3][7:0], dfifo_head_y[d_wi[i] * 4 + 2][7:0],
+                       dfifo_head_y[d_wi[i] * 4 + 1][7:0], dfifo_head_y[d_wi[i] * 4][7:0]};
         else
-          d_word[i] = (32'(d_wi[i]) < COLS) ? dfifo_y[dfifo_rd][CIW'(d_wi[i])] : dfifo_chk[dfifo_rd];
+          d_word[i] = (32'(d_wi[i]) < COLS) ? dfifo_head_y[CIW'(d_wi[i])] : dfifo_head_chk;
         drain_beat[32 * i +: 32] = d_word[i];
       end
     end
+  end
+  // the drain FIFO's leaf (drop 0.40): the row pushed = {index of the row in the drain, the check sum, the COLS partial sums
+  // (INT8 rows carry the requantized bytes in the low byte of each word)}; the head row is read asynchronously at dfifo_rd
+  always_comb begin
+    dfifo_wrow = '0;
+    for (int j = 0; j < COLS; j++) dfifo_wrow[j * PW +: PW] = drain_int8 ? PW'(rq_q[j]) : rd_data[j];
+    dfifo_wrow[COLS * PW +: PW]     = rd_chk;
+    dfifo_wrow[(COLS + 1) * PW +: IDXW] = IDXW'(drain_sent) + IDXW'(dfifo_cnt);   // rows arrive in order 0..M-1 (the index wraps at the FIFO's depth)
+  end
+  neo_mem_rf #(.W(DFWD), .D(DFD), .G(1), .RB(0), .DV_HOOKS(0)) u_dfifo (
+    .clk(clk),
+    .we(drain_push), .waddr(dfifo_wr), .wdata(dfifo_wrow),
+    .ra_addr(dfifo_rd), .ra_data(dfifo_head),
+    .rb_en(1'b0), .rb_addr('0), .rb_data(unused_dfifo_rb),
+    .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_dfifo_bd),
+    .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
+  always_comb begin
+    for (int j = 0; j < COLS; j++) dfifo_head_y[j] = dfifo_head[j * PW +: PW];
+    dfifo_head_chk = dfifo_head[COLS * PW +: PW];
+    dfifo_head_idx = dfifo_head[(COLS + 1) * PW +: IDXW];
   end
   logic [15:0] tx_crc;
   logic [15:0] tx_crc_next;
@@ -587,7 +613,7 @@ module tile_nic #(
       X_DRAIN_WORD: begin
         tx_dx = drain_x; tx_dy = drain_y; tx_words = drain_beat; tx_n = d_n; tx_valid = 1'b1;
         if (drain_mode_psum) begin
-          tx_type = T_PSUM; tx_tag = 9'(dfifo_idx[dfifo_rd]); tx_hdr = {6'd0, 6'(d_n - CW'(1)), 8'(dword)};
+          tx_type = T_PSUM; tx_tag = 9'(dfifo_head_idx); tx_hdr = {6'd0, 6'(d_n - CW'(1)), 8'(dword)};
         end else begin
           tx_type = T_WRDATA; tx_hdr = {6'd0, 6'(d_n - CW'(1)), 8'd0};
         end
@@ -644,11 +670,8 @@ module tile_nic #(
       if (cmd_valid && cmd_op == 3'd5) begin
         ntf_pending <= 1'b1; ntf_x <= cmd_x; ntf_y <= cmd_y;
       end
-      // drain FIFO push (no backpressure: sized for a full accumulator drain)
+      // drain FIFO push (no backpressure: sized for a full accumulator drain); the row itself goes into the leaf below
       if (drain_push) begin
-        dfifo_idx[dfifo_wr] <= IDXW'(drain_sent) + IDXW'(dfifo_cnt);   // rows arrive in order 0..M-1 (the index wraps at the FIFO's depth)
-        for (int j = 0; j < COLS; j++) dfifo_y[dfifo_wr][j] <= drain_int8 ? PW'(rq_q[j]) : rd_data[j];
-        dfifo_chk[dfifo_wr] <= rd_chk;
         dfifo_wr <= (dfifo_wr == DFW'(DFD - 1)) ? '0 : dfifo_wr + 1;
       end
       if (drain_push && !(tx_state == X_DRAIN_WORD && tx_fire && d_row_done))      dfifo_cnt <= dfifo_cnt + 1;
