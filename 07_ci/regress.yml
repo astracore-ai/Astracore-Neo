@@ -8,6 +8,7 @@ name: regress
 on:
   push:
     branches: [main]
+    paths-ignore: ['00_overview/**', '**.md']     # a documents-only push (drop log, spec, reports) runs nothing (drop 0.41)
   pull_request:
   workflow_dispatch:
 permissions:

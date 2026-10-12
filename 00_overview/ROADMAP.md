@@ -1,9 +1,13 @@
-# AstraCore Neo — roadmap from drop 0.38 to handoff (11 Oct 2026; §5 status 12 Oct, drop 0.40)
+# AstraCore Neo — roadmap from drop 0.38 to handoff (11 Oct 2026; compressed into four parallel streams 12 Oct, drop 0.41)
 
 Scope: what can be done with the assistant, the GitHub runners (ubuntu-latest: 4 cores, 16 GB, 6 h per job, apt/pip/GitHub reachable)
-and the sandbox (2 cores, 8 GB, GitHub reachable, apt/PyPI not), using open-source tools only, taking the design from "proven in
-simulation at full scale" to a package a silicon team can take to a PDK. Drop numbers are the plan; a phase that takes an extra drop
-shifts the rest. Every drop keeps the rules of HANDOFF-4 §1 (fixNN.zip, README, CI proof, Doc section, drop log).
+and the sandbox (2 cores, 5.8 GB, GitHub reachable, apt/PyPI not), using open-source tools only, taking the design from "proven in
+simulation at full scale" to a package a silicon team can take to a PDK. Since drop 0.41 the work runs as **four parallel streams on
+branches** (A timing → physical, B chip top and power, C sparsity → transformers, D verification and software), each stream's step a
+pull request whose CI run is its proof, merged into main when green; a drop is one merge (or a batch of them), numbered in merge order,
+with its drop-log row, spec update and Doc section written at the merge. The fixNN.zip / README delivery of HANDOFF-4 §1 ended with
+fix38: commits carry what the READMEs carried. Expected: the handoff candidate (0.70) about three weeks after 12 Oct at one long
+session per day; the stream steps below are the plan, a step that needs a second PR shifts its stream, not the others.
 
 ## 0. The claims ledger (what the RTL backs today)
 
@@ -12,7 +16,7 @@ shifts the rest. Every drop keeps the rules of HANDOFF-4 §1 (fixNN.zip, README,
 | 262 TOPS dense INT8, 65,536 MACs, 64 tiles of 32×32 | in RTL, simulated at full 64-tile scale (run 133) | keep |
 | 524 TOPS with 2:4 structured sparsity | **not in RTL** (no sparse PE, index path, compressed weights, compiler packer, tests) | mark planned (0.39); implement (phase 3) |
 | INT4 LLM figures (8B decode 13 ms/token, prefill 52 ms) | not in RTL: INT8 datapath only; the figures assume external memory bandwidth no RTL endpoint provides | strike (0.39); INT4 weight-only storage returns in phase 4 with measured numbers |
-| 2.0 GHz worst case / 2.4 GHz typical | feasibility model | synthesized critical paths on the open proxy PDK (phase 1) |
+| 2.0 GHz worst case / 2.4 GHz typical | feasibility model; the paths synthesized on the ASAP7 proxy (0.40) and, after 0.41, every unit at or near the PE's own product stage (~1 ns on the SS proxy) | the period sweep on two libraries and routed timing (stream A, 0.42 / 0.43) give the proxy's Fmax; the N5A figure stays a model until a foundry library |
 | ~56 W typical, TDP SKUs 65 / 30 / 15 W, always-on island ≤ 2 W | model; no clock gating, power gating or DVFS logic in RTL | mark pending; phase 5 adds the mechanisms, phase 7 the activity-based power |
 | Family 262 / 196 / 131 / 65 by fusing tiles at test | partition isolation exists (`REG_PARTITION`, iso error); no fuse/disable map | mark pending; phase 2 adds tile-enable registers, the fuse source is an IP item |
 | LBIST | tool-inserted at synthesis; hooks (SELFTEST, FTTI-windowed watchdog) exist | mark as integration item |
@@ -23,23 +27,29 @@ shifts the rest. Every drop keeps the rules of HANDOFF-4 §1 (fixNN.zip, README,
 | FMEDA SPFM 99.9 %, 62 FIT | analytical claims per row, each naming its test | FMEDA v2 from the fault campaign (phase 6) |
 | YOLOv8-m 1.90 ms at 1280×736, 0.99 ms at 640² | performance model calibrated with the RTL's endpoint rates | measured on the simulated mesh for a layer group (phase 8) |
 
-## 1. Phases, drops, deliverables
+## 1. Streams, steps, deliverables (the compressed plan of 12 Oct)
 
-| Phase | Drops | What lands | Proof |
+The nine phases of the 11 Oct plan are kept as the design sections below (§2 sparsity, §3 vector unit, §4 chip top, §5 synthesis,
+§6 formal and faults); their delivery is regrouped into four streams that run at the same time. Done steps are marked.
+
+| Stream / step | Drop | What lands | Proof |
 | --- | --- | --- | --- |
-| 0 Truth in the spec | 0.39 | The ledger above in `spec_sheet_v2_1.md` (a status column on every headline row, §2 and §9 reworded), `08_ip_product/neo_npu_ip_datasheet.md` aligned, `00_overview/ROADMAP.md`; HANDOFF-4 | the spec |
-| 1 Synthesis and timing on an open PDK | 0.40–0.42 | `synth` job + `07_ci/synth/`: Yosys (slang front end or sv2v), OpenSTA, ASAP7 and Nangate45 libraries from OpenROAD-flow-scripts; memories black-boxed with the macro table's areas; per block (PE, 16×8 core, router, NIC, bank wrapper, ecc39, requant, DMA, host_if), then the 32×32 core, then the tile; reports: cells, area shares, critical paths vs 2 GHz, `DV_HOOKS = 0` leaves no logic, synthesis lint (latches, multi-drivers); RTL timing fixes where the paths say so | numbers in spec §9 ("synthesized, ASAP7 proxy") |
-| 2 Chip top | 0.43–0.45 | `neo_top`: the mesh plus edge endpoints bridging the NoC to AXI4 (LPDDR5X controller and host DMA fill the banks through them; a bridge is an edge tile position's local port, reusing the NIC's request/response protocol), a global control plane (address decode to tiles' register buses, command queue and doorbells, interrupt and error aggregation into the safety island's interface, a global timer), boot and tile-enable registers (the fusing map), clock domains (host/AXI vs core) with documented CDCs and synchronizers, reset sequencing | a `top` cocotb suite: fill a bank through a bridge, run a layer across tiles, read results back through a bridge and the host; the suite in CI |
-| 3 Sparsity engine | 0.46–0.49 | 2:4 along K (design in §2 below); the compressed weight format; descriptor bit; compiler validator and packer; sparse golden model | T6/T7 on the streaming core, C11 on the core, M20 through DMA and compiler on the tile, coverage bins; area delta from the `synth` job |
-| 4 Transformer readiness | 0.50–0.55 | A per-tile vector unit on the drain path (design in §3), attention tiling with K from a bank as weights, KV cache in banks, INT4 weight-only storage expanded at the weight-buffer load; compiler operators MatMul, Softmax, LayerNorm, GELU/SiLU, residual, transpose-by-DMA | M21 one attention head on the mesh vs numpy; a ViT block end to end; an LLM layer with INT4 weights; coverage bins |
-| 5 Power and product mechanics | 0.56–0.58 | Architectural clock gating per core, NIC, router (idle detection, `clk_en` per block for synthesis to turn into ICGs — the Genus script already enables ICG insertion); tile power-gating hooks (isolation and retention plan, `tile_enable`); telemetry counters per tile (MAC utilization, link and bank stall cycles, drain cycles, fetch wait) behind the host registers; per-partition bandwidth and priority in the NoC for mixed criticality; dual-tile lockstep mode (two tiles run the same descriptor, the owner compares the CRCs of both drains, a mismatch is a sticky cause) | tests per feature; counters validated against the simulators' own cycle counts |
-| 6 Verification to sign-off quality | 0.59–0.63 | `formal` job: SymbiYosys proofs (ecc39 exhaustive SECDED, crc16, packer/unpacker word conservation, router no-loss/no-duplication and bad-parity-always-dropped, lockstep and duplication comparators, requant table parity, DMA engine lockstep) with `sva/bind_all.sv` bound where Yosys reads it; nightly `faults` job: random stuck-at and transient faults in a tile's flops under M1/C1-class workloads, classified detected-by / masked / dangerous-undetected → FMEDA v2 with measured diagnostic coverage, the undetected list driving RTL changes (the duplicate engines' remaining outputs into the lockstep comparators); gate-level simulation of synthesized blocks with the cell models; the Icarus clean-up (constant tables as `assign`/`localparam`, a gated step once green); hierarchical or line-only `tile32_cov`; toggle closure; UVM kept for Xcelium | the jobs; FMEDA v2 rows cite proofs and measured coverage |
-| 7 Physical proxy | 0.64–0.66 | OpenROAD on ASAP7 (the ORFS docker image runs on the runner): the 16×8 then 32×32 core placed and routed, the tile floorplanned as the hard macro the mesh assumes (four link ports, the bank macro, the local control), routed timing and congestion, power from switching activity recorded by the cocotb runs (VCD/SAIF), a chip-level floorplan sketch (64 macros, bridges, island, IO ring) | §9 physical rows from routed blocks |
-| 8 Software to an evaluable level | 0.50 onward, in parallel | ONNX importer (convolution and transformer operators) feeding `neo_backend.py`, post-training quantization with per-channel INT8 and the 2:4 / INT4 paths, a runtime over the chip top's queues (`04_software/neo_host.c` extended), a virtual device: the performance model calibrated with RTL cycles and the telemetry counters, so a network is profiled before silicon; reference networks end to end on the simulated mesh (a YOLOv8-m layer group, a BEV/ViT block, an LLM layer) with accuracy against FP32 | results and cycle counts in the repo; `tool_qual` extended |
-| 9 Handoff | 0.70 | RTL freeze criteria met: synthesizable at target on the proxy PDK, every suite, proof and campaign green, chip top integrated, FMEDA v2, integration specification (clocks, resets, interfaces, memories, IP boundaries), requirement → mechanism → test/proof → coverage traceability matrix generated from the test docstrings and the FMEDA, tagged release, HANDOFF-5 | the release |
+| **A1** timing fixes | **0.41 — done** | every path the 0.40 synthesis named: the NIC's beat CRC in matrix form (4,723 → 733 ps) and `prow` as a memory leaf (−65,536 flops); requant in three stages (3,039 → 934 ps); the ABFT sum in two stages with `err_valid` (1,447 → ~770 ps); the router's one-hot arbitration with parity and route stored at FIFO entry (2,571 → 735 ps), the grant order unchanged cycle for cycle; the packer's link side registered; the activation, weight and accumulator arrays read synchronously (port B — what an SRAM macro does) with an incremental feeder address generator and a two-cycle forwarded accumulate (the core 3,430 → 1,850 ps, ~1.37 ns with the descriptor constraints); the descriptor fields as 4-cycle multicycle paths in the unit and tile SDCs; the sequencer's cycle counts re-derived | PRs #1–#3 green (runs 156, 157, 161); the merged main's run; spec §9 |
+| **D1** formal job | **0.41 — done** | `formal` CI job: SymbiYosys from the pinned OSS CAD Suite, nine full proofs (ecc39 SECDED for all data and all single / double flips; `crc16_beat` equal to a frozen serial reference at BW 4 and 16; packer → unpacker round trip word-exact and in order; router FIFO / XY / no-invention / one-token / fairness invariants; the two lockstep pairs equal from reset; requant table parity; the ABFT verdict), 73 s per run, mutation-checked (19 planted bugs caught) | PR #4 green (run 160); `ci-logs-formal` |
+| **A2** two libraries, a period sweep, the 16×8 core routed | 0.42 | Nangate45 as the second data point; the minimum period of every unit on both libraries and the tile's Fmax on the proxy (= the PE's product stage unless a unit still sits above it: the packer's merge decision moved out of the input cycle, the NIC's writeback-mask path at 2.3 ns and its drain-FIFO head registered, the router's input parity against the link budget); OpenROAD-flow-scripts place-and-route of the 16×8 core on ASAP7: utilization, routed timing, congestion; the duplicated requant judged against a residue-checked single copy (2 × 127 k cells) | the `synth` report with two libraries; a `pnr` job or artefact with the routed figures; spec §9 |
+| **A3** the 32×32 core and the tile placed | 0.43 | the 32×32 core routed; the tile floorplanned as the hard macro the mesh assumes (link ports, the bank macro, local control); power from switching activity recorded by the cocotb runs (VCD / SAIF); a chip-level floorplan sketch | §9 physical rows from routed blocks |
+| **B1** the chip top | 0.44 | `neo_top` (§4): edge bridges NoC ↔ AXI4, the AXI4-Lite control plane with address decode to every tile's register bus, command queue and doorbells, interrupt and error aggregation into the island's interface, boot and tile-enable registers (the fusing map), clock domains with documented CDCs, reset sequencing | a `top` cocotb suite in hdl-sim: bank fill through a bridge, a layer run across tiles started through the queue, results back, an error visible in the aggregated vector |
+| **B2** power and product mechanics | 0.45 | architectural clock gating per block, tile power-gating hooks, telemetry counters behind the host registers, per-partition NoC priority, dual-tile lockstep mode | tests per feature; counters validated against the simulators' own cycle counts; the clock-gated activity in A3's power figure |
+| **C1** sparsity engine | 0.46 | 2:4 along K (§2): PE pair with index flops, feeder pairs, two check columns, compressed weight format, descriptor bit, validator and packer, sparse golden model | T6 / T7, C11, M20, coverage bins; the area delta from the `synth` job |
+| **C2** transformer readiness | 0.47 | the vector unit on the drain path (§3), attention tiling with K as weights, KV cache in banks, INT4 weight-only storage expanded at the weight-buffer load; compiler operators MatMul, Softmax, LayerNorm, GELU / SiLU, residual, transpose-by-DMA | M21 one attention head vs numpy; a ViT block; an LLM layer with INT4 weights |
+| **D2** fault campaign → FMEDA v2 | 0.48 | nightly `faults` job (§6): random stuck-at and transient faults in a tile's flops under M1 / C1-class workloads, classified detected / masked / dangerous-undetected → FMEDA v2 with measured diagnostic coverage; the storage behind the R7 / R10 comparators that 0.41's synchronous reads added (the port-B address latches, `w_load_q`, the feeder's `inb_q` / `a0_q`, the accumulate's stage-0 control) either compared or shown covered by ABFT / CRC; gate-level simulation of synthesized blocks; the Icarus 12 clean-up | the job; FMEDA v2 rows citing proofs and measured coverage |
+| **D3** software to an evaluable level | 0.49 | ONNX importer (convolution and transformer operators) into `neo_backend.py`, post-training quantization (per-channel INT8, the 2:4 and INT4 paths), a runtime over B1's queues (`neo_host.c` extended), the virtual device (the performance model calibrated with RTL cycles and B2's counters); a YOLOv8-m layer group, a ViT block and an LLM layer end to end on the simulated mesh with accuracy against FP32 | results and cycle counts in the repo; `tool_qual` extended |
+| **Freeze** | 0.70 | RTL freeze criteria met: synthesizable at target on the proxy, every suite, proof and campaign green, chip top integrated, FMEDA v2, the integration specification (clocks, resets, interfaces, memories, IP boundaries), the requirement → mechanism → test / proof → coverage traceability matrix generated from the test docstrings and the FMEDA, a tagged release, HANDOFF-5 | the release |
 
-Parallelism: phase 8 runs beside 3–7; phase 6's formal proofs can start any time after phase 1's front end exists (the same Yosys
-read of the RTL serves both).
+Dependences: A2, B1, C1 and D2 need only 0.41 and run at once; A3 follows A2; B2 follows B1 (the registers); C2 follows C1 (the
+feeder pairs) and B1 (banks fed through bridges for the KV cache); D3's runtime follows B1, its importer and quantization do not.
+Stream A's PE product stage (1,031 ps on the SS proxy) is the one path the design cannot restructure without changing PE_LAT; the
+period the proxy supports is read from A2's sweep, and the 2 GHz claim stays a model until a foundry library.
 
 ## 2. The sparsity engine (phase 3 design)
 
@@ -127,27 +137,44 @@ child units black-boxed and regrouped by parameters — slang reads one module i
 the two leaf modules of `01_rtl/neo_mem.sv` (`neo_mem_sp`, `neo_mem_rf`) rather than at instance paths. The gates run as
 planned (plus the hierarchy check); timing is reported, not gated. The expected first findings were right on requant and the
 NIC's beat path and wrong on the router (its `% 5` round-robin arithmetic, not the 5×5 arbitration or the parity tree) and
-on the ECC decode (inside the budget behind the macro's access time). What drops 0.41 and 0.42 take up, in the order of the
-measured damage (ASAP7 SS figures in spec §9):
+on the ECC decode (inside the budget behind the macro's access time).
 
-- **0.41 — the NIC and the arrays' read ports.** A parallel 16-word beat CRC (a 16-input XOR matrix per CRC bit, two
-  pipeline stages at most) on the transmit side (`tx_crc`, 7.7 ns) and the receive side (`crc_acc`, 5.5 ns), the beat
-  path registered where the bank's read data and the core's drain data enter it; `prow`, the per-source partial-sum row
-  under assembly (64 × 1,024 bits = 65,536 flops, 91 % of the NIC's flops), as a `neo_mem_rf` leaf or sized to the sources
-  that can be mid-row at once; the activation buffer's and the weight buffer's reads registered with the address a stage
-  earlier (the feeder's channel-tile-to-array path, 3.43 ns; `memories.md`), the accumulator's read-modify-write across two
-  cycles (port A registered), the drain FIFO's head read registered; the sequencer's pipeline adjusted and the cocotb /
-  neosim figures re-baselined (the latency changes).
-- **0.42 — the arithmetic stages, the router, the constraints.** Requant in three stages (product | round and shift, the
-  rounding bias as a carry-in after the shift | zero point, ReLU, saturate), its 32×16 product pipelined if the proxy still
-  shows it over 1.5 × the PE's stage; the accumulator's 33-operand ABFT sum as a two-stage tree (the flag is sticky, so a
-  stage costs nothing functionally); the router's grant from a one-hot rotating mask (no modulo) with the parity bit computed
-  at FIFO entry; the link packer's merge registered; the descriptor fields (`cfg_*`) declared static during a run
-  (`set_multicycle_path` / case constraints in `constraints.sdc` and the block SDCs) so the input paths stop masking the
-  register-to-register ones; then the Nangate45 run as the second data point and the PE's product stage judged on both
-  (the one path the design cannot restructure without changing PE_LAT).
+**Status after drop 0.41 (A1, the five items, in four PRs by three streams).** Every path the 0.40 run named is restructured and
+measured on the same flow (ASAP7 SS, the 500 ps budget; the figures are the PRs' CI runs, spec §9 carries the merged main's):
+
+- **The NIC** (A1a, PR #1): `crc16_beat` as a generated XOR matrix — each CRC bit of the beat padded to 16 words is one XOR tree over
+  244–288 of the 528 input bits, then one of 17 precomputed inverse matrices selected by the word count `n` (the serial chain
+  multiplied the state by a fixed matrix per unused word; its inverse undoes it) — 4,723 → 733 ps at 3,430 cells, bit-identical to the
+  serial form on 69,792 vectors (exhaustive by linearity for a fixed n) under three simulators and by the formal job's equivalence proof;
+  `prow` as a `neo_mem_rf` leaf (64 × 1,024 bits, written per column group at `rx_src`, read whole at the check word; no reset needed
+  because a row's columns are always written before its check word reads them, a lost flit being caught by the count and the CRC).
+  `tile_nic` 7,662 → 2,324 ps and 477,805 → 104,987 cells; the tile 239,071 → 173,535 flops; the next NIC path is the WRDATA writeback
+  mask behind the 64:1 `wr_ptr[rx_src]` mux (A2).
+- **The arithmetic and the router** (A1b, PR #3): requant in three stages — the 32×16 product, the rounding bias and the zero point
+  (shifted up by `shift`, so the add before the shift is exact) reduced as carry-save rows, one adder, then shift / fits-in-8-bits test /
+  saturate, ReLU as "zero point when the accumulator is negative" (the same result without a compare) — 3,039 → 934 ps and 192,872 →
+  127,456 cells, bit-identical on 246 k random rows and the new boundary test Q4; the ABFT checker in two stages with no carry-propagate
+  adder at all (carry-save rows, then a carry-free equality test S + C == K ⇔ S ^ C ^ K == G << 1 with G the implied carries), the
+  verdict two cycles after its row with a new `err_valid`; the router's arbitration as a one-hot rotating pointer with the flit's parity
+  and route stored at FIFO entry, the grant order identical cycle for cycle (proved by neosim N3 against the 0.40 router over 9,365
+  grants and by every mesh end time) — 2,571 → 735 ps; the packer's link side registered (one cycle per hop on the 32×32 builds); the
+  descriptor fields `cfg_*` as 4-cycle multicycle paths in the unit and tile SDCs (`cfg_ct` / `cfg_ky` / `cfg_kx` excluded — the sequencer
+  changes them one cycle before a run).
+- **The arrays' reads** (A1c, PR #2): the feeder's address generator incremental (adds only in the per-pixel path, the run constants
+  formed once per run in two multiplier-free cycles from radix-4 digit selects), the activation, weight and accumulator arrays read on
+  the leaves' synchronous port B (an SRAM macro's read; port A tied off, so the three macros are 1-write-1-read synchronous), the
+  accumulate as a two-cycle read-modify-write with a one-stage forward (back-to-back rows to the same address proved by the new cocotb C4
+  / neosim K3), the sequencer's constants re-derived (drain wait LAT + 4, one extra reduce-to-drain cycle); `neo_core` 3,430 → 1,850 ps
+  (1,366 ps of negative slack left under the descriptor constraints, all of it A1b's paths before their merge); the end times move by
+  +2 cycles per descriptor and the tile's 32×32 chains by +1 per registered hop (cocotb tile 46,282.52 → 46,298.02 ns before the packer).
+- **What A2 carries forward:** the packer's merge decision still in the input cycle (−263 ps at the unit level); the router's input-side
+  parity (≈545 ps of setup on the mesh input pins — inside a 1 ns period with the link's 0.4 budget, outside the 500 ps proxy budget);
+  the NIC's writeback mask (2.3 ns) and the drain FIFO head; the PE's product stage at 1,031 ps, which sets the proxy's period and
+  which the period sweep on both libraries measures; the duplicated requant (2 × 127 k cells) against a residue-checked single copy.
 
 ## 6. Formal and fault campaign (phase 6 plan)
+
+**Status after drop 0.41:** the `formal` job exists (D1, PR #4; `02_dv/formal/README.md`): nine full proofs on every push, 73 s, the properties below as written plus the lockstep pairs and the two-stage ABFT verdict; crc16 equivalence needed BDDs (ABC `collapse` + `pdr`), not SAT — an all-XOR miter defeats the SMT engines. The fault campaign is D2 (0.48).
 
 - SymbiYosys: `mode bmc` and `prove` per block with the block's own properties: ecc39 (for all 2^32 data: encode → any single flip →
   decode gives the data and `ce`; any double flip gives `ue`; the overall-parity bit cases), crc16 (linearity and the detection of any
