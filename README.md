@@ -20,9 +20,9 @@ neosim bug until proven otherwise.
 | `04_software/` | C host driver (emits descriptors and DMA programs identical to the Python backend; loads tiles through the register map) and its unit test |
 | `05_safety/` | safety concept (in the record), FMEDA v1 workbook with the Evidence sheet, its generator, the assessor concept-review pack |
 | `06_procurement/` | the RFQ-ready IP list with lead times and the issue sequence |
-| `07_ci/` | Makefile and the GitHub Actions workflow (Python regression, C driver check, Icarus/Verilator testbenches, nightly tile mesh) |
+| `07_ci/` | Makefile and the GitHub Actions workflow (Python regression, C driver check, Icarus/Verilator testbenches, the cocotb suites, the 64-tile mesh, and since drop 0.40 the `synth` job: `07_ci/synth/` — Yosys with the slang front end and OpenSTA on the ASAP7 proxy library, unit by unit up to the silicon tile, the report on the `ci-logs-synth` branch) |
 | `08_ip_product/` | IP form of the deliverable (drop 0.15): datasheet with per-configuration PPA, SEooC safety-manual outline, test-chip plan, the PPA model's output; AXI-Lite wrapper and cocotb testbenches live in `01_rtl/` and `02_dv/cocotb/` |
-| `09_synthesis/` | Genus and Design Compiler reference scripts for `neo_tile_axil` at the silicon configuration, the SDC, and the memory-macro map (drop 0.16; run where the N5A libraries are) |
+| `09_synthesis/` | Genus and Design Compiler reference scripts for `neo_tile_axil` at the silicon configuration, the SDC, and the memory-macro map — since drop 0.40 the table of the `neo_mem_sp` / `neo_mem_rf` leaf instances a compiler's macros replace (`memories.md`; run the scripts where the N5A libraries are) |
 | `10_fpga/` | ZCU102 proof-of-concept flow skeleton: Vivado project script, constraints, `fpga_top` (drop 0.16; completes where Vivado is) |
 | `11_tool_qualification/` | compiler tool-qualification kit generator and its report: 122 cases (lowering value-exactness over random shapes, program-emission structure on 2×2 and 8×8 meshes, C driver equality, requantization arithmetic), with the TCL argument (drop 0.16) |
 | `logs/` | every regression log from the final run on the final RTL (`regress_full.log` is the summary) |
