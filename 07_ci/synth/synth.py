@@ -1,0 +1,1066 @@
+#!/usr/bin/env python3
+"""synth.py -- the open-PDK synthesis job (drop 0.40): Yosys with the slang front end, OpenSTA, the ASAP7 and Nangate45
+libraries, the memory leaves as macros.
+
+Runs from the flat layout (`rtl/` beside `synth/`; `make synth` in CI). The design is synthesized as UNITS -- one Yosys run
+per module at its silicon parameters, every child module that is a unit of its own black-boxed (its logic is synthesized once,
+in its own unit, and instantiated by name), the small helpers (delay lines, the ECC and CRC blocks, the checkers) flattened into
+their parents -- because the tile's hierarchy is wide (1,056 PEs, 64 sources in the NIC) and one read of it is beyond the
+sandbox's memory in Yosys's own front end, while slang reads one module in seconds. Per unit:
+  1. slang reads the module at its parameters with its children and the memory leaves (neo_mem_sp / neo_mem_rf,
+     01_rtl/neo_mem.sv) as black boxes; the black-box instances are regrouped by their parameters: a memory leaf becomes a
+     macro cell named by its width / depth / ports, a child instance the unit that synthesizes that parameterization (the
+     check-column PE is `mac_pe_chk`, the data PE `mac_pe`) -- the hierarchy check of the job: every parameterization of a
+     child must have a unit, and the parameters the unit declares must be the ones the parent uses.
+  2. Yosys: `synth -booth -noabc` with ORFS's Kogge-Stone carry-lookahead map, `extract_fa` onto the library's full / half
+     adders, `dfflibmap`, ABC's speed script at the period against the liberty files; `stat`, `check`, the netlist, its JSON.
+     A net with more than MAX_FANOUT loads (a unit's control fanned out to black-boxed children -- the sequencer's load
+     strobe to 1,056 PEs) gets a tree of the library's buffers in the netlist (the synthesis-stage stand-in for the
+     placer's repeaters; clk and rst_n excepted) and the netlist is re-read for the stat.
+  3. One liberty file for every memory macro of the design from the macro model of MACRO (area per bit, access time,
+     setup / hold: FakeRAM2.0's 7 nm bit cell for ASAP7, fakeram45_2048x39 for Nangate45).
+  4. OpenSTA on the unit's netlist with its child units as extracted timing models (each unit's run ends with
+     `write_timing_model`; the parent reads the children's models, so the paths inside a child are the child's report and
+     the paths between units the parent's -- a flat read of the tile's 2.5 M cells needs more than 6 GB): the tile's SDC
+     (09_synthesis/constraints.sdc in the library's units) or the generic block SDC (the clock, 20 % of the period on the
+     I/O); the worst paths, WNS / TNS, the minimum period, the endpoint slacks.
+  5. The gates: every unit synthesizes; no latch; no multiply-driven net; the hierarchy check; the PE count = ROWS x
+     (COLS + 1) on the cores; at DV_HOOKS = 0 no dv_* input of any unit drives logic and every dv_* output is constant or a
+     child's output; every OpenSTA run completes. Cells, flops and area are summed through the tree (instances x unit).
+  Then report.py writes synth_report.md from synth_results.json.
+
+Environment: NEO_SYNTH_TOOLS (default /opt/neo-synth, where tools.sh installs: oss-cad-suite/, sta, pdk/lib/{asap7,
+nangate45,common}), or NEO_YOSYS, NEO_STA, NEO_PDK_LIB for the individual tools.
+"""
+import argparse
+import concurrent.futures
+import gc
+import json
+import math
+import os
+import re
+import subprocess
+import sys
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+# ---------------------------------------------------------------------------------------------------------------------
+# the libraries
+# ---------------------------------------------------------------------------------------------------------------------
+PDKS = {
+    "asap7": dict(
+        dir="asap7",
+        # ASAP7 7.5-track RVT cells from OpenROAD-flow-scripts platforms/asap7/lib/NLDM (gunzipped by tools.sh);
+        # SS = 0.63 V / 100 C (the worst-case corner of the proxy), TT = 0.70 V / 25 C
+        libs={
+            "SS": ["asap7sc7p5t_AO_RVT_SS_nldm_211120.lib", "asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib",
+                   "asap7sc7p5t_OA_RVT_SS_nldm_211120.lib", "asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib",
+                   "asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib"],
+            "TT": ["asap7sc7p5t_AO_RVT_TT_nldm_211120.lib", "asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib",
+                   "asap7sc7p5t_OA_RVT_TT_nldm_211120.lib", "asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib",
+                   "asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib"],
+        },
+        seq_lib="asap7sc7p5t_SEQ_RVT_{corner}_nldm_220123.lib",
+        time_unit_ps=1.0,                     # the liberty time unit in ps (ASAP7: 1 ps)
+        dont_use=["*x1p*_ASAP7*", "*xp*_ASAP7*", "SDF*", "ICG*"],      # ORFS's list: fractional drives, scan flops, gaters
+        abc_driver="BUFx2_ASAP7_75t_R", abc_load_ff=3.898,
+        repeater=("BUFx2_ASAP7_75t_R", "A", "Y"),   # the buffer of the fanout trees (cell, input pin, output pin)
+        # the macro model: ABKGroup FakeRAM2.0 at ORFS's asap7 fakeram.cfg -- bit cell 10 fin pitches (27 nm) x 2 CPP (54 nm)
+        # = 0.0292 um2, x 1.2 x 1.2 periphery = 0.042 um2 per bit; access 218 ps, setup / hold 50 ps, 5 fF per input
+        macro=dict(area_per_bit_um2=0.0292 * 1.44, tcq=218.0, tsu=50.0, th=50.0, cap=5.0, min_period=157.0,
+                   note="FakeRAM2.0 7 nm (ORFS asap7/fakeram.cfg): 0.042 um2/bit, 218 ps access, 50 ps setup/hold"),
+        default_period_ps=500.0,
+        ratio_note="ASAP7 is an academic 7 nm predictive PDK: no foundry data; the figures are a proxy for the N5A target",
+    ),
+    "nangate45": dict(
+        dir="nangate45",
+        libs={"TT": ["NangateOpenCellLibrary_typical.lib"]},
+        seq_lib="NangateOpenCellLibrary_typical.lib",
+        time_unit_ps=1000.0,                  # 1 ns
+        dont_use=["TAPCELL_X1", "FILLCELL_X1", "AOI211_X1", "OAI211_X1"],
+        abc_driver="BUF_X1", abc_load_ff=3.898,
+        repeater=("BUF_X2", "A", "Z"),
+        # fakeram45_2048x39: 45,478.8 um2 for 79,872 bits = 0.569 um2 per bit; 0.435 ns access, 50 ps setup / hold
+        macro=dict(area_per_bit_um2=45478.818 / (2048 * 39), tcq=0.435, tsu=0.050, th=0.050, cap=5.0, min_period=0.321,
+                   note="ORFS fakeram45_2048x39: 0.569 um2/bit, 0.435 ns access, 50 ps setup/hold"),
+        default_period_ps=500.0,
+        ratio_note="Nangate45 (FreePDK45) is a 45 nm open library: a second data point, not a 2 GHz node",
+    ),
+}
+# area factors of the register-file style leaves against the single-port bit cell (a documented assumption of the
+# proxy: an asynchronous read port and a second read port cost bit-cell area)
+MACRO_AREA_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_rb": 2.0}
+MEM_LEAVES = ("neo_mem_sp", "neo_mem_rf")
+
+RTL_FILES = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv", "neo_mem.sv",
+             "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "ecc39.sv", "wbuf_mem.sv",
+             "requant.sv", "neo_core.sv", "host_if.sv", "noc_router.sv", "sram_bank.sv", "mbist.sv", "bank_bist_wrap.sv",
+             "crc16_word.sv", "crc16_beat.sv", "tile_nic.sv", "tile_dma.sv", "prog_mem.sv", "esm.sv", "link_pack.sv", "neo_tile.sv"]
+
+
+def clog2(x):
+    return max(1, (x - 1).bit_length()) if x > 1 else 1
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# the units
+# ---------------------------------------------------------------------------------------------------------------------
+TILE = dict(XW=3, YW=3, NX=8, NY=8, WPF=32, ROWS=32, COLS=32, ACC_ROWS=512, ABUF_DEPTH=2048, WBUF_DEPTH=1024,
+            BANK_DEPTH=524288, FETCH_TIMEOUT=1048575, DV_HOOKS=0)
+CORE16 = dict(ROWS=16, COLS=8, ACC_ROWS=64, ABUF_DEPTH=256, WBUF_DEPTH=512)
+
+
+def U(name, module, params, desc, children=None, macros=(), pe=None, tile=False):
+    """children: {child module: [unit names that synthesize its parameterizations]}; macros: leaf modules to black-box."""
+    return dict(name=name, module=module, params=dict(params), desc=desc, children=dict(children or {}), macros=list(macros),
+                pe_expected=pe, tile=tile)
+
+
+def core_units(c, p, desc):
+    """The units of one core geometry: c = ROWS/COLS/ACC_ROWS/ABUF_DEPTH/WBUF_DEPTH, p = the unit-name prefix."""
+    R, C, PW = c["ROWS"], c["COLS"], 32
+    WCW = 8 + clog2(R) + 1
+    IDXW, AW, WAW = clog2(c["ACC_ROWS"]), clog2(c["ABUF_DEPTH"]), clog2(c["WBUF_DEPTH"])
+    lanes = (C * 8 + WCW + 31) // 32
+    return [
+        U(p + "mac_pe", "mac_pe", dict(XW=8, WW=8, PW=PW), f"processing element, data column ({desc}): 8x8 signed multiply, 32-bit add, two stages"),
+        U(p + "mac_pe_chk", "mac_pe", dict(XW=8, WW=WCW, PW=PW), f"processing element, ABFT check column ({desc}): {WCW}-bit weight"),
+        U(p + "systolic_array", "systolic_array", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW),
+          f"{R}x{C + 1} PE array ({desc}): the PEs' wiring and the fault-hook select", children={"mac_pe": [p + "mac_pe", p + "mac_pe_chk"]}, pe=R * (C + 1)),
+        U(p + "neo_mac_core", "neo_mac_core", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW),
+          f"streaming core ({desc}): the array with its skew / deskew lines and the ABFT checker", children={"systolic_array": [p + "systolic_array"]}),
+        U(p + "act_feeder", "act_feeder", dict(ROWS=R, XW=8, ABUF_DEPTH=c["ABUF_DEPTH"], AW=AW, IDXW=IDXW),
+          f"activation feeder ({desc}): duplicated address generators around the {c['ABUF_DEPTH'] // 2} x {2 * R * 8} pair leaf (macro)", macros=["neo_mem_rf"]),
+        U(p + "acc_bank", "acc_bank", dict(COLS=C, PW=PW, ACC_ROWS=c["ACC_ROWS"], IDXW=IDXW),
+          f"accumulator ({desc}): {C + 1} adders and the ABFT check around the {c['ACC_ROWS']} x {(C + 1) * PW} leaf (macro)", macros=["neo_mem_rf"]),
+        U(p + "neo_mac_core_v02", "neo_mac_core_v02", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW, ACC_ROWS=c["ACC_ROWS"], ABUF_DEPTH=c["ABUF_DEPTH"], IDXW=IDXW, AW=AW),
+          f"core datapath ({desc}): feeder, streaming core, accumulator",
+          children={"neo_mac_core": [p + "neo_mac_core"], "act_feeder": [p + "act_feeder"], "acc_bank": [p + "acc_bank"]}),
+        U(p + "wbuf_mem", "wbuf_mem", dict(COLS=C, WW=8, WCW=WCW, DEPTH=c["WBUF_DEPTH"], WAW=WAW, DV_HOOKS=0),
+          f"weight buffer ({desc}): {lanes} SECDED lanes around the {c['WBUF_DEPTH'] // 2} x {2 * lanes * 39} pair leaf (macro)", macros=["neo_mem_rf"]),
+        U(p + "requant", "requant", dict(COLS=C, PW=PW, MW=16), f"requantizer ({desc}): {C} columns of 32x17 multiply, shift, round, saturate; table parity"),
+        U(p + "core_seq", "core_seq", dict(ROWS=R, COLS=C, IDXW=IDXW, WBUF_DEPTH=c["WBUF_DEPTH"], WAW=WAW, PE_LAT=2), f"sequencer ({desc}; a lockstep pair in the core)"),
+        U(p + "neo_core", "neo_core", dict(ROWS=R, COLS=C, PW=PW, ACC_ROWS=c["ACC_ROWS"], ABUF_DEPTH=c["ABUF_DEPTH"], WBUF_DEPTH=c["WBUF_DEPTH"], DV_HOOKS=0),
+          f"the {R}x{C} core: datapath, weight buffer, two sequencers, two requantizers, the comparators and flags",
+          children={"neo_mac_core_v02": [p + "neo_mac_core_v02"], "wbuf_mem": [p + "wbuf_mem"], "requant": [p + "requant"], "core_seq": [p + "core_seq"]},
+          pe=R * (C + 1)),
+    ]
+
+
+def tile_units(T):
+    R, C, PW = T["ROWS"], T["COLS"], 32
+    WCW = 8 + clog2(R) + 1
+    IDXW, AW, WAW, BAW = clog2(T["ACC_ROWS"]), clog2(T["ABUF_DEPTH"]), clog2(T["WBUF_DEPTH"]), clog2(T["BANK_DEPTH"])
+    XW, YW, NX, NY, WPF = T["XW"], T["YW"], T["NX"], T["NY"], T["WPF"]
+    DWL = 32 + 32 * WPF
+    BW, LANES, PDEPTH = 16, 16, 32
+    units = core_units(T, "", "32x32")
+    units += [
+        U("sram_bank", "sram_bank", dict(DEPTH=T["BANK_DEPTH"], LANES=LANES, DV_HOOKS=0),
+          f"bank: {LANES} SECDED lanes around the {T['BANK_DEPTH'] // LANES} x {39 * LANES} leaf (macro)", macros=["neo_mem_sp"]),
+        U("mbist", "mbist", dict(AW=BAW, WORDS=T["BANK_DEPTH"], LANES=LANES), "March C- MBIST over the bank's rows"),
+        U("bank_bist_wrap", "bank_bist_wrap", dict(DEPTH=T["BANK_DEPTH"], AW=BAW, BIST_WORDS=T["BANK_DEPTH"], LANES=LANES, DV_HOOKS=0),
+          "the bank with its MBIST and port mux", children={"sram_bank": ["sram_bank"], "mbist": ["mbist"]}),
+        U("crc16_beat", "crc16_beat", dict(BW=BW), "CRC-16 over a 16-word beat: 16 chained word stages (combinational; twice inside the NIC)"),
+        U("ecc39_enc", "ecc39_enc", {}, "(39,32) SECDED encoder (combinational; inside the bank, the weight buffer, the program memory)"),
+        U("ecc39_dec", "ecc39_dec", {}, "(39,32) SECDED decoder: syndrome, correction, ce / ue (combinational; the same)"),
+        U("link_packer", "link_packer", dict(XW=XW, YW=YW, BW=BW, WPF=WPF), "beats (16 words) to 32-word link flits"),
+        U("link_unpacker", "link_unpacker", dict(XW=XW, YW=YW, BW=BW, WPF=WPF), "32-word link flits to beats"),
+        U("tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX, NSRC=NX * NY, BW=BW, ROWS=R, COLS=C, WCW=WCW, IDXW=IDXW, AW=AW, WAW=WAW, BAW=BAW, PW=PW,
+                                       DFD=T["ACC_ROWS"], FETCH_TIMEOUT=T["FETCH_TIMEOUT"], DV_HOOKS=0),
+          "tile interface: fetch (two entries per cycle), serve, writeback, partial sums, CRC per beat, per-source state for 64 sources; the drain FIFO 512 x 1,065 is a leaf (macro)",
+          macros=["neo_mem_rf"]),
+        U("noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router: 1077-bit flits, 2-entry input FIFOs, parity at the FIFO head, round-robin outputs"),
+        U("tile_dma", "tile_dma", dict(XW=XW, YW=YW, PDEPTH=PDEPTH, DV_HOOKS=0), "DMA program engine (a lockstep pair in the tile)"),
+        U("prog_mem", "prog_mem", dict(DEPTH=PDEPTH, DV_HOOKS=0), "32 x 64-bit program memory as two SECDED lanes (flops)"),
+        U("host_if", "host_if", dict(IDXW=IDXW, PAW=clog2(PDEPTH), DV_HOOKS=0), "host register interface"),
+        U("esm", "esm", dict(NFLAGS=18), "error-signaling module: 18 causes, the mask, the windowed watchdog"),
+        U("neo_tile", "neo_tile", dict(T), "the silicon tile: 8x8 mesh position, 32x32 core, 2 MB bank, 1024-bit links, DV_HOOKS = 0 (own logic: flags, the hooks' tie-offs, the register decode)",
+          children={"neo_core": ["neo_core"], "tile_nic": ["tile_nic"], "noc_router": ["noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
+                    "tile_dma": ["tile_dma"], "prog_mem": ["prog_mem"], "host_if": ["host_if"], "esm": ["esm"],
+                    "link_packer": ["link_packer"], "link_unpacker": ["link_unpacker"]},
+          pe=R * (C + 1), tile=True),
+    ]
+    return units
+
+
+UNITS = tile_units(TILE) + core_units(CORE16, "c16_", "16x8")
+UNIT = {u["name"]: u for u in UNITS}
+
+
+def log(msg):
+    print(time.strftime("%H:%M:%S"), msg, flush=True)
+
+
+def run(cmd, cwd, logfile, timeout=None):
+    with open(logfile, "w") as f:
+        f.write("$ " + " ".join(cmd) + "\n")
+        f.flush()
+        p = subprocess.run(cmd, cwd=cwd, stdout=f, stderr=subprocess.STDOUT, timeout=timeout)
+    return p.returncode
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# tools
+# ---------------------------------------------------------------------------------------------------------------------
+def find_tools(args):
+    root = os.environ.get("NEO_SYNTH_TOOLS", "/opt/neo-synth")
+    t = {}
+    t["yosys"] = os.environ.get("NEO_YOSYS") or os.path.join(root, "oss-cad-suite", "bin", "yosys")
+    t["sta"] = os.environ.get("NEO_STA") or os.path.join(root, "sta")
+    t["pdk_lib"] = os.environ.get("NEO_PDK_LIB") or os.path.join(root, "pdk", "lib")
+    for k in ("yosys", "sta"):
+        if not (os.path.isfile(t[k]) and os.access(t[k], os.X_OK)):
+            sys.exit(f"synth.py: {k} not found ({t[k]}); run synth/tools.sh or set NEO_{k.upper()}")
+    pdk = PDKS[args.pdk]
+    libdir = os.path.join(t["pdk_lib"], pdk["dir"])
+    t["libs"] = [os.path.join(libdir, f) for f in pdk["libs"][args.corner]]
+    t["seq_lib"] = os.path.join(libdir, pdk["seq_lib"].format(corner=args.corner))
+    t["lcu"] = os.path.join(t["pdk_lib"], "common", "lcu_kogge_stone.v")
+    t["fa_map"] = os.path.join(libdir, "cells_adders.v")
+    for f in t["libs"] + [t["lcu"], t["fa_map"]]:
+        if not os.path.isfile(f):
+            sys.exit(f"synth.py: library file missing: {f}")
+    return t
+
+
+def tool_versions(t):
+    v = {}
+    for k, cmd in (("yosys", [t["yosys"], "-V"]), ("sta", [t["sta"], "-version"])):
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=120).stdout.strip().splitlines()
+            v[k] = out[0] if out else "?"
+        except Exception as e:   # noqa: BLE001
+            v[k] = f"? ({e})"
+    return v
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# the netlist JSON
+# ---------------------------------------------------------------------------------------------------------------------
+def const_int(v):
+    if isinstance(v, str) and v and set(v) <= {"0", "1"}:
+        return int(v, 2)
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return v
+
+
+class Netlist:
+    def __init__(self, path):
+        with open(path) as f:
+            self.j = json.load(f)
+        self.modules = self.j["modules"]
+        tops = [n for n, m in self.modules.items() if str(m.get("attributes", {}).get("top", "")).strip("0") == "1"]
+        if tops:
+            self.top = tops[0]
+        else:
+            inst = {c["type"] for m in self.modules.values() for c in m.get("cells", {}).values()}
+            cands = [n for n in self.modules if n not in inst and not self.is_blackbox(n)]
+            self.top = cands[0] if cands else next(iter(self.modules))
+
+    def is_blackbox(self, mod):
+        a = self.modules[mod].get("attributes", {})
+        return "blackbox" in a or "whitebox" in a
+
+    def ports(self, mod):
+        return self.modules[mod].get("ports", {})
+
+    def cells(self, mod=None):
+        return self.modules[mod or self.top].get("cells", {})
+
+    def groups(self, mod=None):
+        """{black-box type: {parameter tuple: [cell names]}} of the top's cells whose type is a black box."""
+        g = {}
+        for cn, c in self.cells(mod).items():
+            ty = c["type"]
+            if ty in self.modules and self.is_blackbox(ty):
+                key = tuple(sorted((k, const_int(v)) for k, v in c.get("parameters", {}).items()))
+                g.setdefault(ty, {}).setdefault(key, []).append(cn)
+        return g
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# the macro liberty
+# ---------------------------------------------------------------------------------------------------------------------
+def macro_name(base, p):
+    n = f"{base}_w{p.get('W')}_d{p.get('D')}_g{p.get('G', 1)}"
+    if base == "neo_mem_rf":
+        n += f"_rb{p.get('RB', 0)}"
+    return n
+
+
+def macro_record(base, p, pdk):
+    bits = p["W"] * p["D"]
+    kind = base if not (base == "neo_mem_rf" and p.get("RB", 0)) else "neo_mem_rf_rb"
+    return dict(name=macro_name(base, p), base=base, W=p["W"], D=p["D"], G=p.get("G", 1), RB=p.get("RB", 0), AW=p.get("AW", clog2(p["D"])),
+                bits=bits, area_um2=bits * pdk["macro"]["area_per_bit_um2"] * MACRO_AREA_FACTOR[kind], factor=MACRO_AREA_FACTOR[kind])
+
+
+def write_macro_lib(recs, pdk, path, libname="neo_macros"):
+    """One liberty cell per memory-leaf parameterization: bus pins, setup / hold on the inputs, the access time on the
+    read data (clock-to-Q on the registered ports, address-to-data on the asynchronous port A of neo_mem_rf)."""
+    m = pdk["macro"]
+    widths = set()
+    for r in recs:
+        for pn, w, d in r["pins"]:
+            if w > 1:
+                widths.add(w)
+    time_unit = "1ps" if pdk["time_unit_ps"] == 1.0 else "1ns"
+    L = [f"library ({libname}) {{",
+         "  delay_model : table_lookup;",
+         f"  time_unit : \"{time_unit}\";",
+         "  capacitive_load_unit (1,ff);",
+         "  voltage_unit : \"1V\"; current_unit : \"1mA\"; leakage_power_unit : \"1pW\"; pulling_resistance_unit : \"1kohm\";",
+         "  nom_process : 1; nom_temperature : 25; nom_voltage : 0.7;",
+         "  slew_lower_threshold_pct_rise : 20; slew_upper_threshold_pct_rise : 80; slew_lower_threshold_pct_fall : 20; slew_upper_threshold_pct_fall : 80;",
+         "  input_threshold_pct_rise : 50; input_threshold_pct_fall : 50; output_threshold_pct_rise : 50; output_threshold_pct_fall : 50;",
+         "  default_max_transition : 1000;"]
+    for w in sorted(widths):
+        L.append(f"  type (bus_{w}) {{ base_type : array; data_type : bit; bit_width : {w}; bit_from : {w - 1}; bit_to : 0; downto : true; }}")
+    tr = f"{m['tcq'] * 0.1:.4g}"
+
+    def arc_cq(related, ttype):
+        return (f"      timing() {{ related_pin : \"{related}\"; {ttype} timing_sense : non_unate;"
+                f" cell_rise(scalar) {{ values(\"{m['tcq']}\"); }} cell_fall(scalar) {{ values(\"{m['tcq']}\"); }}"
+                f" rise_transition(scalar) {{ values(\"{tr}\"); }} fall_transition(scalar) {{ values(\"{tr}\"); }} }}")
+
+    def arc_su():
+        return (f"      timing() {{ related_pin : \"clk\"; timing_type : setup_rising; rise_constraint(scalar) {{ values(\"{m['tsu']}\"); }} fall_constraint(scalar) {{ values(\"{m['tsu']}\"); }} }}\n"
+                f"      timing() {{ related_pin : \"clk\"; timing_type : hold_rising; rise_constraint(scalar) {{ values(\"{m['th']}\"); }} fall_constraint(scalar) {{ values(\"{m['th']}\"); }} }}")
+
+    for r in recs:
+        L.append(f"  cell ({r['name']}) {{")
+        L.append(f"    area : {r['area_um2']:.3f};")
+        L.append("    dont_use : true;")
+        L.append(f"    memory() {{ type : ram; address_width : {r['AW']}; word_width : {r['W']}; }}")
+        for pn, w, d in r["pins"]:
+            head = f"    pin ({pn}) {{" if w == 1 else f"    bus ({pn}) {{ bus_type : bus_{w};"
+            body = [f"      direction : {d};"]
+            if pn == "clk":
+                body.append(f"      clock : true; capacitance : {m['cap'] * 4:.3f}; min_period : {m['min_period']};")
+            elif d == "input":
+                body.append(f"      capacitance : {m['cap']:.3f};")
+                if not pn.startswith(("bd_", "fi_")):     # the hook pins are tied off in silicon: no constraint
+                    body.append(arc_su())
+            else:
+                body.append("      max_capacitance : 500.0;")
+                if pn in ("rdata", "rb_data"):
+                    body.append(arc_cq("clk", "timing_type : rising_edge;"))
+                elif pn == "ra_data":           # the asynchronous read: an arc from every address bit (a bus-to-bus arc of
+                    aw = r["AW"]                  # different widths is not taken by OpenSTA)
+                    body.append(arc_cq(" ".join(f"ra_addr[{i}]" for i in range(aw)), ""))
+            L.append(head)
+            L.extend(body)
+            L.append("    }")
+        L.append("  }")
+    L.append("}")
+    with open(path, "w") as f:
+        f.write("\n".join(L) + "\n")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# step 1: the unit's first read (slang) and its analysis
+# ---------------------------------------------------------------------------------------------------------------------
+def slang_read_cmd(u, rtl):
+    bb = " ".join(f"--blackboxed-module {m}" for m in list(u["children"]) + u["macros"])
+    g = " ".join(f"-G {k}={v}" for k, v in u["params"].items())
+    files = " ".join(os.path.join(rtl, f) for f in RTL_FILES)
+    return f"read_slang --ignore-timing {bb} --top {u['module']} {g} {files}"
+
+
+def pins_of(nl, ty, cell_name):
+    """The pins of a black-box type as one instance connects them: (name, width, direction)."""
+    ports = nl.ports(ty)
+    c = nl.cells()[cell_name]
+    return [(pn, len(bits), ports.get(pn, {}).get("direction", "input")) for pn, bits in c["connections"].items()]
+
+
+def analyse(u, nl, pdk):
+    """The black-box groups of the unit: the retype plan (cell type -> unit / macro name per parameterization), the stubs,
+    the macro records, the child instance counts and the hierarchy-check findings."""
+    plan, stubs, macros, kids, problems = [], {}, {}, {}, []
+    seen_children = set()
+    for ty, groups in nl.groups().items():
+        for key, cells in groups.items():
+            p = dict(key)
+            if ty in u["macros"]:
+                if "W" not in p or "D" not in p:
+                    problems.append(f"{ty}: leaf instance without W / D parameters ({p})")
+                    continue
+                r = macro_record(ty, p, pdk)
+                target = r["name"]
+                if target not in macros:
+                    r["pins"] = pins_of(nl, ty, cells[0])
+                    r["instances"] = 0
+                    macros[target] = r
+                macros[target]["instances"] += len(cells)
+            elif ty in u["children"]:
+                cand = [UNIT[n] for n in u["children"][ty]]
+                match = [c for c in cand if all(p.get(k) == v for k, v in c["params"].items())]
+                if not match:
+                    problems.append(f"{ty} instantiated with {p}: no unit synthesizes it (candidates {[c['name'] for c in cand]})")
+                    continue
+                target = match[0]["name"]
+                kids[target] = kids.get(target, 0) + len(cells)
+                seen_children.add(ty)
+            else:
+                problems.append(f"unexpected black box {ty}")
+                continue
+            plan.append((ty, p, target, cells))
+            if target != ty and target not in stubs:
+                stubs[target] = pins_of(nl, ty, cells[0])
+    for ty in u["children"]:
+        if ty not in seen_children:
+            problems.append(f"{ty} is declared a child but the module instantiates none")
+    return dict(plan=plan, stubs=stubs, macros=macros, children=kids, problems=problems)
+
+
+def stub_verilog(name, pins):
+    ports = ", ".join(pn for pn, _, _ in pins)
+    decl = [f"  {d}{(' [%d:0]' % (w - 1)) if w > 1 else ''} {pn};" for pn, w, d in pins]
+    return f"module {name}({ports});\n" + "\n".join(decl) + "\nendmodule\n"
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# step 2: the unit's synthesis script
+# ---------------------------------------------------------------------------------------------------------------------
+def synth_script(u, an, t, pdk, period_ps, rtl, udir):
+    libs = " ".join(f"-liberty {l}" for l in t["libs"])
+    dont = " ".join(f"-dont_use {c}" for c in pdk["dont_use"])
+    with open(os.path.join(udir, "abc.constr"), "w") as f:
+        f.write(f"set_driving_cell {pdk['abc_driver']}\nset_load {pdk['abc_load_ff']}\n")
+    L = [f"# unit {u['name']}: {u['module']} {u['params']}", "plugin -i slang", slang_read_cmd(u, rtl)]
+    if an["stubs"]:
+        with open(os.path.join(udir, "stubs.v"), "w") as f:
+            for name, pins in an["stubs"].items():
+                f.write(stub_verilog(name, pins))
+        L.append("read_verilog -lib stubs.v")
+    # the black-box instances under their unit / macro names, without parameters (the stubs and the liberty carry none):
+    # the parameterizations of one type are told apart by the integer parameters whose values differ between them
+    by_type = {}
+    for ty, p, target, cells in an["plan"]:
+        by_type.setdefault(ty, []).append((p, target))
+    for ty, groups in by_type.items():
+        keys = sorted({k for p, _ in groups for k in p})
+        distinct = [k for k in keys if len({str(p.get(k)) for p, _ in groups}) > 1 and all(isinstance(p.get(k), int) for p, _ in groups)]
+        for p, target in groups:
+            if target != ty:
+                sel = f"t:{ty} " + " ".join(f"r:{k}={p[k]} %i" for k in distinct)
+                L.append(f"chtype -set {target} {sel}")
+        for target in sorted({target for _, target in groups}):
+            if keys:
+                L.append("setparam " + " ".join(f"-unset {k}" for k in keys) + f" t:{target}")
+    if u["name"] != u["module"]:
+        L.append(f"rename -top {u['name']}")
+    L += [
+        "# generic synthesis (the children and the leaves stay black boxes); the arithmetic as the ORFS flow maps it: Booth",
+        "# multipliers, Kogge-Stone carry lookahead, the full adders on the library's FA / HA cells",
+        f"synth -top {u['name']} -booth -noabc -extra-map {t['lcu']}",
+        "tee -q -o generic_stat.json stat -json",
+        "tee -q -o check.txt check",
+        "extract_fa",
+        f"techmap -map {t['fa_map']}",
+        "techmap",
+        "opt -fast -purge",
+        "# the flops named after the registers they hold (the paths read in RTL terms), then the library: flops, then ABC's",
+        "# speed script at the clock period with the driver / load of the platform",
+        "rename -wire -suffix _reg t:$_DFF* t:$_DFFE* t:$_SDFF* t:$_SDFFE* t:$_DFFSR* t:$_DFFSRE* t:$_ALDFF* t:$_DLATCH*",
+        f"dfflibmap -liberty {t['seq_lib']} {dont}",
+        "opt",
+        "setundef -zero",
+        f"abc -script {os.path.join(HERE, 'abc_speed.script')} {libs} {dont} -D {int(round(period_ps))} -constr abc.constr",
+        "opt_clean -purge",
+        "# the library cells as black boxes, so the JSON carries every pin's direction (the repeater trees need it)",
+    ] + [f"read_liberty -lib {l}" for l in t["libs"]] + [
+        f"tee -q -o stat.json stat {libs} -json",
+        f"tee -q -o stat.txt stat {libs}",
+        "write_verilog -noattr -noexpr -nohex -nodec netlist.v",
+        "write_json netlist.json",
+    ]
+    return "\n".join(L) + "\n"
+
+
+MAX_FANOUT = 32
+
+
+def buffer_fanout(json_path, pdk, skip_ports=("clk", "rst_n")):
+    """Repeater trees on every net of the unit's top module whose fanout exceeds MAX_FANOUT (what the physical flow
+    inserts; the per-unit synthesis cannot see the loads behind its black-box children, so a strobe into 1,056 PEs would
+    otherwise be timed as one driver): 4-ary trees of the library's buffer, the clock and the reset nets excepted. The
+    JSON is rewritten in place (Yosys re-reads it for the Verilog and the stat); returns the number of buffers added."""
+    with open(json_path) as f:
+        j = json.load(f)
+    top = next((n for n, m in j["modules"].items() if str(m.get("attributes", {}).get("top", "")).strip("0") == "1"), None)
+    if top is None:
+        return 0
+    m = j["modules"][top]
+    for cn, c in m["cells"].items():
+        if not c.get("port_directions"):
+            raise RuntimeError(f"buffer_fanout: no pin directions for {cn} ({c['type']}) -- the liberty cells must be in the design")
+    cell_name, pin_in, pin_out = pdk["repeater"]
+    skip_bits = set()
+    for pn in skip_ports:
+        if pn in m["ports"]:
+            skip_bits.update(b for b in m["ports"][pn]["bits"] if isinstance(b, int))
+    # the sinks of every bit: (cell, port, index) of input pins, and ("", port, index) of the module's output ports
+    sinks = {}
+    for cn, c in m["cells"].items():
+        dirs = c["port_directions"]
+        for port, bits in c["connections"].items():
+            if dirs.get(port, "input") != "input":
+                continue
+            for i, b in enumerate(bits):
+                if isinstance(b, int) and b not in skip_bits:
+                    sinks.setdefault(b, []).append((cn, port, i))
+    for pn, p in m["ports"].items():
+        if p["direction"] == "output":
+            for i, b in enumerate(p["bits"]):
+                if isinstance(b, int) and b not in skip_bits:
+                    sinks.setdefault(b, []).append(("", pn, i))
+    heavy = {b: sk for b, sk in sinks.items() if len(sk) > MAX_FANOUT}
+    if not heavy:
+        return 0
+    added = 0
+    next_bit = max([b for mod in j["modules"].values() for p in mod["ports"].values() for b in p["bits"] if isinstance(b, int)] +
+                   [b for mod in j["modules"].values() for c in mod["cells"].values() for bits in c["connections"].values() for b in bits if isinstance(b, int)] +
+                   [b for mod in j["modules"].values() for n in mod.get("netnames", {}).values() for b in n["bits"] if isinstance(b, int)] + [0]) + 1
+
+    def reconnect(sk, bit):
+        cn, port, i = sk
+        if cn == "":
+            m["ports"][port]["bits"][i] = bit
+            nn = m.get("netnames", {}).get(port)         # the port's own net name must move with it, or read_json shorts the two
+            if nn and i < len(nn["bits"]):
+                nn["bits"][i] = bit
+        else:
+            m["cells"][cn]["connections"][port][i] = bit
+
+    def tree(src, sk_list):
+        """src drives sk_list through buffers: at most MAX_FANOUT loads per driver at every level."""
+        nonlocal next_bit, added
+        if len(sk_list) <= MAX_FANOUT:
+            for sk in sk_list:
+                reconnect(sk, src)
+            return
+        groups = [sk_list[i:i + MAX_FANOUT] for i in range(0, len(sk_list), MAX_FANOUT)]
+        new_srcs = []
+        for g in groups:
+            b = next_bit
+            next_bit += 1
+            added += 1
+            m["cells"][f"fobuf_{b}"] = {"hide_name": 1, "type": cell_name, "parameters": {}, "attributes": {},
+                                         "port_directions": {pin_in: "input", pin_out: "output"},
+                                         "connections": {pin_in: [None], pin_out: [b]}}
+            for sk in g:
+                reconnect(sk, b)
+            new_srcs.append((f"fobuf_{b}", pin_in, 0))
+        tree(src, new_srcs)
+
+    for b, sk_list in heavy.items():
+        tree(b, sk_list)
+    with open(json_path, "w") as f:
+        json.dump(j, f)
+    return added
+
+
+def fix_netlist(path):
+    """No `signed` on the declarations (OpenSTA's reader does not take it)."""
+    with open(path) as f:
+        s = f.read()
+    s = re.sub(r"^(\s*(?:input|output|inout|wire|reg)) signed ", r"\1 ", s, flags=re.M)
+    with open(path, "w") as f:
+        f.write(s)
+
+
+def parse_stat(udir):
+    try:
+        with open(os.path.join(udir, "stat.json")) as f:
+            s = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    return {k.lstrip("\\"): v for k, v in s.get("modules", {}).items()}
+
+
+def latches(udir):
+    try:
+        with open(os.path.join(udir, "generic_stat.json")) as f:
+            g = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    n = 0
+    for mname, s in g.get("modules", {}).items():
+        for ty, k in s.get("num_cells_by_type", {}).items():
+            if "latch" in ty.lower() or ty.startswith("$_DLATCH") or ty.startswith("$dlatch"):
+                n += k
+    return n
+
+
+def check_problems(udir):
+    try:
+        txt = open(os.path.join(udir, "check.txt")).read()
+    except FileNotFoundError:
+        return None
+    m = re.search(r"Found and reported (\d+) problems", txt)
+    return dict(problems=int(m.group(1)) if m else 0, multiple_drivers=len(re.findall(r"multiple conflicting drivers", txt)))
+
+
+def dv_hooks_check(nl, an):
+    """DV_HOOKS = 0 in this unit: every dv_* input bit drives only black-box children (or nothing); every dv_* output bit is
+    a constant or a black-box child's output."""
+    top = nl.modules[nl.top]
+    ports = top.get("ports", {})
+    bb_types = {ty for ty, _, _, _ in an["plan"]} | {target for _, _, target, _ in an["plan"]}
+    in_bits = set()
+    for pn, p in ports.items():
+        if pn.startswith("dv_") and p["direction"] == "input":
+            in_bits.update(b for b in p["bits"] if isinstance(b, int))
+    bad_loads, bb_out_bits = [], set()
+    for cn, c in top.get("cells", {}).items():
+        is_bb = c["type"] in bb_types
+        cports = nl.ports(c["type"]) if c["type"] in nl.modules else {}
+        for port, bits in c.get("connections", {}).items():
+            if is_bb and cports.get(port, {}).get("direction") == "output":
+                bb_out_bits.update(b for b in bits if isinstance(b, int))
+            if not is_bb and any(isinstance(b, int) and b in in_bits for b in bits):
+                bad_loads.append(f"{cn} ({c['type']}).{port}")
+    bad_outs = []
+    for pn, p in ports.items():
+        if p["direction"] == "output":
+            if any(isinstance(b, int) and b in in_bits for b in p["bits"]):
+                bad_outs.append(f"{pn} passes a dv_* input through")
+            if pn.startswith("dv_") and any(isinstance(b, int) and b not in bb_out_bits for b in p["bits"]):
+                bad_outs.append(f"{pn} is driven by logic")
+    return dict(dv_inputs=sorted(pn for pn, p in ports.items() if pn.startswith("dv_") and p["direction"] == "input"),
+                dv_outputs=sorted(pn for pn, p in ports.items() if pn.startswith("dv_") and p["direction"] == "output"),
+                bad_loads=bad_loads[:20], bad_outputs=bad_outs, passed=(not bad_loads and not bad_outs))
+
+
+def run_unit(u, t, pdk, args, out, rtl):
+    udir = os.path.join(out, u["name"])
+    os.makedirs(udir, exist_ok=True)
+    res = dict(name=u["name"], module=u["module"], params=u["params"], description=u["desc"], pe_expected=u["pe_expected"], tile=u["tile"])
+    t0 = time.time()
+    with open(os.path.join(udir, "read.ys"), "w") as f:
+        f.write("plugin -i slang\n" + slang_read_cmd(u, rtl) + "\nwrite_json pre.json\n")
+    rc = run([t["yosys"], "-q", "-l", "read.log", "-s", "read.ys"], udir, os.path.join(udir, "read.out"), timeout=args.timeout)
+    if rc != 0:
+        res["failed"] = f"slang read exit {rc}"
+        log(f"{u['name']}: read FAILED (exit {rc})")
+        return res
+    nl = Netlist(os.path.join(udir, "pre.json"))
+    an = analyse(u, nl, pdk)
+    del nl                       # the parsed JSON (hundreds of MB for the NIC) is not held through the Yosys run
+    gc.collect()
+    res["hierarchy_problems"] = an["problems"]
+    res["children"] = an["children"]
+    res["macros"] = {k: {kk: vv for kk, vv in v.items() if kk != "pins"} for k, v in an["macros"].items()}
+    res["macro_pins"] = {k: v["pins"] for k, v in an["macros"].items()}
+    if an["problems"]:
+        res["failed"] = "hierarchy: " + "; ".join(an["problems"])
+        log(f"{u['name']}: {res['failed']}")
+        return res
+    with open(os.path.join(udir, "synth.ys"), "w") as f:
+        f.write(synth_script(u, an, t, pdk, args.period, rtl, udir))
+    log(f"{u['name']}: yosys ({u['module']} {u['params']})")
+    rc = run([t["yosys"], "-q", "-l", "yosys.log", "-s", "synth.ys"], udir, os.path.join(udir, "yosys.out"), timeout=args.timeout)
+    res["synth_seconds"] = time.time() - t0
+    if rc != 0:
+        res["failed"] = f"yosys exit {rc}"
+        log(f"{u['name']}: yosys FAILED (exit {rc}) in {res['synth_seconds']:.0f} s")
+        return res
+    res["repeaters"] = buffer_fanout(os.path.join(udir, "netlist.json"), pdk)
+    if res["repeaters"]:
+        libs2 = " ".join(f"-liberty {l}" for l in t["libs"])
+        with open(os.path.join(udir, "rewrite.ys"), "w") as f:            # the JSON carries the black boxes (stubs, library cells)
+            f.write(f"read_json netlist.json\nhierarchy -top {u['name']}\n"
+                    f"tee -q -o stat.json stat {libs2} -json\ntee -q -o stat.txt stat {libs2}\n"
+                    "write_verilog -noattr -noexpr -nohex -nodec netlist.v\n")
+        rc = run([t["yosys"], "-q", "-l", "rewrite.log", "-s", "rewrite.ys"], udir, os.path.join(udir, "rewrite.out"), timeout=args.timeout)
+        if rc != 0:
+            res["failed"] = f"yosys rewrite (fanout trees) exit {rc}"
+            log(f"{u['name']}: rewrite FAILED (exit {rc})")
+            return res
+    fix_netlist(os.path.join(udir, "netlist.v"))
+    if u["params"].get("DV_HOOKS") == 0:          # on the synthesized netlist: the tie-offs' dead logic is gone, the black boxes stay
+        res["dv_hooks"] = dv_hooks_check(Netlist(os.path.join(udir, "netlist.json")), an)
+    mods = parse_stat(udir) or {}
+    s = mods.get(u["name"], {})
+    by_type = {k.lstrip("\\"): v for k, v in s.get("num_cells_by_type", {}).items()}
+    own_targets = {target for _, _, target, _ in an["plan"]}
+    res["own_cells"] = sum(v for k, v in by_type.items() if k not in own_targets)      # library cells of this unit
+    res["own_area_um2"] = float(s.get("area", 0.0) or 0.0)
+    res["own_flops"] = sum(v for k, v in by_type.items() if "DFF" in k.upper() or k.startswith(("DHL", "DL")))
+    res["cells_by_type"] = by_type
+    res["latches"] = latches(udir)
+    res["check"] = check_problems(udir)
+    log(f"{u['name']}: yosys done in {res['synth_seconds']:.0f} s: {res['own_cells']:,} cells, {res['own_area_um2']:,.0f} um2")
+    return res
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# the tree: totals, the PE count, the netlists of a subtree
+# ---------------------------------------------------------------------------------------------------------------------
+def subtree(name, results, acc=None):
+    acc = acc if acc is not None else []
+    if name in acc:
+        return acc
+    acc.append(name)
+    for child in (results.get(name, {}).get("children") or {}):
+        subtree(child, results, acc)
+    return acc
+
+
+def totals(name, results, memo):
+    if name in memo:
+        return memo[name]
+    r = results.get(name, {})
+    if r.get("failed") or "own_cells" not in r:
+        memo[name] = None
+        return None
+    cells, area, flops, marea = r["own_cells"], r["own_area_um2"], r["own_flops"], 0.0
+    pes = 1 if UNIT[name]["module"] == "mac_pe" else 0
+    for m, rec in (r.get("macros") or {}).items():
+        marea += rec["area_um2"] * rec["instances"]
+    for child, n in (r.get("children") or {}).items():
+        ct = totals(child, results, memo)
+        if ct is None:
+            memo[name] = None
+            return None
+        cells += n * ct["cells"]; area += n * ct["cell_area_um2"]; flops += n * ct["flops"]; marea += n * ct["macro_area_um2"]; pes += n * ct["pe_count"]
+    memo[name] = dict(cells=cells, cell_area_um2=area, flops=flops, macro_area_um2=marea, total_area_um2=area + marea, pe_count=pes)
+    return memo[name]
+
+
+def all_macros(results):
+    recs = {}
+    for r in results.values():
+        for m, rec in (r.get("macros") or {}).items():
+            if m not in recs:
+                recs[m] = dict(rec, pins=(r.get("macro_pins") or {}).get(m))
+    return list(recs.values())
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# OpenSTA
+# ---------------------------------------------------------------------------------------------------------------------
+TILE_SDC = """# neo_tile at {period} {unit} (09_synthesis/constraints.sdc, drop 0.16, in the library's units; drop 0.40)
+create_clock -name clk -period {period} [get_ports clk]
+set_clock_uncertainty -setup {u_setup} [get_clocks clk]
+set_clock_uncertainty -hold {u_hold} [get_clocks clk]
+set_clock_transition {ctrans} [get_clocks clk]
+# asynchronous reset: assertion async, deassertion synchronized outside the block
+set_false_path -from [get_ports rst_n]
+# the tile's coordinates are straps
+set_false_path -from [get_ports {{my_x* my_y*}}]
+# mesh links: registered on both sides; a budget of 0.4 of the cycle to and from the neighbouring tile
+set_input_delay  -clock clk -max {link} [get_ports {{in_valid* in_flit* out_ready*}}]
+set_output_delay -clock clk -max {link} [get_ports {{out_valid* out_flit* in_ready*}}]
+# host register bus: relaxed (registered in the aggregator)
+set_input_delay  -clock clk -max {host} [get_ports {{h_we h_re h_addr* h_wdata*}}]
+set_output_delay -clock clk -max {host} [get_ports {{h_rdata* err_pin}}]
+# status flags are sampled by the island at its own rate
+set_multicycle_path 4 -setup -to [get_ports {{prog_done drain_busy done parity_err crc_err *_sticky ecc_* wbuf_* rq_tbl_perr lost_err fetch_timeout}}]
+set_multicycle_path 3 -hold  -to [get_ports {{prog_done drain_busy done parity_err crc_err *_sticky ecc_* wbuf_* rq_tbl_perr lost_err fetch_timeout}}]
+set_max_fanout 32 [current_design]
+set_max_transition {mtrans} [current_design]
+"""
+BLOCK_SDC = """# {name} at {period} {unit}: the clock and 0.2 of the period on every input and output (drop 0.40)
+create_clock -name clk -period {period} [get_ports clk]
+set_clock_uncertainty -setup {u_setup} [get_clocks clk]
+set_input_delay  -clock clk -max {io} [delete_from_list [all_inputs] [get_ports {{clk rst_n}}]]
+set_output_delay -clock clk -max {io} [all_outputs]
+set_false_path -from [get_ports rst_n]
+set_max_fanout 32 [current_design]
+set_max_transition {mtrans} [current_design]
+"""
+COMB_SDC = """# {name}: combinational -- a virtual clock of {period} {unit}, inputs and outputs at its edges (drop 0.40)
+create_clock -name vclk -period {period}
+set_input_delay  -clock vclk 0 [all_inputs]
+set_output_delay -clock vclk 0 [all_outputs]
+set_max_fanout 32 [current_design]
+set_max_transition {mtrans} [current_design]
+"""
+STA_TCL = """# {name}: OpenSTA on the unit's netlist with its children as extracted timing models (drop 0.40)
+{read_libs}
+read_verilog netlist.v
+link_design {name}
+read_sdc block.sdc
+report_checks -path_delay max -group_path_count 10 -endpoint_path_count 1 -unique_paths_to_endpoint -fields {{slew cap fanout}} -digits 1 -format full_clock_expanded > paths_max.txt
+report_checks -path_delay min -group_path_count 3 -digits 1 > paths_min.txt
+set f [open summary.txt w]
+puts $f "wns_max [worst_slack -max]"
+puts $f "tns_max [total_negative_slack -max]"
+puts $f "wns_min [worst_slack -min]"
+close $f
+report_clock_min_period > min_period.txt
+report_check_types -max_slew -max_capacitance -max_fanout -violators > drv.txt
+set f [open endpoints.txt w]
+foreach pin [sta::endpoints] {{
+  puts $f "[get_full_name $pin] [get_property $pin slack_max]"
+}}
+close $f
+# the unit as a liberty cell for its parent's run: setup / hold at the inputs, clock-to-output and input-to-output arcs
+write_timing_model -library_name {name}_etm -cell_name {name} etm.lib
+exit
+"""
+
+
+def write_sdc(u, has_clk, pdk, period_ps, udir):
+    tu = pdk["time_unit_ps"]
+    P = period_ps / tu
+    unit = "ps" if tu == 1.0 else "ns"
+    fmt = (lambda x: f"{x:.1f}") if tu == 1.0 else (lambda x: f"{x:.4f}")
+    if u["tile"]:
+        s = TILE_SDC.format(period=fmt(P), unit=unit, u_setup=fmt(0.08 * P), u_hold=fmt(0.04 * P), ctrans=fmt(0.06 * P),
+                            link=fmt(0.4 * P), host=fmt(0.5 * P), mtrans=fmt(0.16 * P))
+    elif has_clk:
+        s = BLOCK_SDC.format(name=u["name"], period=fmt(P), unit=unit, u_setup=fmt(0.08 * P), io=fmt(0.2 * P), mtrans=fmt(0.16 * P))
+    else:
+        s = COMB_SDC.format(name=u["name"], period=fmt(P), unit=unit, mtrans=fmt(0.16 * P))
+    with open(os.path.join(udir, "block.sdc"), "w") as f:
+        f.write(s)
+
+
+def run_sta(u, results, t, pdk, args, out):
+    """OpenSTA on the unit's own netlist, every child unit a liberty cell from its own run's extracted timing model
+    (`write_timing_model`: setup / hold on the inputs, clock-to-output and input-to-output arcs) -- the paths inside a child
+    are the child's report, the paths between the units this one; a flat read of the tile's 2.5 M cells is beyond 6 GB.
+    The run ends by writing this unit's model for its parent."""
+    udir = os.path.join(out, u["name"])
+    children = list((results[u["name"]].get("children") or {}).keys())
+    needed = [os.path.join(udir, "netlist.v")] + [os.path.join(out, c, "etm.lib") for c in children]
+    missing = [p for p in needed if not os.path.isfile(p)]
+    if missing:
+        return dict(exit=-1, error=f"missing: {', '.join(os.path.relpath(p, out) for p in missing)}")
+    nl = Netlist(os.path.join(udir, "netlist.json"))
+    write_sdc(u, "clk" in nl.ports(nl.top), pdk, args.period, udir)
+    libs = list(t["libs"])
+    macro_lib = os.path.join(out, "macros.lib")
+    if os.path.isfile(macro_lib) and results[u["name"]].get("macros"):
+        libs.append(macro_lib)
+    libs += needed[1:]
+    tcl = STA_TCL.format(name=u["name"], read_libs="\n".join(f"read_liberty {l}" for l in libs))
+    with open(os.path.join(udir, "sta.tcl"), "w") as f:
+        f.write(tcl)
+    t0 = time.time()
+    rc = run([t["sta"], "-no_init", "-no_splash", "-exit", "sta.tcl"], udir, os.path.join(udir, "sta.log"), timeout=args.timeout)
+    r = parse_sta(udir, pdk, args.period) or {}
+    r["exit"] = rc
+    if rc == 0 and not os.path.isfile(os.path.join(udir, "etm.lib")):
+        r["exit"] = -2
+        r["error"] = "no timing model written"
+    r["seconds"] = time.time() - t0
+    r["models"] = children
+    return r
+
+
+def parse_sta(udir, pdk, period_ps):
+    tu = pdk["time_unit_ps"]
+    r = {}
+    try:
+        for line in open(os.path.join(udir, "summary.txt")):
+            k, v = line.split()
+            try:
+                r[k + "_ps"] = float(v) * tu
+            except ValueError:
+                r[k + "_ps"] = None
+    except FileNotFoundError:
+        return None
+    try:
+        for line in open(os.path.join(udir, "min_period.txt")):
+            m = re.search(r"period_min\s*=\s*([0-9.eE+-]+)\s+fmax\s*=\s*([0-9.eE+-]+)", line)
+            if m:
+                r["min_period_ps"] = float(m.group(1)) * tu
+                r["fmax_mhz"] = float(m.group(2))
+    except FileNotFoundError:
+        pass
+    try:
+        slacks = []
+        for line in open(os.path.join(udir, "endpoints.txt")):
+            parts = line.split()
+            if len(parts) == 2:
+                try:
+                    v = float(parts[1]) * tu
+                except ValueError:
+                    continue
+                if math.isfinite(v):
+                    slacks.append(v)
+        if slacks:
+            r["endpoints"] = len(slacks)
+            r["endpoints_violating"] = sum(1 for s in slacks if s < 0)
+            binw = period_ps / 10.0
+            hist = {}
+            for s in slacks:
+                b = math.floor(s / binw)
+                hist[b] = hist.get(b, 0) + 1
+            r["slack_histogram"] = {f"{b * binw:.0f}..{(b + 1) * binw:.0f} ps": n for b, n in sorted(hist.items())}
+    except FileNotFoundError:
+        pass
+    try:
+        txt = open(os.path.join(udir, "paths_max.txt")).read()
+        m = re.search(r"Startpoint:\s*(\S+).*?Endpoint:\s*(\S+)", txt, re.S)
+        if m:
+            r["worst_start"], r["worst_end"] = m.group(1), m.group(2)
+        m = re.search(r"\n\s*([-0-9.]+)\s+slack \((VIOLATED|MET)\)", txt)
+        if m:
+            r["worst_slack_ps"] = float(m.group(1)) * tu
+        m = re.search(r"\n\s*([-0-9.]+)\s+data arrival time\n", txt)
+        if m:
+            r["worst_arrival_ps"] = float(m.group(1)) * tu
+    except FileNotFoundError:
+        pass
+    return r
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------------------------------------------------
+def select_units(sel):
+    names = [u["name"] for u in UNITS]
+    if sel == "all":
+        chosen = names
+    elif sel == "tile":
+        chosen = ["neo_tile"]
+    elif sel == "core":
+        chosen = ["neo_core"]
+    elif sel == "core16":
+        chosen = ["c16_neo_core"]
+    else:
+        chosen = sel.split(",")
+        missing = [n for n in chosen if n not in UNIT]
+        if missing:
+            sys.exit(f"synth.py: unknown units {missing}; known: {names}")
+    closure = []                       # a unit's timing needs its subtree: the closure over the children
+
+    def add(n):
+        if n in closure:
+            return
+        for ch in UNIT[n]["children"].values():
+            for c in ch:
+                add(c)
+        closure.append(n)
+    for n in chosen:
+        add(n)
+    return closure
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--rtl", default="rtl", help="the RTL directory (flat layout)")
+    ap.add_argument("--out", default="synth_out", help="output directory")
+    ap.add_argument("--pdk", default="asap7", choices=sorted(PDKS))
+    ap.add_argument("--corner", default="SS")
+    ap.add_argument("--period", type=float, default=None, help="clock period in ps (default: the library's: 500)")
+    ap.add_argument("--blocks", default="all", help="all | tile | core | core16 | comma-separated unit names (their subtrees are included)")
+    ap.add_argument("--jobs", type=int, default=2, help="parallel unit runs")
+    ap.add_argument("--timeout", type=int, default=4 * 3600, help="seconds per tool run")
+    ap.add_argument("--no-sta", action="store_true", help="synthesis only")
+    ap.add_argument("--sta-only", action="store_true", help="timing on an existing synthesis output")
+    ap.add_argument("--resume", action="store_true", help="keep the units already synthesized in --out (synth_results.json) and run the rest")
+    args = ap.parse_args()
+    pdk = PDKS[args.pdk]
+    if args.corner not in pdk["libs"]:
+        sys.exit(f"synth.py: corner {args.corner} not in {sorted(pdk['libs'])} for {args.pdk}")
+    if args.period is None:
+        args.period = pdk["default_period_ps"]
+    t = find_tools(args)
+    out = os.path.abspath(args.out)
+    os.makedirs(out, exist_ok=True)
+    rtl = os.path.abspath(args.rtl)
+    for f in RTL_FILES:
+        if not os.path.isfile(os.path.join(rtl, f)):
+            sys.exit(f"synth.py: RTL file missing: {os.path.join(rtl, f)}")
+    versions = tool_versions(t)
+    log(f"tools: {versions}")
+    log(f"library {args.pdk} {args.corner}, period {args.period} ps, output {out}")
+    names = select_units(args.blocks)
+    log(f"units: {names}")
+    t_start = time.time()
+    results = {}
+    if args.sta_only:
+        with open(os.path.join(out, "synth_results.json")) as f:
+            results = json.load(f)["units"]
+    else:
+        done = set()
+        if args.resume and os.path.isfile(os.path.join(out, "synth_results.json")):
+            with open(os.path.join(out, "synth_results.json")) as f:
+                prev = json.load(f)["units"]
+            for n, r in prev.items():
+                if n in names and not r.get("failed") and "own_cells" in r and os.path.isfile(os.path.join(out, n, "netlist.v")):
+                    results[n] = {k: v for k, v in r.items() if k != "sta"}
+                    done.add(n)
+            log(f"resume: keeping {sorted(done)}")
+        # phase A: every unit's synthesis, in parallel (the children are black boxes); the long ones first
+        order = sorted((n for n in names if n not in done), key=lambda n: 0 if n in ("tile_nic", "noc_router", "neo_tile", "neo_core", "requant") else 1)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as ex:
+            futs = {ex.submit(run_unit, UNIT[n], t, pdk, args, out, rtl): n for n in order}
+            for fut in concurrent.futures.as_completed(futs):
+                r = fut.result()
+                results[r["name"]] = r
+        recs = all_macros(results)
+        if recs:
+            write_macro_lib(recs, pdk, os.path.join(out, "macros.lib"))
+            log(f"macros: {[r['name'] for r in recs]}")
+    memo = {}
+    for n in names:
+        tot = totals(n, results, memo)
+        if tot:
+            results[n].update(tot)
+            results[n]["pe_check"] = (UNIT[n]["pe_expected"] is None) or (tot["pe_count"] == UNIT[n]["pe_expected"])
+    # phase B: timing per unit, children before parents (a parent's run reads its children's timing models), each level
+    # in parallel
+    if not args.no_sta:
+        pending = [n for n in names if not results.get(n, {}).get("failed") and "own_cells" in results.get(n, {})]
+        finished = set()
+        while pending:
+            ready = [n for n in pending if all(c in finished or c not in pending for c in (results[n].get("children") or {}))]
+            if not ready:
+                ready = list(pending)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as ex:
+                futs = {ex.submit(run_sta, UNIT[n], results, t, pdk, args, out): n for n in ready}
+                for fut in concurrent.futures.as_completed(futs):
+                    n = futs[fut]
+                    results[n]["sta"] = r = fut.result()
+                    finished.add(n)
+                    log(f"{n}: sta done in {r.get('seconds', 0):.0f} s (exit {r.get('exit')}{'; ' + r['error'] if r.get('error') else ''}; "
+                        f"wns {r.get('wns_max_ps')} ps, min period {r.get('min_period_ps')} ps)")
+            pending = [n for n in pending if n not in finished]
+    if "neo_tile" in results and not results["neo_tile"].get("failed"):
+        bad = [n for n in subtree("neo_tile", results) if results[n].get("dv_hooks") and not results[n]["dv_hooks"]["passed"]]
+        results["neo_tile"]["dv_hooks_tree"] = dict(passed=not bad, failing_units=bad)
+    summary = dict(pdk=args.pdk, corner=args.corner, period_ps=args.period, tools=versions, libs=t["libs"],
+                   macro_model=pdk["macro"], macro_area_factor=MACRO_AREA_FACTOR, ratio_note=pdk["ratio_note"],
+                   seconds=time.time() - t_start, date=time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+                   order=names, units=results)
+    with open(os.path.join(out, "synth_results.json"), "w") as f:
+        json.dump(summary, f, indent=1, default=str)
+    log(f"done in {summary['seconds']:.0f} s: {out}/synth_results.json")
+    gates = []
+    for n in names:
+        r = results.get(n, {})
+        if r.get("failed"):
+            gates.append(f"{n}: {r['failed']}")
+            continue
+        if r.get("latches"):
+            gates.append(f"{n}: {r['latches']} latches")
+        if r.get("check") and r["check"].get("multiple_drivers"):
+            gates.append(f"{n}: {r['check']['multiple_drivers']} multiply-driven nets")
+        if not r.get("pe_check", True):
+            gates.append(f"{n}: PE count {r.get('pe_count')} != {UNIT[n]['pe_expected']}")
+        if r.get("dv_hooks") and not r["dv_hooks"]["passed"]:
+            gates.append(f"{n}: dv_* hooks drive logic: {r['dv_hooks']['bad_loads'][:3]} {r['dv_hooks']['bad_outputs'][:3]}")
+        if not args.no_sta and r.get("sta", {}).get("exit", 0) != 0:
+            gates.append(f"{n}: sta exit {r['sta'].get('exit')} {r['sta'].get('error', '')}")
+    if gates:
+        log("GATES FAILED: " + "; ".join(gates))
+        return 1
+    log("GATES: all passed (every unit synthesized, no latch, no multiply-driven net, the hierarchy consistent, the PE counts, "
+        "DV_HOOKS = 0 clean, every timing run complete)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

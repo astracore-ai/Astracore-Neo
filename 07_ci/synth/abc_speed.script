@@ -1,0 +1,38 @@
+# ABC mapping script for the open-PDK synthesis job (drop 0.40): OpenROAD-flow-scripts' abc_speed.script
+# (flow/scripts, ORFS 3451ca1) with the delay target {D} (synth.py's --period, in ps) on the final mapping and
+# the sizing steps. Yosys substitutes {D} with "-D <ps>".
+&get -n
+&st
+&dch
+&nf
+&st
+&syn2
+&if -g -K 6
+&synch2
+&nf
+&st
+&syn2
+&if -g -K 6
+&synch2
+&nf
+&st
+&syn2
+&if -g -K 6
+&synch2
+&nf
+&st
+&syn2
+&if -g -K 6
+&synch2
+&nf
+&st
+&syn2
+&if -g -K 6
+&synch2
+&nf {D}
+&put
+buffer -c
+topo
+stime -c
+upsize -c {D}
+dnsize -c {D}
