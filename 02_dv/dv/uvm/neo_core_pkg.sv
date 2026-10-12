@@ -58,16 +58,24 @@ package neo_core_pkg;
     function void build_phase(uvm_phase phase);
       if (!uvm_config_db#(virtual neo_core_if)::get(this, "", "vif", vif)) `uvm_fatal("NOVIF", "neo_core_if not set")
     endfunction
+    // drop 0.41: the ABFT verdict of a drained row comes two cycles later (acc_abft_err with acc_abft_err_valid), so a
+    // row waits in a queue for its verdict; the k-th verdict belongs to the k-th row
     task run_phase(uvm_phase phase);
       int row = 0;
+      neo_row_txn pending[$];
       forever begin
         @(negedge vif.clk);
+        if (vif.acc_abft_err_valid && pending.size() != 0) begin
+          neo_row_txn t = pending.pop_front();
+          t.abft_err = vif.acc_abft_err;
+          ap.write(t);
+        end
         if (vif.rd_valid) begin
           neo_row_txn t = neo_row_txn::type_id::create("t");
           t.row = row++; t.data = new[vif.COLS];
           foreach (t.data[j]) t.data[j] = vif.rd_data[j];
-          t.chk = vif.rd_chk; t.abft_err = vif.acc_abft_err;
-          ap.write(t);
+          t.chk = vif.rd_chk;
+          pending.push_back(t);
         end
         if (vif.done) row = 0;
       end

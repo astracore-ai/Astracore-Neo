@@ -13,6 +13,20 @@
 //   leaves, so a 32-word flit leaves every second cycle at 16 words per beat. A data stream always ends with a CRC flit,
 //   which flushes the last partial flit; a beat is never split across two flits, so flits of 17..31 words occur after a
 //   partial first beat (a serve that starts inside a row) -- the receiver counts words, not flits.
+//   Drop 0.41: the link side registered (it was combinational from core_flit: same / fits -> emit_pend -> the 1,077-bit
+//   output mux and its parity, 1.04 ns input to output on the ASAP7 SS proxy). link_valid / link_flit are registers,
+//   loaded whenever the stage is empty or draining (oready = !link_valid || link_ready); the pending logic sees oready
+//   where it saw link_ready. A data beat is taken when nothing is pending or the stage can take the pending flit
+//   (!pend_valid || oready: a beat that would merge waits while the stage holds an unaccepted flit), a single-word beat
+//   when nothing is pending and oready. The stage's next flit is the pending one when a flit is pending, else the passing
+//   single-word one (selected by the pend_valid register). So that the merge decision (the beat's fields compared with
+//   the pending flit's) steers no data, the pending flit's words live in one of two buffers: a taken beat is written
+//   both where it goes if it merges and, at word 0 of the other buffer, where it goes if it starts the next flit; the
+//   decision picks the buffer and the counts (g_merge below). The parity of the pending flit is kept as it is built: the
+//   fixed fields' parity when the flit starts, the word parities of each beat (one per word, 32-bit reductions on the
+//   beat) registered as it joins and folded into a running bit when the next beat joins, so the emitted parity is a
+//   reduction of 24 registered bits instead of 1,077. Throughput is unchanged (a 32-word flit every second cycle at 16
+//   words per beat, back-to-back flits one per cycle while link_ready is high); latency +1 cycle.
 //   Packer, WPF < BW (the 16x8 and 8x8-core builds, WPF = 1): a beat is sent as ceil(n / WPF) flits of up to WPF words, so
 //   the link sees the same single-word flits, in the same order, as before drop 0.29.
 //   Unpacker: a flit of n words is presented as ceil(n / BW) beats of up to BW words (two per 32-word flit; one, as it is,
@@ -37,6 +51,8 @@ module link_packer #(
   localparam logic [2:0] T_RDRSP = 3'd2, T_WRDATA = 3'd4, T_PSUM = 3'd5;
   localparam int CWB = $clog2(BW + 1);                     // beat word count 0..BW
   localparam int CWL = $clog2(WPF + 1);                    // flit word count 0..WPF
+  localparam int CWR = CWL + 1;                            // the room left in a flit, WPF - count (drop 0.41)
+  localparam int BWL = $clog2(BW);                         // the low bits of a beat's count field (drop 0.41)
   localparam int VWB = 32 * BW;
   localparam int VWL = 32 * WPF;
   logic [HW-1:0]  in_head;
@@ -45,80 +61,142 @@ module link_packer #(
   logic [19:0]    in_hdr;
   logic [VWB-1:0] in_words;
   logic           in_data;
-  logic [CWB-1:0] in_n;                                     // words in the beat
   assign in_head  = core_flit[DWB +: HW];
   assign in_type  = core_flit[DWB-1 -: 3];
   assign in_tag   = core_flit[DWB-4 -: 9];
   assign in_hdr   = core_flit[DWB-13 -: 20];
   assign in_words = core_flit[VWB-1:0];
   assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
-  assign in_n     = in_data ? CWB'(in_hdr[13:8]) + CWB'(1) : CWB'(1);
   logic unused_core_parity;                                // the flit's parity is the router's business (lint)
   assign unused_core_parity = core_flit[FWB-1];
 
   generate
     if (WPF >= BW) begin : g_merge
+      // The pending flit lives in one of two word buffers (cur). A data beat that is taken is written, unconditionally,
+      // into the pending buffer at word pend_cnt (where it goes if it merges) AND into the other buffer at word 0 (where
+      // it goes if it starts the next flit); the merge decision then only picks the buffer (cur flips on a start) and the
+      // counts. The write that turns out wrong lands in a buffer that is free (the other one) or whose flit leaves in this
+      // very cycle (the pending one, read from its registers into the output stage), at words the flit does not hold; the
+      // emitted flit shows words below pend_cnt only (zeros above), so stale words never reach the link. The fields that
+      // a merging beat repeats (head, type, tag, hdr[19:14]) are loaded on every taken beat.
       logic           pend_valid;
+      logic           cur;                                  // the buffer holding the pending flit
+      logic [VWL-1:0] pbuf0, pbuf1;                         // the two flit buffers, word i at [32*i +: 32]
+      logic [CWL-1:0] pend_cnt;                             // words held, 1..WPF while pend_valid (the merge position)
+      logic [WPF:0]   pend_thr;                             // pend_cnt as a thermometer: bit s = (s < pend_cnt)
+      logic [5:0]     pend_cm1;                             // pend_cnt - 1: the flit's hdr[13:8] (the counts' arithmetic)
+      logic [CWR-1:0] pend_room;                            // WPF - pend_cnt
       logic [HW-1:0]  pend_head;
       logic [2:0]     pend_type;
       logic [8:0]     pend_tag;
-      logic [19:0]    pend_hdr;                             // hdr of word 0 (PSUM: its column)
-      logic [VWL-1:0] pend_vec;                             // words held, word i at [32*i +: 32]
-      logic [CWL-1:0] pend_cnt;                             // words held, 1..WPF while pend_valid
-      logic [VWB-1:0] in_vec;                               // the beat's words with the unused positions cleared
-      logic           full, fits, same, mergeable, emit_pend;
+      logic [5:0]     pend_hhi;                             // hdr[19:14]
+      logic [7:0]     pend_col0;                            // hdr[7:0] of word 0 (PSUM: its column)
+      logic [7:0]     pend_ncol;                            // PSUM: the column the next beat continues at
+      logic           pend_par0;                            // parity of the fixed fields and of the words before the last beat
+      logic [BW-1:0]  last_wp;                              // the word parities of the last beat that joined
+      logic [BW-1:0]  in_wp;                                // the beat's word parities (zero at the unused positions)
+      logic [VWL-1:0] mshift;                               // the beat's words at the merge position
+      logic [WPF-1:0] mwe;                                  // the words of the pending buffer the merge candidate writes
+      logic [WPF:0]   in_thr;                               // a data beat's word count as a thermometer: bit s = (s < in_n)
+      logic           full, fits, same, mergeable, emit_pend, pass, take, oready, room_big;
+      assign room_big  = !pend_thr[WPF-BW];                 // pend_cnt <= WPF - BW: any beat still fits
       always_comb begin
-        in_vec = '0;
-        for (int w = 0; w < BW; w++)
-          if (w < in_n) in_vec[32*w +: 32] = in_words[32*w +: 32];
+        for (int w = 0; w < BW; w++)                        // word w is in the beat: w < in_n
+          in_wp[w] = (in_data ? (in_hdr[13:8] >= 6'(w)) : (w == 0)) && (^in_words[32*w +: 32]);
+        for (int s = 0; s <= WPF; s++)
+          in_thr[s] = (in_hdr[13:8] >= 6'(s));
+        for (int s = 0; s < BW; s++)                        // words pend_cnt .. pend_cnt + BW - 1
+          mwe[s] = !pend_thr[s];
+        for (int s = BW; s < WPF; s++)
+          mwe[s] = !pend_thr[s] && pend_thr[s - BW];
       end
-      assign full      = pend_valid && (pend_cnt == WPF);
-      assign fits      = (pend_cnt + in_n) <= WPF;
+      assign mshift    = VWL'(in_words) << (32 * pend_cnt);
+      assign oready    = !link_valid || link_ready;         // the output stage is empty or drains this cycle
+      assign full      = pend_valid && pend_thr[WPF-1];
+      // in_n <= WPF - pend_cnt for a data beat (in_n = hdr[13:8] + 1 <= BW): any beat fits while BW words are left, else
+      // the low bits of the count field against the low bits of the room
+      assign fits      = (in_hdr[13:8] < 6'(BW)) && (room_big || (in_hdr[8 +: BWL] < pend_room[BWL-1:0]));
       assign same      = (in_type == pend_type) && (in_head == pend_head) && (in_tag == pend_tag) &&
-                         (in_hdr[19:14] == pend_hdr[19:14]) &&
-                         (in_type != T_PSUM || in_hdr[7:0] == pend_hdr[7:0] + 8'(pend_cnt));
+                         (in_hdr[19:14] == pend_hhi) && (in_type != T_PSUM || in_hdr[7:0] == pend_ncol);
       assign mergeable = pend_valid && core_valid && in_data && same && fits;
       // the pending flit goes out when it is full, or when the next beat cannot join it
       assign emit_pend = pend_valid && (full || (core_valid && !mergeable));
-      logic [FWL-2:0] pend_body, pass_body;
+      assign pass      = core_valid && !in_data && !pend_valid;      // single-word types pass through
+      // a data beat joins or starts the pending flit when the stage could take a flit that leaves; a single-word beat
+      // passes when nothing is pending and the stage takes it
+      assign core_ready = core_valid && (in_data ? (!pend_valid || oready) : (!pend_valid && oready));
+      assign take      = core_ready && in_data;
+      logic [VWL-1:0] pend_words;                           // the pending flit's words, zero at and above pend_cnt
       always_comb begin
-        pend_body = {pend_head, pend_type, pend_tag, pend_hdr[19:14], 6'(pend_cnt - 1), pend_hdr[7:0], pend_vec};
+        for (int s = 0; s < WPF; s++)
+          pend_words[32*s +: 32] = pend_thr[s] ? (cur ? pbuf1[32*s +: 32] : pbuf0[32*s +: 32]) : 32'd0;
+      end
+      logic [FWL-2:0] pend_body, pass_body;
+      logic           pend_par, pass_par;
+      always_comb begin
+        pend_body = {pend_head, pend_type, pend_tag, pend_hhi, pend_cm1, pend_col0, pend_words};
         pass_body = {in_head, in_type, in_tag, in_hdr, VWL'(in_words[31:0])};
       end
-      always_comb begin
-        link_valid = 1'b0; link_flit = '0; core_ready = 1'b0;
-        if (emit_pend) begin
-          link_valid = 1'b1; link_flit = {^pend_body, pend_body};
-          core_ready = core_valid && in_data && link_ready;   // a data beat that could not join starts the next flit as this one leaves
-        end else if (core_valid && !in_data && !pend_valid) begin
-          link_valid = 1'b1; link_flit = {^pass_body, pass_body};   // single-word types pass through
-          core_ready = link_ready;
-        end else if (core_valid && in_data) begin
-          core_ready = 1'b1;                                // joins or starts the pending flit
+      assign pend_par = pend_par0 ^ (^pend_cm1) ^ (^last_wp);                    // = ^pend_body
+      assign pass_par = ^{in_head, in_type, in_tag, in_hdr, in_words[31:0]};     // = ^pass_body
+      // the buffers (no reset: a word is shown only below pend_cnt, i.e. after the beat that brought it has written it)
+      always_ff @(posedge clk) begin
+        if (take) begin
+          for (int s = 0; s < WPF; s++) begin                // the merge candidate, into the pending buffer
+            if (mwe[s]) begin
+              if (cur) pbuf1[32*s +: 32] <= mshift[32*s +: 32];
+              else     pbuf0[32*s +: 32] <= mshift[32*s +: 32];
+            end
+          end
+          for (int s = 0; s < BW; s++) begin                 // the start candidate, into the other buffer
+            if (cur) pbuf0[32*s +: 32] <= in_words[32*s +: 32];
+            else     pbuf1[32*s +: 32] <= in_words[32*s +: 32];
+          end
         end
       end
       always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-          pend_valid <= 1'b0; pend_cnt <= '0; pend_head <= '0; pend_type <= '0; pend_tag <= '0; pend_hdr <= '0; pend_vec <= '0;
+          pend_valid <= 1'b0; cur <= 1'b0; pend_cnt <= '0; pend_thr <= '0; pend_cm1 <= '0; pend_room <= '0;
+          pend_head <= '0; pend_type <= '0; pend_tag <= '0; pend_hhi <= '0; pend_col0 <= '0; pend_ncol <= '0;
+          pend_par0 <= 1'b0; last_wp <= '0;
+          link_valid <= 1'b0; link_flit <= '0;
         end else begin
-          if (emit_pend && link_ready) begin
-            pend_valid <= 1'b0; pend_cnt <= '0;
+          if (oready) begin                                 // the output stage: loaded when empty or draining
+            link_valid <= emit_pend || pass;
+            link_flit  <= pend_valid ? {pend_par, pend_body} : {pass_par, pass_body};
           end
-          if (core_valid && in_data && core_ready) begin
+          if (emit_pend && oready) begin
+            pend_valid <= 1'b0; pend_cnt <= '0; pend_thr <= '0;
+          end
+          if (take) begin
+            pend_valid <= 1'b1;
+            last_wp    <= in_wp;
+            pend_head  <= in_head; pend_type <= in_type; pend_tag <= in_tag; pend_hhi <= in_hdr[19:14];   // = pend's on a merge
+            // the counts of a data beat as one adder each, in_n = hdr[13:8] + 1 folded in as a carry or a complement
+            pend_ncol  <= in_hdr[7:0] + 8'(in_hdr[13:8]) + 8'd1;
             if (mergeable) begin
-              pend_vec <= pend_vec | (VWL'(in_vec) << (32 * pend_cnt));
-              pend_cnt <= pend_cnt + in_n;
+              pend_cnt  <= CWL'(pend_cm1) + CWL'(in_hdr[13:8]) + CWL'(2);       // pend_cnt + in_n
+              pend_thr  <= ((pend_thr << 1) << in_hdr[13:8]) | in_thr;          // (s < pend_cnt + in_n)
+              pend_cm1  <= pend_cm1 + in_hdr[13:8] + 6'd1;
+              pend_room <= pend_room + ~CWR'(in_hdr[13:8]);                     // room - in_n
+              pend_par0 <= pend_par0 ^ (^last_wp);
             end else begin                                  // the pending flit is empty, or leaves this cycle
-              pend_valid <= 1'b1; pend_cnt <= CWL'(in_n);
-              pend_head <= in_head; pend_type <= in_type; pend_tag <= in_tag; pend_hdr <= in_hdr;
-              pend_vec  <= VWL'(in_vec);
+              cur       <= !cur;
+              pend_cnt  <= CWL'(in_hdr[13:8]) + CWL'(1);
+              pend_thr  <= in_thr;
+              pend_cm1  <= in_hdr[13:8];
+              pend_room <= CWR'(WPF - 1) - CWR'(in_hdr[13:8]);                 // WPF - in_n
+              pend_col0 <= in_hdr[7:0];
+              pend_par0 <= ^{in_head, in_type, in_tag, in_hdr[19:14], in_hdr[7:0]};
             end
           end
         end
       end
     end else begin : g_split
+      logic [CWB-1:0] in_n;                                 // words in the beat
       logic [CWB-1:0] idx;                                  // chunk of WPF words being sent
       logic [CWB-1:0] base, left, cn;
+      assign in_n    = in_data ? CWB'(in_hdr[13:8]) + CWB'(1) : CWB'(1);
       logic           last;
       logic [VWB-1:0] sh;
       logic [VWL-1:0] cvec;

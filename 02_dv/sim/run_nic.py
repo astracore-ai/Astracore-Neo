@@ -18,7 +18,13 @@ bank port). tile_nic alone, its link side driven with beats and its bank side mo
      types come out as the words, columns and types that went in, no flit wider than WPF
   I13 crc16_beat in matrix form (drop 0.41) under neosim: the generated module and crc16_beat_serial (the chain it replaced,
      tb/crc16_beat_serial.sv) side by side at BW = 16, 4 and 1 on random beats (n = 0 and n = BW included) agree with each
-     other and with the bit-serial model -- neosim reads the module the tile tests run (the exhaustive proof is make crc16)"""
+     other and with the bit-serial model -- neosim reads the module the tile tests run (the exhaustive proof is make crc16)
+  I14 the registered link_packer (drop 0.41) at the silicon widths (XW = YW = 3, BW = 16, WPF = 32) against the drop-0.40
+     packer kept in tb/link_packer_ref.sv: (a) link_ready high, the same beats (streams of RDRSP / WRDATA beats of random
+     sizes with garbage above their count, PSUM rows with consecutive and broken columns, single-word types, head changes,
+     gaps): core_ready equal in every cycle and every link flit equal to the reference's of the cycle before, bit for bit
+     -- the throughput unchanged, one cycle of latency; (b) link_ready at random: every link flit has even parity, at most
+     WPF words and zeros above its count, and the words, columns and single-word flits come out in order"""
 import os, random, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from neosim import Design, load
@@ -613,6 +619,125 @@ ok13 = not any(res13.values())
 print(f"  I13 crc16_beat matrix form vs crc16_beat_serial and the bit-serial model under neosim: 400 / 300 / 100 random beats at BW 16 / 4 / 1 "
       f"(n = 0 and n = BW included), mismatches {res13[16]} / {res13[4]} / {res13[1]} -> {'PASS' if ok13 else 'FAIL'}")
 fails += not ok13
+
+# ---------------- I14: the registered packer against the drop-0.40 packer (tb/link_packer_ref.sv) ----------------
+def packer_ref_test(seed):
+    r = random.Random(seed)
+    xw = yw = 3
+    wpf = 32
+    hw = 2 * (xw + yw) + 8
+    dwb, dwl = 32 + 32 * BW, 32 + 32 * wpf
+    fwb, fwl = 1 + hw + dwb, 1 + hw + dwl
+    d = Design(load([os.path.join(rtl, "link_pack.sv"), os.path.join(HERE, "..", "tb", "link_packer_ref.sv")]))
+    d.elaborate("link_packer_pair", {"XW": xw, "YW": yw, "BW": BW, "WPF": wpf})
+    p = {n: d.cell_of(n) for n in ("rst_n", "core_valid", "core_flit", "n_link_ready", "r_link_ready", "n_core_ready", "n_link_valid",
+                                    "n_link_flit", "r_core_ready", "r_link_valid", "r_link_flit")}
+    data_types = (T_RDRSP, T_WRDATA, T_PSUM)
+
+    def beat(typ, words, head, lo=0, tag=0):
+        n = len(words)
+        hdr = ((n - 1) << 8 | lo) if typ in data_types else lo
+        v = 0
+        for k in range(BW):                                  # garbage above the count: the packer must not carry it
+            v |= (words[k] if k < n else r.getrandbits(32)) << (32 * k)
+        f = (head << dwb) | (typ << (dwb - 3)) | (tag << (dwb - 12)) | (hdr << (dwb - 32)) | v
+        return (bin(f).count("1") & 1) << (fwb - 1) | f
+
+    seq, expect = [], {"words": {T_RDRSP: [], T_WRDATA: []}, "psum": [], "single": []}
+    for _ in range(40):                                      # streams to random destinations
+        head = r.getrandbits(hw)
+        k = r.random()
+        if k < 0.35:
+            for _ in range(r.randint(1, 6)):
+                ws = [r.getrandbits(32) for _ in range(r.choice([16, 16, 16, 1, 5, 11, 15]))]
+                seq.append(beat(T_RDRSP, ws, head)); expect["words"][T_RDRSP] += ws
+            seq.append(beat(T_CRC, [r.getrandbits(32)], head)); expect["single"].append(seq[-1])
+        elif k < 0.6:
+            seq.append(beat(T_WRHDR, [r.getrandbits(20)], head)); expect["single"].append(seq[-1])
+            for _ in range(r.randint(1, 8)):
+                ws = [r.getrandbits(32) for _ in range(r.choice([16, 16, 1, 1, 8, 3]))]
+                seq.append(beat(T_WRDATA, ws, head)); expect["words"][T_WRDATA] += ws
+            seq.append(beat(T_CRC, [r.getrandbits(32)], head)); expect["single"].append(seq[-1])
+        elif k < 0.85:
+            tag, col = r.getrandbits(9), 0
+            while col < 33:
+                n = min(r.choice([16, 16, 1, 4, 9]), 33 - col)
+                if r.random() < 0.15:
+                    col += 1                                  # a gap in the columns: the beat starts a new flit
+                ws = [r.getrandbits(32) for _ in range(n)]
+                seq.append(beat(T_PSUM, ws, head, lo=col & 0xFF, tag=tag))
+                expect["psum"] += [(tag, (col + i) & 0xFF, w) for i, w in enumerate(ws)]
+                col += n
+            seq.append(beat(T_CRC, [r.getrandbits(32)], head)); expect["single"].append(seq[-1])   # a stream ends with its CRC
+        else:
+            seq.append(beat(r.choice([T_RDREQ, T_RDY]), [r.getrandbits(32)], head)); expect["single"].append(seq[-1])
+
+    def reset():
+        p["core_valid"].v = 0; p["n_link_ready"].v = 1; p["r_link_ready"].v = 1
+        p["rst_n"].v = 0; d.tick(); d.tick(); p["rst_n"].v = 1; d.tick()
+
+    # (a) link_ready high: cycle for cycle against the reference, one cycle later
+    reset()
+    i, cyc, bad, prev, flits_a = 0, 0, [], (0, 0), 0
+    while i < len(seq) or prev[0] or p["n_link_valid"].v:
+        v = int(i < len(seq) and r.random() < 0.85)
+        p["core_valid"].v = v
+        p["core_flit"].v = seq[i] if v else r.getrandbits(fwb)
+        d.settle()
+        if p["n_core_ready"].v != p["r_core_ready"].v:
+            bad.append((cyc, "core_ready"))
+        if p["n_link_valid"].v != prev[0] or (prev[0] and p["n_link_flit"].v != prev[1]):
+            bad.append((cyc, "link"))
+        flits_a += prev[0]
+        prev = (p["r_link_valid"].v, p["r_link_flit"].v)
+        took = v and p["n_core_ready"].v
+        d.tick(); cyc += 1
+        i += took
+        if cyc > 20000:
+            bad.append((cyc, "hang")); break
+    ok_a = not bad
+    # (b) link_ready at random: properties of every flit and the streams in order
+    reset()
+    i, cyc, got = 0, 0, []
+    while i < len(seq) or p["n_link_valid"].v:
+        v = int(i < len(seq) and r.random() < 0.85)
+        p["core_valid"].v = v
+        p["core_flit"].v = seq[i] if v else r.getrandbits(fwb)
+        p["n_link_ready"].v = int(r.random() < 0.5)
+        d.settle()
+        if p["n_link_valid"].v and p["n_link_ready"].v:
+            got.append(p["n_link_flit"].v)
+        took = v and p["n_core_ready"].v
+        d.tick(); cyc += 1
+        i += took
+        if cyc > 40000:
+            break
+    words, psum, singles, props = {T_RDRSP: [], T_WRDATA: []}, [], [], 0
+    for f in got:
+        typ, tag, hdr = (f >> (dwl - 3)) & 7, (f >> (dwl - 12)) & 0x1FF, (f >> (dwl - 32)) & 0xFFFFF
+        n = ((hdr >> 8) & 0x3F) + 1 if typ in data_types else 1
+        ws = [(f >> (32 * k)) & 0xFFFFFFFF for k in range(n)]
+        if bin(f).count("1") & 1 or n > wpf or (f & ((1 << (32 * wpf)) - 1)) >> (32 * n):
+            props += 1                                        # odd parity, too many words, or a nonzero word above the count
+        if typ in (T_RDRSP, T_WRDATA):
+            words[typ] += ws
+        elif typ == T_PSUM:
+            psum += [(tag, ((hdr & 0xFF) + k) & 0xFF, w) for k, w in enumerate(ws)]
+        else:
+            singles.append(f)
+    sing_exp = [((s & ((1 << (fwb - 1)) - 1)) >> dwb << dwl) | (((s >> (dwb - 32)) & ((1 << 32) - 1)) << (dwl - 32)) | (s & 0xFFFFFFFF)
+                for s in expect["single"]]                    # head, type/tag/hdr and word 0 at the link's positions
+    sing_got = [s & ((1 << (fwl - 1)) - 1) for s in singles]
+    ok_b = (props == 0 and words == expect["words"] and psum == expect["psum"] and sing_got == sing_exp and i == len(seq))
+    return ok_a, bad[:3], flits_a, len(seq), ok_b, len(got), props
+
+
+ok_a, bad, nfa, nbeats, ok_b, nfb, props = packer_ref_test(14)
+print(f"  I14 registered packer vs the drop-0.40 packer at WPF 32: {nbeats} beats; (a) link_ready high: {nfa} flits, core_ready equal "
+      f"every cycle and every flit equal to the reference's one cycle earlier -> {'PASS' if ok_a else 'FAIL ' + str(bad)}; "
+      f"(b) link_ready at random: {nfb} flits, {props} with odd parity / too many words / stale words, streams in order -> "
+      f"{'PASS' if ok_b else 'FAIL'}")
+fails += (not ok_a) + (not ok_b)
 
 print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
 raise SystemExit(1 if fails else 0)

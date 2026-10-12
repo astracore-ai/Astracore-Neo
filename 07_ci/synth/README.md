@@ -43,8 +43,13 @@ the parent's, and a flat read of the tile's 2.5 M cells (more than 6 GB in OpenS
 `09_synthesis/constraints.sdc` in the library's units (links at 0.4 of the period each side, host bus relaxed, the status
 flags multicycle 4, `rst_n` and the coordinate straps false paths), a block under the clock and 0.2 of the period on
 every input and output, a combinational block under a virtual clock; ideal clock, no wire load (synthesis-stage STA, as
-ORFS's `synth` step). Reported per unit: WNS / TNS, the minimum period (`report_clock_min_period`: register-to-register
-paths of the clock, a child's clock-to-output and setup arcs included), the worst ten paths with their stages
+ORFS's `synth` step). Since drop 0.41 the layer descriptor (`STATIC_CFG` in `synth.py`: the `cfg_*` fields of host_if's
+window and `cfg_m`, written only between runs and held through the run) has multicycle 4 / hold 3, on every unit whose
+inputs include it (`-from` those ports) and in the tile through the core's descriptor pins (`-through u_core/cfg_*`);
+the run position `cfg_ct` / `cfg_ky` / `cfg_kx` (set by the sequencer one cycle before a run) and the requantization
+tables (written by the DMA during a layer) stay single-cycle. Reported per unit: WNS / TNS, the minimum period
+(`report_clock_min_period`: register-to-register paths of the clock, a child's clock-to-output and setup arcs included),
+the worst ten paths with their stages
 (`paths_max.txt`), the endpoint slack histogram; the macro ports carry the model's access time (218 ps ASAP7 / 435 ps
 Nangate45: clock-to-Q on the registered read ports, address-to-data on the asynchronous port A of `neo_mem_rf`) and 50 ps
 setup / hold.

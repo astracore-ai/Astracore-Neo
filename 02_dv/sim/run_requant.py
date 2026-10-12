@@ -7,6 +7,10 @@ LSB of the floating-point requantization it approximates.
       Python fixed-point model (round-half-up, saturation) bit for bit
   Q2  same rows with ReLU: outputs below zp are clamped to zp
   Q3  float sanity: |q - clip(round(acc * mult / 2^shift) + zp)| <= 1 for every element
+  Q4  the three-stage pipeline (drop 0.41): full-range tables (mult 0..65535, shift 0..31, zp -128..127), accumulators
+      aimed at the saturation and ReLU boundaries (r + zp around -128 / 127, r around -256 / 255) plus random 32-bit
+      extremes, in_valid with random gaps: every row comes out exactly LAT = 3 cycles after it went in (out_valid nowhere
+      else), bit-exact against the model, with and without ReLU
 """
 import os
 import sys
@@ -18,6 +22,7 @@ sys.path.insert(0, HERE)
 from neosim import Design, load  # noqa: E402
 
 COLS, PW, MW = 8, 32, 16
+LAT = 3                                                  # in_valid -> out_valid (drop 0.41: three stages)
 
 
 def model(acc, mult, shift, zp, relu):
@@ -83,6 +88,61 @@ def main():
             worst = int(np.max(np.abs(got - fl)))
             print(f"  Q3 float sanity: max |q - float requantization| = {worst} LSB (expect <= 1) -> {'PASS' if worst <= 1 else 'FAIL'}")
             fails += worst > 1
+
+    # Q4: full-range tables, boundary-aimed accumulators, random valid gaps, the exact latency
+    mult = rng.integers(0, 65536, size=COLS)
+    mult[:3] = [0, 1, 65535]
+    shift = rng.integers(0, 32, size=COLS)
+    shift[:3] = [0, 31, 0]
+    zp = rng.integers(-128, 128, size=COLS)
+    zp[:3] = [-128, 127, 0]
+    for j in range(COLS):
+        p["tbl_we"].v = 1
+        p["tbl_addr"].v = j
+        p["tbl_mult"].v = int(mult[j])
+        p["tbl_shift"].v = int(shift[j])
+        p["tbl_zp"].v = int(zp[j]) & 0xFF
+        d.tick()
+    p["tbl_we"].v = 0
+
+    def aimed(j):
+        """An accumulator whose requantized value r lands near a saturation boundary of column j (or a random extreme)."""
+        k = int(rng.integers(0, 4))
+        if k == 0 or mult[j] == 0:
+            return int(rng.choice([(1 << 31) - 1, -(1 << 31), int(rng.integers(-(1 << 31), 1 << 31))]))
+        target = int(rng.choice([127, -128, 255, -256, 256, -257, 0, -1])) - (int(zp[j]) if k == 1 else 0) + int(rng.integers(-3, 4))
+        acc = (target << int(shift[j])) // int(mult[j]) + int(rng.integers(-2, 3))
+        return max(-(1 << 31), min((1 << 31) - 1, acc))
+
+    N4 = 400
+    rows4 = [[aimed(j) for j in range(COLS)] for _ in range(N4)]
+    for relu in (0, 1):
+        p["relu"].v = relu
+        sched = [int(rng.random() < 0.7) for _ in range(N4 * 2)]        # in_valid with gaps
+        sent, got4, bad_lat, i = [], [], 0, 0
+        for s in range(len(sched) + LAT + 2):
+            v = sched[s] if s < len(sched) and i < N4 else 0
+            p["in_valid"].v = v
+            for j in range(COLS):
+                in_acc[j].v = rows4[i][j] & 0xFFFFFFFF if v else 0
+            d.tick()
+            if v:
+                sent.append((s, i))
+                i += 1
+            if p["out_valid"].v:
+                # the row that entered LAT cycles earlier (tick s - LAT + 1 counts the entry tick as the first)
+                src = [r for (t, r) in sent if t == s - LAT + 1]
+                if not src:
+                    bad_lat += 1
+                    continue
+                got4.append((src[0], [(c.v - 256) if c.v >= 128 else c.v for c in out_q]))
+        lost = i - len(got4)
+        ok = bad_lat == 0 and lost == 0 and all(
+            q == [model(rows4[r][j], mult[j], shift[j], zp[j], relu) for j in range(COLS)] for r, q in got4)
+        print(f"  Q4 {'relu' if relu else 'linear'}: {i} rows with gaps, full-range tables, boundary-aimed accumulators: "
+              f"{len(got4)} out exactly {LAT} cycles after entry ({bad_lat} at another cycle, {lost} lost), "
+              f"bit-exact vs model -> {'PASS' if ok else 'FAIL'}")
+        fails += not ok
     print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
     return 1 if fails else 0
 

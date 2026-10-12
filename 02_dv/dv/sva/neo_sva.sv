@@ -5,7 +5,7 @@
 
 // ---- streaming core: token/double-buffer rule, exact latency, ABFT invariant -----------------
 module neo_mac_core_sva #(parameter int ROWS = 32, COLS = 32, PE_LAT = 2) (
-  input logic clk, rst_n, w_load, swap_in, valid_in, valid_out, abft_err, fault_inject);
+  input logic clk, rst_n, w_load, swap_in, valid_in, valid_out, abft_err, abft_err_valid, fault_inject);
   localparam int LAT = PE_LAT * ROWS + COLS;
   logic fault_seen;
   always_ff @(posedge clk or negedge rst_n)
@@ -18,9 +18,16 @@ module neo_mac_core_sva #(parameter int ROWS = 32, COLS = 32, PE_LAT = 2) (
     valid_in |-> ##LAT valid_out);
   p_no_spurious_valid: assert property (@(posedge clk) disable iff (!rst_n)
     valid_out |-> $past(valid_in, LAT));
+  // drop 0.41: the checker's verdict of a row comes two cycles after the row, marked by abft_err_valid
+  p_abft_verdict: assert property (@(posedge clk) disable iff (!rst_n)
+    valid_out |-> ##2 abft_err_valid);
+  p_abft_no_spurious_verdict: assert property (@(posedge clk) disable iff (!rst_n)
+    abft_err_valid |-> $past(valid_out, 2));
+  p_abft_err_with_verdict: assert property (@(posedge clk) disable iff (!rst_n)
+    abft_err |-> abft_err_valid);
   // with no fault injected the check column always agrees with the data columns
   p_abft_silent_without_fault: assert property (@(posedge clk) disable iff (!rst_n)
-    (valid_out && !fault_seen) |-> !abft_err);
+    (abft_err_valid && !fault_seen) |-> !abft_err);
 endmodule
 
 // ---- sequencer: legal state machine, run accounting, reduce gating --------------------------
@@ -85,8 +92,8 @@ module tile_dma_sva (input logic clk, rst_n, prog_start, prog_done, prog_busy, c
   p_go_pulse:     assert property (@(posedge clk) disable iff (!rst_n) go |=> !go);
 endmodule
 
-// ---- requantization: fixed two-cycle latency, valid never dropped ----------------------------
+// ---- requantization: fixed three-cycle latency (drop 0.41; two before), valid never dropped ---
 module requant_sva (input logic clk, rst_n, in_valid, out_valid);
-  p_rq_latency: assert property (@(posedge clk) disable iff (!rst_n) in_valid |-> ##2 out_valid);
-  p_rq_no_spurious: assert property (@(posedge clk) disable iff (!rst_n) out_valid |-> $past(in_valid, 2));
+  p_rq_latency: assert property (@(posedge clk) disable iff (!rst_n) in_valid |-> ##3 out_valid);
+  p_rq_no_spurious: assert property (@(posedge clk) disable iff (!rst_n) out_valid |-> $past(in_valid, 3));
 endmodule

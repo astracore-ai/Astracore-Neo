@@ -7,7 +7,8 @@ model/systolic_ref.py.
   T1  clean dataflow: every Y[m][j] and the check column equal the golden values,
       first valid_out exactly PE_LAT*ROWS+COLS cycles after the token, zero ABFT flags
   T2  single-MAC fault in PE(FAULT_ROW, FAULT_COL) while row FAULT_M passes through:
-      exactly one output off by +1, abft_err on exactly that row, sticky set
+      exactly one output off by +1, abft_err on exactly that row, sticky set (drop 0.41: the verdict of a row arrives
+      two cycles after its valid_out, with abft_err_valid; the k-th abft_err_valid is the k-th row)
   T3  abft_clear clears the sticky flag
   T4  double buffering: tile B's shadow weights load while tile A streams, B follows A with
       no drain, both tiles' outputs correct, zero ABFT flags
@@ -98,6 +99,7 @@ def main():
     valid_out = design.cell_of("valid_out")
     abft_clear = design.cell_of("abft_clear")
     abft_err = design.cell_of("abft_err")
+    abft_err_valid = design.cell_of("abft_err_valid")
     abft_err_sticky = design.cell_of("abft_err_sticky")
     fault_inject = design.cell_of("fault_inject")
 
@@ -156,6 +158,7 @@ def main():
                 if first is None:
                     first = s
                 outs.append([from_bits(c.v, PW) for c in y] + [from_bits(y_chk.v, PW)])
+            if abft_err_valid.v:                  # the verdict of the row valid_out showed two cycles before
                 errs.append(abft_err.v)
         swap_in.v = 0
         valid_in.v = 0
@@ -191,7 +194,7 @@ def main():
     t1 = time.time()
     outs, errs, first = stream()
     mism = compare(outs)
-    ok = len(outs) == M and not mism and sum(errs) == 0 and abft_err_sticky.v == 0
+    ok = len(outs) == M and len(errs) == M and not mism and sum(errs) == 0 and abft_err_sticky.v == 0
     lat_ok = first == LAT  # token at tick 0, row 0 at tick 1, visible after tick LAT
     print(f"  T1 dataflow  : {len(outs)} rows x {C} outputs + check column vs golden, "
           f"{len(mism)} mismatches, {sum(errs)} ABFT flags, sticky={abft_err_sticky.v} -> {'PASS' if ok else 'FAIL'}")
@@ -205,7 +208,7 @@ def main():
     outs, errs, _ = stream(fault_cycle=cyc)
     mism = compare(outs)
     hit = len(mism) == 1 and mism[0] == (MF, FC, 1)
-    flagged = sum(errs) == 1 and errs[MF] == 1
+    flagged = len(errs) == M and sum(errs) == 1 and errs[MF] == 1
     sticky = abft_err_sticky.v == 1
     print(f"  T2 MAC fault : PE({FR},{FC}) fault at stream cycle {cyc}: mismatches={mism}, "
           f"flags on rows {[m for m, e in enumerate(errs) if e]}, sticky={abft_err_sticky.v} -> "
@@ -238,7 +241,7 @@ def main():
     expB = Xm @ W2
     okA = len(outs) >= MA and all(outs[m][:C] == expA[m].tolist() for m in range(MA))
     okB = len(outs) == MA + M and all(outs[MA + m][:C] == expB[m].tolist() and outs[MA + m][C] == int(Xm[m] @ np.array(WC2)) for m in range(M))
-    ok4 = okA and okB and sum(errsA) + sum(errsB) == 0
+    ok4 = okA and okB and len(errsA) + len(errsB) == len(outs) and sum(errsA) + sum(errsB) == 0
     print(f"  T4 double-buf: tile A ({MA} rows, W) with W2 loading from tick {LAT}, tile B ({M} rows, W2) with no drain: "
           f"{len(outs)} rows out, A {'ok' if okA else 'BAD'}, B {'ok' if okB else 'BAD'}, flags {sum(errsA) + sum(errsB)} -> {'PASS' if ok4 else 'FAIL'}")
     fails += not ok4

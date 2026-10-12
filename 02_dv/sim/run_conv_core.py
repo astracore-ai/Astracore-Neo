@@ -63,7 +63,7 @@ class NeoCore:
             "cfg_ct0", "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "ext_valid", "ext_idx", "ext_chk",
             "ext_ready", "reduce_ready",
             "cfg_m", "go", "done", "busy", "state_dbg", "rd_valid", "rd_chk", "err_clear",
-            "array_abft_sticky", "acc_abft_err", "acc_abft_sticky", "ctrl_err_sticky",
+            "array_abft_sticky", "acc_abft_err", "acc_abft_err_valid", "acc_abft_sticky", "ctrl_err_sticky",
             "fault_inject", "ctrl_fault_inject", "rq_valid", "rq_tbl_we", "rq_tbl_addr", "rq_tbl_mult",
             "rq_tbl_shift", "rq_tbl_zp", "rq_relu", "seq_fault_inject", "rq_fault_inject", "seq_err_sticky", "rq_err_sticky",
             "cfg_regions_m1", "tiles_ready", "cfg_oy0", "cfg_oy_n", "cfg_iy0",
@@ -153,12 +153,17 @@ class NeoCore:
             self.tick()
             if self.p["rd_valid"].v:
                 out.append([sbits(c.v, 32) for c in self.rd_data])
+            if self.p["acc_abft_err_valid"].v:      # drop 0.41: the verdict of the row drained two cycles before
                 errs.append(self.p["acc_abft_err"].v)
             if self.p["rq_valid"].v:
                 self.rq_out.append([sbits(c.v, 8) for c in self.rq_q])
             if self.p["done"].v:
-                for _ in range(3):                 # requant pipeline tail after done
+                # the tail after done (done comes with the last drained row): its ABFT verdict two cycles later, the
+                # requant pipeline three (drop 0.41), the sticky flags one more
+                for _ in range(4):
                     self.tick()
+                    if self.p["acc_abft_err_valid"].v:
+                        errs.append(self.p["acc_abft_err"].v)
                     if self.p["rq_valid"].v:
                         self.rq_out.append([sbits(c.v, 8) for c in self.rq_q])
                 break
@@ -204,6 +209,7 @@ def conv_on_core(core: NeoCore, x, wgt, s, p, poke=None, ctrl_fault_at=None, seq
         total_cycles += cycles
         acc_errs.append(errs)
         assert out.shape[0] == M, f"drained {out.shape[0]} rows, expected {M}"
+        assert len(errs) == M, f"{len(errs)} ABFT verdicts for {M} drained rows"
         for mm in range(M):
             for c in range(cc):
                 y[nt * C + c, mm // wo, mm % wo] = out[mm, c]

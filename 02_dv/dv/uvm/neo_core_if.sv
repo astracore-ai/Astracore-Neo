@@ -1,7 +1,7 @@
 // neo_core_if.sv -- interface between the UVM agent and neo_core's ports (drop 0.11 skeleton).
 interface neo_core_if #(parameter int ROWS = 16, COLS = 8, PW = 32) (input logic clk);
   import neo_core_pkg::*;
-  logic rst_n, go, done, rd_valid, acc_abft_err;
+  logic rst_n, go, done, rd_valid, acc_abft_err, acc_abft_err_valid;   // the verdict two cycles after its row (drop 0.41)
   logic signed [PW-1:0] rd_data [COLS];
   logic signed [PW-1:0] rd_chk;
   // DMA write ports, descriptor and flags are driven by the tasks below (bodies: see tb/tb_neo_core.sv, which

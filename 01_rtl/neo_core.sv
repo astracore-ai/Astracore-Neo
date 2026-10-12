@@ -71,7 +71,7 @@ module neo_core #(
   input  logic signed [PW-1:0]  ext_chk,
   output logic                  ext_ready,
   output logic                  reduce_ready,
-  // drained results: INT32 (ABFT-checked) and, two cycles later, requantized INT8
+  // drained results: INT32 (ABFT-checked) and, three cycles later, requantized INT8 (drop 0.41: requant in three stages)
   output logic signed [PW-1:0]  rd_data [COLS],
   output logic signed [PW-1:0]  rd_chk,
   output logic                  rd_valid,
@@ -88,6 +88,7 @@ module neo_core #(
   input  logic                  err_clear,
   output logic                  array_abft_sticky,
   output logic                  acc_abft_err,
+  output logic                  acc_abft_err_valid,   // drop 0.41: acc_abft_err is the verdict of the row rd_valid showed two cycles before
   output logic                  acc_abft_sticky,
   output logic                  ctrl_err_sticky,
   output logic                  seq_err_sticky,       // R10: lockstep sequencer comparator
@@ -124,7 +125,7 @@ module neo_core #(
   logic [2:0]            d_state;
   logic signed [15:0]    d_ct_free_idx;
   logic                  seq_err;
-  logic                  array_abft_err, ctrl_err;
+  logic                  array_abft_err, array_abft_err_valid, ctrl_err;
   logic                  acc_ext_ready;
   logic                  ext_gated;
   assign ext_gated = ext_valid && reduce_ready;
@@ -188,8 +189,8 @@ module neo_core #(
     .w_load(w_load_q), .w_in(w_in), .wc_in(wc_in),
     .ext_valid(ext_gated), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(acc_ext_ready),
     .rd_en(rd_en), .rd_idx(rd_idx), .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid),
-    .abft_clear(err_clear), .array_abft_err(array_abft_err), .array_abft_sticky(array_abft_sticky),
-    .acc_abft_err(acc_abft_err), .acc_abft_sticky(acc_abft_sticky),
+    .abft_clear(err_clear), .array_abft_err(array_abft_err), .array_abft_err_valid(array_abft_err_valid), .array_abft_sticky(array_abft_sticky),
+    .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid), .acc_abft_sticky(acc_abft_sticky),
     .ctrl_err(ctrl_err), .ctrl_err_sticky(ctrl_err_sticky),
     .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject));
 
@@ -233,5 +234,5 @@ module neo_core #(
   // ct_free_idx (its compared outputs are in seq_err), the duplicate requant's parity flag, the unlatched ABFT and
   // control errors (their sticky versions are the outputs)
   logic unused_core_bits;
-  assign unused_core_bits = ^{d_busy, d_ct_free, d_ct_free_idx, array_abft_err, ctrl_err, rq_tbl_perr_d};
+  assign unused_core_bits = ^{d_busy, d_ct_free, d_ct_free_idx, array_abft_err, array_abft_err_valid, ctrl_err, rq_tbl_perr_d};
 endmodule

@@ -7,6 +7,11 @@ run_noc.py -- noc_mesh (3x3 of noc_router) under neosim.
       at the right node, with its payload intact, and in order per (source, destination) pair
   N2  parity: one flit injected with wrong parity is dropped at its ingress router, which raises
       parity_err; every other router stays clean and all good packets still arrive
+  N3  the drop-0.41 router (one-hot rotating arbitration, parity stored at FIFO entry) against the drop-0.40 router kept
+      in tb/noc_router_ref.sv, side by side on the same inputs (tb's noc_router_pair, XW = YW = 3): random coordinates,
+      flits aimed at the neighbourhood so that the five inputs contend for the outputs, bad parity, random back-pressure,
+      err_clear and the output-register hooks; every output (in_ready, out_valid, out_flit, parity_err_sticky) equal in
+      every cycle -- the same grant order, cycle for cycle
 """
 import os
 import sys
@@ -163,6 +168,64 @@ def run(n_per_node, seed, bad=None):
     return fails, got, total, tick, (np.mean(lat) if lat else 0, max(lat) if lat else 0), elapsed, len(d.cells)
 
 
+def equivalence(seed, cycles, hooks):
+    """N3: rtl/noc_router.sv and the drop-0.40 reference on the same random inputs, every output compared every cycle.
+    Returns (mismatches, first mismatch, fires, contended grants)."""
+    rng = np.random.default_rng(seed)
+    xw = yw = 3
+    dw = 16
+    fw = 1 + 2 * (xw + yw) + 8 + dw
+    rtl, tb = os.path.join(HERE, "..", "rtl"), os.path.join(HERE, "..", "tb")
+    d = Design(load([os.path.join(rtl, "noc_router.sv"), os.path.join(tb, "noc_router_ref.sv")]))
+    d.elaborate("noc_router_pair", {"XW": xw, "YW": yw, "DW": dw, "DV_HOOKS": 1})
+    c = {n: d.cell_of(n) for n in ("rst_n", "my_x", "my_y", "err_clear", "dv_flit_flip", "dv_valid_clear", "dv_port", "dv_mask",
+                                    "n_perr", "r_perr")}
+    a = {n: d.array_of(n) for n in ("in_valid", "in_flit", "out_ready", "n_in_ready", "n_out_valid", "n_out_flit",
+                                     "r_in_ready", "r_out_valid", "r_out_flit")}
+    rq = [d.cells[f"top.u_new.rq[{o}]"] for o in range(5)]
+    fire = [d.cells[f"top.u_new.fire[{o}]"] for o in range(5)]
+    for n in ("err_clear", "dv_flit_flip", "dv_valid_clear", "dv_port", "dv_mask"):
+        c[n].v = 0
+    for i in range(5):
+        a["in_valid"][i].v = 0
+        a["out_ready"][i].v = 1
+    mx, my = int(rng.integers(0, 8)), int(rng.integers(0, 8))
+    c["my_x"].v, c["my_y"].v = mx, my
+    c["rst_n"].v = 0
+    d.tick(); d.tick()
+    c["rst_n"].v = 1
+    mism, first, fires, contended = 0, None, 0, 0
+    for t in range(cycles):
+        for i in range(5):
+            a["in_valid"][i].v = int(rng.random() < 0.7)
+            dx = min(7, max(0, mx + int(rng.integers(-1, 2))))
+            dy = min(7, max(0, my + int(rng.integers(-1, 2))))
+            v = (dy << (fw - 1 - yw)) | (dx << (fw - 1 - yw - xw)) | int(rng.integers(0, 1 << (fw - 1 - yw - xw)))
+            par = bin(v).count("1") & 1
+            if rng.random() < 0.05:
+                par ^= 1                                      # a corrupted flit: dropped and flagged by both
+            a["in_flit"][i].v = (par << (fw - 1)) | v
+            a["out_ready"][i].v = int(rng.random() < 0.6)
+        c["err_clear"].v = int(rng.random() < 0.01)
+        if hooks:
+            c["dv_flit_flip"].v = int(rng.random() < 0.03)
+            c["dv_valid_clear"].v = int(rng.random() < 0.03)
+            c["dv_port"].v = int(rng.integers(0, 8))
+            c["dv_mask"].v = int(rng.integers(0, 1 << fw))
+        d.settle()
+        contended += sum(1 for o in range(5) if fire[o].v and bin(rq[o].v).count("1") >= 2)
+        fires += sum(f.v for f in fire)
+        d.tick()
+        diff = [n for n in ("in_ready", "out_valid", "out_flit") for i in range(5) if a["n_" + n][i].v != a["r_" + n][i].v]
+        if c["n_perr"].v != c["r_perr"].v:
+            diff.append("parity_err_sticky")
+        if diff:
+            mism += 1
+            if first is None:
+                first = (t, diff[:4])
+    return mism, first, fires, contended
+
+
 def main():
     fails_total = 0
     print(f"noc_mesh {NX}x{NY}, {FW}-bit flits, XY routing, 2-entry input FIFOs, registered outputs (neosim):")
@@ -180,6 +243,21 @@ def main():
           f"corrupted flit dropped, parity_err raised on node 0 only -> {'PASS' if ok else 'FAIL'}")
     for f in fails[:5]:
         print("     ", f)
+    fails_total += not ok
+    t0 = time.time()
+    tot = [0, 0, 0]
+    firsts = []
+    for seed, hooks in ((31, False), (32, True), (33, True)):
+        mism, first, fires, contended = equivalence(seed, 2000, hooks)
+        tot[0] += mism; tot[1] += fires; tot[2] += contended
+        if first:
+            firsts.append((seed, first))
+    ok = tot[0] == 0
+    print(f"  N3 one-hot arbitration vs the drop-0.40 router: 3 x 2,000 cycles, random coordinates, 70 % injection, 5 % bad parity, "
+          f"60 % ready, err_clear and output hooks: {tot[1]} grants ({tot[2]} with two or more contenders), "
+          f"{tot[0]} cycles with any output different -> {'PASS' if ok else 'FAIL'} ({time.time() - t0:.1f} s)")
+    for s, f in firsts[:3]:
+        print(f"      seed {s}: first difference at cycle {f[0]} on {f[1]}")
     fails_total += not ok
     print(f"RESULT: {'ALL PASS' if fails_total == 0 else f'{fails_total} FAILURES'}")
     return 1 if fails_total else 0

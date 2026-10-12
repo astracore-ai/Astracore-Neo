@@ -126,6 +126,7 @@ def run_split(x, wgt, s, p, corrupt=None, hold_b0=False):
         accepted = owner.p["ext_valid"].v and owner.p["ext_ready"].v
         if owner.p["rd_valid"].v:
             out.append([sbits(cell.v, 32) for cell in owner.rd_data])
+        if owner.p["acc_abft_err_valid"].v:     # drop 0.41: the verdict of the row drained two cycles before
             errs.append(owner.p["acc_abft_err"].v)
         for i, c in enumerate(cores):           # done pulses in the same cycle as the last drained row
             if c.p["done"].v:
@@ -138,6 +139,13 @@ def run_split(x, wgt, s, p, corrupt=None, hold_b0=False):
         if cycles > 6000:
             raise RuntimeError("K-split did not finish")
     owner.p["ext_valid"].v = 0
+    for _ in range(3):                          # the last rows' verdicts (two cycles behind) and the sticky flag
+        owner.d.settle()
+        if owner.p["acc_abft_err_valid"].v:
+            errs.append(owner.p["acc_abft_err"].v)
+        for c in cores:
+            c.tick()
+    assert len(errs) == len(out), f"{len(errs)} ABFT verdicts for {len(out)} drained rows"
     return np.array(out, dtype=np.int64), errs, cycles, forwarded, owner
 
 
