@@ -1,18 +1,19 @@
 /* verilator lint_off DECLFILENAME */        // two modules, neo_mem_sp and neo_mem_rf, in one file by design
 // neo_mem.sv -- the design's memory arrays as leaf modules (drop 0.40).
 //   Every array that a memory compiler replaces in silicon (09_synthesis/memories.md: the bank's 16 lanes, the weight
-//   buffer, the activation buffer, the accumulator, the NIC's drain FIFO) lives in one of the two modules below, so that one swap -- the
-//   macro wrapper at implementation, a black box with the macro's area and timing in the open-PDK synthesis job
-//   (07_ci/synth) -- covers the whole design, while every simulator runs the behavioural array here. The program
-//   memory (prog_mem), the requantization tables and the router FIFOs stay flops in their own modules.
+//   buffer, the activation buffer, the accumulator, the NIC's drain FIFO and, since drop 0.41, the NIC's partial-sum rows
+//   under assembly) lives in one of the two modules below, so that one swap -- the macro wrapper at implementation, a
+//   black box with the macro's area and timing in the open-PDK synthesis job (07_ci/synth) -- covers the whole design,
+//   while every simulator runs the behavioural array here. The program memory (prog_mem), the requantization tables and
+//   the router FIFOs stay flops in their own modules.
 //
 //   neo_mem_sp -- single-port style: one write port of G groups (we[g] writes bits [g*GW +: GW] of the word at waddr,
 //     GW = W / G) and one registered read port (rdata holds the word at raddr from the cycle after re). The bank's lanes.
 //   neo_mem_rf -- register-file style: the same write port, an asynchronous read port A (ra_data is the word at ra_addr
 //     in the same cycle) and, with RB = 1, a registered read port B (rb_en / rb_addr -> rb_data the cycle after). The
-//     weight buffer, the activation buffer and the NIC's drain FIFO use port A; the accumulator uses A for its
-//     read-modify-write and B for the drain. A write and a read of the same word in one cycle: the read returns the old
-//     word (nonblocking write).
+//     weight buffer, the activation buffer, the NIC's drain FIFO and its partial-sum rows use port A; the accumulator
+//     uses A for its read-modify-write and B for the drain. A write and a read of the same word in one cycle: the read
+//     returns the old word (nonblocking write).
 //
 //   Testbench hooks (DV_HOOKS = 1; the ports are tied off at 0, the default): a backdoor write at the rising edge
 //   (bd_we[g]: group g of the word at bd_addr <= the same group of bd_wdata, independent of the functional write of the

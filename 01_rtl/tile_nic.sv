@@ -29,8 +29,11 @@
 //   reformatting. The drain sends 16-word beats (drop 0.31): an INT32 row (COLS + 1 words) is 16 + 16 + 1 at 32x32, an
 //   INT8 row (COLS / 4 words) one beat; the packer merges beats into wide flits as before.
 //   RX: per-source write pointers, PSUM row assembly and CRC accumulators (sources interleave at a destination; each
-//   (source, destination) stream is in order on the XY mesh), each source's state in its own register block. TX: one
-//   message at a time (RDREQ, serve a read, or drain), so a receiver never sees two of our messages interleaved.
+//   (source, destination) stream is in order on the XY mesh), each source's state in its own register block -- except the
+//   rows under assembly, which are one neo_mem_rf leaf of NSRC rows since drop 0.41 (u_prow: 64 x 1,024 bits in silicon,
+//   65,536 flops before). TX: one message at a time (RDREQ, serve a read, or drain), so a receiver never sees two of our
+//   messages interleaved. Both beat CRCs (receive, transmit) are crc16_beat in its matrix form since drop 0.41: one XOR
+//   tree per CRC bit instead of 16 chained word stages, the transmit beat's 7.7 ns path of drop 0.40.
 //   Commands from the host or sequencer: FETCH_A / FETCH_W pull `len` words from a remote bank into the activation /
 //   weight buffer at entry `base`; DRAIN_WR / DRAIN_PSUM route the core's drained rows to a remote bank address / to the
 //   owner core's reduce port. crc_err_sticky is the end-to-end protection the FMEDA counts on (row 12): it covers
@@ -166,11 +169,10 @@ module tile_nic #(
   assign rx_src_y = rx_flit[SRCY_LO +: YW];
   assign rx_src   = SRCW'(32'(rx_src_y) * NX + 32'(rx_src_x));
 
-  // per-source receive state (each source's registers in its own block, g_src below)
+  // per-source receive state (each source's registers in its own block, g_src below; the partial-sum rows in the u_prow leaf)
   logic [BAW-1:0]       wr_ptr  [NSRC];
   logic [15:0]          crc_acc [NSRC];
   logic [15:0]          rx_cnt  [NSRC];                 // data words received in the current message
-  logic [COLS*PW-1:0]   prow    [NSRC];                 // partial-sum row under assembly, column j at [PW*j +: PW]
   localparam int FTW = $clog2(FETCH_TIMEOUT + 1);          // timer width follows the parameter (drop 0.24: was a fixed 16 bits)
   logic [FTW-1:0]       fetch_timer;
 
@@ -343,12 +345,44 @@ module tile_nic #(
   assign abuf_waddr = fetch_entry[AW-1:0];
   assign wbuf_waddr = fetch_entry[WAW-1:0];
 
-  // per-source state: write pointer, CRC accumulator, word count, partial-sum row
+  // partial-sum rows under assembly (drop 0.41): one neo_mem_rf leaf of NSRC words x COLS*PW bits -- the row of source s is
+  // word s, column j its write group j -- instead of NSRC registers of COLS*PW bits (65,536 of the silicon NIC's 71,999 flops in
+  // the synthesis of drop 0.40, and the 64:1 row mux behind them). A PSUM beat writes the columns it covers (prow_we[j] for
+  // j in [ps_col0, ps_end), its words at their column positions) at the address of its source; the beat with the check word
+  // reads its source's row through the asynchronous port A in the same cycle, where prow[rx_src] was read before, and takes
+  // the columns it carries itself from the beat (a write and a read of one word in a cycle return the old word, as the
+  // registers did). No reset is needed: the drain sends every PSUM row whole and in column order -- COLS + 1 words from
+  // column 0, the check word last (DRAIN_PSUM always drains INT32 rows) -- and a source's beats arrive in order (XY routing;
+  // the packer and the unpacker merge and split beats without reordering them), so every column the check beat reads was
+  // written by an earlier beat of the same row from the same source; no row is shorter than COLS, so no read needs masking.
+  // The only read of a column the row did not write follows a lost flit, a fault the stream's word count and CRC flag at
+  // its CRC flit (lost_err, crc_err), with the row wrong either way: the reset registers read zeros for a column lost
+  // before the source's first complete row and the previous row's column after it, the leaf its power-up content or the
+  // previous row's column. The simulators initialize the array to zero, so every test sees what the registers gave.
+  logic [COLS-1:0]    prow_we;                            // the PSUM beat covers column j
+  logic [COLS*PW-1:0] prow_wdata;                         // the beat's words at their column positions
+  logic [COLS*PW-1:0] prow_rd;                            // the row of rx_src (port A, combinational)
+  logic [COLS*PW-1:0] unused_prow_rb, unused_prow_bd;     // the leaf's unused read ports (RB = 0, no hooks here)
+  generate
+    for (genvar j = 0; j < COLS; j++) begin : g_prow
+      assign prow_we[j] = rx_fire && (rx_type == T_PSUM) && (j >= 32'(ps_col0)) && (j < 32'(ps_end));
+      assign prow_wdata[PW * j +: PW] = rx_words[32 * LW'(LW'(j) - LW'(ps_col0)) +: 32];
+    end
+  endgenerate
+  neo_mem_rf #(.W(COLS * PW), .D(NSRC), .G(COLS), .RB(0), .DV_HOOKS(0)) u_prow (
+    .clk(clk),
+    .we(prow_we), .waddr(rx_src), .wdata(prow_wdata),
+    .ra_addr(rx_src), .ra_data(prow_rd),
+    .rb_en(1'b0), .rb_addr('0), .rb_data(unused_prow_rb),
+    .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_prow_bd),
+    .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
+
+  // per-source state: write pointer, CRC accumulator, word count
   generate
     for (genvar s = 0; s < NSRC; s++) begin : g_src
       always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-          wr_ptr[s] <= '0; crc_acc[s] <= 16'hFFFF; rx_cnt[s] <= '0; prow[s] <= '0;
+          wr_ptr[s] <= '0; crc_acc[s] <= 16'hFFFF; rx_cnt[s] <= '0;
         end else if (rx_src == s) begin
           if (rx_fire) begin
             case (rx_type)
@@ -362,11 +396,9 @@ module tile_nic #(
                 crc_acc[s] <= rx_crc_next;
                 rx_cnt[s]  <= rx_cnt[s] + 16'(rx_nw);
               end
-              T_PSUM: begin                                  // the whole beat: its columns into the row under assembly
+              T_PSUM: begin                                  // the whole beat (its columns go into the u_prow leaf)
                 crc_acc[s] <= rx_crc_next;
                 rx_cnt[s]  <= rx_cnt[s] + 16'(rx_nw);
-                for (int j = 0; j < COLS; j++)
-                  if ((j >= 32'(ps_col0)) && (j < 32'(ps_end))) prow[s][PW * j +: PW] <= rx_words[32 * LW'(LW'(j) - LW'(ps_col0)) +: 32];
               end
               T_CRC: begin
                 crc_acc[s] <= 16'hFFFF;
@@ -427,11 +459,11 @@ module tile_nic #(
           if (w >= 32'(fx_dst) && w < 32'(fx_dst) + 32'(fx_rem)) stage[w] <= rx_words[32 * LW'(fx_src + LW'(w) - LW'(fx_dst)) +: 32];
       end
       if (rx_fire && ps_has_chk) begin                     // PSUM check word: the row is complete -- the columns this
-        efifo_valid[efifo_wr] <= 1'b1;                     // beat brings are taken from the beat, the rest from prow
-        efifo_idx[efifo_wr]   <= rx_tag[IDXW-1:0];
+        efifo_valid[efifo_wr] <= 1'b1;                     // beat brings are taken from the beat, the rest from the
+        efifo_idx[efifo_wr]   <= rx_tag[IDXW-1:0];         // source's row in the u_prow leaf
         efifo_chk[efifo_wr]   <= rx_words[32 * ps_chk_idx +: 32];
         for (int j = 0; j < COLS; j++)
-          efifo_y[efifo_wr][j] <= ((j >= 32'(ps_col0)) && (j < 32'(ps_end))) ? rx_words[32 * LW'(LW'(j) - LW'(ps_col0)) +: 32] : prow[rx_src][PW * j +: PW];
+          efifo_y[efifo_wr][j] <= ((j >= 32'(ps_col0)) && (j < 32'(ps_end))) ? rx_words[32 * LW'(LW'(j) - LW'(ps_col0)) +: 32] : prow_rd[PW * j +: PW];
         efifo_wr <= !efifo_wr;
       end
       if (rx_fire) begin

@@ -370,6 +370,53 @@ for rows, cols, label in ((16, 8, "I11"), (32, 32, "I11b")):
           f"every other beat one cycle -> {'PASS' if ok else 'FAIL'}")
     fails += not ok
 
+
+def psum_leaf_test(rows, cols, seed):
+    """The rows under assembly live in a leaf without reset (u_prow, drop 0.41): its NSRC words are filled with random bits
+    after reset (what a macro holds at power-up), then three sources send two PSUM rows each, their beats (1..16 columns)
+    interleaved at random with each source's own order kept, each stream closed by its CRC flit: every row comes out of
+    the reduce port with its columns and check value -- every column the check beat takes from the leaf was written by an
+    earlier beat of the same row and source -- in the order of the check beats, and no stream flags crc_err / lost_err."""
+    r = random.Random(seed)
+    nic = Nic(rows, cols)
+    for s in range(NX * NY):
+        nic.d.cells[f"top.u_prow.mem[{s}]"].v = r.getrandbits(32 * cols)
+    nic.p["ext_ready"].v = 1
+    srcs = [(1, 1), (1, 0), (0, 1)]
+    beats = {s: [] for s in srcs}                          # per source: (flit, check row or None) in stream order
+    words = {s: [] for s in srcs}
+    for si, s in enumerate(srcs):
+        for row in range(2):
+            ws = [r.getrandbits(32) for _ in range(cols + 1)]
+            words[s] += ws
+            col = 0
+            while col <= cols:
+                n = min(r.choice([1, 3, 7, 16, 16]), cols + 1 - col)
+                last = col + n > cols
+                beats[s].append((flit(T_PSUM, ws[col:col + n], hdr=col, tag=10 * si + row, src=s), (10 * si + row, ws[:cols], ws[cols]) if last else None))
+                col += n
+        beats[s].append((flit(T_CRC, [(len(words[s]) << 16) | crc16(words[s])], src=s), None))
+    exp, pos = [], {s: 0 for s in srcs}
+    while any(pos[s] < len(beats[s]) for s in srcs):
+        s = r.choice([s for s in srcs if pos[s] < len(beats[s])])
+        f, row = beats[s][pos[s]]
+        pos[s] += 1
+        nic.send(f)
+        if row is not None:
+            exp.append(row)
+    for _ in range(4):
+        nic.tick()
+    ok = nic.ext_rows == exp and nic.p["crc_err_sticky"].v == 0 and nic.p["lost_err_sticky"].v == 0
+    return ok, sum(len(b) for b in beats.values())
+
+
+for rows, cols, label in ((16, 8, "I11c"), (32, 32, "I11d")):
+    ok, nb = psum_leaf_test(rows, cols, 500 + rows)
+    print(f"  {label} PSUM rows through the leaf without reset at {rows}x{cols}: u_prow filled with random bits after reset, 3 sources x 2 rows of "
+          f"{cols}+1 words in {nb} beats interleaved across sources: every row out with its columns and check value, in check-beat order, "
+          f"CRC and count clean per stream -> {'PASS' if ok else 'FAIL'}")
+    fails += not ok
+
 # ---------------- I12: the drain in 16-word beats (drop 0.31) ----------------
 def drain_test(rows, cols, mode, seed):
     """Rows pushed into the drain FIFO (rd_valid / rq_valid as the core does), a DRAIN_WR (INT32 or INT8) or DRAIN_PSUM
