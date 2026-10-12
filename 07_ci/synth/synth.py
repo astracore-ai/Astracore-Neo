@@ -783,6 +783,20 @@ set_false_path -from [get_ports rst_n]
 set_max_fanout 32 [current_design]
 set_max_transition {mtrans} [current_design]
 """
+# the layer descriptor (host_if order 0x10-0x24, and cfg_m): static during a run by protocol (drop 0.42) -- the host or
+# the DMA writes it only between runs, before go, and the sequencer takes several cycles from go to its first f_start --
+# so the paths from it have four cycles instead of 0.2 of one period of input delay. NOT in the list: cfg_ct / cfg_ky /
+# cfg_kx of act_feeder and neo_mac_core_v02 (the run's position, which the sequencer changes between runs one cycle
+# before start), and the requantization tables (tbl_* / relu of requant, rq_tbl_* / rq_relu of neo_core), which the DMA
+# writes during a layer. A unit gets the constraint from the descriptor inputs it has; the tile, whose descriptor lives
+# in host_if's registers, through the descriptor pins of its child instances (u_core/cfg_*); none when there are none.
+STATIC_CFG = ("cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n",
+              "cfg_ct0", "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1", "cfg_m")
+STATIC_SDC = """# the layer descriptor ({what}): written by the host or the DMA only between runs (before go) and held
+# for the whole run, the sequencer several cycles from go to its first f_start -- four cycles for its paths (drop 0.42)
+set_multicycle_path 4 -setup {how} [get_{kind} {{{names}}}]
+set_multicycle_path 3 -hold  {how} [get_{kind} {{{names}}}]
+"""
 COMB_SDC = """# {name}: combinational -- a virtual clock of {period} {unit}, inputs and outputs at its edges (drop 0.40)
 create_clock -name vclk -period {period}
 set_input_delay  -clock vclk 0 [all_inputs]
@@ -815,7 +829,18 @@ exit
 """
 
 
-def write_sdc(u, has_clk, pdk, period_ps, udir):
+def static_cfg(nl):
+    """The descriptor inputs of the unit (STATIC_CFG names among its input ports) and the descriptor input pins of its
+    child instances (`instance/port`, for the tile, whose children are timing models)."""
+    ports = [pn for pn, p in nl.ports(nl.top).items() if pn in STATIC_CFG and p.get("direction") == "input"]
+    pins = []
+    for cn, c in nl.cells().items():
+        dirs = c.get("port_directions") or {}
+        pins += [f"{cn}/{pn}" for pn in c.get("connections", {}) if pn in STATIC_CFG and dirs.get(pn) == "input"]
+    return sorted(ports, key=STATIC_CFG.index), sorted(pins)
+
+
+def write_sdc(u, has_clk, pdk, period_ps, udir, cfg_ports=(), cfg_pins=()):
     tu = pdk["time_unit_ps"]
     P = period_ps / tu
     unit = "ps" if tu == 1.0 else "ns"
@@ -823,8 +848,12 @@ def write_sdc(u, has_clk, pdk, period_ps, udir):
     if u["tile"]:
         s = TILE_SDC.format(period=fmt(P), unit=unit, u_setup=fmt(0.08 * P), u_hold=fmt(0.04 * P), ctrans=fmt(0.06 * P),
                             link=fmt(0.4 * P), host=fmt(0.5 * P), mtrans=fmt(0.16 * P))
+        if cfg_pins:                                  # the descriptor from host_if's registers into the core's pins
+            s += STATIC_SDC.format(what="the child instances' descriptor pins", how="-through", kind="pins", names=" ".join(cfg_pins))
     elif has_clk:
         s = BLOCK_SDC.format(name=u["name"], period=fmt(P), unit=unit, u_setup=fmt(0.08 * P), io=fmt(0.2 * P), mtrans=fmt(0.16 * P))
+        if cfg_ports:
+            s += STATIC_SDC.format(what="the descriptor inputs", how="-from", kind="ports", names=" ".join(cfg_ports))
     else:
         s = COMB_SDC.format(name=u["name"], period=fmt(P), unit=unit, mtrans=fmt(0.16 * P))
     with open(os.path.join(udir, "block.sdc"), "w") as f:
@@ -843,7 +872,9 @@ def run_sta(u, results, t, pdk, args, out):
     if missing:
         return dict(exit=-1, error=f"missing: {', '.join(os.path.relpath(p, out) for p in missing)}")
     nl = Netlist(os.path.join(udir, "netlist.json"))
-    write_sdc(u, "clk" in nl.ports(nl.top), pdk, args.period, udir)
+    cfg_ports, cfg_pins = static_cfg(nl)
+    write_sdc(u, "clk" in nl.ports(nl.top), pdk, args.period, udir, cfg_ports, cfg_pins)
+    del nl
     libs = list(t["libs"])
     macro_lib = os.path.join(out, "macros.lib")
     if os.path.isfile(macro_lib) and results[u["name"]].get("macros"):
