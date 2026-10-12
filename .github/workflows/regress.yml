@@ -213,7 +213,9 @@ jobs:
   # hierarchy, PE counts, no hook logic at DV_HOOKS = 0, every tool run clean) fail the job, the report (synth_report.md,
   # synth_results.json, the worst paths and stats per unit) goes to ci-logs-synth either way. Tools from GitHub only
   # (synth/tools.sh): the OSS CAD Suite nightly tarball, OpenSTA built from source once per cache key (the binary is
-  # cached), the ORFS platform libraries by sparse checkout. Own concurrency group.
+  # cached as soon as it is built), the ORFS platform libraries by sparse checkout. Should OpenSTA not build, tools.sh prints
+  # its cmake / make logs and the job synthesizes without timing: the synthesis gates still run, the timing gate fails (fix38).
+  # Own concurrency group.
   synth:
     runs-on: ubuntu-latest
     timeout-minutes: 300
@@ -232,14 +234,23 @@ jobs:
           mkdir -p ci_logs/synth && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/synth/RUN.txt
           { echo "cores $(nproc)"; free -m | sed -n 2,3p; df -h / | tail -1; } | tee -a ci_logs/synth/RUN.txt
       - name: OpenSTA binary cache
-        uses: actions/cache@v4
+        id: sta-cache
+        uses: actions/cache/restore@v4
         with:
           path: /home/runner/neo-synth/sta
           key: neo-synth-sta-f861c62-${{ runner.os }}-${{ runner.arch }}
       - name: tools (OSS CAD Suite, OpenSTA, the ORFS libraries)
+        id: tools
         run: |
           set -o pipefail
           bash synth/tools.sh 2>&1 | tee ci_logs/synth/tools.txt
+          echo "sta=$([ -x /home/runner/neo-synth/sta ] && echo 1 || echo 0)" >> "$GITHUB_OUTPUT"
+      - name: cache the OpenSTA binary          # saved as soon as it is built, whatever the gates say afterwards
+        if: steps.tools.outputs.sta == '1' && steps.sta-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /home/runner/neo-synth/sta
+          key: neo-synth-sta-f861c62-${{ runner.os }}-${{ runner.arch }}
       - name: synthesis and timing (ASAP7 SS, 500 ps; every unit of the tile)
         run: |
           set -o pipefail
