@@ -1,5 +1,6 @@
 # Neo regression on GitHub Actions (drop 0.24, repository layout = handoff package; drop 0.34: the mesh job measured; drop 0.35: the
-# 64-tile mesh of 32x32 cores built hierarchically -- the tile verilated once -- and the lint step a full -Wall gate).
+# 64-tile mesh of 32x32 cores built hierarchically -- the tile verilated once -- and the lint step a full -Wall gate; drop 0.40:
+# the synth job -- every unit of the silicon tile through Yosys (slang front end) + OpenSTA on the ASAP7 proxy library).
 # Every job builds the flat layout from the numbered folders with plain copies, then writes its logs to its own
 # branch ci-logs-<job> (ci_logs/<job>/*.txt), so results can be read from the repository and jobs never
 # overwrite each other's results.
@@ -205,6 +206,58 @@ jobs:
             git add -f ci_logs
             git commit -m "hdl-mesh8 logs run ${{ github.run_number }}" || true
             git push origin ci-logs-hdl-mesh8 --force'
+  # the open-PDK synthesis job (drop 0.40): 07_ci/synth/synth.py synthesizes every unit of the silicon tile (8x8 position,
+  # 32x32 core, 2 MB bank, 1024-bit links, DV_HOOKS = 0) -- a module at its silicon parameters with its children black-boxed
+  # -- with Yosys (the slang front end), the memory leaves (01_rtl/neo_mem.sv) priced by a macro model, and runs OpenSTA on
+  # each unit with its subtree at 500 ps on ASAP7's SS corner; the gates (no latch, no multiply-driven net, a consistent
+  # hierarchy, PE counts, no hook logic at DV_HOOKS = 0, every tool run clean) fail the job, the report (synth_report.md,
+  # synth_results.json, the worst paths and stats per unit) goes to ci-logs-synth either way. Tools from GitHub only
+  # (synth/tools.sh): the OSS CAD Suite nightly tarball, OpenSTA built from source once per cache key (the binary is
+  # cached), the ORFS platform libraries by sparse checkout. Own concurrency group.
+  synth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    concurrency:
+      group: synth-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      NEO_SYNTH_TOOLS: /home/runner/neo-synth      # the runner's own home: no sudo for the tools or the cache restore
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 07_ci/synth synth && cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/synth && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/synth/RUN.txt
+          { echo "cores $(nproc)"; free -m | sed -n 2,3p; df -h / | tail -1; } | tee -a ci_logs/synth/RUN.txt
+      - name: OpenSTA binary cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/neo-synth/sta
+          key: neo-synth-sta-f861c62-${{ runner.os }}-${{ runner.arch }}
+      - name: tools (OSS CAD Suite, OpenSTA, the ORFS libraries)
+        run: |
+          set -o pipefail
+          bash synth/tools.sh 2>&1 | tee ci_logs/synth/tools.txt
+      - name: synthesis and timing (ASAP7 SS, 500 ps; every unit of the tile)
+        run: |
+          set -o pipefail
+          echo "synth starts $(date -u)" | tee -a ci_logs/synth/RUN.txt
+          # two Yosys runs at a time on a 16 GB runner (the two largest units peak near 5 GB each), one on a 7 GB runner
+          J=1; [ "$(free -m | awk '/Mem:/{print $2}')" -ge 14000 ] && J=2
+          echo "SYNTH_JOBS=$J" | tee -a ci_logs/synth/RUN.txt
+          make synth SYNTH_JOBS=$J 2>&1 | tee ci_logs/synth/synth.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          mkdir -p ci_logs/synth && { echo "finished $(date -u)"; free -m | sed -n 2p; } >> ci_logs/synth/RUN.txt
+          git checkout --orphan ci-logs-synth
+          git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs
+          git commit -m "synth logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-synth --force
   tiles:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest

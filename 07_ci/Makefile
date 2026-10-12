@@ -35,6 +35,8 @@
 #                   Verilator (C1 on neo_core at 16x8 and 32x32, the mesh suite); `make regress` stays for a workstation and the
 #                   manual `tiles` job
 # make xrun_core  : Cadence Xcelium replay of the C1 convolution on neo_core (vectors_core from --dump)
+# make synth      : the open-PDK synthesis job (drop 0.40): Yosys (slang front end) + OpenSTA on ASAP7 (SS, 500 ps) -- synth/synth.py
+#                   unit by unit up to the silicon tile, synth/report.py into ci_logs/synth/; tools from synth/tools.sh (CI's synth job)
 VECDIR ?= vectors
 ROWS   ?= 32
 COLS   ?= 32
@@ -42,7 +44,7 @@ M      ?= 64
 SEED   ?= 1
 
 RTL := rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
-       rtl/systolic_array.sv rtl/abft_checker.sv rtl/neo_mac_core.sv \
+       rtl/systolic_array.sv rtl/abft_checker.sv rtl/neo_mem.sv rtl/neo_mac_core.sv \
        rtl/act_feeder.sv rtl/acc_bank.sv rtl/neo_mac_core_v02.sv \
        rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv
 NOC := rtl/noc_router.sv rtl/noc_mesh.sv
@@ -50,7 +52,7 @@ TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wra
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth
 
 all: regress model
 
@@ -258,5 +260,21 @@ lint:
 	verilator --lint-only -Wall $(LINTW) --top-module tile_mesh $(TILE)
 	@echo "lint: four -Wall passes, nothing waived, clean"
 
+# the synthesis job (drop 0.40): synth/synth.py synthesizes every unit of the tile (a module at its silicon parameters, its
+# children black-boxed; the slang front end; the memory leaves priced by a macro model) with Yosys and runs OpenSTA on each
+# unit with its subtree; it exits nonzero when a gate fails (a latch, a multiply-driven net, a hierarchy mismatch, a wrong
+# PE count, hook logic left at DV_HOOKS = 0, a tool failure) -- the report is written either way. SYNTH_PDK asap7 |
+# nangate45, SYNTH_CORNER SS | TT (asap7) / TT (nangate45), SYNTH_BLOCKS all | tile | core | core16 | names, SYNTH_JOBS
+# parallel Yosys runs (2 on the 16 GB runner -- the two largest units peak near 5 GB each; 1 under 8 GB), SYNTH_PERIOD in ps
+# (default the library's 500). Tools: synth/tools.sh.
+SYNTH_PDK ?= asap7
+SYNTH_CORNER ?= SS
+SYNTH_BLOCKS ?= all
+SYNTH_JOBS ?= 2
+SYNTH_PERIOD ?=
+synth:
+	python3 synth/synth.py --rtl rtl --out synth_out --pdk $(SYNTH_PDK) --corner $(SYNTH_CORNER) --blocks $(SYNTH_BLOCKS) --jobs $(SYNTH_JOBS) $(if $(SYNTH_PERIOD),--period $(SYNTH_PERIOD),); rc=$$?; \
+	python3 synth/report.py synth_out --out ci_logs/synth; exit $$rc
+
 clean:
-	rm -rf build obj_dir xcelium.d xrun.history xrun.log *.vcd
+	rm -rf build obj_dir xcelium.d xrun.history xrun.log *.vcd synth_out
