@@ -4,12 +4,16 @@
 //   Overhead for a 32-column core: one extra column (3.1 %) and a 32-input adder tree.
 //   Coverage: every single-point fault in a MAC, a stored weight or the psum chain of one
 //   data or check column flips exactly one side of the equality.
-//   Drop 0.42: the sum in two stages (the 33-operand sum and compare were one combinational path from the row's registers,
-//   1.45 ns behind the array and 1.64 ns behind the accumulator's drain read on the ASAP7 SS proxy). Stage 1 registers
-//   NG = 4 partial sums of ceil(COLS / 4) consecutive columns each, y_chk and valid; stage 2 adds the four, compares and
-//   registers err. Alignment: the row presented with valid in cycle t has its verdict on err in cycle t + 2, together with
-//   err_valid (valid delayed by two), so a consumer pairs err with its row by counting err_valid pulses (rows keep their
-//   order); err_sticky rises in cycle t + 3. The sums wrap at PW bits as before, so the verdict is the same per row.
+//   Drop 0.42: two stages, no carry-propagate adder (the 33-operand sum and compare were one combinational path from the
+//   row's registers, 1.45 ns behind the array and 1.64 ns behind the accumulator's drain read on the ASAP7 SS proxy).
+//   Stage 1 reduces each of NG = 2 groups of ceil(COLS / 2) consecutive columns to a sum row and a carry row (3:2
+//   compressors, rows taken three at a time in order) and registers the 2 NG rows with y_chk and valid. Stage 2 reduces
+//   them to two rows S and C and compares S + C with y_chk without adding: S + C = K (mod 2^PW) exactly when
+//   S ^ C ^ K == G << 1 with G = (S & C) | ((S | C) & ~K) -- bit i's carry-in must be S ^ C ^ K at bit i for the sum bit
+//   to be K's, and G is then bit i's carry-out (constant depth, no carry chain); err is registered. Alignment: the row
+//   presented with valid in cycle t has its verdict on err in cycle t + 2, together with err_valid (valid delayed by two),
+//   so a consumer pairs err with its row by counting err_valid pulses (rows keep their order); err_sticky rises in cycle
+//   t + 3. The sums wrap at PW bits as before, so the verdict is the same per row.
 module abft_checker #(
   parameter int COLS = 32,
   parameter int PW   = 32
@@ -24,36 +28,56 @@ module abft_checker #(
   output logic                 err_valid,
   output logic                 err_sticky
 );
-  localparam int NG  = 4;                           // partial sums in stage 1
-  localparam int CPG = (COLS + NG - 1) / NG;        // columns per partial sum
+  localparam int NG  = 2;                           // column groups in stage 1
+  localparam int CPG = (COLS + NG - 1) / NG;        // columns per group
+  localparam int R1  = (CPG > 2) ? CPG : 2;         // a group's rows (zeros past its columns)
+  localparam int N1  = R1 + 2 * (R1 - 2);           // with the rows its R1 - 2 compressors make
+  localparam int N2  = 2 * NG + 2 * (2 * NG - 2);   // stage 2: the 2 NG registered rows and the compressors' rows
 
-  // stage 1: the partial sums of the row (column j goes to partial sum j / CPG)
-  logic signed [PW-1:0] ps   [NG];
-  logic signed [PW-1:0] ps_q [NG];
-  logic signed [PW-1:0] chk_q;
-  logic                 v_q;
+  // stage 1: group g's rows are its columns; compressor i takes rows 3i, 3i + 1, 3i + 2 and makes rows R1 + 2i (sum)
+  // and R1 + 2i + 1 (carry); the last two rows are the group's sum and carry
+  logic [PW-1:0] t1 [NG][N1];
   always_comb begin
-    for (int g = 0; g < NG; g++) ps[g] = '0;
-    for (int j = 0; j < COLS; j++) ps[j / CPG] = ps[j / CPG] + y[j];
+    for (int g = 0; g < NG; g++) begin
+      for (int k = 0; k < R1; k++)
+        t1[g][k] = ((k < CPG) && (g * CPG + k < COLS)) ? y[(g * CPG + k) % COLS] : '0;
+      for (int i = 0; i < R1 - 2; i++) begin
+        t1[g][R1 + 2*i]     = t1[g][3*i] ^ t1[g][3*i + 1] ^ t1[g][3*i + 2];
+        t1[g][R1 + 2*i + 1] = ((t1[g][3*i] & t1[g][3*i + 1]) | (t1[g][3*i] & t1[g][3*i + 2]) |
+                               (t1[g][3*i + 1] & t1[g][3*i + 2])) << 1;
+      end
+    end
   end
+  logic [PW-1:0] r_q [2*NG];                        // the groups' sum and carry rows
+  logic [PW-1:0] chk_q;
+  logic          v_q;
 
-  // stage 2: the four added and compared
-  logic signed [PW-1:0] sum;
+  // stage 2: the 2 NG rows reduced to S and C the same way, then the carry-free compare with y_chk
+  logic [PW-1:0] t2 [N2];
+  logic [PW-1:0] g2, e2;                            // the carries the equality implies, and the bits that disagree
   always_comb begin
-    sum = '0;
-    for (int g = 0; g < NG; g++) sum = sum + ps_q[g];
+    for (int k = 0; k < 2 * NG; k++) t2[k] = r_q[k];
+    for (int i = 0; i < 2 * NG - 2; i++) begin
+      t2[2*NG + 2*i]     = t2[3*i] ^ t2[3*i + 1] ^ t2[3*i + 2];
+      t2[2*NG + 2*i + 1] = ((t2[3*i] & t2[3*i + 1]) | (t2[3*i] & t2[3*i + 2]) | (t2[3*i + 1] & t2[3*i + 2])) << 1;
+    end
+    g2 = (t2[N2-2] & t2[N2-1]) | ((t2[N2-2] | t2[N2-1]) & (chk_q ^ {PW{1'b1}}));
+    e2 = t2[N2-2] ^ t2[N2-1] ^ chk_q ^ (g2 << 1);
   end
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      for (int g = 0; g < NG; g++) ps_q[g] <= '0;
+      for (int k = 0; k < 2 * NG; k++) r_q[k] <= '0;
       chk_q <= '0; v_q <= 1'b0;
       err <= 1'b0; err_valid <= 1'b0;
     end else begin
-      for (int g = 0; g < NG; g++) ps_q[g] <= ps[g];
+      for (int g = 0; g < NG; g++) begin
+        r_q[2*g]     <= t1[g][N1-2];
+        r_q[2*g + 1] <= t1[g][N1-1];
+      end
       chk_q     <= y_chk;
       v_q       <= valid;
-      err       <= v_q && (sum != chk_q);
+      err       <= v_q && (e2 != '0);
       err_valid <= v_q;
     end
   end
