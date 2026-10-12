@@ -12,7 +12,8 @@ From synth.py's output for the unit (the job runs `synth.py --blocks <unit> --pe
      placer, tap cells, PDN), place, cts, route, do-finish (fill, OpenRCX, the final report) -- in the docker image
      tools.sh pulled, the workspace mounted at its own path, as the runner's user; the time left of --budget-min bounds
      every stage (a stage cut short is reported as such, the job still publishes)
-  5. neo_report.tcl on the final database (or the last one a failed run left)
+  5. neo_report.tcl on the final database (or the last one a failed run left): the ten worst endpoints, the cells
+     driving clock nets, the macros' placement -- not fatal (report.py reads ORFS's 6_finish.rpt and metrics)
   6. the logs, reports and metrics JSON of every stage, run.json (stage times, exit codes, the image, the make
      arguments) and the inputs' records into --logs (ci_logs/pnr/<block>/), then report.py -> pnr_<block>.md there
 Exit status 0 when every stage and the report ran, 1 otherwise.
@@ -160,6 +161,13 @@ def collect(work, block, logs, in_dir):
     for p in glob.glob(os.path.join(in_dir, "synth_sta", "*")):
         os.makedirs(os.path.join(logs, "in", "synth_sta"), exist_ok=True)
         shutil.copy(p, os.path.join(logs, "in", "synth_sta", os.path.basename(p)))
+    # the make output of a stage repeats its ORFS logs (collected above in full): beyond 4 MB its head and tail stay
+    for p in glob.glob(os.path.join(logs, "orfs_*.txt")):
+        if os.path.getsize(p) > 4 * 1024 * 1024:
+            with open(p, errors="replace") as f:
+                lines = f.readlines()
+            with open(p, "w") as f:
+                f.writelines(lines[:300] + [f"... {len(lines) - 3300} lines cut (orfs/logs/ has the stage logs) ...\n"] + lines[-3000:])
     return n
 
 
@@ -257,9 +265,8 @@ def main():
         rc, secs = orfs.run("run", os.path.join(logs, "orfs_neo_report.txt"), timeout=left,
                             extra_vars=[f"RUN_SCRIPT={os.path.join(HERE, 'neo_report.tcl')}", "RUN_LOG_NAME_STEM=7_neo_report",
                                         f"NEO_REPORT_ODB={db[0]}", f"NEO_REPORT_SDC={db[1]}"])
-        record["stages"].append(dict(stage="neo_report", exit=rc, seconds=round(secs, 1), db=db[0]))
-        if rc != 0 and not failed:
-            failed = f"neo_report failed (exit {rc})"
+        record["stages"].append(dict(stage="neo_report", exit=rc, seconds=round(secs, 1), db=db[0],
+                                     note="" if rc == 0 else "not fatal: the report falls back on ORFS's own"))
     record["status"] = failed or "complete"
     n = collect(work, block, logs, in_dir)
     record["collected_files"] = n

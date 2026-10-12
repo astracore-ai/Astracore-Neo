@@ -17,7 +17,7 @@ measured runs).
 | `neo_report.tcl` | after ORFS's final stage, on `6_final.odb` with `6_final.spef`: slacks, the register-to-register minimum period (synth.py's figure) and the one with the I/O paths, worst paths, clock skew, the cells driving clock nets, power, areas, wire length |
 | `report.py` | `pnr_<block>.md` (and `metrics.json`, every ORFS metric merged) from a block's logs |
 | `publish.sh` | a block's `ci_logs/pnr/<block>/` into `ci-logs-pnr` on top of the other blocks' (fetch, commit, push; retried on a lost race) |
-| `designs/neo_common.mk`, `designs/<block>/config.mk` | the ORFS design configurations: `mac_pe`, `c16_systolic_array`, `c16_neo_core` (+ `macro_place.tcl`, the macro-placement fallback) |
+| `designs/neo_common.mk`, `designs/<block>/config.mk` | the ORFS design configurations: `mac_pe`, `c16_systolic_array`, `c16_neo_core` (+ `macro_place.tcl`, the macro-placement fallback) -- the job's default blocks -- and `noc_router`, `tile_nic` (the mesh's blocks, I/O-bound: lower utilization, pins one track apart; on demand through `pnr_blocks`) |
 
 ## Tools: why the docker image
 

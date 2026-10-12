@@ -412,11 +412,15 @@ jobs:
         if: steps.plan.outputs.run == '1'
         env:
           EVENT: ${{ github.event_name }}
+          BLOCKS_JSON: ${{ steps.plan.outputs.blocks }}
+          PERIOD: ${{ inputs.pnr_period || '1000' }}
+          FLOW_ARGS: ${{ inputs.pnr_flow_args }}
+          IMAGE_INPUT: ${{ inputs.pnr_image }}
         run: |
           git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
           mkdir -p ci_logs/pnr
           { echo "run ${{ github.run_number }} ($EVENT on ${{ github.ref_name }} at ${{ github.sha }}) $(date -u)"
-            echo "blocks ${{ steps.plan.outputs.blocks }}, period ${{ inputs.pnr_period || '1000' }} ps, flow args [${{ inputs.pnr_flow_args }}], image [${{ inputs.pnr_image }}]"; } > ci_logs/pnr/RUN.txt
+            echo "blocks $BLOCKS_JSON, period $PERIOD ps, flow args [$FLOW_ARGS], image [$IMAGE_INPUT]"; } > ci_logs/pnr/RUN.txt
           git checkout --orphan ci-logs-pnr
           git rm -rfq --cached . 2>/dev/null || true
           git add -f ci_logs/pnr/RUN.txt
@@ -453,6 +457,14 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL || true
           df -h / | tail -1 | tee -a ci_logs/pnr/$BLOCK/RUN.txt
+      # detailed routing keeps every finished worker of a batch (a quarter of the die: one colour of the 2 x 2
+      # checkerboard, up to 1,024 workers) until the batch ends: run 164 peaked at 15.3 GB on c16_systolic_array and
+      # c16_neo_core died at 15.6 GB in its first iteration. The finished workers are not touched again until the batch
+      # ends, so swap holds them at little cost: 32 GB of swap file beside the runner's 16 GB.
+      - name: swap for detailed routing's batch memory
+        run: |
+          sudo fallocate -l 32G /pnr.swap && sudo chmod 600 /pnr.swap && sudo mkswap -q /pnr.swap && sudo swapon /pnr.swap
+          free -m | sed -n 2,3p | tee -a ci_logs/pnr/$BLOCK/RUN.txt
       - name: OpenSTA binary cache (the synth job's)
         uses: actions/cache/restore@v4
         with:
