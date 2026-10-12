@@ -18,7 +18,7 @@ sandbox's memory in Yosys's own front end, while slang reads one module in secon
      strobe to 1,056 PEs) gets a tree of the library's buffers in the netlist (the synthesis-stage stand-in for the
      placer's repeaters; clk and rst_n excepted) and the netlist is re-read for the stat.
   3. One liberty file for every memory macro of the design from the macro model of MACRO (area per bit, access time,
-     setup / hold: FakeRAM2.0's 7 nm bit cell for ASAP7, fakeram45_2048x39 for Nangate45).
+     setup / hold: FakeRAM2.0's 7 nm bit cell for ASAP7, ORFS's FakeRAM45 macros for Nangate45 -- drop 0.42).
   4. OpenSTA on the unit's netlist with its child units as extracted timing models (each unit's run ends with
      `write_timing_model`; the parent reads the children's models, so the paths inside a child are the child's report and
      the paths between units the parent's -- a flat read of the tile's 2.5 M cells needs more than 6 GB): the tile's SDC
@@ -27,7 +27,14 @@ sandbox's memory in Yosys's own front end, while slang reads one module in secon
   5. The gates: every unit synthesizes; no latch; no multiply-driven net; the hierarchy check; the PE count = ROWS x
      (COLS + 1) on the cores; at DV_HOOKS = 0 no dv_* input of any unit drives logic and every dv_* output is constant or a
      child's output; every OpenSTA run completes. Cells, flops and area are summed through the tree (instances x unit).
-  Then report.py writes synth_report.md from synth_results.json.
+  6. (drop 0.42) --sweep: OpenSTA again per unit at every period of a list, one session per unit reading each period's
+     SDC in turn (the children's timing models do not depend on the period): WNS, TNS, violating endpoints of all, the
+     minimum period, the worst path; and the verdict over the silicon tile's units -- the smallest swept period at which
+     every unit but the PE-limited ones (mac_pe, mac_pe_chk, systolic_array, neo_mac_core and their parents) is clean,
+     the PE's own stage, the period the tile runs at on the proxy (the larger of the two).
+  Then report.py writes synth_report.md from synth_results.json (and, given two outputs, the two libraries side by side).
+  Drop 0.42 also made Nangate45 a full second library: its macro model is derived from the platform's FakeRAM45 liberty
+  files (derive_macro), and a memory leaf is priced by the read ports it uses (macro_kind), not by its RB parameter.
 
 Environment: NEO_SYNTH_TOOLS (default /opt/neo-synth, where tools.sh installs: oss-cad-suite/, sta, pdk/lib/{asap7,
 nangate45,common}), or NEO_YOSYS, NEO_STA, NEO_PDK_LIB for the individual tools.
@@ -71,6 +78,7 @@ PDKS = {
         macro=dict(area_per_bit_um2=0.0292 * 1.44, tcq=218.0, tsu=50.0, th=50.0, cap=5.0, min_period=157.0,
                    note="FakeRAM2.0 7 nm (ORFS asap7/fakeram.cfg): 0.042 um2/bit, 218 ps access, 50 ps setup/hold"),
         default_period_ps=500.0,
+        sweep_ps=[500.0, 750.0, 1000.0, 1250.0, 1500.0],
         ratio_note="ASAP7 is an academic 7 nm predictive PDK: no foundry data; the figures are a proxy for the N5A target",
     ),
     "nangate45": dict(
@@ -78,20 +86,76 @@ PDKS = {
         libs={"TT": ["NangateOpenCellLibrary_typical.lib"]},
         seq_lib="NangateOpenCellLibrary_typical.lib",
         time_unit_ps=1000.0,                  # 1 ns
-        dont_use=["TAPCELL_X1", "FILLCELL_X1", "AOI211_X1", "OAI211_X1"],
-        abc_driver="BUF_X1", abc_load_ff=3.898,
+        dont_use=["TAPCELL_X1", "FILLCELL_X1", "AOI211_X1", "OAI211_X1"],      # ORFS's DONT_USE_CELLS for the platform
+        abc_driver="BUF_X1", abc_load_ff=3.898,                               # ORFS's ABC_DRIVER_CELL / ABC_LOAD_IN_FF
         repeater=("BUF_X2", "A", "Z"),
-        # fakeram45_2048x39: 45,478.8 um2 for 79,872 bits = 0.569 um2 per bit; 0.435 ns access, 50 ps setup / hold
+        # the macro model from ORFS's FakeRAM45 macros (drop 0.42; derive_macro below reads them): the area per bit is the
+        # sum of their areas over the sum of their bits, the access time the slowest clock-to-output, setup / hold and the
+        # minimum period the largest; this dict is the fallback when no FakeRAM45 liberty is found (the 2048 x 39 alone)
+        macro_libs=["fakeram45_2048x39.lib", "fakeram45_512x64.lib"],
         macro=dict(area_per_bit_um2=45478.818 / (2048 * 39), tcq=0.435, tsu=0.050, th=0.050, cap=5.0, min_period=0.321,
                    note="ORFS fakeram45_2048x39: 0.569 um2/bit, 0.435 ns access, 50 ps setup/hold"),
         default_period_ps=500.0,
+        # the typical corner at 1.1 V is faster than ASAP7's SS at 0.63 V (the PE: 0.76 ns against 1.03 ns): the same
+        # grid, 0.5 .. 1.5 ns, brackets it
+        sweep_ps=[500.0, 750.0, 1000.0, 1250.0, 1500.0],
         ratio_note="Nangate45 (FreePDK45) is a 45 nm open library: a second data point, not a 2 GHz node",
     ),
 }
-# area factors of the register-file style leaves against the single-port bit cell (a documented assumption of the
-# proxy: an asynchronous read port and a second read port cost bit-cell area)
-MACRO_AREA_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_rb": 2.0}
+# area factors of the memory leaves against the single-port bit cell, by the read ports an instance uses (a documented
+# assumption of the proxy: an asynchronous read port, and a second read port, cost bit-cell area). Drop 0.42: by use,
+# not by the RB parameter -- a neo_mem_rf whose port A is tied off and read only on its registered port B is the same
+# one-write one-read synchronous array as neo_mem_sp (the core's three arrays since drop 0.41, the NIC's drain FIFO
+# since 0.42), which the parameter priced as an array with two read ports.
+MACRO_AREA_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_b": 1.0, "neo_mem_rf_rb": 2.0}
 MEM_LEAVES = ("neo_mem_sp", "neo_mem_rf")
+
+
+def derive_macro(pdk, libdir):
+    """The macro model of a library from the FakeRAM liberty files of PDKS[...]['macro_libs'] found in libdir: area per
+    bit = sum of areas / sum of bits, access = the slowest clock-to-output of rd_out, setup / hold / minimum period = the
+    largest; the input capacitance = a data pin's (the smallest pin capacitance of a macro: its clock pin's is larger),
+    the largest over the macros. Returns (macro dict, the macros read) -- the fallback dict and [] when none is found.
+    Values in the liberty's time unit, as the library's own (FakeRAM45: ns)."""
+    found = []
+    for fn in pdk.get("macro_libs", []):
+        path = os.path.join(libdir, fn)
+        if not os.path.isfile(path):
+            continue
+        txt = open(path).read()
+        cell = re.search(r"\bcell\s*\(\s*(\w+)\s*\)", txt)
+        area = re.search(r"\barea\s*:\s*([0-9.]+)", txt)
+        aw = re.search(r"\baddress_width\s*:\s*(\d+)", txt)
+        ww = re.search(r"\bword_width\s*:\s*(\d+)", txt)
+        rd = txt.find("rd_out")
+        tcq = re.search(r"cell_rise\s*\(\s*scalar\s*\)\s*\{\s*values\s*\(\s*\"([0-9.]+)\"", txt[rd:]) if rd >= 0 else None
+        cons = [float(v) for v in re.findall(r"rise_constraint\s*\(\s*scalar\s*\)\s*\{\s*values\s*\(\s*\"([0-9.]+)\"", txt)]
+        minp = [float(v) for v in re.findall(r"\bmin_period\s*:\s*([0-9.]+)", txt)]
+        caps = [float(v) for v in re.findall(r"(?<!_)\bcapacitance\s*:\s*([0-9.]+)", txt)]
+        if not (cell and area and aw and ww and tcq):
+            continue
+        words, width = 1 << int(aw.group(1)), int(ww.group(1))
+        found.append(dict(name=cell.group(1), words=words, width=width, bits=words * width, area_um2=float(area.group(1)),
+                          tcq=float(tcq.group(1)), cons=max(cons) if cons else None, min_period=max(minp) if minp else None,
+                          cap=min(caps) if caps else None))
+    if not found:
+        return dict(pdk["macro"]), []
+    bits = sum(f["bits"] for f in found)
+    area = sum(f["area_um2"] for f in found)
+    m = dict(pdk["macro"])
+    m["area_per_bit_um2"] = area / bits
+    m["tcq"] = max(f["tcq"] for f in found)
+    if any(f["cons"] is not None for f in found):
+        m["tsu"] = m["th"] = max(f["cons"] for f in found if f["cons"] is not None)
+    if any(f["min_period"] is not None for f in found):
+        m["min_period"] = max(f["min_period"] for f in found if f["min_period"] is not None)
+    if any(f["cap"] is not None for f in found):
+        m["cap"] = max(f["cap"] for f in found if f["cap"] is not None)
+    unit = "ns" if pdk["time_unit_ps"] != 1.0 else "ps"
+    each = ", ".join("%s (%.3f um2/bit, %g %s access)" % (f["name"], f["area_um2"] / f["bits"], f["tcq"], unit) for f in found)
+    m["note"] = (f"ORFS FakeRAM45 macros {each}: {m['area_per_bit_um2']:.3f} um2/bit (the sum of their areas over the sum of "
+                 f"their bits), {m['tcq']:g} {unit} access (the slowest), {m['tsu']:g} {unit} setup/hold")
+    return m, found
 
 RTL_FILES = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv", "neo_mem.sv",
              "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "ecc39.sv", "wbuf_mem.sv",
@@ -169,7 +233,7 @@ def tile_units(T):
         U("link_unpacker", "link_unpacker", dict(XW=XW, YW=YW, BW=BW, WPF=WPF), "32-word link flits to beats"),
         U("tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX, NSRC=NX * NY, BW=BW, ROWS=R, COLS=C, WCW=WCW, IDXW=IDXW, AW=AW, WAW=WAW, BAW=BAW, PW=PW,
                                        DFD=T["ACC_ROWS"], FETCH_TIMEOUT=T["FETCH_TIMEOUT"], DV_HOOKS=0),
-          "tile interface: fetch (two entries per cycle), serve, writeback, partial sums, CRC per beat, per-source state for 64 sources; the drain FIFO 512 x 1,065 and the partial-sum rows 64 x 1,024 are leaves (macros)",
+          "tile interface: fetch (two entries per cycle), serve, writeback, partial sums, CRC per beat, per-source state for 64 sources; the drain FIFO 512 x 1,068 and the partial-sum rows 64 x 1,024 are leaves (macros)",
           macros=["neo_mem_rf"]),
         U("noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router: 1077-bit flits, 2-entry input FIFOs, parity at the FIFO head, round-robin outputs"),
         U("tile_dma", "tile_dma", dict(XW=XW, YW=YW, PDEPTH=PDEPTH, DV_HOOKS=0), "DMA program engine (a lockstep pair in the tile)"),
@@ -299,11 +363,24 @@ def macro_name(base, p):
     return n
 
 
-def macro_record(base, p, pdk):
+def macro_kind(base, p, port_a):
+    """The area class of a leaf instance (MACRO_AREA_FACTOR) by the read ports it uses: neo_mem_rf reads on its
+    asynchronous port A when ra_addr is connected (port_a), on its registered port B when RB = 1 (drop 0.42; before, RB
+    alone decided, so a port-B-only leaf was priced as one with two read ports)."""
+    if base != "neo_mem_rf":
+        return base
+    port_b = bool(p.get("RB", 0))
+    if port_a and port_b:
+        return "neo_mem_rf_rb"
+    return "neo_mem_rf_b" if port_b else "neo_mem_rf"
+
+
+def macro_record(base, p, pdk, port_a=True):
     bits = p["W"] * p["D"]
-    kind = base if not (base == "neo_mem_rf" and p.get("RB", 0)) else "neo_mem_rf_rb"
+    kind = macro_kind(base, p, port_a)
     return dict(name=macro_name(base, p), base=base, W=p["W"], D=p["D"], G=p.get("G", 1), RB=p.get("RB", 0), AW=p.get("AW", clog2(p["D"])),
-                bits=bits, area_um2=bits * pdk["macro"]["area_per_bit_um2"] * MACRO_AREA_FACTOR[kind], factor=MACRO_AREA_FACTOR[kind])
+                bits=bits, kind=kind, area_um2=bits * pdk["macro"]["area_per_bit_um2"] * MACRO_AREA_FACTOR[kind],
+                factor=MACRO_AREA_FACTOR[kind])
 
 
 def write_macro_lib(recs, pdk, path, libname="neo_macros"):
@@ -397,12 +474,16 @@ def analyse(u, nl, pdk):
                 if "W" not in p or "D" not in p:
                     problems.append(f"{ty}: leaf instance without W / D parameters ({p})")
                     continue
-                r = macro_record(ty, p, pdk)
+                # port A read: ra_addr driven by a net in some instance, not tied to constants (drop 0.42)
+                port_a = any(isinstance(b, int) for c in cells for b in nl.cells()[c]["connections"].get("ra_addr", []))
+                r = macro_record(ty, p, pdk, port_a)
                 target = r["name"]
                 if target not in macros:
                     r["pins"] = pins_of(nl, ty, cells[0])
                     r["instances"] = 0
                     macros[target] = r
+                elif r["factor"] > macros[target]["factor"]:     # one parameterization used two ways: the larger class
+                    macros[target].update({k: r[k] for k in ("kind", "factor", "area_um2")})
                 macros[target]["instances"] += len(cells)
             elif ty in u["children"]:
                 cand = [UNIT[n] for n in u["children"][ty]]
@@ -840,7 +921,7 @@ def static_cfg(nl):
     return sorted(ports, key=STATIC_CFG.index), sorted(pins)
 
 
-def write_sdc(u, has_clk, pdk, period_ps, udir, cfg_ports=(), cfg_pins=()):
+def write_sdc(u, has_clk, pdk, period_ps, udir, cfg_ports=(), cfg_pins=(), fname="block.sdc"):
     tu = pdk["time_unit_ps"]
     P = period_ps / tu
     unit = "ps" if tu == 1.0 else "ns"
@@ -856,7 +937,7 @@ def write_sdc(u, has_clk, pdk, period_ps, udir, cfg_ports=(), cfg_pins=()):
             s += STATIC_SDC.format(what="the descriptor inputs", how="-from", kind="ports", names=" ".join(cfg_ports))
     else:
         s = COMB_SDC.format(name=u["name"], period=fmt(P), unit=unit, mtrans=fmt(0.16 * P))
-    with open(os.path.join(udir, "block.sdc"), "w") as f:
+    with open(os.path.join(udir, fname), "w") as f:
         f.write(s)
 
 
@@ -895,6 +976,20 @@ def run_sta(u, results, t, pdk, args, out):
     return r
 
 
+def parse_min_period(path, tu):
+    """(min period in ps, fmax in MHz) from report_clock_min_period's line, or (None, None). The period from fmax when
+    there is one: OpenSTA prints period_min with two decimals in the library's unit (10 ps steps in ns), fmax finer."""
+    try:
+        for line in open(path):
+            m = re.search(r"period_min\s*=\s*([0-9.eE+-]+)\s+fmax\s*=\s*([0-9.eE+-]+)", line)
+            if m:
+                pmin, fmax = float(m.group(1)) * tu, float(m.group(2))
+                return (1e6 / fmax if fmax > 0 else pmin), fmax
+    except FileNotFoundError:
+        pass
+    return None, None
+
+
 def parse_sta(udir, pdk, period_ps):
     tu = pdk["time_unit_ps"]
     r = {}
@@ -907,14 +1002,9 @@ def parse_sta(udir, pdk, period_ps):
                 r[k + "_ps"] = None
     except FileNotFoundError:
         return None
-    try:
-        for line in open(os.path.join(udir, "min_period.txt")):
-            m = re.search(r"period_min\s*=\s*([0-9.eE+-]+)\s+fmax\s*=\s*([0-9.eE+-]+)", line)
-            if m:
-                r["min_period_ps"] = float(m.group(1)) * tu
-                r["fmax_mhz"] = float(m.group(2))
-    except FileNotFoundError:
-        pass
+    mp, fmax = parse_min_period(os.path.join(udir, "min_period.txt"), tu)
+    if mp is not None:
+        r["min_period_ps"], r["fmax_mhz"] = mp, fmax
     try:
         slacks = []
         for line in open(os.path.join(udir, "endpoints.txt")):
@@ -951,6 +1041,153 @@ def parse_sta(udir, pdk, period_ps):
     except FileNotFoundError:
         pass
     return r
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# the period sweep (drop 0.42)
+# ---------------------------------------------------------------------------------------------------------------------
+SWEEP_TCL = """# {name}: the period sweep (drop 0.42) -- OpenSTA on the unit's netlist with its children's timing models, which do not
+# depend on the period; the SDC of each period read in turn (each one replaces the clock, the I/O delays and the
+# uncertainty of the one before -- the same figures as a fresh run at that period)
+{read_libs}
+read_verilog netlist.v
+link_design {name}
+{periods}
+exit
+"""
+SWEEP_ONE = """read_sdc sweep_{tag}.sdc
+set n 0
+set v 0
+foreach pin [sta::endpoints] {{
+  set s [get_property $pin slack_max]
+  if {{[string is double -strict $s] && $s < 1e29 && $s > -1e29}} {{
+    incr n
+    if {{$s < 0}} {{ incr v }}
+  }}
+}}
+set f [open sweep_{tag}.txt w]
+puts $f "wns_max [worst_slack -max]"
+puts $f "tns_max [total_negative_slack -max]"
+puts $f "endpoints $n"
+puts $f "violating $v"
+close $f
+report_clock_min_period > sweep_{tag}_minp.txt
+report_checks -path_delay max -group_path_count 1 -digits 1 > sweep_{tag}_path.txt
+"""
+
+
+def parse_periods(spec, pdk):
+    """--sweep: 'default' (the library's sweep_ps), or a comma-separated list in ps, each value optionally with an 'ns'
+    suffix (0.75ns = 750 ps); returns ps, sorted."""
+    if not spec or spec == "none":
+        return []
+    if spec == "default":
+        return sorted(pdk["sweep_ps"])
+    out = []
+    for tok in spec.split(","):
+        tok = tok.strip().lower()
+        out.append(float(tok[:-2]) * 1000.0 if tok.endswith("ns") else float(tok[:-2] if tok.endswith("ps") else tok))
+    return sorted(set(out))
+
+
+def ptag(p):
+    return f"{int(round(p))}"
+
+
+def run_sweep(u, results, t, pdk, args, out, periods):
+    """One OpenSTA session per unit over every swept period: per period WNS, TNS, the endpoints and the violating ones,
+    the minimum period, the worst path's start and end -- the same constraints as the unit's main run at that period."""
+    udir = os.path.join(out, u["name"])
+    children = list((results[u["name"]].get("children") or {}).keys())
+    needed = [os.path.join(udir, "netlist.v")] + [os.path.join(out, c, "etm.lib") for c in children]
+    missing = [p for p in needed if not os.path.isfile(p)]
+    if missing:
+        return dict(error=f"missing: {', '.join(os.path.relpath(p, out) for p in missing)}")
+    nl = Netlist(os.path.join(udir, "netlist.json"))
+    cfg_ports, cfg_pins = static_cfg(nl)
+    has_clk = "clk" in nl.ports(nl.top)
+    del nl
+    for p in periods:
+        write_sdc(u, has_clk, pdk, p, udir, cfg_ports, cfg_pins, fname=f"sweep_{ptag(p)}.sdc")
+    libs = list(t["libs"])
+    macro_lib = os.path.join(out, "macros.lib")
+    if os.path.isfile(macro_lib) and results[u["name"]].get("macros"):
+        libs.append(macro_lib)
+    libs += needed[1:]
+    tcl = SWEEP_TCL.format(name=u["name"], read_libs="\n".join(f"read_liberty {l}" for l in libs),
+                           periods="\n".join(SWEEP_ONE.format(tag=ptag(p)) for p in periods))
+    with open(os.path.join(udir, "sweep.tcl"), "w") as f:
+        f.write(tcl)
+    t0 = time.time()
+    rc = run([t["sta"], "-no_init", "-no_splash", "-exit", "sweep.tcl"], udir, os.path.join(udir, "sweep.log"), timeout=args.timeout)
+    tu = pdk["time_unit_ps"]
+    res = dict(exit=rc, seconds=time.time() - t0, periods={})
+    for p in periods:
+        tag, r = ptag(p), {}
+        try:
+            for line in open(os.path.join(udir, f"sweep_{tag}.txt")):
+                k, v = line.split()
+                try:
+                    r[k] = float(v)
+                except ValueError:
+                    r[k] = None
+        except FileNotFoundError:
+            res["periods"][tag] = dict(error="no result")
+            continue
+        e = dict(wns_ps=None if r.get("wns_max") is None else r["wns_max"] * tu,
+                 tns_ps=None if r.get("tns_max") is None else r["tns_max"] * tu,
+                 endpoints=int(r.get("endpoints") or 0), endpoints_violating=int(r.get("violating") or 0))
+        e["min_period_ps"], _ = parse_min_period(os.path.join(udir, f"sweep_{tag}_minp.txt"), tu)
+        try:
+            txt = open(os.path.join(udir, f"sweep_{tag}_path.txt")).read()
+            m = re.search(r"Startpoint:\s*(\S+).*?Endpoint:\s*(\S+)", txt, re.S)
+            if m:
+                e["worst_start"], e["worst_end"] = m.group(1), m.group(2)
+        except FileNotFoundError:
+            pass
+        res["periods"][tag] = e
+    return res
+
+
+# the units whose stage is the PE's product: the PE and the array, the streaming core, and every unit above them
+PE_LIMITED = ("mac_pe", "systolic_array", "neo_mac_core")
+
+
+def pe_limited_units(names):
+    """The PE-limited units among names: the units of the modules in PE_LIMITED (mac_pe covers mac_pe_chk) and, through
+    the unit tree, their parents."""
+    lim = {n for n in names if UNIT[n]["module"] in PE_LIMITED}
+    grew = True
+    while grew:
+        grew = False
+        for n in names:
+            if n not in lim and any(c in lim for ch in UNIT[n]["children"].values() for c in ch):
+                lim.add(n)
+                grew = True
+    return lim
+
+
+def sweep_verdict(results, names, periods):
+    """The verdict of the sweep over the silicon tile's units (the 16x8 core's are not in the tile; all units when the
+    tile was not run): the smallest swept period at which every unit except the PE-limited ones has no violating
+    endpoint, the PE's own stage (mac_pe's minimum period) and the period the tile runs at on the proxy -- the larger of
+    the two -- with the units still violating at each period."""
+    scope = [n for n in (subtree("neo_tile", results) if "neo_tile" in names else names) if n in names]
+    lim = pe_limited_units(scope)
+    judged = [n for n in scope if n not in lim and (results.get(n, {}).get("sweep") or {}).get("periods")]
+    per = {}
+    for p in periods:
+        tag = ptag(p)
+        bad = [n for n in judged if (results[n]["sweep"]["periods"].get(tag) or {}).get("endpoints_violating", 1) != 0]
+        per[tag] = bad
+    clean = next((p for p in periods if not per[ptag(p)]), None)
+    stages = {n: (results.get(n, {}).get("sta") or {}).get("min_period_ps") for n in scope if n in lim}
+    pe = stages.get("mac_pe")
+    tile = None if clean is None or pe is None else max(clean, pe)
+    worst_other = max(((results[n].get("sta") or {}).get("min_period_ps") or 0.0, n) for n in judged) if judged else (None, None)
+    return dict(scope=scope, pe_limited=sorted(lim), judged=judged, violating_by_period=per, clean_period_ps=clean,
+                pe_stage_ps=pe, pe_limited_stages=stages, tile_period_ps=tile, tile_fmax_mhz=(1e6 / tile if tile else None),
+                worst_other_min_period=dict(unit=worst_other[1], ps=worst_other[0]))
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -998,13 +1235,17 @@ def main():
     ap.add_argument("--no-sta", action="store_true", help="synthesis only")
     ap.add_argument("--sta-only", action="store_true", help="timing on an existing synthesis output")
     ap.add_argument("--resume", action="store_true", help="keep the units already synthesized in --out (synth_results.json) and run the rest")
+    ap.add_argument("--sweep", default="none", help="the period sweep after the timing runs (drop 0.42): 'default' (the library's "
+                    "list: 500,750,1000,1250,1500 ps on both), 'none', or a list in ps -- an 'ns' suffix per value for ns (0.75ns)")
     args = ap.parse_args()
-    pdk = PDKS[args.pdk]
+    pdk = dict(PDKS[args.pdk])
     if args.corner not in pdk["libs"]:
         sys.exit(f"synth.py: corner {args.corner} not in {sorted(pdk['libs'])} for {args.pdk}")
     if args.period is None:
         args.period = pdk["default_period_ps"]
+    periods = parse_periods(args.sweep, pdk)
     t = find_tools(args)
+    pdk["macro"], macro_sources = derive_macro(pdk, os.path.join(t["pdk_lib"], pdk["dir"]))
     sta_missing = t["sta"] is None and not args.no_sta
     if sta_missing:
         args.no_sta = True
@@ -1016,7 +1257,9 @@ def main():
             sys.exit(f"synth.py: RTL file missing: {os.path.join(rtl, f)}")
     versions = tool_versions(t)
     log(f"tools: {versions}")
-    log(f"library {args.pdk} {args.corner}, period {args.period} ps, output {out}")
+    log(f"library {args.pdk} {args.corner}, period {args.period} ps, output {out}; macro model: {pdk['macro']['note']}")
+    if periods:
+        log(f"period sweep: {[ptag(p) for p in periods]} ps")
     names = select_units(args.blocks)
     log(f"units: {names}")
     t_start = time.time()
@@ -1069,11 +1312,27 @@ def main():
                     log(f"{n}: sta done in {r.get('seconds', 0):.0f} s (exit {r.get('exit')}{'; ' + r['error'] if r.get('error') else ''}; "
                         f"wns {r.get('wns_max_ps')} ps, min period {r.get('min_period_ps')} ps)")
             pending = [n for n in pending if n not in finished]
+    # phase C (drop 0.42): the period sweep, every unit at once (the children's timing models exist after phase B)
+    verdict = None
+    if periods and not args.no_sta:
+        swept = [n for n in names if (results.get(n, {}).get("sta") or {}).get("exit") == 0]
+        t_sw = time.time()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as ex:
+            futs = {ex.submit(run_sweep, UNIT[n], results, t, pdk, args, out, periods): n for n in swept}
+            for fut in concurrent.futures.as_completed(futs):
+                n = futs[fut]
+                results[n]["sweep"] = r = fut.result()
+                log(f"{n}: sweep done in {r.get('seconds', 0):.0f} s (exit {r.get('exit')}{'; ' + r['error'] if r.get('error') else ''}; "
+                    f"violating endpoints {[(r.get('periods') or {}).get(ptag(p), {}).get('endpoints_violating') for p in periods]})")
+        verdict = sweep_verdict(results, names, periods)
+        log(f"sweep done in {time.time() - t_sw:.0f} s; verdict: every unit outside the PE-limited ones clean from "
+            f"{verdict['clean_period_ps']} ps, the PE's stage {verdict['pe_stage_ps']} ps, the tile at {verdict['tile_period_ps']} ps")
     if "neo_tile" in results and not results["neo_tile"].get("failed"):
         bad = [n for n in subtree("neo_tile", results) if results[n].get("dv_hooks") and not results[n]["dv_hooks"]["passed"]]
         results["neo_tile"]["dv_hooks_tree"] = dict(passed=not bad, failing_units=bad)
     summary = dict(pdk=args.pdk, corner=args.corner, period_ps=args.period, tools=versions, libs=t["libs"],
-                   macro_model=pdk["macro"], macro_area_factor=MACRO_AREA_FACTOR, ratio_note=pdk["ratio_note"],
+                   macro_model=pdk["macro"], macro_sources=macro_sources, macro_area_factor=MACRO_AREA_FACTOR,
+                   ratio_note=pdk["ratio_note"], time_unit_ps=pdk["time_unit_ps"], sweep_ps=periods, verdict=verdict,
                    seconds=time.time() - t_start, date=time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
                    order=names, units=results)
     with open(os.path.join(out, "synth_results.json"), "w") as f:
@@ -1097,6 +1356,9 @@ def main():
             gates.append(f"{n}: dv_* hooks drive logic: {r['dv_hooks']['bad_loads'][:3]} {r['dv_hooks']['bad_outputs'][:3]}")
         if not args.no_sta and r.get("sta", {}).get("exit", 0) != 0:
             gates.append(f"{n}: sta exit {r['sta'].get('exit')} {r['sta'].get('error', '')}")
+        sw = r.get("sweep")
+        if sw and (sw.get("exit", 0) != 0 or sw.get("error") or any(e.get("error") for e in (sw.get("periods") or {}).values())):
+            gates.append(f"{n}: sweep exit {sw.get('exit')} {sw.get('error', '')}")
     if gates:
         log("GATES FAILED: " + "; ".join(gates))
         return 1

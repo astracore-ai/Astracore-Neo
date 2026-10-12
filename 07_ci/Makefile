@@ -38,7 +38,9 @@
 #                   manual `tiles` job
 # make xrun_core  : Cadence Xcelium replay of the C1 convolution on neo_core (vectors_core from --dump)
 # make synth      : the open-PDK synthesis job (drop 0.40): Yosys (slang front end) + OpenSTA on ASAP7 (SS, 500 ps) -- synth/synth.py
-#                   unit by unit up to the silicon tile, synth/report.py into ci_logs/synth/; tools from synth/tools.sh (CI's synth job)
+#                   unit by unit up to the silicon tile, synth/report.py into ci_logs/synth/; tools from synth/tools.sh (CI's synth job);
+#                   drop 0.42: the period sweep and its verdict (SYNTH_SWEEP), SYNTH_PDK=nangate45 the second library, make
+#                   synth_compare the two side by side
 # make formal     : the formal job (drop 0.41): SymbiYosys proofs of the protection logic, every formal/*.sby task (ecc39, crc16_beat
 #                   against the frozen serial reference, the link packer/unpacker round trip, the router, the lockstep pairs, the
 #                   requant table parity, the ABFT checker) -- formal/run.py, formal_out/formal_report.md and ci_logs/formal/ (CI's formal job)
@@ -290,15 +292,25 @@ lint:
 # PE count, hook logic left at DV_HOOKS = 0, a tool failure) -- the report is written either way. SYNTH_PDK asap7 |
 # nangate45, SYNTH_CORNER SS | TT (asap7) / TT (nangate45), SYNTH_BLOCKS all | tile | core | core16 | names, SYNTH_JOBS
 # parallel Yosys runs (2 on the 16 GB runner -- the two largest units peak near 5 GB each; 1 under 8 GB), SYNTH_PERIOD in ps
-# (default the library's 500). Tools: synth/tools.sh.
+# (default the library's 500). Drop 0.42: SYNTH_SWEEP the period sweep after the timing runs (default: the library's list,
+# 500..1500 ps; none to skip; a list in ps), SYNTH_OUT / SYNTH_LOGS the output and report directories (the CI job runs the
+# second library into synth_out_nangate45 and ci_logs/synth/nangate45, SYNTH_REPORT_ARGS=--lite: no timing models in its
+# logs), synth_compare the two libraries side by side (ci_logs/synth/synth_report_libraries.md). Tools: synth/tools.sh.
 SYNTH_PDK ?= asap7
 SYNTH_CORNER ?= SS
 SYNTH_BLOCKS ?= all
 SYNTH_JOBS ?= 2
 SYNTH_PERIOD ?=
+SYNTH_SWEEP ?= default
+SYNTH_OUT ?= synth_out
+SYNTH_LOGS ?= ci_logs/synth
+SYNTH_REPORT_ARGS ?=
 synth:
-	python3 synth/synth.py --rtl rtl --out synth_out --pdk $(SYNTH_PDK) --corner $(SYNTH_CORNER) --blocks $(SYNTH_BLOCKS) --jobs $(SYNTH_JOBS) $(if $(SYNTH_PERIOD),--period $(SYNTH_PERIOD),); rc=$$?; \
-	python3 synth/report.py synth_out --out ci_logs/synth; exit $$rc
+	python3 synth/synth.py --rtl rtl --out $(SYNTH_OUT) --pdk $(SYNTH_PDK) --corner $(SYNTH_CORNER) --blocks $(SYNTH_BLOCKS) --jobs $(SYNTH_JOBS) --sweep $(SYNTH_SWEEP) $(if $(SYNTH_PERIOD),--period $(SYNTH_PERIOD),); rc=$$?; \
+	python3 synth/report.py $(SYNTH_OUT) --out $(SYNTH_LOGS) $(SYNTH_REPORT_ARGS); exit $$rc
+.PHONY: synth_compare
+synth_compare:
+	python3 synth/report.py --compare synth_out synth_out_nangate45 --out ci_logs/synth
 
 # the formal job (drop 0.41): formal/run.py runs every task of every formal/*.sby with SymbiYosys (sby -f -d formal_out/<task>),
 # FORMAL_JOBS at a time, each under FORMAL_TIMEOUT seconds (the task's whole session -- sby and its solvers -- is killed at the
@@ -316,4 +328,4 @@ formal:
 	python3 $(FORMAL_RUN) --dir formal --out formal_out --logs ci_logs/formal --jobs $(FORMAL_JOBS) --timeout $(FORMAL_TIMEOUT)
 
 clean:
-	rm -rf build obj_dir xcelium.d xrun.history xrun.log *.vcd synth_out formal_out
+	rm -rf build obj_dir xcelium.d xrun.history xrun.log *.vcd synth_out synth_out_nangate45 formal_out

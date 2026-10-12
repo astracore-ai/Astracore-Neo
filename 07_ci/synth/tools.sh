@@ -9,7 +9,8 @@
 #                    no $T/sta and exits 0: synth.py then runs the synthesis and its gates without timing and fails the
 #                    timing gate, so the job is red for the right reason with the synthesis report published.
 #   pdk/lib/asap7    ASAP7 7.5-track RVT NLDM liberty files (SS, TT: AO, INVBUF, OA, SIMPLE, SEQ), gunzipped, and the
-#                    platform's full-adder map; pdk/lib/nangate45: NangateOpenCellLibrary_typical.lib and its adder map;
+#                    platform's full-adder map; pdk/lib/nangate45: NangateOpenCellLibrary_typical.lib, its adder map and
+#                    the FakeRAM45 macros 2048x39 and 512x64 (the macro model, drop 0.42);
 #                    pdk/lib/common/lcu_kogge_stone.v -- all from OpenROAD-flow-scripts $ORFS_COMMIT (sparse checkout)
 # Every version is pinned here; every download is a GitHub clone or release asset. Idempotent: a tool that is already
 # there is kept (CI caches $NEO_SYNTH_TOOLS/sta between runs; the rest downloads in about a minute).
@@ -63,6 +64,8 @@ if [ ! -f "$T/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib" ]; then
   done
   cp $P/asap7/yoSys/cells_adders_R.v "$T/pdk/lib/asap7/cells_adders.v"
   cp $P/nangate45/lib/NangateOpenCellLibrary_typical.lib $P/nangate45/lib/fakeram45_2048x39.lib "$T/pdk/lib/nangate45/"
+  # the second FakeRAM45 macro of the Nangate45 macro model (drop 0.42; synth.py's derive_macro uses the ones present)
+  cp $P/nangate45/lib/fakeram45_512x64.lib "$T/pdk/lib/nangate45/" 2>/dev/null || echo "   (fakeram45_512x64.lib not in ORFS ${ORFS_COMMIT:0:7})"
   cp $P/nangate45/cells_adders.v "$T/pdk/lib/nangate45/cells_adders.v" 2>/dev/null || cp flow/platforms/nangate45/cells_adders.v "$T/pdk/lib/nangate45/cells_adders.v"
   cp $P/common/lcu_kogge_stone.v "$T/pdk/lib/common/"
   cd "$T" && rm -rf orfs

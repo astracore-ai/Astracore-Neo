@@ -216,7 +216,10 @@ jobs:
   # (synth/tools.sh): the OSS CAD Suite nightly tarball, OpenSTA built from source once per cache key (the binary is
   # cached as soon as it is built), the ORFS platform libraries by sparse checkout. Should OpenSTA not build, tools.sh prints
   # its cmake / make logs and the job synthesizes without timing: the synthesis gates still run, the timing gate fails (fix38).
-  # Own concurrency group.
+  # Drop 0.42: each library's run ends with the period sweep (OpenSTA again per unit at 500..1500 ps) and its verdict, and
+  # the second library -- Nangate45 typical, the same units, its macro model from ORFS's FakeRAM45 macros -- runs after
+  # ASAP7 into synth_out_nangate45, its report in ci_logs/synth/nangate45 (no timing models: they double the push), the two
+  # side by side in ci_logs/synth/synth_report_libraries.md. Own concurrency group.
   synth:
     runs-on: ubuntu-latest
     timeout-minutes: 300
@@ -252,7 +255,7 @@ jobs:
         with:
           path: /home/runner/neo-synth/sta
           key: neo-synth-sta-f861c62-${{ runner.os }}-${{ runner.arch }}
-      - name: synthesis and timing (ASAP7 SS, 500 ps; every unit of the tile)
+      - name: synthesis and timing (ASAP7 SS, 500 ps; every unit of the tile; the period sweep)
         run: |
           set -o pipefail
           echo "synth starts $(date -u)" | tee -a ci_logs/synth/RUN.txt
@@ -260,6 +263,18 @@ jobs:
           J=1; [ "$(free -m | awk '/Mem:/{print $2}')" -ge 14000 ] && J=2
           echo "SYNTH_JOBS=$J" | tee -a ci_logs/synth/RUN.txt
           make synth SYNTH_JOBS=$J 2>&1 | tee ci_logs/synth/synth.txt
+      - name: synthesis and timing, the second library (Nangate45 TT; every unit; the period sweep)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          echo "synth nangate45 starts $(date -u)" | tee -a ci_logs/synth/RUN.txt
+          J=1; [ "$(free -m | awk '/Mem:/{print $2}')" -ge 14000 ] && J=2
+          make synth SYNTH_PDK=nangate45 SYNTH_CORNER=TT SYNTH_OUT=synth_out_nangate45 SYNTH_LOGS=ci_logs/synth/nangate45 \
+            SYNTH_REPORT_ARGS=--lite SYNTH_JOBS=$J 2>&1 | tee ci_logs/synth/synth_nangate45.txt
+          echo "synth nangate45 done $(date -u)" | tee -a ci_logs/synth/RUN.txt
+      - name: the two libraries side by side
+        if: ${{ !cancelled() }}
+        run: make synth_compare 2>&1 | tee ci_logs/synth/compare.txt
       - name: publish logs
         if: always()
         run: |
