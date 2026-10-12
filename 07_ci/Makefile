@@ -4,7 +4,8 @@
 # make xrun       : Cadence Xcelium simulation of tb_neo_mac_core
 # make iverilog   : Icarus Verilog simulation (open source)
 # make verilator  : Verilator simulation (open source)
-# make lint       : Verilator lint of the RTL: four -Wall passes, nothing waived, every warning fails (drop 0.35)
+# make lint       : Verilator lint of the RTL: six -Wall passes, every warning fails (drop 0.35); the chip top's two at the silicon
+#                   parameters (drop 0.44), one pre-existing link_pack.sv line waived there (tb/lint/silicon.vlt)
 # make sim        : run the RTL under neosim (built-in subset simulator; no install needed)
 # make compile    : compiler v1 lowering verification + YOLOv8-m performance report
 # make conv       : whole convolutions on the v0.2 core RTL under neosim (feeder + accumulator + ABFT)
@@ -54,6 +55,8 @@ RTL := rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
        rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv
 NOC := rtl/noc_router.sv rtl/noc_mesh.sv
 TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/crc16_beat.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/link_pack.sv rtl/neo_tile.sv rtl/tile_mesh.sv
+# the chip top (drop 0.44): the bridges, the control plane, the crossings
+TOPR := rtl/cdc_bits.sv rtl/cdc_fifo.sv rtl/cdc_sync.sv rtl/noc_axi_bridge.sv rtl/top_ctrl.sv rtl/mesh_ctrl.sv rtl/neo_top.sv
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
@@ -277,12 +280,22 @@ cocotb_mesh8s_run:
 # --unused-regexp default), and lint_off DECLFILENAME on the two files that hold two modules by design. LINTW stays for
 # a local run that wants to waive something (make lint LINTW=-Wno-UNUSEDSIGNAL).
 LINTW ?=
+# drop 0.44, the chip top at the silicon parameters (8 x 8 tiles of 32 x 32 cores, 2 MB banks, WPF 32, a 512-bit AXI4 memory
+# bridge per row, the host bridge in row 0) in two passes, because Verilator flattens every instance even with --lint-only
+# and 64 such tiles need more than 16 GB (measured in the sandbox: 2 x 2 1.5 GB, 4 x 4 over 5.8 GB): (5) the tile alone at
+# the chip top's tile parameters -- XW 4 (the bridge column at x = 8), NX 9 (its source index over 9 columns) -- and (6)
+# neo_top over tb/lint/neo_tile.sv, a ports-only stub of the tile, so the bridges, the control plane, the bridge column's
+# routers, the fences and the wiring are linted at XW 4 / YW 3. tb/lint/silicon.vlt waives the one finding of those passes,
+# which is in link_pack.sv, not in the top: link_unpacker's `sh` upper half is unread at WPF 32 (see the file).
+TOP_TILE_P := -GXW=4 -GYW=3 -GNX=9 -GNY=8 -GWPF=32 -GROWS=32 -GCOLS=32 -GACC_ROWS=512 -GABUF_DEPTH=2048 -GWBUF_DEPTH=1024 -GBANK_DEPTH=524288
 lint:
 	verilator --lint-only -Wall $(LINTW) --top-module neo_core $(RTL)
 	verilator --lint-only -Wall $(LINTW) --top-module noc_mesh $(NOC)
 	verilator --lint-only -Wall $(LINTW) --top-module neo_tile_axil $(TILE) rtl/host_axil.sv rtl/neo_tile_axil.sv
 	verilator --lint-only -Wall $(LINTW) --top-module tile_mesh $(TILE)
-	@echo "lint: four -Wall passes, nothing waived, clean"
+	verilator --lint-only -Wall $(LINTW) --top-module neo_tile $(TOP_TILE_P) tb/lint/silicon.vlt $(filter-out rtl/tile_mesh.sv,$(TILE))
+	verilator --lint-only -Wall $(LINTW) --top-module neo_top tb/lint/silicon.vlt $(filter-out rtl/neo_tile.sv rtl/tile_mesh.sv,$(TILE)) tb/lint/neo_tile.sv $(TOPR)
+	@echo "lint: six -Wall passes (the chip top's two at the silicon parameters), clean; one link_pack.sv line waived in tb/lint/silicon.vlt"
 
 # the synthesis job (drop 0.40): synth/synth.py synthesizes every unit of the tile (a module at its silicon parameters, its
 # children black-boxed; the slang front end; the memory leaves priced by a macro model) with Yosys and runs OpenSTA on each
