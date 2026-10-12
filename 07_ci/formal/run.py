@@ -159,7 +159,7 @@ def tool_versions(sby):
     yosys = str(yosys) if yosys.exists() else shutil.which("yosys")
     if yosys:
         v.append(subprocess.run([yosys, "-V"], capture_output=True, text=True, check=False).stdout.strip())
-    v.append(f"sby, yosys-smtbmc, yices, yosys-abc from {Path(sby).parent}")
+    v.append(f"sby, yosys-smtbmc, yices, bitwuzla, yosys-abc from {Path(sby).parent}")
     return v
 
 

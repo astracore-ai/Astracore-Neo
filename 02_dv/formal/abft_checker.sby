@@ -1,6 +1,8 @@
-# abft_checker -- err == valid && (row sum != y_chk); err_sticky sets the cycle after, holds, clears on abft_clear
-# COLS = 4, PW = 8, every input free; the sum wraps at PW bits (formed in the harness as a tree, the RTL sums a chain).
-# Full proof by k-induction (drop 0.41); abft_checker_fv.sv holds the harness.
+# abft_checker -- a row's verdict two cycles after valid: err == (row sum != y_chk) with err_valid; err_sticky after err
+# COLS = 4, PW = 8, every input free; the sum wraps at PW bits (formed in the harness as a tree, the RTL as carry-save
+# rows and a carry-free compare); err_valid is valid delayed by two, err never without err_valid; err_sticky sets the
+# cycle after err, holds, clears on abft_clear. Full proof by k-induction (drop 0.41, the two-stage checker);
+# abft_checker_fv.sv holds the harness.
 [options]
 mode prove
 depth 2

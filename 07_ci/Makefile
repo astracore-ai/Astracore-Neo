@@ -306,8 +306,8 @@ synth:
 # per task) and copies it, every task's sby log and every counterexample trace into ci_logs/formal/; it exits nonzero unless
 # every task is PASS. A smtbmc prove task runs two solver processes: FORMAL_JOBS=1 on a 2-core machine. formal/run.py is
 # 07_ci/formal/run.py, which the flat layout copies next to the harnesses (02_dv/formal); FORMAL_RUN points elsewhere (a
-# worktree's 07_ci/formal/run.py). Tools: the OSS CAD Suite's sby, yosys with the slang plugin, yosys-smtbmc, yices, yosys-abc
-# (NEO_TOOLS_ONLY=oss bash synth/tools.sh).
+# worktree's 07_ci/formal/run.py). Tools: the OSS CAD Suite's sby, yosys with the slang plugin, yosys-smtbmc, yices, bitwuzla,
+# yosys-abc (NEO_TOOLS_ONLY=oss bash synth/tools.sh).
 FORMAL_JOBS ?= 2
 FORMAL_TIMEOUT ?= 600
 FORMAL_RUN ?= formal/run.py
