@@ -3,7 +3,7 @@
 # $NEO_SYNTH_TOOLS (default /opt/neo-synth; the CI job sets /home/runner/neo-synth):
 #   oss-cad-suite/   YosysHQ OSS CAD Suite nightly $OSS_DATE (yosys with the slang SystemVerilog front end, yosys-abc;
 #                    GitHub release tarball, no apt)
-#   sta              OpenSTA (parallaxsw, $STA_COMMIT) built from source -- cmake, tcl-dev, swig, bison, flex, libeigen3-dev
+#   sta              OpenSTA (parallaxsw, $STA_COMMIT) built from source -- cmake, tcl-dev, swig, bison, flex, libfl-dev, libeigen3-dev
 #                    from apt on the runner (OpenSTA's own Dockerfile.ubuntu24.04 recipe), CUDD 3.0.0 from GitHub; the
 #                    binary is what actions/cache keeps. If the build fails, the script prints the cmake / make logs, leaves
 #                    no $T/sta and exits 0: synth.py then runs the synthesis and its gates without timing and fails the
@@ -74,8 +74,9 @@ fi
 build_opensta() (
   set -e
   if [ -n "$APT" ]; then
-    $SUDO apt-get install -y -qq build-essential cmake tcl-dev tcl8.6 swig bison flex libeigen3-dev libfmt-dev zlib1g-dev \
-      automake autoconf libtool > apt.log 2>&1 || { echo "   apt-get install of the build packages failed:"; tail -n 20 apt.log; exit 1; }
+    # libfl-dev: Debian ships FlexLexer.h there, not in flex -- OpenSTA's liberty scanner includes it (run 151's build error)
+    $SUDO apt-get install -y -qq build-essential cmake tcl-dev tcl8.6 swig bison flex libfl-dev libeigen3-dev libfmt-dev \
+      zlib1g-dev automake autoconf libtool > apt.log 2>&1 || { echo "   apt-get install of the build packages failed:"; tail -n 20 apt.log; exit 1; }
   fi
   # OpenSTA's build runs etc/TclEncode.tcl through `tclsh` on PATH: Debian ships tclsh8.6, the plain name only through
   # the alternatives (the sandbox has neither) -- a link in $T/bin covers both
