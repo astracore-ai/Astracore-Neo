@@ -4,7 +4,9 @@
 //   One run = one (kernel position, channel tile, output tile) pass over the output grid; the
 //   compiler's work item for a layer is a sequence of runs with the first run of each output
 //   chunk in overwrite mode (acc_first), then a drain. Weight tiles are loaded into the shadow
-//   chain during the previous run (start >= ROWS+COLS cycles after that run's start).
+//   chain during the previous run: w_load here no earlier than PE_LAT*(ROWS-1)+COLS+3 cycles after
+//   the cycle that run's start is asserted (drop 0.41: the feeder's token leaves two cycles after
+//   start and reaches the last PE PE_LAT*(ROWS-1)+COLS cycles later).
 module neo_mac_core_v02 #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,

@@ -1,7 +1,8 @@
 """test_neo_core.py -- cocotb: the C1 convolution on neo_core, bit-exact against the golden model (drop 0.21), and C2, the
 core's own fault hooks (drop 0.36): the duplicated feeder control, the lockstep sequencer, the duplicated requantization
 and the requantization-table parity each flag their fault -- the flags the mesh suite cannot raise, since neo_tile ties
-these hooks off.
+these hooks off. C3, the weight buffer's SECDED through its hook (drop 0.37); C4, the reduce port's back-to-back partial
+sums on one row and the drain after the last one (drop 0.41: the accumulator's two-cycle read-modify-write).
 Mirrors sim/run_conv_core.py's NeoCore.execute() step for step, driving the DMA write ports, the descriptor and go,
 and collecting the drained rows. Run: make -C dv/cocotb core (16x8) or core32 (the silicon core: 32x32, ACC_ROWS 512,
 ABUF 2048, WBUF 1024); the geometry comes from NEO_ROWS/NEO_COLS, exported by the Makefile to match its -G values.
@@ -67,12 +68,15 @@ async def write_wbuf(dut, entries):
 S_DRAIN = 5                                          # core_seq state while the accumulator rows are read out
 
 
-async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False, rq_fault=False, tbl_fault=False, wbuf_flips=()):
+async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False, rq_fault=False, tbl_fault=False, wbuf_flips=(),
+                   desc=None, psums=()):
     """C1's run as a helper: reset, load the buffers, descriptor, go, collect the drained rows until done. The fault
     hooks (drop 0.36) mirror sim/run_conv_core.py: the feeder-control fault held for the first 40 cycles of the run
     (it hits valid rows), the sequencer fault while the drain runs, the requant-input fault while rows drain, the
     table fault (bit 0 of column 0's multiplier) for the whole run; wbuf_flips = [(entry, lane, mask)] XORs stored weight
-    codewords through the buffer's hook before the run (drop 0.37). Returns (rows, cycles, M, wo)."""
+    codewords through the buffer's hook before the run (drop 0.37). desc overrides descriptor fields; psums =
+    [(idx, ys, chk)] are partial-sum rows offered on the reduce port in that order, one per cycle, each until the core
+    accepts it (ext_ready; drop 0.41). Returns (rows, cycles, M, wo)."""
     cin = x.shape[0]
     cin_tiles = (cin + ROWS - 1) // ROWS
     h, w = x.shape[1], x.shape[2]
@@ -109,13 +113,14 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     for name, v in (("cfg_h", h), ("cfg_w", w), ("cfg_ho", ho), ("cfg_wo", wo), ("cfg_s", s), ("cfg_p", p), ("cfg_oy0", 0), ("cfg_oy_n", ho),
                     ("cfg_iy0", 0), ("cfg_k", k), ("cfg_ct_n", cin_tiles), ("cfg_tile_pixels", h * w), ("cfg_ct0", 0), ("cfg_ky0", 0),
                     ("cfg_kx0", 0), ("cfg_rn", cin_tiles * k * k), ("cfg_contrib_n", 0), ("cfg_regions_m1", 0xFFFF), ("tiles_ready", 0x7FFF)):
-        getattr(dut, name).value = bits(v, 16)
+        getattr(dut, name).value = bits((desc or {}).get(name, v), 16)
     dut.cfg_m.value = M
     dut.rq_tbl_fault_inject.value = 1 if tbl_fault else 0
     dut.go.value = 1
     await RisingEdge(dut.clk)
     dut.go.value = 0
     rows, cycles, in_drain, rd_valid = [], 0, False, 0
+    queue = list(psums)
     for cycles in range(1, 20000):
         await RisingEdge(dut.clk)
         # the hooks for the coming edge, from what the last read-only phase saw (one cycle behind the state: the sequencer
@@ -123,7 +128,17 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
         dut.ctrl_fault_inject.value = 1 if (ctrl_fault and cycles < 40) else 0
         dut.seq_fault_inject.value = 1 if (seq_fault and in_drain) else 0
         dut.rq_fault_inject.value = 1 if (rq_fault and rd_valid) else 0
+        # the reduce port: the head row is offered every cycle (the core gates it with reduce_ready) until it is accepted
+        dut.ext_valid.value = 1 if queue else 0
+        if queue:
+            idx, ys, chk = queue[0]
+            dut.ext_idx.value = idx
+            for c in range(COLS):
+                dut.ext_y[c].value = bits(ys[c], 32)
+            dut.ext_chk.value = bits(chk, 32)
         await ReadOnly()
+        if queue and int(dut.ext_ready.value):
+            queue.pop(0)                                             # taken at the coming edge
         in_drain = int(dut.state_dbg.value) == S_DRAIN
         rd_valid = int(dut.rd_valid.value)
         if rd_valid:
@@ -131,8 +146,9 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
         if int(dut.done.value):
             break
     await RisingEdge(dut.clk)
-    for name in ("ctrl_fault_inject", "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject"):
+    for name in ("ctrl_fault_inject", "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "ext_valid"):
         getattr(dut, name).value = 0
+    assert not queue, f"{len(queue)} partial-sum rows not accepted"
     for _ in range(4):                                               # the requant pipeline and the sticky flags settle
         await RisingEdge(dut.clk)
     return rows, cycles, M, wo
@@ -217,4 +233,42 @@ async def c3_wbuf_ecc(dut):
     fc.sample_flag("wbuf_ue")
     dut._log.info(f"C3: weight-buffer SECDED: a data bit and a check bit corrected on read (result bit-exact, wbuf_ce, {cycles} cycles); "
                   f"a double-bit lane error flagged uncorrectable (wbuf_ue, run complete, {cycles2} cycles)")
+    fc.report("funcov_neo_core.yml")
+
+
+@cocotb.test()
+async def c4_reduce_forward(dut):
+    """The accumulator's two-cycle read-modify-write on the reduce port (drop 0.41). The core runs channel tile 0 as the owner
+    of a K-split (cfg_rn = 9 runs, cfg_contrib_n = 2) and then takes the partial sums of channel tiles 1 and 2 (A and B,
+    from the golden model) on its reduce port, one row per cycle in the order A0, A1, B1, A2, B2, ..., A35, B35, B0: every
+    pair (A_r, B_r) lands back to back on one row, so B_r's registered read is taken at the edge where A_r's sum is
+    written and only the forward (acc_bank's fwd1 / new_q) keeps A_r in the row; the last row goes to row 0, which the
+    drain reads first, so the drain must start a cycle after that row's write (core_seq's red_last). The drained rows are
+    the whole convolution, bit-exact, with every flag clean -- without the forward or without the extra cycle a row loses a
+    contributor's partial sum (consistently with its check sum, so only the comparison with the golden model sees it)."""
+    cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    rng = np.random.default_rng(17)
+    x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
+    ref = direct_conv(x, wgt, 1, 1)
+    wo, M = 6, 36
+    parts = [direct_conv(x[t * ROWS:(t + 1) * ROWS], wgt[:, t * ROWS:(t + 1) * ROWS], 1, 1) for t in (1, 2)]
+
+    def psum(part, m):
+        ys = [int(part[c, m // wo, m % wo]) if c < 7 else 0 for c in range(COLS)]
+        return (m, ys, sum(ys))
+    order = [psum(parts[0], 0)] + [r for m in range(1, M) for r in (psum(parts[0], m), psum(parts[1], m))] + [psum(parts[1], 0)]
+    rows, cycles, M, wo = await run_conv(dut, x, wgt, desc={"cfg_rn": 9, "cfg_contrib_n": 2}, psums=order)
+    got = np.zeros_like(ref)
+    for m in range(M):
+        for c in range(7):
+            got[c, m // wo, m % wo] = rows[m][c]
+    assert len(rows) == M, f"C4: {len(rows)} rows drained, expected {M}"
+    bad = sorted({int(i[1] * wo + i[2]) for i in np.argwhere(got != ref)})
+    assert not bad, f"C4: rows {bad} differ from the golden convolution (a partial sum lost in the read-modify-write)"
+    f = flags(dut)
+    assert not any(f.values()), f"C4 flags {f}"
+    fc.sample_descriptor(dict(cfg_k=3, cfg_s=1, cfg_ct_n=3, cfg_oy_n=6, cfg_ho=6, cfg_contrib_n=2, cfg_ct0=0, cfg_ky0=0, cfg_kx0=0))
+    dut._log.info(f"C4: owner of a 3-way K-split on neo_core {ROWS}x{COLS}: {len(order)} partial-sum rows on the reduce port, "
+                  f"{M - 1} same-row pairs back to back and the last on row 0; {M} rows bit-exact, flags clean ({cycles} cycles)")
     fc.report("funcov_neo_core.yml")
