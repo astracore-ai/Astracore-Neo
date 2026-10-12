@@ -28,7 +28,10 @@ first block. So the job runs the image ORFS's release pipeline pushes for every 
 describe>`, at the commit `synth/tools.sh` already pins for the liberty files — the libraries synth.py maps to and the
 ones ORFS places with are the same files. `tools.sh` prints the image's OpenROAD / Yosys versions and compares the
 image's `flow/Makefile` and `flow/scripts/variables.yaml` with the pinned commit's. Everything else comes from GitHub as
-in the other jobs. The workflow input `pnr_image` overrides the image.
+in the other jobs. The workflow input `pnr_image` overrides the image. Measured (runs 164 and 168): image
+`sha256:f152917ebc45...`, 4.62 GB, built 2026-10-11 03:41 UTC, pulled in about a minute; its flow/ matches 3451ca1f5;
+OpenROAD is ORFS's `tools/OpenROAD` submodule at 91e5f5ff2 (the image's `openroad -version` prints `unknown`), Yosys
+0.68+post (it only copies our netlist), KLayout 0.30.12 (not used: no GDS).
 
 ORFS runs as the runner's user in the image (`make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=... WORK_HOME=...
 NEO_PNR_IN=...`, the workspace mounted at its own path), one make target per stage: `synth` (with `SYNTH_NETLIST_FILES`

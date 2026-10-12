@@ -107,17 +107,19 @@ def orfs_sections(path):
 
 
 def step_times(logdir):
-    """Every ORFS step log's `Elapsed time: H:MM:SS.ff ... Peak memory: NKB.` -> {step: (seconds, MB)}."""
+    """Every ORFS step log's `Elapsed time: H:MM:SS.ff ... Peak memory: NKB.` -> {step: (seconds, MB)}. A step's time is
+    its log's last such line (the step's own `time` wrapper): a nested run -- the equivalence check inside CTS and the
+    final report -- prints its line into the parent's log too, and the parent's time already holds it."""
     out = {}
     for p in glob.glob(os.path.join(logdir, "*.log")):
         step = os.path.basename(p)[:-4]
-        tot, peak = 0.0, 0.0
+        secs, peak = 0.0, 0.0
         for m in re.finditer(r"Elapsed time:\s*([0-9:.]+)\[h:\]min:sec\..*?Peak memory:\s*(\d+)KB", read(p)):
             parts = [float(x) for x in m.group(1).split(":")]
-            tot += sum(v * 60 ** i for i, v in enumerate(reversed(parts)))
+            secs = sum(v * 60 ** i for i, v in enumerate(reversed(parts)))
             peak = max(peak, int(m.group(2)) / 1024.0)
-        if tot or peak:
-            out[step] = (tot, peak)
+        if secs or peak:
+            out[step] = (secs, peak)
     return out
 
 
@@ -370,6 +372,9 @@ def main():
     tot, by_stage = 0.0, {}
     for step in sorted(times, key=lambda s: (STEP_ORDER.index(s) if s in STEP_ORDER else 99, s)):
         secs, mb = times[step]
+        if "_lec" in step:              # the equivalence checks run inside their stage's step: shown, not added again
+            md.append(f"| {step} (inside its stage's step) | {secs / 60:.1f} min | {mb:,.0f} MB |")
+            continue
         tot += secs
         st = STAGE_OF.get(step[:1], "other")
         t, p = by_stage.get(st, (0.0, 0.0))

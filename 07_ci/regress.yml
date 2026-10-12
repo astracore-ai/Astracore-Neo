@@ -39,9 +39,10 @@ permissions:
   contents: write
 # One run per branch at a time: a new push (every folder of a web upload is one) cancels the queued and running runs
 # of the earlier commits, so only the last commit's run -- the one with every file -- is executed (drop 0.22). The weekly
-# pnr run and a pnr-only dispatch have a group of their own (drop 0.42): they neither cancel nor are cancelled by a push.
+# pnr run and a pnr-only dispatch have a group of their own (drop 0.42): they neither cancel nor are cancelled by a push,
+# and a pnr-only dispatch's group carries its block list -- one for other blocks does not cancel a 6 h run in flight.
 concurrency:
-  group: regress-${{ github.ref }}${{ (github.event_name == 'schedule' || inputs.pnr_only) && '-pnr' || '' }}
+  group: regress-${{ github.ref }}${{ (github.event_name == 'schedule' || inputs.pnr_only) && format('-pnr-{0}', inputs.pnr_blocks) || '' }}
   cancel-in-progress: true
 jobs:
   python-regress:
