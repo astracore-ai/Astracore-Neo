@@ -27,23 +27,24 @@ an arbitrary initial value, never changing).
 ## The proofs
 
 Times: the sandbox (2 cores shared with three other agents, `--jobs 1`, two runs: a quiet one and one at load 4) and the
-PR's `formal` job (4-core runner, `--jobs 2`). Mode prove is a full proof: k-induction for smtbmc (k = the induction
-length it closed at; the basecase checks the first *depth* steps from reset), pdr for abc.
+PR's `formal` job (run 159: 4-core runner, `--jobs 2`). Mode prove is a full proof: k-induction for smtbmc (k = the
+induction length it closed at; the basecase checks the first *depth* steps from reset), pdr for abc.
 
 | Proof | What is proven | Parameters | Mode, depth (reached) | Engine | Sandbox | CI |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ecc39` | for all 2^32 data words: decode(encode(d)) = d with ce = ue = 0; any single flip of the 39 stored bits ({op, p, d}) gives d, ce = 1, ue = 0; any two distinct flips give ue = 1, ce = 0 | — | prove (combinational) | `abc collapse -r; muxes; strash; pdr` | 0.6 / 1.1 s | |
-| `crc16_beat_bw4` | `rtl/crc16_beat` = `crc16_beat_ref` for every crc_in, every beat, every n = 0..BW (one instance pair per n) | BW = 4 | prove (combinational) | same | 1.6 / 2.9 s | |
-| `crc16_beat_bw16` | the same at the silicon width | BW = 16 | prove (combinational) | same | 68 / 157 s | |
-| `link_pack` | packer → unpacker: the beats out carry the accepted words in order, none invented or repeated, each with its head, type, tag, hdr[19:14], PSUM column (one-word types their whole hdr); link flits even parity and 1..32 words, beats out even parity and 1..16 words; accepting a one-word type (the CRC closing a stream) leaves nothing in flight; with the sink ready no beat waits more than 2 cycles | BW = 16, WPF = 32, XW = YW = 3 (silicon) | prove, depth 2 (k = 1) | `smtbmc yices` | 55 / 115 s | |
-| `noc_router` | count <= 2, in_ready == (count != 2); each output register holds only flits whose XY port it is; no output register ever holds odd parity, a bad head is popped the cycle it is the head and `parity_err_sticky` is exactly "a bad head was dropped since err_clear"; every flit value that leaves was accepted; a picked accepted flit stays in its FIFO slot, moves into exactly one output register, unchanged until it leaves, and that register is its XY port; a requesting head is granted within 5 fires of its output | XW = YW = 3, DW = 8, DV_HOOKS = 0 | prove, depth 2 (k = 1) | `smtbmc yices` | 26 / 52 s | |
-| `lockstep_core_seq` | two `core_seq` with identical inputs from reset: neo_core's twelve compared outputs (f_start, f_first, f_ct, f_ky, f_kx, w_load, w_raddr, rd_en, rd_idx, done, reduce_ready, state_dbg) and the other three equal every cycle; resets at any time | ROWS = 16, COLS = 8, IDXW = 6, WBUF_DEPTH = 512 | prove, depth 2 (k = 1) | `smtbmc yices` | 1.2 / 2.7 s | |
-| `lockstep_requant` | two `requant`, the stream only once all four table entries are written: out_valid equal, out_q equal while out_valid, the parity stickies equal | COLS = 4, PW = 32, **MW = 4** (below) | prove, depth 2 (k = 1) | `smtbmc yices` | 27 / 53 s | |
-| `requant_parity` | `tbl_perr_sticky` is exactly "tbl_fault_inject met a written entry 0 under in_valid since err_clear": with the fault off it never rises whatever the unwritten entries hold; with it, 1 the next cycle (the brief's "within two"), held until err_clear | COLS = 4, PW = 32, MW = 16 | prove, depth 4 (k = 1) | `smtbmc yices` | 0.9 / 1.8 s | |
-| `abft_checker` | err == valid && (sum of the row != y_chk), the sum wrapped to PW bits (formed as a tree in the harness, the RTL sums a chain); err_sticky sets the cycle after, holds, clears on abft_clear | COLS = 4, PW = 8 | prove, depth 2 (k = 1) | `smtbmc yices` | 0.5 / 0.9 s | |
+| `ecc39` | for all 2^32 data words: decode(encode(d)) = d with ce = ue = 0; any single flip of the 39 stored bits ({op, p, d}) gives d, ce = 1, ue = 0; any two distinct flips give ue = 1, ce = 0 | — | prove (combinational) | `abc collapse -r; muxes; strash; pdr` | 0.6 / 1.1 s | 0.5 s |
+| `crc16_beat_bw4` | `rtl/crc16_beat` = `crc16_beat_ref` for every crc_in, every beat, every n = 0..BW (one instance pair per n) | BW = 4 | prove (combinational) | same | 1.6 / 2.9 s | 1.1 s |
+| `crc16_beat_bw16` | the same at the silicon width | BW = 16 | prove (combinational) | same | 68 / 157 s | 31 s |
+| `link_pack` | packer → unpacker: the beats out carry the accepted words in order, none invented or repeated, each with its head, type, tag, hdr[19:14], PSUM column (one-word types their whole hdr); link flits even parity and 1..32 words, beats out even parity and 1..16 words; accepting a one-word type (the CRC closing a stream) leaves nothing in flight; with the sink ready no beat waits more than 2 cycles | BW = 16, WPF = 32, XW = YW = 3 (silicon) | prove, depth 2 (k = 1) | `smtbmc yices` | 55 / 115 s | 49 s |
+| `noc_router` | count <= 2, in_ready == (count != 2); each output register holds only flits whose XY port it is; no output register ever holds odd parity, a bad head is popped the cycle it is the head and `parity_err_sticky` is exactly "a bad head was dropped since err_clear"; every flit value that leaves was accepted; a picked accepted flit stays in its FIFO slot, moves into exactly one output register, unchanged until it leaves, and that register is its XY port; a requesting head is granted within 5 fires of its output | XW = YW = 3, DW = 8, DV_HOOKS = 0 | prove, depth 2 (k = 1) | `smtbmc yices` | 26 / 52 s | 18 s |
+| `lockstep_core_seq` | two `core_seq` with identical inputs from reset: neo_core's twelve compared outputs (f_start, f_first, f_ct, f_ky, f_kx, w_load, w_raddr, rd_en, rd_idx, done, reduce_ready, state_dbg) and the other three equal every cycle; resets at any time | ROWS = 16, COLS = 8, IDXW = 6, WBUF_DEPTH = 512 | prove, depth 2 (k = 1) | `smtbmc yices` | 1.2 / 2.7 s | 1.2 s |
+| `lockstep_requant` | two `requant`, the stream only once all four table entries are written: out_valid equal, out_q equal while out_valid, the parity stickies equal | COLS = 4, PW = 32, **MW = 4** (below) | prove, depth 2 (k = 1) | `smtbmc yices` | 27 / 53 s | 21 s |
+| `requant_parity` | `tbl_perr_sticky` is exactly "tbl_fault_inject met a written entry 0 under in_valid since err_clear": with the fault off it never rises whatever the unwritten entries hold; with it, 1 the next cycle (the brief's "within two"), held until err_clear | COLS = 4, PW = 32, MW = 16 | prove, depth 4 (k = 1) | `smtbmc yices` | 0.9 / 1.8 s | 0.7 s |
+| `abft_checker` | err == valid && (sum of the row != y_chk), the sum wrapped to PW bits (formed as a tree in the harness, the RTL sums a chain); err_sticky sets the cycle after, holds, clears on abft_clear | COLS = 4, PW = 8 | prove, depth 2 (k = 1) | `smtbmc yices` | 0.5 / 0.9 s | 0.3 s |
 
 All nine are full proofs; no task needed the bounded fallback. The whole set: 180 s sequential in the quiet sandbox run,
-386 s under load.
+386 s under load; 69 s two at a time on the runner, where the job takes about two minutes with the 19 s tool install
+(budget: 20 minutes; the per-task timeout of 600 s keeps a hard proof from holding the job).
 
 ## Assumptions
 
