@@ -46,7 +46,8 @@ Mode prove is a full proof: k-induction for smtbmc (k = the induction length it 
 
 All ten are full proofs (link_pack two tasks since drop 0.42); no task needed the bounded fallback. The whole set with
 the drop 0.42 packer: 480 s sequential in the sandbox, with other agents' builds beside it (the drop 0.41 set of nine:
-214 s, link_pack 116 s of it). Run 159 (drop 0.40): 69 s two at a time on the runner, where the job took about two
+214 s, link_pack 116 s of it); on the runner (run 170, A2a's PR, two at a time) 210 s, link_pack_stream 207.9 s and
+link_pack_parity 10.5 s of it. Run 159 (drop 0.40): 69 s two at a time on the runner, where the job took about two
 minutes with the 19 s tool install (budget: 20 minutes; the per-task timeout of 600 s keeps a hard proof from holding the
 job).
 
@@ -127,8 +128,9 @@ Every harness holds the DUT's reset in the first cycle (an initialised register)
 ## Non-vacuity: each harness against a broken RTL
 
 Each harness was run against a copy of `01_rtl/` with one deliberate bug; every one stops the job (not PASS). On the
-merged tree (9f834a1 with this link_pack harness), except the two ecc39 rows (d69b862; the SECDED RTL and its harness
-did not change since):
+merged tree (9f834a1 with the drop 0.41 link_pack harness), except the two ecc39 rows (d69b862; the SECDED RTL and its
+harness did not change since) and the link_pack rows, re-run on the drop 0.42 packer and harness (stream A2a; the
+assertion the induction step breaks in brackets):
 
 | Mutation | Task | Result |
 | --- | --- | --- |
@@ -144,18 +146,21 @@ did not change since):
 | `noc_router`: S routed to N | noc_router | UNKNOWN 3.9 s |
 | `noc_router`: parity never checked | noc_router | UNKNOWN 2.4 s |
 | `noc_router`: a granted head not popped | noc_router | UNKNOWN 2.6 s |
-| `link_unpacker`: the second beat one word early | link_pack | UNKNOWN 6.7 s; bmc FAIL at step 5, a word out differs (37 s) |
-| `link_packer`: beats of different tags merged | link_pack | UNKNOWN 12.0 s; bmc FAIL at step 4, flit parity (7.4 s) |
-| `link_packer`: a merge does not fold the last beat's word parities into pend_par0 | link_pack | UNKNOWN 11.8 s; bmc FAIL at step 4, flit parity (7.4 s) |
-| `link_packer`: the output register not reloaded as it drains (oready = !link_valid) | link_pack | UNKNOWN 7.5 s; bmc FAIL at step 3, a word out never accepted (4.4 s) |
-| `link_packer`: a beat that would merge never taken | link_pack | UNKNOWN 13.2 s; bmc FAIL at step 5, the wait bound (19.2 s) |
+| `link_unpacker`: the second beat one word early (the word select's base (BW - 1) idx_w) | link_pack stream | UNKNOWN 16.5 s (a word out differs) |
+| `link_packer`: beats of different tags merged | link_pack stream | UNKNOWN 15.4 s (the pending flit's fields against the word's) |
+| `link_packer`: a merge does not fold the last beat's word parities into pend_par0 | link_pack parity | UNKNOWN 17.5 s (the running-parity invariant) |
+| `link_packer`: the output register not reloaded as it drains (oready = !link_valid) | link_pack stream | UNKNOWN 7.6 s (the words in flight) |
+| `link_packer`: a beat that would merge never taken | link_pack stream | UNKNOWN 9.4 s (the wait bound) |
+| `link_packer`: the input register not reloaded as its beat moves on (core_ready = !iv) | link_pack stream | UNKNOWN 6.6 s (the words in flight) |
+| `link_unpacker`: the word select's index copy stepping by 2 | link_pack stream | UNKNOWN 8.5 s (idx_w == idx) |
 
 UNKNOWN is a failed induction step (the counterexample to induction is `engine_0/trace_induct.vcd`, copied to
 `ci_logs/formal/`): the router, ABFT and link_pack basecases are 2 steps deep, shorter than the bug's first appearance
 (a deeper bmc of the router and link_pack costs minutes per step, above). For a real trace after an UNKNOWN, run the task
 as a bmc: copy the `.sby`, set `mode bmc` and `depth 8`, run it with `sby -f -d formal_out/<name>_bmc <copy>.sby`. The
-link_pack traces above come from a bmc of depth 10 with bitwuzla of the harness without its invariants (the asserted
-properties alone): with them, a bmc stops at the first broken invariant, often a step earlier.
+drop 0.41 link_pack mutations were also run as a bmc of depth 10 with bitwuzla of the harness without its invariants
+(the asserted properties alone), each failing at step 3-5 (a word out differs, flit parity, a word never accepted, the
+wait bound): with the invariants, a bmc stops at the first broken invariant, often a step earlier.
 
 ## Internal names the harnesses read
 

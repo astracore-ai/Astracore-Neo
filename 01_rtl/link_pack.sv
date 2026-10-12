@@ -286,7 +286,6 @@ module link_unpacker #(
   logic [8:0]     l_tag;
   logic [19:0]    l_hdr;
   logic           l_data;
-  logic [CWL-1:0] n_words;                                  // words in this flit
   logic [VWL-1:0] l_words;
   logic [CWL-1:0] idx;                                      // beat of BW words presented now
   logic [CWL-1:0] idx_w;                                    // the same, for the word select (drop 0.42, below)
@@ -301,7 +300,6 @@ module link_unpacker #(
   assign l_tag   = link_flit[DWL-4 -: 9];
   assign l_hdr   = link_flit[DWL-13 -: 20];
   assign l_data  = (l_type == T_RDRSP) || (l_type == T_WRDATA) || (l_type == T_PSUM);
-  assign n_words = l_data ? CWL'(l_hdr[13:8]) + CWL'(1) : CWL'(1);
   assign l_words = link_flit[VWL-1:0];
   assign base    = CWL'(32'(idx_w) * BW);
   assign sh      = l_words >> (32 * base);
@@ -311,26 +309,44 @@ module link_unpacker #(
   // register in the tile). So the word select has its own copy of the index (idx_w, equal to idx in every cycle: the same
   // reset and update; written from itself so that synthesis keeps the two apart), and the header and last flag of every
   // beat index b are formed from the flit alone and selected by idx at the end.
-  localparam int NB = (WPF + BW - 1) / BW;                  // beats per flit at most
+  // No adder on the count either: with BW a power of two, beat b holds the flit's last word iff the count field (words -
+  // 1) is below (b + 1) BW, i.e. its bits above the lane bits are at most b, and then its own count field is the flit's
+  // low lane bits (else BW - 1) -- the same values as words - b BW compared and decremented, for every beat a flit within
+  // the source's contract presents.
+  localparam int NB  = (WPF + BW - 1) / BW;                 // beats per flit at most
+  localparam int LWB = $clog2(BW);                          // the lane bits of a count (BW = 2^LWB)
+  localparam int CHB = 6 - LWB;                             // the count field's bits above them
   logic [19:0]    hdr_b  [NB];
   logic [NB-1:0]  last_b;
   always_comb begin
     for (int b = 0; b < NB; b++) begin
-      logic [CWL-1:0] lft, bnb;
-      lft       = n_words - CWL'(b * BW);                   // words from beat b on
-      last_b[b] = (32'(lft) <= BW);
-      bnb       = last_b[b] ? lft : CWL'(BW);
-      hdr_b[b]  = l_data ? {l_hdr[19:14], 6'(bnb) - 6'd1, (l_type == T_PSUM) ? l_hdr[7:0] + 8'(b * BW) : l_hdr[7:0]} : l_hdr;
+      last_b[b] = !l_data || (32'(l_hdr[13 -: CHB]) <= b);  // count field >> LWB <= b
+      hdr_b[b]  = l_data ? {l_hdr[19:14], last_b[b] ? 6'(l_hdr[8 +: LWB]) : 6'(BW - 1),
+                            (l_type == T_PSUM) ? l_hdr[7:0] + 8'(b * BW) : l_hdr[7:0]} : l_hdr;
     end
     hdr_out = hdr_b[0];
     last    = last_b[0];
     for (int b = 1; b < NB; b++)
       if (32'(idx) == b) begin hdr_out = hdr_b[b]; last = last_b[b]; end
   end
+  // the beat's parity the same way (drop 0.42): the fields' part (with the beat's header) and the words' part of every beat
+  // index formed from the flit and selected by idx -- where one XOR tree over the 564-bit beat followed the selects, the
+  // count arithmetic in series with it (0.82 ns from the count field to the parity bit on the ASAP7 SS proxy); a beat
+  // index past the flit's beats (none for a flit within the source's contract) presents beat 0's header and no words
+  logic [NB-1:0]  par_f, par_w;                             // per beat index: the parity of its fields, of its words
+  logic           par_sel;
+  always_comb begin
+    par_w = '0;
+    for (int w = 0; w < WPF; w++) par_w[w / BW] = par_w[w / BW] ^ (^l_words[32 * w +: 32]);
+    for (int b = 0; b < NB; b++) par_f[b] = ^{l_head, l_type, l_tag, hdr_b[b]};
+    par_sel = (idx == '0) ? par_f[0] ^ par_w[0] : par_f[0];
+    for (int b = 1; b < NB; b++)
+      if (32'(idx) == b) par_sel = par_f[b] ^ par_w[b];
+  end
   logic unused_link_parity;                                 // the flit's parity is the router's business (lint)
   assign unused_link_parity = link_flit[FWL-1];
   assign body    = {l_head, l_type, l_tag, hdr_out, bvec};
-  assign core_flit  = {^body, body};
+  assign core_flit  = {par_sel, body};                      // = {^body, body}
   assign core_valid = link_valid;
   assign link_ready = core_ready && last;
   always_ff @(posedge clk or negedge rst_n) begin

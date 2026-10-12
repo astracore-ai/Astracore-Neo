@@ -160,7 +160,7 @@ def compare(dirs, out):
     L += ["## Units on both libraries", "",
           "Minimum period (register to register, a child's arcs included), cells and total area (cells + macros, the unit with its "
           "subtree) per library; the ratio is the second library's period over the first's.", "", hdr,
-          "| --- | " + " | ".join("---" for _ in runs) + " | --- | " + " | ".join("---" for _ in runs) * 2 + " |"]
+          "| --- | " + " | ".join("---" for _ in runs) + " | --- | " + " | ".join("---" for _ in range(2 * len(runs))) + " |"]
     for n in names:
         mps = [((r["units"][n].get("sta") or {}).get("min_period_ps")) for r in runs]
         ratio = f"{mps[1] / mps[0]:.2f}" if len(mps) > 1 and mps[0] and mps[1] else "—"
