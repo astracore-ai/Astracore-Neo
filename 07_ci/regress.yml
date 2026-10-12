@@ -269,6 +269,46 @@ jobs:
           git add -f ci_logs
           git commit -m "synth logs run ${{ github.run_number }}" || true
           git push origin ci-logs-synth --force
+  # the formal job (drop 0.41): SymbiYosys proofs of the protection logic -- 02_dv/formal/*.sby, one directory per task --
+  # with the OSS CAD Suite tarball that synth/tools.sh pins, installed alone (NEO_TOOLS_ONLY=oss: no ORFS libraries, no
+  # OpenSTA, no cache, about a minute). formal/run.py (07_ci/formal/run.py) runs every task, two at a time, 600 s each,
+  # writes formal_report.md and fails the job unless every task is PASS; the report, every task's sby log and every
+  # counterexample trace go to ci-logs-formal either way.
+  formal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      NEO_SYNTH_TOOLS: /home/runner/neo-synth      # the runner's own home: no sudo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/formal formal && cp 07_ci/formal/run.py formal/run.py
+          cp -r 07_ci/synth synth && cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/formal && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/formal/RUN.txt
+          { echo "cores $(nproc)"; free -m | sed -n 2,3p; } | tee -a ci_logs/formal/RUN.txt
+      - name: tools (the OSS CAD Suite alone)
+        run: |
+          set -o pipefail
+          NEO_TOOLS_ONLY=oss bash synth/tools.sh 2>&1 | tee ci_logs/formal/tools.txt
+          echo "/home/runner/neo-synth/oss-cad-suite/bin" >> "$GITHUB_PATH"
+      - name: formal proofs (every 02_dv/formal/*.sby task)
+        run: |
+          set -o pipefail
+          echo "formal starts $(date -u)" | tee -a ci_logs/formal/RUN.txt
+          make formal FORMAL_JOBS=2 FORMAL_TIMEOUT=600 2>&1 | tee ci_logs/formal/formal.txt
+      - name: publish logs
+        if: always()
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          mkdir -p ci_logs/formal && echo "finished $(date -u)" >> ci_logs/formal/RUN.txt
+          git checkout --orphan ci-logs-formal
+          git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs
+          git commit -m "formal logs run ${{ github.run_number }}" || true
+          git push origin ci-logs-formal --force
   tiles:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
