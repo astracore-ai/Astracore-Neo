@@ -16,8 +16,10 @@ Every bit of T is the XOR of a fixed subset of the 16 + 32*BW input bits. The wo
 parities, not on their bits: p_i[k] = the parity of word k under row i's 32 constants, and T_i = (crc_in part) ^ (XOR of
 p_i[k] over k < n) -- the same function as zeroing the words first (a word's part of T is linear in the word), with 16 AND
 gates per row instead of 512 on the inputs, and n reaching T through those 16 only. Synthesized on ASAP7 SS (unit
-crc16_beat): 3,805 cells and 762 ps against 4,194 cells and 821 ps when the words themselves are masked (n's path there
-went through the input mask's fanout), and 4,723 ps for the serial chain. The inverse is a 16 x 16 matrix indexed by n
+crc16_beat, the sandbox and the CI synth job alike): 3,430 cells and 733 ps, against 4,194 cells and 821 ps when the
+words themselves are masked (n's path there went through the input mask's fanout), 3,805 cells and 762 ps when the
+crc_in part and the masked parities are two reductions XORed together instead of one over their concatenation (the form
+emitted below), and 3,275 cells and 4,723 ps for the serial chain. The inverse is a 16 x 16 matrix indexed by n
 itself -- no arithmetic on n in front of the table (an index BW - n cost 1,108 ps). Padding the beat to MAXBW words, rather
 than inverting A^(BW-n), is what makes the index n direct and one set of constants serve every BW <= MAXBW (the tile's 16,
 the testbench's 1 and 4):
