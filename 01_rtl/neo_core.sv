@@ -71,7 +71,7 @@ module neo_core #(
   input  logic signed [PW-1:0]  ext_chk,
   output logic                  ext_ready,
   output logic                  reduce_ready,
-  // drained results: INT32 (ABFT-checked) and, two cycles later, requantized INT8
+  // drained results: INT32 (ABFT-checked) and, three cycles later, requantized INT8 (drop 0.42: requant in three stages)
   output logic signed [PW-1:0]  rd_data [COLS],
   output logic signed [PW-1:0]  rd_chk,
   output logic                  rd_valid,

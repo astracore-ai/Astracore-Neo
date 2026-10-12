@@ -85,8 +85,8 @@ module tile_dma_sva (input logic clk, rst_n, prog_start, prog_done, prog_busy, c
   p_go_pulse:     assert property (@(posedge clk) disable iff (!rst_n) go |=> !go);
 endmodule
 
-// ---- requantization: fixed two-cycle latency, valid never dropped ----------------------------
+// ---- requantization: fixed three-cycle latency (drop 0.42; two before), valid never dropped ---
 module requant_sva (input logic clk, rst_n, in_valid, out_valid);
-  p_rq_latency: assert property (@(posedge clk) disable iff (!rst_n) in_valid |-> ##2 out_valid);
-  p_rq_no_spurious: assert property (@(posedge clk) disable iff (!rst_n) out_valid |-> $past(in_valid, 2));
+  p_rq_latency: assert property (@(posedge clk) disable iff (!rst_n) in_valid |-> ##3 out_valid);
+  p_rq_no_spurious: assert property (@(posedge clk) disable iff (!rst_n) out_valid |-> $past(in_valid, 3));
 endmodule
