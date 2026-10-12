@@ -210,9 +210,13 @@ def find_tools(args):
     t["yosys"] = os.environ.get("NEO_YOSYS") or os.path.join(root, "oss-cad-suite", "bin", "yosys")
     t["sta"] = os.environ.get("NEO_STA") or os.path.join(root, "sta")
     t["pdk_lib"] = os.environ.get("NEO_PDK_LIB") or os.path.join(root, "pdk", "lib")
-    for k in ("yosys", "sta"):
-        if not (os.path.isfile(t[k]) and os.access(t[k], os.X_OK)):
-            sys.exit(f"synth.py: {k} not found ({t[k]}); run synth/tools.sh or set NEO_{k.upper()}")
+    if not (os.path.isfile(t["yosys"]) and os.access(t["yosys"], os.X_OK)):
+        sys.exit(f"synth.py: yosys not found ({t['yosys']}); run synth/tools.sh or set NEO_YOSYS")
+    if not (os.path.isfile(t["sta"]) and os.access(t["sta"], os.X_OK)):
+        # no OpenSTA (tools.sh could not build it): the synthesis and its gates still run, the timing phase is skipped
+        # and reported as a failed gate -- the job is red for the right reason, with the synthesis report published
+        log(f"OpenSTA not found ({t['sta']}): synthesis only, the timing gate will fail")
+        t["sta"] = None
     pdk = PDKS[args.pdk]
     libdir = os.path.join(t["pdk_lib"], pdk["dir"])
     t["libs"] = [os.path.join(libdir, f) for f in pdk["libs"][args.corner]]
@@ -228,6 +232,9 @@ def find_tools(args):
 def tool_versions(t):
     v = {}
     for k, cmd in (("yosys", [t["yosys"], "-V"]), ("sta", [t["sta"], "-version"])):
+        if cmd[0] is None:
+            v[k] = "missing"
+            continue
         try:
             out = subprocess.run(cmd, capture_output=True, text=True, timeout=120).stdout.strip().splitlines()
             v[k] = out[0] if out else "?"
@@ -967,6 +974,9 @@ def main():
     if args.period is None:
         args.period = pdk["default_period_ps"]
     t = find_tools(args)
+    sta_missing = t["sta"] is None and not args.no_sta
+    if sta_missing:
+        args.no_sta = True
     out = os.path.abspath(args.out)
     os.makedirs(out, exist_ok=True)
     rtl = os.path.abspath(args.rtl)
@@ -1039,6 +1049,8 @@ def main():
         json.dump(summary, f, indent=1, default=str)
     log(f"done in {summary['seconds']:.0f} s: {out}/synth_results.json")
     gates = []
+    if sta_missing:
+        gates.append("timing: OpenSTA is not installed (synth/tools.sh could not build it; see tools.txt) -- no timing run")
     for n in names:
         r = results.get(n, {})
         if r.get("failed"):

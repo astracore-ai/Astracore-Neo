@@ -1,4 +1,4 @@
-# `07_ci/synth` — the open-PDK synthesis job (drop 0.40)
+# `07_ci/synth` — the open-PDK synthesis job (drop 0.40; fix38: the tool install diagnosable and non-fatal)
 
 What the `synth` job of `regress.yml` runs: the RTL through **Yosys (slang front end) → OpenSTA** on the **ASAP7** 7.5-track
 RVT library (SS corner, 0.63 V / 100 °C, 500 ps clock), unit by unit up to the silicon tile, with the memory leaves
@@ -7,7 +7,7 @@ black-boxed and priced by a macro model. Nangate45 is a second library for a san
 
 | File | Role |
 | --- | --- |
-| `tools.sh` | installs the pinned tools into `$NEO_SYNTH_TOOLS` (default `/opt/neo-synth`; the CI job sets `/home/runner/neo-synth`, no sudo): OSS CAD Suite nightly 2026-10-11 (Yosys 0.69+274 with the slang plugin, yosys-abc), OpenSTA f861c62 built from source (the binary is cached by `actions/cache`), the ASAP7 / Nangate45 liberty files, adder maps and the Kogge-Stone carry-lookahead map from OpenROAD-flow-scripts 3451ca1 |
+| `tools.sh` | installs the pinned tools into `$NEO_SYNTH_TOOLS` (default `/opt/neo-synth`; the CI job sets `/home/runner/neo-synth`, no sudo): OSS CAD Suite nightly 2026-10-11 (Yosys 0.69+274 with the slang plugin, yosys-abc), OpenSTA f861c62 built from source with OpenSTA's own Ubuntu 24.04 recipe (the binary is cached as soon as it is built), the ASAP7 / Nangate45 liberty files, adder maps and the Kogge-Stone carry-lookahead map from OpenROAD-flow-scripts 3451ca1. Should OpenSTA not build, the script prints the cmake / make logs and exits 0 without `sta`: `synth.py` then synthesizes without timing, the synthesis gates run, the timing gate fails — the job is red for the right reason with the synthesis report published (`NEO_SYNTH_NO_APT=1` skips apt, `STA_CMAKE_EXTRA` adds cmake arguments: the sandbox) |
 | `synth.py` | the flow (below): the units, the Yosys run per unit, the macro liberty, the repeater trees, the per-unit OpenSTA with the children as timing models, the gates; `synth_results.json` |
 | `abc_speed.script` | ORFS's `abc_speed.script` with the `{D}` delay target on the final mapping and sizing |
 | `report.py` | `synth_report.md` and the per-unit files for `ci_logs/synth/` |
