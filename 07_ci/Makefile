@@ -39,6 +39,9 @@
 # make xrun_core  : Cadence Xcelium replay of the C1 convolution on neo_core (vectors_core from --dump)
 # make synth      : the open-PDK synthesis job (drop 0.40): Yosys (slang front end) + OpenSTA on ASAP7 (SS, 500 ps) -- synth/synth.py
 #                   unit by unit up to the silicon tile, synth/report.py into ci_logs/synth/; tools from synth/tools.sh (CI's synth job)
+# make formal     : the formal job (drop 0.41): SymbiYosys proofs of the protection logic, every formal/*.sby task (ecc39, crc16_beat
+#                   against the frozen serial reference, the link packer/unpacker round trip, the router, the lockstep pairs, the
+#                   requant table parity, the ABFT checker) -- formal/run.py, formal_out/formal_report.md and ci_logs/formal/ (CI's formal job)
 VECDIR ?= vectors
 ROWS   ?= 32
 COLS   ?= 32
@@ -297,5 +300,20 @@ synth:
 	python3 synth/synth.py --rtl rtl --out synth_out --pdk $(SYNTH_PDK) --corner $(SYNTH_CORNER) --blocks $(SYNTH_BLOCKS) --jobs $(SYNTH_JOBS) $(if $(SYNTH_PERIOD),--period $(SYNTH_PERIOD),); rc=$$?; \
 	python3 synth/report.py synth_out --out ci_logs/synth; exit $$rc
 
+# the formal job (drop 0.41): formal/run.py runs every task of every formal/*.sby with SymbiYosys (sby -f -d formal_out/<task>),
+# FORMAL_JOBS at a time, each under FORMAL_TIMEOUT seconds (the task's whole session -- sby and its solvers -- is killed at the
+# limit: TIMEOUT), writes formal_out/formal_report.md (result, mode, depth, engine, reached induction length or bmc steps, time
+# per task) and copies it, every task's sby log and every counterexample trace into ci_logs/formal/; it exits nonzero unless
+# every task is PASS. A smtbmc prove task runs two solver processes: FORMAL_JOBS=1 on a 2-core machine. formal/run.py is
+# 07_ci/formal/run.py, which the flat layout copies next to the harnesses (02_dv/formal); FORMAL_RUN points elsewhere (a
+# worktree's 07_ci/formal/run.py). Tools: the OSS CAD Suite's sby, yosys with the slang plugin, yosys-smtbmc, yices, yosys-abc
+# (NEO_TOOLS_ONLY=oss bash synth/tools.sh).
+FORMAL_JOBS ?= 2
+FORMAL_TIMEOUT ?= 600
+FORMAL_RUN ?= formal/run.py
+.PHONY: formal
+formal:
+	python3 $(FORMAL_RUN) --dir formal --out formal_out --logs ci_logs/formal --jobs $(FORMAL_JOBS) --timeout $(FORMAL_TIMEOUT)
+
 clean:
-	rm -rf build obj_dir xcelium.d xrun.history xrun.log *.vcd synth_out
+	rm -rf build obj_dir xcelium.d xrun.history xrun.log *.vcd synth_out formal_out

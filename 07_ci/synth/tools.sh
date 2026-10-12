@@ -36,6 +36,12 @@ if [ ! -x "$T/oss-cad-suite/bin/yosys" ]; then
 fi
 "$T/oss-cad-suite/bin/yosys" -V
 [ -f "$T/oss-cad-suite/share/yosys/plugins/slang.so" ] || { echo "slang plugin missing"; exit 1; }
+# NEO_TOOLS_ONLY=oss (the formal job, drop 0.41): the pinned OSS CAD Suite alone -- sby, yosys with the slang plugin,
+# yosys-smtbmc, the solvers, yosys-abc -- and nothing after it (no ORFS libraries, no OpenSTA build, no cache)
+if [ "${NEO_TOOLS_ONLY:-}" = oss ]; then
+  echo "== NEO_TOOLS_ONLY=oss: the OSS CAD Suite only, $T/oss-cad-suite/bin ($(date -u)) =="
+  exit 0
+fi
 
 # ---- the libraries from OpenROAD-flow-scripts ---------------------------------------------------------------------------
 if [ ! -f "$T/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib" ]; then

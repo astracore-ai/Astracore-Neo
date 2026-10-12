@@ -1,0 +1,28 @@
+# crc16_beat -- rtl/crc16_beat == the frozen serial reference, every crc_in, beat and word count n = 0..BW
+# crc16_ref.sv holds crc16_beat_ref, the serial chain of drops 0.29-0.40 (never to change); crc16_beat_fv.sv compares one
+# instance pair per n. Combinational, full proofs at BW = 4 and at the silicon BW = 16 (drop 0.41). The engine is ABC's BDD
+# collapse ahead of pdr: with n a constant per pair every node is a parity of the inputs, the global BDDs stay linear in
+# size and the miter collapses to constant 0; SAT engines (smtbmc yices / bitwuzla, plain abc pdr, abc iprove) did not
+# close BW = 4 against the matrix form of drop 0.41 in minutes -- an XOR miter (README.md has the numbers).
+[tasks]
+bw4
+bw16
+
+[options]
+mode prove
+depth 1
+
+[engines]
+abc collapse -r; muxes; strash; pdr
+
+[script]
+plugin -i slang
+bw4: read_slang -DFORMAL -G BW=4 --top crc16_beat_fv crc16_word.sv crc16_beat.sv crc16_ref.sv crc16_beat_fv.sv
+bw16: read_slang -DFORMAL -G BW=16 --top crc16_beat_fv crc16_word.sv crc16_beat.sv crc16_ref.sv crc16_beat_fv.sv
+prep -top crc16_beat_fv
+
+[files]
+rtl/crc16_word.sv
+rtl/crc16_beat.sv
+formal/crc16_ref.sv
+formal/crc16_beat_fv.sv

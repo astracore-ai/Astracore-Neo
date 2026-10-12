@@ -1,0 +1,20 @@
+# ecc39 -- (39,32) SECDED: dec(enc(d)) == d clean; every single flip corrected (ce); every double flip detected (ue)
+# For all 2^32 data words: clean -> d, ce = 0, ue = 0; any one of the 39 stored bits flipped -> d, ce = 1, ue = 0; any two
+# distinct bits flipped -> ue = 1, ce = 0. Combinational, full proof (drop 0.41); ecc39_fv.sv holds the harness. The syndrome
+# is a parity over the codeword: ABC's BDD collapse settles the miter in about a second, plain abc pdr in 17 s, smtbmc yices
+# not within 3 minutes (README.md).
+[options]
+mode prove
+depth 1
+
+[engines]
+abc collapse -r; muxes; strash; pdr
+
+[script]
+plugin -i slang
+read_slang -DFORMAL --top ecc39_fv ecc39.sv ecc39_fv.sv
+prep -top ecc39_fv
+
+[files]
+rtl/ecc39.sv
+formal/ecc39_fv.sv
