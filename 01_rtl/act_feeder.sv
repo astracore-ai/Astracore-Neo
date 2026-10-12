@@ -1,4 +1,5 @@
-// act_feeder.sv -- sliding-window activation feeder (implicit im2col), v0.4 (drop 0.41: incremental addresses, synchronous read).
+// act_feeder.sv -- sliding-window activation feeder (implicit im2col), v0.5 (drop 0.41: incremental addresses, synchronous
+//   read; drop 0.46: 2:4 sparse layers, a pixel per pair word -- see the end of this header).
 //   Holds channel tiles of one input in a local buffer of REGIONS regions (a power of two):
 //   abuf[(ct mod regions)*tile_pixels + iy*w + ix][channel]; the DMA refills a region after the
 //   sequencer's ct_free for the tile that used it,
@@ -54,12 +55,27 @@
 //     generator is idle and hold while it runs, so each depends on its own copy's state (two registers fed by the same
 //     port logic would be merged into one by synthesis). The comparator checks valid, swap and row_idx on the delayed
 //     outputs of both copies and addr / inb in the generation cycle, as before; the fault hook stays on the primary's addr.
+//
+//   Drop 0.46 -- 2:4 sparse layers on the NCHK = 4 core (NCHK = 1 is the feeder of drop 0.41 bit for bit). A sparse
+//   channel tile is 64 channels and a pixel's 64 channels are one pair word of the buffer: entry 2k holds channels
+//   0..31, entry 2k + 1 channels 32..63 (the compiler's activation layout for sparse layers). The generator is A1c's and
+//   counts pixels as before -- cfg_tile_pixels, the region base (ct & regions_m1)*tile_pixels, iy0, w, s are all in
+//   pixels in both modes -- and in sparse mode every address is doubled: the per-pixel step is 2s, the row step 2sw
+//   (registered while idle, like sw), and the token cycle shifts the start-time sum left by one, so the entry address
+//   a = 2*(region base + (iy - iy0)*w + ix) is the pair's even entry and addr[AW-1:1] -- the leaf's word address,
+//   unchanged -- is the pixel; nothing new on the address path to the leaf. The row presented is 2*ROWS bytes (x_vec):
+//   bytes 0..ROWS-1 are the selected entry as before (in sparse mode addr[0] is 0, so the pair's lower entry: channels
+//   0..31), bytes ROWS..2*ROWS-1 the pair's upper entry in sparse mode (channels 32..63) and zero in dense mode -- the
+//   whole pair word per cycle; skew_in regroups it into four-byte row buses (channels 4g .. 4g + 3 to rows 2g and
+//   2g + 1). The duplicate generator doubles its own addresses, so the comparator still checks every address.
 module act_feeder #(
   parameter int ROWS       = 32,
   parameter int XW         = 8,
   parameter int ABUF_DEPTH = 4096,
   parameter int AW         = $clog2(ABUF_DEPTH),
-  parameter int IDXW       = 9
+  parameter int IDXW       = 9,
+  parameter int NCHK       = 1,                       // the core's check columns: 4 = the sparse-capable core (drop 0.46)
+  parameter int XB         = (NCHK > 1) ? 2 * ROWS : ROWS   // bytes presented per row (derived)
 )(
   input  logic                 clk,
   input  logic                 rst_n,
@@ -85,11 +101,12 @@ module act_feeder #(
   input  logic signed [15:0]   cfg_ky,         // kernel position of this run
   input  logic signed [15:0]   cfg_kx,
   input  logic                 acc_first,      // 1: this run overwrites the accumulator rows
+  input  logic                 cfg_sparse,     // NCHK = 4: the layer is 2:4 sparse (64-channel tiles, a pixel per pair word)
   // control
   input  logic                 start,
   output logic                 busy,
   // stream out
-  output logic signed [XW-1:0] x_vec [ROWS],
+  output logic [XB*XW-1:0]     x_vec,          // byte c at [c*XW +: XW]: dense, the entry in bytes 0..ROWS-1; sparse, the pair word
   output logic                 valid,
   output logic                 swap,
   output logic [IDXW-1:0]      row_idx,
@@ -108,6 +125,16 @@ module act_feeder #(
   logic [1:0]     pair_we;
   logic [EWB-1:0] ent_rd;                           // the entry read (the delayed addr[0] selects it inside the pair)
   logic [BWD-1:0] unused_ra, unused_bd;             // the leaf's unused read ports (port A tied off, no hooks here)
+  logic           sp;                               // drop 0.46: a sparse layer (NCHK = 4 only): addresses doubled, the pair presented
+  generate
+    if (NCHK > 1) begin : g_sp
+      assign sp = cfg_sparse;
+    end else begin : g_nosp
+      assign sp = 1'b0;
+      logic unused_sparse;
+      assign unused_sparse = cfg_sparse;
+    end
+  endgenerate
 
   // ---- the start-time arithmetic of both generators ----
   // The radix-4 digit products of the per-run operands and their carry-save sums, four trees: [0] / [1] the primary's
@@ -210,7 +237,10 @@ module act_feeder #(
   assign ent_rd = a0_q ? pair_rdata[BWD-1:EWB] : pair_rdata[EWB-1:0];
   generate
     for (genvar c = 0; c < ROWS; c++) begin : g_out
-      assign x_vec[c] = (valid_q && inb_q) ? ent_rd[c*XW +: XW] : '0;
+      assign x_vec[c*XW +: XW] = (valid_q && inb_q) ? ent_rd[c*XW +: XW] : '0;
+    end
+    for (genvar c = ROWS; c < XB; c++) begin : g_out_hi      // NCHK = 4: the pair's upper entry, in sparse mode only
+      assign x_vec[c*XW +: XW] = (valid_q && inb_q && sp) ? pair_rdata[c*XW +: XW] : '0;
     end
   endgenerate
 
@@ -239,7 +269,7 @@ module act_feeder #(
       iyb <= '0; sw <= '0; q <= '0; tp3 <= '0; w3 <= '0; s1 <= '0; c1 <= '0; s2 <= '0; c2 <= '0;
     end else if (!running) begin
       iyb <= 18'(cfg_oy0) * 18'(cfg_s) - 18'(cfg_p);
-      sw  <= AW'(cfg_s) * AW'(cfg_w);
+      sw  <= (AW'(cfg_s) * AW'(cfg_w)) << sp;      // sparse: in entries, two per pixel
       q   <= AW'(18'(cfg_oy0) * 18'(cfg_s) - 18'(cfg_p) - 18'(cfg_iy0)) * AW'(cfg_w);
       tp3 <= AW'(cfg_tile_pixels) + (AW'(cfg_tile_pixels) << 1);
       w3  <= AW'(cfg_w) + (AW'(cfg_w) << 1);
@@ -279,8 +309,8 @@ module act_feeder #(
       first_q <= acc_first;
       iy      <= iyb + 18'(cfg_ky);
       ix      <= 18'(cfg_kx) - 18'(cfg_p);
-      arow    <= s1 + c1 + s2 + c2;
-      a       <= s1 + c1 + s2 + c2;
+      arow    <= (s1 + c1 + s2 + c2) << sp;        // sparse: the pixel's even entry
+      a       <= (s1 + c1 + s2 + c2) << sp;
     end else if (valid_g) begin
       m <= m + 1;
       if (row_end) begin
@@ -293,7 +323,7 @@ module act_feeder #(
       end else begin
         ox <= ox + 1;
         ix <= ix + 18'(cfg_s);
-        a  <= a + AW'(cfg_s);
+        a  <= a + (AW'(cfg_s) << sp);
       end
     end
   end
@@ -366,7 +396,7 @@ module act_feeder #(
       iyb_d <= '0; sw_d <= '0; q_d <= '0; tp3_d <= '0; w3_d <= '0; s1_d <= '0; c1_d <= '0; s2_d <= '0; c2_d <= '0;
     end else if (!running_d) begin
       iyb_d <= 18'(cfg_oy0) * 18'(cfg_s) - 18'(cfg_p);
-      sw_d  <= AW'(cfg_s) * AW'(cfg_w);
+      sw_d  <= (AW'(cfg_s) * AW'(cfg_w)) << sp;
       q_d   <= AW'(18'(cfg_oy0) * 18'(cfg_s) - 18'(cfg_p) - 18'(cfg_iy0)) * AW'(cfg_w);
       tp3_d <= AW'(cfg_tile_pixels) + (AW'(cfg_tile_pixels) << 1);
       w3_d  <= AW'(cfg_w) + (AW'(cfg_w) << 1);
@@ -402,8 +432,8 @@ module act_feeder #(
       m_d    <= '0;
       iy_d   <= iyb_d + 18'(cfg_ky);
       ix_d   <= 18'(cfg_kx) - 18'(cfg_p);
-      arow_d <= s1_d + c1_d + s2_d + c2_d;
-      a_d    <= s1_d + c1_d + s2_d + c2_d;
+      arow_d <= (s1_d + c1_d + s2_d + c2_d) << sp;
+      a_d    <= (s1_d + c1_d + s2_d + c2_d) << sp;
     end else if (valid_gd) begin
       m_d <= m_d + 1;
       if (row_end_d) begin
@@ -416,7 +446,7 @@ module act_feeder #(
       end else begin
         ox_d <= ox_d + 1;
         ix_d <= ix_d + 18'(cfg_s);
-        a_d  <= a_d + AW'(cfg_s);
+        a_d  <= a_d + (AW'(cfg_s) << sp);
       end
     end
   end

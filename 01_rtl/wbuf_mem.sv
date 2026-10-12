@@ -14,13 +14,23 @@
 //   rb_data -> the entry selected by raddr[0] delayed one cycle (ra0_q) -> the LANES decoders -> rdata. The ce / ue flags
 //   rise one cycle after the address that read the faulty codeword. The core delays the sequencer's w_load by one cycle
 //   to match (neo_core's w_load_q), so the shadow chain shifts in the cycle the data is valid.
+//   Drop 0.46 -- the entry of the sparse-capable core (NCHK = 4; NCHK = 1 is the entry above, bit for bit): one format
+//   for dense and 2:4 sparse layers, COLS x (WW + 2) + NCHK x WCW bits before coding --
+//   {idx[COLS-1] .. idx[0] (2 bits each), wc[NCHK-1] .. wc[0] (WCW each), w[COLS-1] .. w[0] (WW each)}: the weights
+//   where they were, the check weight of column 0 where the single check weight was, then check columns 1..3, then the
+//   indices. A dense entry is the entry of NCHK = 1 with zeros above it (index 0, three zero check weights). The ports
+//   carry the shadow-chain entry {index, weight} per column (wdata / rdata, WW + 2 bits) and the NCHK check weights
+//   packed (wcdata / rcdata, column k at [k*WCW +: WCW]); the SECDED lanes are simply more numerous: LANES =
+//   ceil(EW / 32) = 12 at 32x32 (376 bits; 9 before), 5 at 16x8 (132 bits; 3 before).
 module wbuf_mem #(
   parameter int COLS  = 32,
   parameter int WW    = 8,
   parameter int WCW   = WW + 6,
   parameter int DEPTH = 1024,
   parameter int WAW   = $clog2(DEPTH),
-  parameter int EW    = COLS * WW + WCW,            // entry width in bits
+  parameter int NCHK  = 1,                          // the core's check columns: 4 = the sparse-capable core (drop 0.46)
+  parameter int IW    = (NCHK > 1) ? 2 : 0,         // index bits per weight (derived)
+  parameter int EW    = COLS * (WW + IW) + NCHK * WCW,   // entry width in bits
   parameter int LANES = (EW + 31) / 32,
   parameter int DV_HOOKS = 0                        // 1: the testbench hook below exists (drop 0.37); 0: the silicon buffer, ports tied off
 )(
@@ -28,14 +38,14 @@ module wbuf_mem #(
   input  logic                  rst_n,
   input  logic                  we,
   input  logic [WAW-1:0]        waddr,
-  input  logic signed [WW-1:0]  wdata [COLS],
-  input  logic signed [WCW-1:0] wcdata,
+  input  logic [WW+IW-1:0]      wdata [COLS],             // {index, weight} per column
+  input  logic [NCHK*WCW-1:0]   wcdata,                   // the check weights, column k at [k*WCW +: WCW]
   input  logic                  we2,                      // the upper entry of the same pair (drop 0.32)
-  input  logic signed [WW-1:0]  wdata2 [COLS],
-  input  logic signed [WCW-1:0] wcdata2,
+  input  logic [WW+IW-1:0]      wdata2 [COLS],
+  input  logic [NCHK*WCW-1:0]   wcdata2,
   input  logic [WAW-1:0]        raddr,
-  output logic signed [WW-1:0]  rdata [COLS],
-  output logic signed [WCW-1:0] rcdata,
+  output logic [WW+IW-1:0]      rdata [COLS],
+  output logic [NCHK*WCW-1:0]   rcdata,
   input  logic                  err_clear,
   output logic                  ecc_ce_sticky,
   output logic                  ecc_ue_sticky,
@@ -66,24 +76,49 @@ module wbuf_mem #(
 
   // pack / unpack with exactly one driver per variable (several continuous assignments to slices
   // of one variable are resolved differently by different simulators)
-  always_comb begin
-    wflat = '0;
-    for (int j = 0; j < COLS; j++) wflat[j*WW +: WW] = wdata[j];
-    wflat[COLS*WW +: WCW] = wcdata;
-  end
-  always_comb begin
-    wflat2 = '0;
-    for (int j = 0; j < COLS; j++) wflat2[j*WW +: WW] = wdata2[j];
-    wflat2[COLS*WW +: WCW] = wcdata2;
-  end
+  localparam int IDX0 = COLS * WW + NCHK * WCW;      // drop 0.46: where the indices start in the entry
+  generate
+    if (IW > 0) begin : g_pack_idx
+      always_comb begin
+        wflat = '0;
+        for (int j = 0; j < COLS; j++) begin
+          wflat[j*WW +: WW] = wdata[j][WW-1:0];
+          wflat[IDX0 + j*IW +: IW] = wdata[j][WW +: IW];
+        end
+        wflat[COLS*WW +: NCHK*WCW] = wcdata;
+      end
+      always_comb begin
+        wflat2 = '0;
+        for (int j = 0; j < COLS; j++) begin
+          wflat2[j*WW +: WW] = wdata2[j][WW-1:0];
+          wflat2[IDX0 + j*IW +: IW] = wdata2[j][WW +: IW];
+        end
+        wflat2[COLS*WW +: NCHK*WCW] = wcdata2;
+      end
+      always_comb begin
+        for (int j = 0; j < COLS; j++) rdata[j] = {rflat[IDX0 + j*IW +: IW], rflat[j*WW +: WW]};
+      end
+    end else begin : g_pack
+      always_comb begin
+        wflat = '0;
+        for (int j = 0; j < COLS; j++) wflat[j*WW +: WW] = wdata[j];
+        wflat[COLS*WW +: NCHK*WCW] = wcdata;
+      end
+      always_comb begin
+        wflat2 = '0;
+        for (int j = 0; j < COLS; j++) wflat2[j*WW +: WW] = wdata2[j];
+        wflat2[COLS*WW +: NCHK*WCW] = wcdata2;
+      end
+      always_comb begin
+        for (int j = 0; j < COLS; j++) rdata[j] = rflat[j*WW +: WW];
+      end
+    end
+  endgenerate
   always_comb begin
     rflat = '0;
     for (int l = 0; l < LANES; l++) rflat[l*32 +: 32] = rfix[l];
   end
-  always_comb begin
-    for (int j = 0; j < COLS; j++) rdata[j] = rflat[j*WW +: WW];
-  end
-  assign rcdata = rflat[COLS*WW +: WCW];
+  assign rcdata = rflat[COLS*WW +: NCHK*WCW];
 
   generate
     for (genvar l = 0; l < LANES; l++) begin : g_lane

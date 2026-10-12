@@ -5,3 +5,4 @@
 `define VEC_FAULT_ROW 5
 `define VEC_FAULT_COL 7
 `define VEC_FAULT_M 10
+`define VEC_NCHK 1

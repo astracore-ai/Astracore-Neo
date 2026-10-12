@@ -25,8 +25,8 @@ module tb_neo_core;
   logic signed [XW-1:0]  abuf_wdata [ROWS];
   logic                  wbuf_we;
   logic [WAW-1:0]        wbuf_waddr;
-  logic signed [WW-1:0]  wbuf_wdata [COLS];
-  logic signed [WCW-1:0] wcbuf_wdata;
+  logic [WW-1:0]         wbuf_wdata [COLS];      // the core's entry ports are unsigned since drop 0.46 ({index, weight} at NCHK = 4)
+  logic [WCW-1:0]        wcbuf_wdata;
   logic signed [15:0]    cfg_h, cfg_w, cfg_ho, cfg_wo, cfg_s, cfg_p, cfg_k, cfg_ct_n, cfg_tile_pixels;
   logic signed [15:0]    cfg_ct0, cfg_ky0, cfg_kx0, cfg_rn, cfg_contrib_n, cfg_regions_m1, tiles_ready, cfg_oy0, cfg_oy_n, cfg_iy0;
   logic                  seq_err_sticky, rq_err_sticky, seq_fault_inject, rq_fault_inject, rq_tbl_fault_inject;
@@ -60,7 +60,7 @@ module tb_neo_core;
     .cfg_h(cfg_h), .cfg_w(cfg_w), .cfg_ho(cfg_ho), .cfg_wo(cfg_wo), .cfg_oy0(cfg_oy0), .cfg_oy_n(cfg_oy_n), .cfg_iy0(cfg_iy0),
     .cfg_s(cfg_s), .cfg_p(cfg_p),
     .cfg_k(cfg_k), .cfg_ct_n(cfg_ct_n), .cfg_ct0(cfg_ct0), .cfg_ky0(cfg_ky0), .cfg_kx0(cfg_kx0), .cfg_rn(cfg_rn),
-    .cfg_contrib_n(cfg_contrib_n), .cfg_tile_pixels(cfg_tile_pixels), .cfg_regions_m1(cfg_regions_m1),
+    .cfg_contrib_n(cfg_contrib_n), .cfg_tile_pixels(cfg_tile_pixels), .cfg_regions_m1(cfg_regions_m1), .cfg_sparse(1'b0),
     .tiles_ready(tiles_ready), .cfg_m(cfg_m),
     .go(go), .done(done), .busy(busy), .state_dbg(state_dbg), .ct_free(ct_free), .ct_free_idx(ct_free_idx),
     .ext_valid(ext_valid), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(ext_ready),
@@ -95,7 +95,7 @@ module tb_neo_core;
   always @(negedge clk) begin
     cyc++;
     if (rst_n) begin
-      if (!seen_x_xvec && dut.u_dp.f_valid === 1'b1 && $isunknown(dut.u_dp.x_vec[0])) begin
+      if (!seen_x_xvec && dut.u_dp.f_valid === 1'b1 && $isunknown(dut.u_dp.x_vec[7:0])) begin   // byte 0 of the packed row (drop 0.46)
         seen_x_xvec = 1; $display("XMON cycle %0d: feeder x_vec[0] is X while f_valid=1 (seq state %0d, addr %0d)", cyc, dut.u_seq.state, dut.u_dp.u_feeder.addr); end
       if (!seen_x_y && dut.u_dp.valid_out === 1'b1 && $isunknown(dut.u_dp.y[0])) begin
         seen_x_y = 1; $display("XMON cycle %0d: array y[0] is X while valid_out=1", cyc); end
@@ -129,7 +129,8 @@ module tb_neo_core;
       if (!vm_x && dut.u_dp.f_valid === 1'b1) begin
         vm_x = 1;
         $display("VMON cycle %0d: first feeder vector x_vec[0..3] = %0d %0d %0d %0d (seq state %0d, ct %0d ky %0d kx %0d); abuf entry 0 bytes 0..3 = %0d %0d %0d %0d",
-                 cyc, dut.u_dp.x_vec[0], dut.u_dp.x_vec[1], dut.u_dp.x_vec[2], dut.u_dp.x_vec[3], dut.u_seq.state, dut.u_seq.ct, dut.u_seq.ky, dut.u_seq.kx,
+                 cyc, $signed(dut.u_dp.x_vec[7:0]), $signed(dut.u_dp.x_vec[15:8]), $signed(dut.u_dp.x_vec[23:16]), $signed(dut.u_dp.x_vec[31:24]),
+                 dut.u_seq.state, dut.u_seq.ct, dut.u_seq.ky, dut.u_seq.kx,
                  $signed(abuf_mem[0][7:0]), $signed(abuf_mem[0][15:8]), $signed(abuf_mem[0][23:16]), $signed(abuf_mem[0][31:24]));
       end
       if (!vm_y && dut.u_dp.valid_out === 1'b1) begin
@@ -198,8 +199,8 @@ module tb_neo_core;
     for (int a = 0; a < `CORE_N_WBUF; a++) begin
       @(negedge clk);
       wbuf_we = 1'b1; wbuf_waddr = a;
-      for (int j = 0; j < COLS; j++) wbuf_wdata[j] = $signed(wbuf_mem[a][8*j +: 8]);
-      wcbuf_wdata = $signed(wbuf_mem[a][8*COLS +: WCW]);
+      for (int j = 0; j < COLS; j++) wbuf_wdata[j] = wbuf_mem[a][8*j +: 8];
+      wcbuf_wdata = wbuf_mem[a][8*COLS +: WCW];
     end
     @(negedge clk); wbuf_we = 1'b0;
 

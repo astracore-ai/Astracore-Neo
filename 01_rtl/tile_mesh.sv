@@ -8,6 +8,7 @@ module tile_mesh #(
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
   parameter int FETCH_TIMEOUT = 1048575,     // silicon default (drop 0.24): 2^20 - 1, see tile_nic.sv
   parameter int BIST_WORDS = BANK_DEPTH,
+  parameter int NCHK = 1,                    // the cores' check columns: 4 = the 2:4 sparse-capable core (drop 0.46)
   parameter int DV_HOOKS = 0,                // 1: the testbench hooks of the tiles exist (drop 0.35); 0: tied off
   parameter int NW = (NX * NY > 1) ? $clog2(NX * NY) : 1,   // node index width of the hooks
   parameter int BAW = $clog2(BANK_DEPTH)
@@ -87,7 +88,7 @@ module tile_mesh #(
         neo_tile #(.XW(XW), .YW(YW), .NX(NX), .NY(NY), .WPF(WPF),
                    .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH),
                    .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT), .BIST_WORDS(BIST_WORDS),
-                   .DV_HOOKS(DV_HOOKS)) u_t (
+                   .NCHK(NCHK), .DV_HOOKS(DV_HOOKS)) u_t (
           .clk(clk), .rst_n(rst_n), .my_x(XW'(x)), .my_y(YW'(y)),
           .in_valid(t_in_valid), .in_flit(t_in_flit), .in_ready(t_in_ready),
           .out_valid(t_out_valid), .out_flit(t_out_flit), .out_ready(t_out_ready),

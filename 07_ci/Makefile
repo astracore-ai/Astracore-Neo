@@ -24,7 +24,10 @@
 # make nic        : the tile interface's bank-side paths at 16 words per cycle (writeback, serve, packer/unpacker; drop 0.29)
 # make two_layer  : M10: two layers back to back on the mesh with INT8 handoff through the bank
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
-# make verilator  : Verilator: the beat CRC's equivalence (make crc16, first), streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then cocotb: M1-M13 and M10 at 16x8/8x8, M1-M13 and C1 on the 32x32 silicon configuration (drop 0.21)
+# make verilator  : Verilator: the beat CRC's equivalence (make crc16, first), streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then cocotb: M1-M13 and M10 at 16x8/8x8, M1-M13 and C1 on the 32x32 silicon configuration (drop 0.21);
+#                   drop 0.46: the streaming core again on the 2:4 sparse-capable arrays (NCHK = 4, make vectors_sp: 32x32 and 16x8) -- T1-T3
+#                   dense, T6 sparse dataflow, T7 a PE fault per index value and a check weight per check column; these two runs gate the target
+# make vectors_sp : drop 0.46: the vectors of the NCHK = 4 arrays (build/v32_4, build/v168s); make iverilog_sp runs them under Icarus
 # make crc16      : the matrix-form crc16_beat (drop 0.41): the RTL is gen_crc16_beat.py's output, lint-clean at BW 16 / 4 / 1, and equal to the
 #                   serial chain it replaced (tb_crc16_beat.sv: 69,792 vectors, random and the exhaustive basis sweep) under Verilator and Icarus
 # make cocotb_mesh8 : cocotb on Verilator: the mesh-level tests on the silicon mesh, 8x8 tiles of 32x32 cores with 2 MB banks (drop 0.24; its own CI job;
@@ -57,7 +60,7 @@ TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wra
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth crc16
+.PHONY: all model vectors vectors_sp sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog iverilog_sp xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth crc16
 
 all: regress model
 
@@ -66,6 +69,14 @@ model:
 
 vectors:
 	python3 model/systolic_ref.py --rows $(ROWS) --cols $(COLS) --m $(M) --seed $(SEED) --out $(VECDIR)
+
+# drop 0.46: vectors for the 2:4 sparse-capable arrays (NCHK = 4 -- four check columns, the index path, the four-byte row
+# buses): the silicon 32x32 array and the 16x8 core. Besides T1-T3 (dense: the same results and latency as NCHK = 1) they
+# hold T6 (a 2:4 sparse tile of 2*ROWS channels: compressed weights, indices, the four check weights) and T7 (a PE fault
+# under each index value, a check weight per check column)
+vectors_sp:
+	python3 model/systolic_ref.py --rows 32 --cols 32 --m 64 --seed 1 --nchk 4 --out build/v32_4
+	python3 model/systolic_ref.py --rows 16 --cols 8 --m 24 --seed 5 --fault-row 6 --fault-col 3 --nchk 4 --out build/v168s
 
 sim: vectors
 	python3 sim/run_mac_core.py --vectors $(VECDIR)
@@ -145,10 +156,12 @@ iverilog_core: vectors_core
 	iverilog -g2012 -I vectors_core -o build/sim_core.vvp $(RTL) $(TBC)
 	vvp build/sim_core.vvp +VECDIR=vectors_core
 
-regress: vectors
+regress: vectors vectors_sp
 	python3 model/systolic_ref.py --rows 8 --cols 16 --m 20 --seed 7 --fault-row 2 --fault-col 9 --out build/v816
 	python3 sim/run_mac_core.py --vectors build/v816
 	python3 sim/run_mac_core.py --vectors $(VECDIR)
+	python3 sim/run_mac_core.py --vectors build/v168s
+	python3 sim/run_mac_core.py --vectors build/v32_4
 	python3 compiler/neo_compile.py --verify
 	python3 compiler/neo_backend.py --check
 	python3 sim/run_conv_v02.py --skip32
@@ -161,10 +174,12 @@ regress: vectors
 	python3 sim/run_nic.py
 	$(MAKE) cdriver
 
-regress_ci: vectors
+regress_ci: vectors vectors_sp
 	python3 model/systolic_ref.py --rows 8 --cols 16 --m 20 --seed 7 --fault-row 2 --fault-col 9 --out build/v816
 	python3 sim/run_mac_core.py --vectors build/v816
 	python3 sim/run_mac_core.py --vectors $(VECDIR)
+	python3 sim/run_mac_core.py --vectors build/v168s
+	python3 sim/run_mac_core.py --vectors build/v32_4
 	python3 compiler/neo_compile.py --verify
 	python3 compiler/neo_backend.py --check
 	python3 sim/run_noc.py
@@ -178,15 +193,35 @@ iverilog: vectors
 	iverilog -g2012 -I $(VECDIR) -o build/sim.vvp $(RTL) $(TB)
 	vvp build/sim.vvp +VECDIR=$(VECDIR)
 
+# drop 0.46: the streaming core on the NCHK = 4 arrays under Icarus (14; CI's Icarus 12 shows its standing always_comb X
+# failures here too, so the target is not part of hdl-sim)
+iverilog_sp: vectors_sp
+	mkdir -p build
+	iverilog -g2012 -I build/v32_4 -o build/sim_v32_4.vvp $(RTL) $(TB)
+	vvp build/sim_v32_4.vvp +VECDIR=build/v32_4 | tee build/tb_v32_4_iverilog.txt
+	grep -q "^RESULT: ALL PASS" build/tb_v32_4_iverilog.txt
+	iverilog -g2012 -I build/v168s -o build/sim_v168s.vvp $(RTL) $(TB)
+	vvp build/sim_v168s.vvp +VECDIR=build/v168s | tee build/tb_v168s_iverilog.txt
+	grep -q "^RESULT: ALL PASS" build/tb_v168s_iverilog.txt
+
 xrun: vectors
 	xrun -64bit -sv -timescale 1ns/1ps +incdir+$(VECDIR) -top tb_neo_mac_core -access +rwc \
 	     $(RTL) $(TB) +VECDIR=$(VECDIR)
 
-verilator: vectors vectors_core
+verilator: vectors vectors_sp vectors_core
 	$(MAKE) crc16
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD +incdir+$(VECDIR) --top-module tb_neo_mac_core \
 	          $(RTL) $(TB) -o sim
 	./obj_dir/sim +VECDIR=$(VECDIR)
+	mkdir -p build
+	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_v32_4 +incdir+build/v32_4 --top-module tb_neo_mac_core \
+	          $(RTL) $(TB) -o sim
+	./obj_v32_4/sim +VECDIR=build/v32_4 | tee build/tb_v32_4_verilator.txt
+	grep -q "^RESULT: ALL PASS" build/tb_v32_4_verilator.txt
+	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_v168s +incdir+build/v168s --top-module tb_neo_mac_core \
+	          $(RTL) $(TB) -o sim
+	./obj_v168s/sim +VECDIR=build/v168s | tee build/tb_v168s_verilator.txt
+	grep -q "^RESULT: ALL PASS" build/tb_v168s_verilator.txt
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_core +incdir+vectors_core --top-module tb_neo_core \
 	          $(RTL) $(TBC) -o sim_core
 	./obj_core/sim_core +VECDIR=vectors_core
@@ -234,8 +269,9 @@ cocotb_tiles:
 	-$(call timed,tile8) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile8
 	-$(call timed,tile32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32
 	-$(call timed,core32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core32
+	-$(call timed,tile_sp) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_sp
 	-$(call timed,coverage) $(MAKE) -j$(MESH8_BUILD_JOBS) cocotb_coverage
-	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml
+	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml dv/cocotb/results_tile_sp.xml
 
 # the coverage report (drop 0.26, item 5): the 16x8 suite, M10 and C1 rebuilt with Verilator line/toggle coverage and the
 # functional covergroups on; the report and the raw data land in ci_logs/hdl-sim/, which the CI job publishes
@@ -277,12 +313,21 @@ cocotb_mesh8s_run:
 # --unused-regexp default), and lint_off DECLFILENAME on the two files that hold two modules by design. LINTW stays for
 # a local run that wants to waive something (make lint LINTW=-Wno-UNUSEDSIGNAL).
 LINTW ?=
+# drop 0.46: the 2:4 sparse-capable core (NCHK = 4, the silicon configuration) is linted too -- neo_core at 32x32 and
+# 16x8, the 2x2 mesh of 16x8 and of 32x32 cores -- beside the default NCHK = 1 builds (the mesh passes keep one word per
+# flit, as the other lint passes do)
+SILICON_G := -GNCHK=4 -GROWS=32 -GCOLS=32 -GACC_ROWS=512 -GABUF_DEPTH=2048 -GWBUF_DEPTH=1024
+SMALL_G := -GNCHK=4 -GROWS=16 -GCOLS=8 -GACC_ROWS=64 -GABUF_DEPTH=256 -GWBUF_DEPTH=512
 lint:
 	verilator --lint-only -Wall $(LINTW) --top-module neo_core $(RTL)
 	verilator --lint-only -Wall $(LINTW) --top-module noc_mesh $(NOC)
 	verilator --lint-only -Wall $(LINTW) --top-module neo_tile_axil $(TILE) rtl/host_axil.sv rtl/neo_tile_axil.sv
 	verilator --lint-only -Wall $(LINTW) --top-module tile_mesh $(TILE)
-	@echo "lint: four -Wall passes, nothing waived, clean"
+	verilator --lint-only -Wall $(LINTW) $(SILICON_G) --top-module neo_core $(RTL)
+	verilator --lint-only -Wall $(LINTW) $(SMALL_G) --top-module neo_core $(RTL)
+	verilator --lint-only -Wall $(LINTW) $(SMALL_G) --top-module tile_mesh $(TILE)
+	verilator --lint-only -Wall $(LINTW) $(SILICON_G) --top-module tile_mesh $(TILE)
+	@echo "lint: eight -Wall passes (four at NCHK = 4), nothing waived, clean"
 
 # the synthesis job (drop 0.40): synth/synth.py synthesizes every unit of the tile (a module at its silicon parameters, its
 # children black-boxed; the slang front end; the memory leaves priced by a macro model) with Yosys and runs OpenSTA on each
@@ -316,4 +361,4 @@ formal:
 	python3 $(FORMAL_RUN) --dir formal --out formal_out --logs ci_logs/formal --jobs $(FORMAL_JOBS) --timeout $(FORMAL_TIMEOUT)
 
 clean:
-	rm -rf build obj_dir xcelium.d xrun.history xrun.log *.vcd synth_out formal_out
+	rm -rf build obj_dir obj_v32_4 obj_v168s xcelium.d xrun.history xrun.log *.vcd synth_out formal_out

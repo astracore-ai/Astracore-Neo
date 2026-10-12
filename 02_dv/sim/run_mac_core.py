@@ -12,6 +12,13 @@ model/systolic_ref.py.
   T3  abft_clear clears the sticky flag
   T4  double buffering: tile B's shadow weights load while tile A streams, B follows A with
       no drain, both tiles' outputs correct, zero ABFT flags
+  NCHK = 4 (drop 0.46: the sparse-capable core; VEC_NCHK in params.vh): T1-T4 present the dense rows in bytes
+  0..ROWS-1 of the 2*ROWS-byte row, with index 0 and the check weight in column 0; then
+  T6  a 2:4 sparse tile (64 input channels at 32 rows) with sparse = 1: every output and the summed check columns
+      equal the model's dense arithmetic on the pruned weights, zero ABFT flags
+  T7  (a) the MAC fault of T2 while PE(FAULT_ROW, FAULT_COL) holds index 0, 1, 2, 3 (the model's four weight sets):
+      one output off by +1, exactly that row flagged; (b) check column k's weight in row FAULT_ROW off by one, k = 0..3:
+      data untouched, exactly the rows whose channel 4*(FAULT_ROW/2) + k is nonzero flagged
 
 Usage: python3 sim/run_mac_core.py [--vectors vectors]
 """
@@ -68,20 +75,33 @@ def main():
     WCW = WW + (0 if R <= 1 else (R - 1).bit_length()) + 1
     PE_LAT = prm.get("VEC_PE_LAT", 2)
     LAT = PE_LAT * R + C
+    NCHK = prm.get("VEC_NCHK", 1)
+    XB = 2 * R if NCHK > 1 else R
 
     X = read_hex(os.path.join(vec, "x.hex"), 8)
     W = read_hex(os.path.join(vec, "w.hex"), 8)
     WC = read_hex(os.path.join(vec, "wc.hex"), 16)
     Y = read_hex(os.path.join(vec, "y_exp.hex"), 32)
     YC = read_hex(os.path.join(vec, "yc_exp.hex"), 32)
+    if NCHK > 1:
+        XS = read_hex(os.path.join(vec, "x_sp.hex"), 8)
+        WS = read_hex(os.path.join(vec, "w_sp.hex"), 8)
+        IS = [v & 3 for v in read_hex(os.path.join(vec, "i_sp.hex"), 4)]
+        WCS = read_hex(os.path.join(vec, "wc_sp.hex"), 16)
+        YS = read_hex(os.path.join(vec, "y_sp_exp.hex"), 32)
+        YCS = read_hex(os.path.join(vec, "yc_sp_exp.hex"), 32)
+        W7 = read_hex(os.path.join(vec, "w_t7.hex"), 8)
+        I7 = [v & 3 for v in read_hex(os.path.join(vec, "i_t7.hex"), 4)]
+        WC7 = read_hex(os.path.join(vec, "wc_t7.hex"), 16)
+        Y7 = read_hex(os.path.join(vec, "y_t7_exp.hex"), 32)
 
     rtl_dir = os.path.join(os.path.dirname(__file__), "..", "rtl")
     t0 = time.time()
     design = Design(load([os.path.join(rtl_dir, f) for f in RTL]))
-    design.elaborate("neo_mac_core", {"ROWS": R, "COLS": C, "XW": XW, "WW": WW, "PW": PW,
+    design.elaborate("neo_mac_core", {"ROWS": R, "COLS": C, "XW": XW, "WW": WW, "PW": PW, "NCHK": NCHK,
                                       "FAULT_ROW": FR, "FAULT_COL": FC})
     t_elab = time.time() - t0
-    print(f"neosim: elaborated neo_mac_core ROWS={R} COLS={C} (+1 ABFT column) M={M}: "
+    print(f"neosim: elaborated neo_mac_core ROWS={R} COLS={C} (+{NCHK} ABFT column{'s' if NCHK > 1 else ''}) M={M}: "
           f"{len(design.cells)} cells, {len(design.comb_nodes)} comb nodes, {len(design.ff_nodes)} always_ff "
           f"blocks, {t_elab:.1f} s")
 
@@ -91,9 +111,10 @@ def main():
     w_load = design.cell_of("w_load")
     w_in = design.array_of("w_in")
     wc_in = design.cell_of("wc_in")
-    x_in = design.array_of("x_in")
+    x_in = design.cell_of("x_in")                 # drop 0.46: the packed row, byte c at [8c +: 8]
     valid_in = design.cell_of("valid_in")
     swap_in = design.cell_of("swap_in")
+    sparse = design.cell_of("sparse")
     y = design.array_of("y")
     y_chk = design.cell_of("y_chk")
     valid_out = design.cell_of("valid_out")
@@ -108,25 +129,28 @@ def main():
         wc_in.v = 0
         valid_in.v = 0
         swap_in.v = 0
+        sparse.v = 0
         fault_inject.v = 0
         abft_clear.v = 0
         for c in w_in:
             c.v = 0
-        for c in x_in:
-            c.v = 0
+        x_in.v = 0
 
-    def drive_weight_row(Wflat, WCflat, t):
-        """Present shadow-chain row ROWS-1-t of a tile (flat W [R*C], WC [R])."""
+    def drive_weight_row(Wflat, WCflat, t, Iflat=None, nwc=1):
+        """Present shadow-chain row ROWS-1-t of a tile (flat W [R*C], indices I [R*C] (default 0), WC [R*nwc]: nwc check
+        weights per row, column k of row r at r*nwc + k; the check columns above them get zeros)."""
+        r = R - 1 - t
         w_load.v = 1
         for j in range(C):
-            w_in[j].v = to_bits(Wflat[(R - 1 - t) * C + j], WW)
-        wc_in.v = to_bits(WCflat[R - 1 - t], WCW)
+            idx = Iflat[r * C + j] if Iflat is not None else 0
+            w_in[j].v = to_bits(Wflat[r * C + j], WW) | ((idx << WW) if NCHK > 1 else 0)
+        wc_in.v = sum(to_bits(WCflat[r * nwc + k], WCW) << (k * WCW) for k in range(nwc))
 
-    def load_weights(Wflat=None, WCflat=None):
+    def load_weights(Wflat=None, WCflat=None, Iflat=None, nwc=1):
         Wflat = W if Wflat is None else Wflat
         WCflat = WC if WCflat is None else WCflat
         for t in range(R):
-            drive_weight_row(Wflat, WCflat, t)
+            drive_weight_row(Wflat, WCflat, t, Iflat, nwc)
             design.tick()
         w_load.v = 0
         for c in w_in:
@@ -134,21 +158,22 @@ def main():
         wc_in.v = 0
         design.tick()
 
-    def stream(Xrows=None, fault_cycle=-1, load_during=None, drain=True):
+    def stream(Xrows=None, fault_cycle=-1, load_during=None, drain=True, sp=0):
         """Tick 0: swap token. Ticks 1..M: unskewed rows. load_during=(Wflat, WCflat) shifts a new
-        shadow tile in from tick LAT (the double-buffering rule). Returns (outputs, err flags,
-        first-valid tick)."""
+        shadow tile in from tick LAT (the double-buffering rule). sp = 1: Xrows are 2*ROWS-byte sparse rows presented
+        with sparse = 1 (dense rows fill bytes 0..ROWS-1). Returns (outputs, err flags, first-valid tick)."""
         Xrows = X if Xrows is None else Xrows
-        Mr = len(Xrows) // R
+        rb = 2 * R if sp else R                       # bytes per row of Xrows
+        Mr = len(Xrows) // rb
         outs, errs, first = [], [], None
         ticks = Mr + 1 + (LAT + 2 if drain else 0)
+        sparse.v = sp
         for s in range(ticks):
             m = s - 1
             swap_in.v = 1 if s == 0 else 0
             valid_in.v = 1 if 0 <= m < Mr else 0
             fault_inject.v = 1 if s == fault_cycle else 0
-            for i in range(R):
-                x_in[i].v = to_bits(Xrows[m * R + i], XW) if 0 <= m < Mr else 0
+            x_in.v = sum(to_bits(Xrows[m * rb + i], XW) << (XW * i) for i in range(rb)) if 0 <= m < Mr else 0
             if load_during is not None and LAT <= s < LAT + R:
                 drive_weight_row(load_during[0], load_during[1], s - LAT)
             else:
@@ -168,17 +193,20 @@ def main():
             design.tick()
         return outs, errs, first
 
-    def compare(outs):
+    def compare(outs, Yx=None, YCx=None):
+        """Mismatches against Yx (default the dense Y) and the check sums YCx (default YC; False: not compared)."""
+        Yx = Y if Yx is None else Yx
+        YCx = YC if YCx is None else YCx
         mism = []
         for m, row in enumerate(outs):
             if m >= M:
                 mism.append((m, -1, None))
                 continue
             for j in range(C):
-                if row[j] != Y[m * C + j]:
-                    mism.append((m, j, row[j] - Y[m * C + j]))
-            if row[C] != YC[m]:
-                mism.append((m, C, row[C] - YC[m]))
+                if row[j] != Yx[m * C + j]:
+                    mism.append((m, j, row[j] - Yx[m * C + j]))
+            if YCx is not False and row[C] != YCx[m]:
+                mism.append((m, C, row[C] - YCx[m]))
         return mism
 
     fails = 0
@@ -246,7 +274,50 @@ def main():
           f"{len(outs)} rows out, A {'ok' if okA else 'BAD'}, B {'ok' if okB else 'BAD'}, flags {sum(errsA) + sum(errsB)} -> {'PASS' if ok4 else 'FAIL'}")
     fails += not ok4
 
-    print(f"  simulated {2 * (M + LAT + 4) + MA + M + LAT + 6 + R + 7} clocks in {time.time() - t1:.1f} s")
+    nclk = 2 * (M + LAT + 4) + MA + M + LAT + 6 + R + 7
+    if NCHK > 1:
+        # ---- T6: the 2:4 sparse dataflow ----
+        load_weights(WS, WCS, IS, nwc=4)
+        outs, errs, first = stream(XS, sp=1)
+        mism = compare(outs, YS, YCS)
+        ok6 = len(outs) == M and len(errs) == M and not mism and sum(errs) == 0 and first == LAT
+        print(f"  T6 sparse    : {len(outs)} rows of {2 * R} channels (2:4 on {R} rows) x {C} outputs + summed check columns vs golden, "
+              f"{len(mism)} mismatches, {sum(errs)} ABFT flags, first valid after tick {first} -> {'PASS' if ok6 else 'FAIL'}")
+        if mism:
+            print("     first mismatches:", mism[:5])
+        fails += not ok6
+        # ---- T7a: the MAC fault while PE(FR, FC) holds index 0..3 ----
+        for k in range(4):
+            abft_clear.v = 1
+            design.tick()
+            abft_clear.v = 0
+            load_weights(W7[k * R * C:(k + 1) * R * C], WC7[k * R * 4:(k + 1) * R * 4], I7[k * R * C:(k + 1) * R * C], nwc=4)
+            Yk = Y7[k * M * C:(k + 1) * M * C]
+            YCk = [from_bits(sum(Yk[m * C:(m + 1) * C]), PW) for m in range(M)]
+            outs, errs, _ = stream(XS, fault_cycle=cyc, sp=1)
+            mism = compare(outs, Yk, YCk)
+            hit = len(mism) == 1 and mism[0] == (MF, FC, 1)
+            flagged = len(errs) == M and sum(errs) == 1 and errs[MF] == 1
+            print(f"  T7 index {k}   : PE({FR},{FC}) holding index {k} (check column {k} covers it), MAC fault: mismatches={mism}, "
+                  f"flags on rows {[m for m, e in enumerate(errs) if e]} -> {'PASS' if hit and flagged else 'FAIL'}")
+            fails += not (hit and flagged)
+        # ---- T7b: check column k's weight in row FR off by one ----
+        for k in range(4):
+            abft_clear.v = 1
+            design.tick()
+            abft_clear.v = 0
+            wcb = list(WCS)
+            wcb[FR * 4 + k] += 1
+            load_weights(WS, wcb, IS, nwc=4)
+            outs, errs, _ = stream(XS, sp=1)
+            mism = compare(outs, YS, False)
+            expect = [1 if XS[m * 2 * R + 4 * (FR // 2) + k] != 0 else 0 for m in range(M)]
+            ok = len(outs) == M and not mism and errs == expect
+            print(f"  T7 check {k}   : check weight of column {k} in row {FR} off by one: {len(mism)} data mismatches, "
+                  f"{sum(errs)} rows flagged (expect the {sum(expect)} whose channel {4 * (FR // 2) + k} is nonzero) -> {'PASS' if ok else 'FAIL'}")
+            fails += not ok
+        nclk += 9 * (R + 2 + M + LAT + 3)
+    print(f"  simulated {nclk} clocks in {time.time() - t1:.1f} s")
     print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
     return 0 if fails == 0 else 1
 
