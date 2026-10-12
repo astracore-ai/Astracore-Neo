@@ -2,7 +2,8 @@
 //   One 32x32 weight-stationary INT8 systolic core (1024 MACs) with an ABFT check column.
 //   Streaming interface: present one unskewed activation row X[m][0..ROWS-1] per cycle with
 //   valid_in; the matching output row Y[m][0..COLS-1] appears on y with valid_out exactly
-//   LATENCY = ROWS + COLS cycles later, together with the ABFT verdict for that row.
+//   LATENCY = ROWS + COLS cycles later; the ABFT verdict for that row follows two cycles after
+//   valid_out on abft_err, marked by abft_err_valid (drop 0.42: the checker's sum in two stages).
 //   Weight load: hold w_load for ROWS cycles, feeding W[ROWS-1-t][*] (and the check weight
 //   sum_j W[ROWS-1-t][j]) on cycle t into the SHADOW registers; then pulse swap_in for one
 //   cycle immediately before the first row of the tile. The token travels with the data, so
@@ -39,6 +40,7 @@ module neo_mac_core #(
   // safety
   input  logic                  abft_clear,
   output logic                  abft_err,
+  output logic                  abft_err_valid,   // drop 0.42: abft_err is the verdict of the row valid_out showed two cycles before
   output logic                  abft_err_sticky,
   // DV only
   input  logic                  fault_inject
@@ -92,5 +94,5 @@ module neo_mac_core #(
 
   abft_checker #(.COLS(COLS), .PW(PW)) u_abft (
     .clk(clk), .rst_n(rst_n), .valid(valid_out), .y(y), .y_chk(y_chk),
-    .abft_clear(abft_clear), .err(abft_err), .err_sticky(abft_err_sticky));
+    .abft_clear(abft_clear), .err(abft_err), .err_valid(abft_err_valid), .err_sticky(abft_err_sticky));
 endmodule

@@ -181,7 +181,7 @@ module neo_tile #(
   logic signed [PW-1:0]  ext_chk;
   logic signed [PW-1:0]  rd_data [COLS];
   logic signed [PW-1:0]  rd_chk;
-  logic                  rd_valid, rq_valid, busy, ct_free, acc_abft_err;
+  logic                  rd_valid, rq_valid, busy, ct_free, acc_abft_err, acc_abft_err_valid;
   logic signed [7:0]     rq_q [COLS];
   logic [2:0]            state_dbg;
   logic signed [15:0]    ct_free_idx;
@@ -278,10 +278,12 @@ module neo_tile #(
   esm #(.NFLAGS(18)) u_esm (
     .clk(clk), .rst_n(rst_n), .flags(tile_flags), .mask(err_mask), .err_clear(err_clear),
     .wd_enable(wd_enable), .wd_window(wd_window), .wd_kick(wd_kick), .cause(err_cause), .err_pin(err_pin));
-  // what the tile does not read (lint): the core's busy / state / ct_free_idx / unlatched acc_abft, the engines' prog_busy,
-  // the duplicate engine's rdy_clear, the table address bits above the core's columns, the fault index bits above the widest field
+  // what the tile does not read (lint): the core's busy / state / ct_free_idx / unlatched acc_abft and its row marker, the
+  // engines' prog_busy, the duplicate engine's rdy_clear, the table address bits above the core's columns, the fault index bits
+  // above the widest field
   logic unused_tile_bits;
-  assign unused_tile_bits = ^{busy, state_dbg, ct_free_idx, acc_abft_err, prog_busy, d_prog_busy, d_rdy_clear, rq_tbl_addr, dv_fi_idx};
+  assign unused_tile_bits = ^{busy, state_dbg, ct_free_idx, acc_abft_err, acc_abft_err_valid, prog_busy, d_prog_busy, d_rdy_clear,
+                              rq_tbl_addr, dv_fi_idx};
 
   neo_core #(.ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH)) u_core (
     .clk(clk), .rst_n(rst_n),
@@ -298,7 +300,7 @@ module neo_tile #(
     .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid), .rq_q(rq_q), .rq_valid(rq_valid),
     .rq_tbl_we(rq_tbl_we), .rq_tbl_addr(rq_tbl_addr[$clog2(COLS)-1:0]), .rq_tbl_mult(rq_tbl_mult), .rq_tbl_shift(rq_tbl_shift),
     .rq_tbl_zp(rq_tbl_zp), .rq_relu(rq_relu),
-    .err_clear(err_clear), .array_abft_sticky(array_abft_sticky), .acc_abft_err(acc_abft_err),
+    .err_clear(err_clear), .array_abft_sticky(array_abft_sticky), .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid),
     .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky),
     .wbuf_ce_sticky(wbuf_ce), .wbuf_ue_sticky(wbuf_ue), .rq_tbl_perr_sticky(rq_tbl_perr),

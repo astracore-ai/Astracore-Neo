@@ -1,7 +1,7 @@
 // bind_all.sv -- attach the assertion modules to the RTL without touching it. Compile after the RTL.
 bind neo_mac_core neo_mac_core_sva #(.ROWS(ROWS), .COLS(COLS), .PE_LAT(PE_LAT)) u_sva (
   .clk(clk), .rst_n(rst_n), .w_load(w_load), .swap_in(swap_in), .valid_in(valid_in), .valid_out(valid_out),
-  .abft_err(abft_err), .fault_inject(fault_inject));
+  .abft_err(abft_err), .abft_err_valid(abft_err_valid), .fault_inject(fault_inject));
 bind core_seq core_seq_sva u_sva (.clk(clk), .rst_n(rst_n), .go(go), .done(done), .busy(busy), .reduce_ready(reduce_ready),
   .f_start(f_start), .rd_en(rd_en), .w_load(w_load), .state_dbg(state_dbg));
 bind acc_bank acc_bank_sva u_sva (.clk(clk), .rst_n(rst_n), .wr_valid(wr_valid), .ext_valid(ext_valid), .ext_ready(ext_ready),

@@ -36,6 +36,7 @@ module acc_bank #(
   output logic                 rd_valid,
   input  logic                 abft_clear,
   output logic                 abft_err,
+  output logic                 abft_err_valid,   // drop 0.42: abft_err is the verdict of the row rd_valid showed two cycles before
   output logic                 abft_err_sticky
 );
   localparam int RW = (COLS + 1) * PW;              // a row: COLS partial sums and the check sum
@@ -86,5 +87,5 @@ module acc_bank #(
 
   abft_checker #(.COLS(COLS), .PW(PW)) u_abft (
     .clk(clk), .rst_n(rst_n), .valid(rd_valid), .y(rd_data), .y_chk(rd_chk),
-    .abft_clear(abft_clear), .err(abft_err), .err_sticky(abft_err_sticky));
+    .abft_clear(abft_clear), .err(abft_err), .err_valid(abft_err_valid), .err_sticky(abft_err_sticky));
 endmodule

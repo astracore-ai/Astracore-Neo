@@ -12,7 +12,8 @@ numpy convolution; the accumulator's own ABFT is exercised by flipping a bit in 
   C1  conv 40x6x6 -> 7x6x6, k3 s1 p1, 16x8 core (3 channel tiles, 1 output tile)
   C2  conv 20x7x7 -> 10x4x4, k3 s2 p1, 16x8 core (2 channel tiles, 2 output tiles)
   C3  conv 35x5x5 -> 33x5x5, k3 s1 p1, 32x32 core (2 channel tiles, 2 output tiles)
-  C4  accumulator bit-flip at drain -> acc_abft_err on exactly that row
+  C4  accumulator bit-flip at drain -> acc_abft_err on exactly that row (drop 0.42: sampled with acc_abft_err_valid,
+      two cycles behind the drained row; the k-th verdict is row k)
 """
 import math
 import os
@@ -63,7 +64,7 @@ class CoreV02:
             "rst_n", "abuf_we", "abuf_waddr", "cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_s", "cfg_p",
             "cfg_ky", "cfg_kx", "acc_first", "start", "busy", "w_load", "wc_in", "rd_en", "rd_idx",
             "rd_chk", "rd_valid", "abft_clear", "array_abft_err", "array_abft_sticky",
-            "acc_abft_err", "acc_abft_sticky", "fault_inject")}
+            "acc_abft_err", "acc_abft_err_valid", "acc_abft_sticky", "fault_inject")}
         self.abuf_wdata = d.array_of("abuf_wdata")
         self.w_in = d.array_of("w_in")
         self.rd_data = d.array_of("rd_data")
@@ -131,14 +132,16 @@ class CoreV02:
     def drain(self, n_rows):
         self.tick(self.LAT + 3)               # let the last rows reach the accumulator
         out, errs = [], []
-        for r in range(n_rows + 1):
+        for r in range(n_rows + 3):                       # + 2: the last row's ABFT verdict (drop 0.42)
             self.p["rd_en"].v = 1 if r < n_rows else 0
             self.p["rd_idx"].v = r if r < n_rows else 0
             self.tick()
             if self.p["rd_valid"].v:
                 out.append([sbits(c.v, 32) for c in self.rd_data])
+            if self.p["acc_abft_err_valid"].v:              # the verdict of the row drained two cycles before
                 errs.append(self.p["acc_abft_err"].v)
         self.p["rd_en"].v = 0
+        assert len(errs) == len(out), f"{len(errs)} ABFT verdicts for {len(out)} drained rows"
         return np.array(out, dtype=np.int64), errs
 
 

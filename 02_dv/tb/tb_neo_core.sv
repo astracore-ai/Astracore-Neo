@@ -48,7 +48,7 @@ module tb_neo_core;
   logic signed [PW-1:0]  rd_data [COLS];
   logic signed [PW-1:0]  rd_chk;
   logic                  rd_valid;
-  logic                  err_clear, array_abft_sticky, acc_abft_err, acc_abft_sticky, ctrl_err_sticky;
+  logic                  err_clear, array_abft_sticky, acc_abft_err, acc_abft_err_valid, acc_abft_sticky, ctrl_err_sticky;
   logic                  fault_inject, ctrl_fault_inject;
 
   neo_core #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .ACC_ROWS(ACC_ROWS),
@@ -68,7 +68,7 @@ module tb_neo_core;
     .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid), .rq_q(rq_q), .rq_valid(rq_valid),
     .rq_tbl_we(rq_tbl_we), .rq_tbl_addr(rq_tbl_addr), .rq_tbl_mult(rq_tbl_mult), .rq_tbl_shift(rq_tbl_shift),
     .rq_tbl_zp(rq_tbl_zp), .rq_relu(rq_relu),
-    .err_clear(err_clear), .array_abft_sticky(array_abft_sticky), .acc_abft_err(acc_abft_err),
+    .err_clear(err_clear), .array_abft_sticky(array_abft_sticky), .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid),
     .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky),
     .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject),
@@ -85,6 +85,7 @@ module tb_neo_core;
   int out_row = 0;
   int mismatches = 0;
   int acc_flags = 0;
+  int acc_verdicts = 0;        // drop 0.42: acc_abft_err with acc_abft_err_valid, two cycles behind each drained row
 
   // X monitor: report the first cycle each key signal is unknown (which is where a real simulator
   // disagrees with the zero-initialised Python simulator)
@@ -151,12 +152,15 @@ module tb_neo_core;
               $display("  mismatch row %0d col %0d: got %0d expected %0d", out_row, j, rd_data[j], $signed(y_mem[out_row*COLS + j]));
           end
         end
-        if (acc_abft_err) acc_flags++;
       end else begin
         $display("ERROR: more than M=%0d rows drained", M);
         mismatches++;
       end
       out_row++;
+    end
+    if (rst_n && acc_abft_err_valid) begin
+      acc_verdicts++;
+      if (acc_abft_err) acc_flags++;
     end
   end
 
@@ -211,14 +215,14 @@ module tb_neo_core;
       $display("ERROR: timeout waiting for done");
       $finish;
     end
-    repeat (3) @(negedge clk);
+    repeat (5) @(negedge clk);       // the last row's ABFT verdict (+2) and its sticky, the requant's three stages (drop 0.42)
 
-    if (out_row == M && mismatches == 0 && acc_flags == 0 && !array_abft_sticky && !acc_abft_sticky && !ctrl_err_sticky
-        && !seq_err_sticky && !rq_err_sticky)
-      $display("RESULT: ALL PASS (%0d rows drained, no mismatches, no error flags)", out_row);
+    if (out_row == M && acc_verdicts == M && mismatches == 0 && acc_flags == 0 && !array_abft_sticky && !acc_abft_sticky
+        && !ctrl_err_sticky && !seq_err_sticky && !rq_err_sticky)
+      $display("RESULT: ALL PASS (%0d rows drained, %0d ABFT verdicts, no mismatches, no error flags)", out_row, acc_verdicts);
     else
-      $display("RESULT: FAIL (rows=%0d/%0d mismatches=%0d acc_flags=%0d sticky array/acc/ctrl=%0b/%0b/%0b)",
-               out_row, M, mismatches, acc_flags, array_abft_sticky, acc_abft_sticky, ctrl_err_sticky);
+      $display("RESULT: FAIL (rows=%0d/%0d verdicts=%0d mismatches=%0d acc_flags=%0d sticky array/acc/ctrl=%0b/%0b/%0b)",
+               out_row, M, acc_verdicts, mismatches, acc_flags, array_abft_sticky, acc_abft_sticky, ctrl_err_sticky);
     $finish;
   end
 endmodule

@@ -65,8 +65,10 @@ module neo_mac_core_v02 #(
   // safety
   input  logic                  abft_clear,
   output logic                  array_abft_err,       // per-row check at the array output
+  output logic                  array_abft_err_valid, // drop 0.42: the verdicts come two cycles after their rows (valid_out / rd_valid)
   output logic                  array_abft_sticky,
   output logic                  acc_abft_err,         // check at drain, covers the accumulator too
+  output logic                  acc_abft_err_valid,
   output logic                  acc_abft_sticky,
   output logic                  ctrl_err,             // feeder control duplication comparator (R7)
   output logic                  ctrl_err_sticky,
@@ -102,7 +104,7 @@ module neo_mac_core_v02 #(
     .w_load(w_load), .w_in(w_in), .wc_in(wc_in),
     .x_in(x_vec), .valid_in(f_valid), .swap_in(f_swap),
     .y(y), .y_chk(y_chk), .valid_out(valid_out),
-    .abft_clear(abft_clear), .abft_err(array_abft_err), .abft_err_sticky(array_abft_sticky),
+    .abft_clear(abft_clear), .abft_err(array_abft_err), .abft_err_valid(array_abft_err_valid), .abft_err_sticky(array_abft_sticky),
     .fault_inject(fault_inject));
 
   // row index and first flag travel the same LATENCY as the data
@@ -116,5 +118,5 @@ module neo_mac_core_v02 #(
     .wr_valid(valid_out), .wr_idx(idx_d), .wr_first(first_d), .wr_y(y), .wr_chk(y_chk),
     .ext_valid(ext_valid), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(ext_ready),
     .rd_en(rd_en), .rd_idx(rd_idx), .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid),
-    .abft_clear(abft_clear), .abft_err(acc_abft_err), .abft_err_sticky(acc_abft_sticky));
+    .abft_clear(abft_clear), .abft_err(acc_abft_err), .abft_err_valid(acc_abft_err_valid), .abft_err_sticky(acc_abft_sticky));
 endmodule

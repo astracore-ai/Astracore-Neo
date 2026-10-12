@@ -6,7 +6,8 @@
 //       values, expect zero ABFT flags.
 //   T2: re-stream with fault_inject pulsed in the cycle PE(FAULT_ROW,FAULT_COL) processes row
 //       FAULT_M; expect exactly one output off by +1 at (FAULT_M, FAULT_COL) and abft_err
-//       asserted for exactly that row, and abft_err_sticky set.
+//       asserted for exactly that row, and abft_err_sticky set. Drop 0.42: the verdict of a row comes
+//       two cycles after its valid_out, on abft_err with abft_err_valid; the k-th abft_err_valid is row k.
 //   Run: make iverilog | make xrun | make verilator   (see Makefile)
 `timescale 1ns/1ps
 `include "params.vh"
@@ -38,6 +39,7 @@ module tb_neo_mac_core;
   logic                  valid_out;
   logic                  abft_clear;
   logic                  abft_err;
+  logic                  abft_err_valid;
   logic                  abft_err_sticky;
   logic                  fault_inject;
 
@@ -45,7 +47,7 @@ module tb_neo_mac_core;
                  .FAULT_ROW(FR), .FAULT_COL(FC)) dut (
     .clk(clk), .rst_n(rst_n), .w_load(w_load), .w_in(w_in), .wc_in(wc_in),
     .x_in(x_in), .valid_in(valid_in), .swap_in(swap_in), .y(y), .y_chk(y_chk), .valid_out(valid_out),
-    .abft_clear(abft_clear), .abft_err(abft_err), .abft_err_sticky(abft_err_sticky),
+    .abft_clear(abft_clear), .abft_err(abft_err), .abft_err_valid(abft_err_valid), .abft_err_sticky(abft_err_sticky),
     .fault_inject(fault_inject));
 
   // ---------------- golden vectors ----------------
@@ -60,6 +62,7 @@ module tb_neo_mac_core;
   int out_row;                 // index of the next expected output row
   int mismatches;              // total mismatching outputs (data + check column)
   int err_rows;                // rows with abft_err asserted
+  int err_row;                 // the row the next abft_err_valid reports (drop 0.42)
   // mismatch record: flops written by the scoreboard process only (non-blocking), cleared by sb_clear
   logic signed [31:0] first_mm_row, first_mm_col;
   logic signed [63:0] first_mm_delta;
@@ -70,7 +73,7 @@ module tb_neo_mac_core;
     sb_clear = 1'b1;
     @(negedge clk); @(negedge clk);
     sb_clear = 1'b0;
-    out_row = 0; mismatches = 0; err_rows = 0;
+    out_row = 0; mismatches = 0; err_rows = 0; err_row = 0;
     for (int m = 0; m < M; m++) err_at_row[m] = 1'b0;
   endtask
 
@@ -96,12 +99,21 @@ module tb_neo_mac_core;
           first_mm_row <= out_row; first_mm_col <= COLS;
           first_mm_delta <= longint'(y_chk) - longint'($signed(yc_mem[out_row]));
         end
-        if (abft_err) begin err_rows++; err_at_row[out_row] = 1'b1; end
       end else begin
         $display("ERROR: valid_out asserted for more than M=%0d rows", M);
         mismatches++;
       end
       out_row++;
+    end
+    // the ABFT verdicts, two cycles behind their rows (drop 0.42)
+    if (rst_n && abft_err_valid && !sb_clear) begin
+      if (err_row < M) begin
+        if (abft_err) begin err_rows++; err_at_row[err_row] = 1'b1; end
+      end else begin
+        $display("ERROR: abft_err_valid asserted for more than M=%0d rows", M);
+        mismatches++;
+      end
+      err_row++;
     end
   end
 
@@ -150,7 +162,7 @@ module tb_neo_mac_core;
 
   // Cycle 0: swap token (shadow -> active). Cycles 1..M: unskewed rows. fault_cycle < 0 disables injection.
   task automatic stream_rows(input int fault_cycle);
-    for (int s = 0; s < M + 1 + LAT + 2; s++) begin
+    for (int s = 0; s < M + 1 + LAT + 4; s++) begin   // + 2: the last verdict (drop 0.42)
       @(negedge clk);
       swap_in      = (s == 0);
       valid_in     = (s >= 1 && s <= M);
@@ -185,18 +197,18 @@ module tb_neo_mac_core;
     // ---- T1: clean dataflow ----
     clear_scoreboard();
     stream_rows(-1);
-    if (out_row == M && mismatches == 0 && err_rows == 0 && !abft_err_sticky) begin
+    if (out_row == M && err_row == M && mismatches == 0 && err_rows == 0 && !abft_err_sticky) begin
       $display("T1 dataflow  : %0d rows x %0d outputs + check column match golden, 0 ABFT flags -> PASS", M, COLS);
     end else begin
-      $display("T1 dataflow  : rows=%0d/%0d mismatches=%0d err_rows=%0d sticky=%0b -> FAIL (first mismatch row %0d col %0d delta %0d)",
-               out_row, M, mismatches, err_rows, abft_err_sticky, first_mm_row, first_mm_col, first_mm_delta);
+      $display("T1 dataflow  : rows=%0d/%0d verdicts=%0d mismatches=%0d err_rows=%0d sticky=%0b -> FAIL (first mismatch row %0d col %0d delta %0d)",
+               out_row, M, err_row, mismatches, err_rows, abft_err_sticky, first_mm_row, first_mm_col, first_mm_delta);
       fails++;
     end
 
     // ---- T2: single MAC fault in PE(FR,FC) while row MF passes through ----
     clear_scoreboard();
     stream_rows(1 + MF + PE_LAT * FR + FC);
-    if (out_row == M && mismatches == 1 && first_mm_row == MF && first_mm_col == FC && first_mm_delta == 1
+    if (out_row == M && err_row == M && mismatches == 1 && first_mm_row == MF && first_mm_col == FC && first_mm_delta == 1
         && err_rows == 1 && err_at_row[MF] && abft_err_sticky) begin
       $display("T2 MAC fault : PE(%0d,%0d) fault -> output (%0d,%0d) off by +1 only, ABFT flags exactly row %0d, sticky set -> PASS",
                FR, FC, MF, FC, MF);
