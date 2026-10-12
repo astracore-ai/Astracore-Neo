@@ -61,6 +61,7 @@ class CoreV02:
         d = self.d
         self.p = {n: d.cell_of(n) for n in (
             "rst_n", "abuf_we", "abuf_waddr", "cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_s", "cfg_p",
+            "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_tile_pixels", "cfg_regions_m1", "cfg_ct",
             "cfg_ky", "cfg_kx", "acc_first", "start", "busy", "w_load", "wc_in", "rd_en", "rd_idx",
             "rd_chk", "rd_valid", "abft_clear", "array_abft_err", "array_abft_sticky",
             "acc_abft_err", "acc_abft_sticky", "fault_inject")}
@@ -151,7 +152,10 @@ def conv_on_core(core: CoreV02, x, wgt, s, p, poke=None):
     wo = (w + 2 * p - k) // s + 1
     M = ho * wo
     R, C = core.R, core.C
-    for n, v in (("cfg_h", h), ("cfg_w", w), ("cfg_ho", ho), ("cfg_wo", wo), ("cfg_s", s), ("cfg_p", p)):
+    # the whole output grid is one M-chunk (oy0 = 0, oy_n = ho, iy0 = 0) and every channel tile is written at entry 0
+    # (one region: ct = 0, regions_m1 = 0); undriven, oy_n = 0 made the feeder's last row unreachable (drop 0.41 fix)
+    for n, v in (("cfg_h", h), ("cfg_w", w), ("cfg_ho", ho), ("cfg_wo", wo), ("cfg_s", s), ("cfg_p", p),
+                 ("cfg_oy0", 0), ("cfg_oy_n", ho), ("cfg_iy0", 0), ("cfg_tile_pixels", h * w), ("cfg_regions_m1", 0), ("cfg_ct", 0)):
         core.p[n].v = bits(v, 16)
     cin_tiles, cout_tiles = math.ceil(cin / R), math.ceil(cout / C)
     y = np.zeros((cout, ho, wo), dtype=np.int64)

@@ -12,6 +12,10 @@ full result and must equal a direct numpy convolution.
   K1  40x6x6 -> 7x6x6 k3 split over 3 cores (16x8): owner result bit-exact, no error flags
   K2  one forwarded partial-sum row has a bit flipped on the way: the owner's drain-time ABFT
       flags exactly that row (the reduction transfer is covered by the check column)
+  K3  drop 0.41 (the accumulator's two-cycle read-modify-write): contributor B's row 0 is held back and delivered last,
+      so the owner's last accepted partial sum is on row 0, the first row its drain reads -- the drain must start one cycle
+      after that row's write (core_seq's reduce-to-drain cycle); result bit-exact. K1 already delivers the two
+      contributors' rows of one index back to back (they drain in lockstep), which only the accumulator's forward keeps exact
 """
 import math
 import os
@@ -64,8 +68,9 @@ def setup(core, x, wgt, s, p, ct_range, contrib_n):
     return M
 
 
-def run_split(x, wgt, s, p, corrupt=None):
-    """corrupt = (contributor index, row) flips a bit of that forwarded partial-sum row."""
+def run_split(x, wgt, s, p, corrupt=None, hold_b0=False):
+    """corrupt = (contributor index, row) flips a bit of that forwarded partial-sum row; hold_b0 delivers contributor B's
+    row 0 after every other row (K3)."""
     cin = x.shape[0]
     R, C = 16, 8
     cin_tiles = math.ceil(cin / R)
@@ -83,6 +88,7 @@ def run_split(x, wgt, s, p, corrupt=None):
     for c in cores:
         c.p["go"].v = 0
     fifo = []                      # partial-sum rows in flight to the owner: (idx, data, chk)
+    held = []                      # K3: contributor B's row 0, delivered when everything else has been
     rows_from = [0, 0]
     out, errs = [], []
     cycles = 0
@@ -97,8 +103,13 @@ def run_split(x, wgt, s, p, corrupt=None):
                 chk = sbits(c.p["rd_chk"].v, 32)
                 if corrupt is not None and corrupt == (i, rows_from[i]):
                     data[2] ^= 1 << 7
-                fifo.append((rows_from[i], data, chk))
+                if hold_b0 and (i, rows_from[i]) == (1, 0):
+                    held.append((rows_from[i], data, chk))
+                else:
+                    fifo.append((rows_from[i], data, chk))
                 rows_from[i] += 1
+        if held and not fifo and rows_from == [M, M]:
+            fifo.append(held.pop())
         # mesh delivers to the owner's reduce port, one row per cycle, only when accepted
         owner_ready = owner.p["reduce_ready"].v and owner.p["ext_ready"].v
         if fifo and owner_ready:
@@ -161,6 +172,16 @@ def main():
     print(f"  K2: bit 7 of column 2 flipped in contributor B's row 9 on the way to the owner: "
           f"owner drain flags rows {flagged} (expect [9]), wrong rows {wrong_rows} (expect [9]), sticky={owner.p['acc_abft_sticky'].v} -> {'PASS' if ok2 else 'FAIL'}")
     fails += not ok2
+    out, errs, cycles, fwd, owner = run_split(x, wgt, 1, 1, hold_b0=True)
+    got = np.zeros_like(ref)
+    for m in range(M):
+        for c in range(7):
+            got[c, m // ref.shape[2], m % ref.shape[2]] = out[m, c]
+    wrong_rows = sorted({int(i[1] * ref.shape[2] + i[2]) for i in np.argwhere(got != ref)})
+    ok3 = out.shape[0] == M and not wrong_rows and sum(errs) == 0 and fwd == 2 * M and owner.p["acc_abft_sticky"].v == 0
+    print(f"  K3: contributor B's row 0 delivered last (the owner's drain reads row 0 first): {fwd} rows reduced, {cycles} cycles, "
+          f"wrong rows {wrong_rows} (expect []), flags {sum(errs)} -> {'PASS' if ok3 else 'FAIL'}")
+    fails += not ok3
     print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
     return 1 if fails else 0
 
