@@ -8,7 +8,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from neosim import Design, load
 rtl = os.path.join(HERE, "..", "rtl")
 def run(stuck=None, stuck2=None):
-    d = Design(load([os.path.join(rtl, f) for f in ("ecc39.sv", "sram_bank.sv", "mbist.sv", "bank_bist_wrap.sv")]))
+    d = Design(load([os.path.join(rtl, f) for f in ("ecc39.sv", "neo_mem.sv", "sram_bank.sv", "mbist.sv", "bank_bist_wrap.sv")]))
     d.elaborate("bank_bist_wrap", {"DEPTH": 64, "BIST_WORDS": 64})
     p = {n: d.cell_of(n) for n in ("rst_n", "we", "wrow", "wmask", "wdata", "re", "rrow", "rdata", "rvalid", "err_clear",
                                    "ecc_ce_sticky", "ecc_ue_sticky", "bist_start", "bist_active", "bist_done", "bist_fail", "bist_fail_addr", "bist_fail_ce")}
@@ -21,8 +21,8 @@ def run(stuck=None, stuck2=None):
         for st in (stuck, stuck2):
             if st is not None:
                 addr, bit = st
-                c = d.cells[f"top.u_bank.mem[{addr % 16},{addr // 16}]"]      # lane, row
-                c.v |= (1 << bit)                 # a stuck-at-1 in the array: the bit never stores a 0
+                c = d.cells[f"top.u_bank.u_mem.mem[{addr // 16}]"]            # the row word; lane addr % 16 at bits [39 * lane +: 39] (drop 0.40)
+                c.v |= (1 << (bit + 39 * (addr % 16)))   # a stuck-at-1 in the array: the bit never stores a 0
         if cycles > 20000: raise RuntimeError("mbist did not finish")
     return d, p, cycles
 fails = 0

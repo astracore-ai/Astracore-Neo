@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "compiler"))
 from neosim import Design, load  # noqa: E402
 from neo_compile import direct_conv  # noqa: E402
 
-RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv",
+RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv", "neo_mem.sv",
        "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "wbuf_mem.sv", "requant.sv",
        "neo_core.sv", "noc_router.sv", "ecc39.sv", "sram_bank.sv", "crc16_word.sv", "tile_nic.sv", "tile_dma.sv",
        "mbist.sv", "bank_bist_wrap.sv", "crc16_beat.sv", "prog_mem.sv", "host_if.sv", "esm.sv", "link_pack.sv", "neo_tile.sv", "tile_mesh.sv"]
@@ -111,15 +111,26 @@ class Mesh:
         self.clocks += n
 
     def bank_cell(self, node, addr):
-        return self.d.cells[f"top.g_y[{node // NX}].g_x[{node % NX}].u_t.u_bank.u_bank.mem[{addr % 16},{addr // 16}]"]   # lane, row (drop 0.28)
+        """The 624-bit row of the bank's leaf array that holds word addr (drop 0.40); the word is lane addr % 16 of it,
+        bits [39 * lane +: 39] -- bank_write / bank_read / the fault pokes shift by bank_lane_shift(addr)."""
+        return self.d.cells[f"top.g_y[{node // NX}].g_x[{node % NX}].u_t.u_bank.u_bank.u_mem.mem[{addr // 16}]"]   # row
+
+    @staticmethod
+    def bank_lane_shift(addr):
+        return 39 * (addr % 16)
 
     def bank_write(self, node, addr, word):
         """Backdoor write of a 32-bit word as its (39,32) codeword, the way the bank's own write port stores it."""
         p, op = ecc_encode(word)
-        self.bank_cell(node, addr).v = (op << 38) | (p << 32) | (word & 0xFFFFFFFF)
+        cell, sh = self.bank_cell(node, addr), self.bank_lane_shift(addr)
+        cell.v = (cell.v & ~(((1 << 39) - 1) << sh)) | ((((op << 38) | (p << 32) | (word & 0xFFFFFFFF))) << sh)
 
     def bank_read(self, node, addr):
-        return self.bank_cell(node, addr).v & 0xFFFFFFFF
+        return (self.bank_cell(node, addr).v >> self.bank_lane_shift(addr)) & 0xFFFFFFFF
+
+    def bank_flip(self, node, addr, bit):
+        """A bit of word addr's stored codeword flipped in the array (bit 0..38)."""
+        self.bank_cell(node, addr).v ^= 1 << (bit + self.bank_lane_shift(addr))
 
     # ---- host register access (the way the island's firmware or the PCIe driver talks to a tile) ----
     def reg_write(self, node, addr, val):
@@ -376,8 +387,8 @@ def main():
         mesh.bank_write(src, A0 + i, wd)
     for i, wd in enumerate(wts):
         mesh.bank_write(src, W0 + i, wd)
-    mesh.bank_cell(src, A0 + 40).v ^= 1 << 13           # data bit 13 of activation word 40 flipped in the bank
-    mesh.bank_cell(src, W0 + 7).v ^= 1 << 35            # a check bit of weight word 7 flipped
+    mesh.bank_flip(src, A0 + 40, 13)                    # data bit 13 of activation word 40 flipped in the bank
+    mesh.bank_flip(src, W0 + 7, 35)                     # a check bit of weight word 7 flipped
     mesh.descriptor(0, 6, 6, ho, wo, s, p, k, cin_tiles, 0, cin_tiles * k * k, 0, M)
     prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(cin_tiles)]
     prog += [ins(OP_FETCH_W, 1, 1, W0, cin_tiles * WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, M),
@@ -606,10 +617,10 @@ def main():
     cause_clean = mesh.reg_read(0, REG_ERR_CAUSE)
     mesh.reg_write(0, REG_MBIST, 1)
     mesh.tick(2)                                                # done drops two cycles after the start write
-    cell = mesh.d.cells["top.g_y[0].g_x[0].u_t.u_bank.u_bank.mem[11,0]"]
+    cell, sh = mesh.bank_cell(0, 11), mesh.bank_lane_shift(11)  # word 11 = lane 11 of row 0
     n = 0
     while not (mesh.reg_read(0, REG_MBIST) & 2):
-        cell.v |= 1 << 3                                        # stuck-at-1 at word 11 bit 3
+        cell.v |= 1 << (3 + sh)                                 # stuck-at-1 at word 11 bit 3
         n += 1
         if n > 2000:
             break

@@ -34,7 +34,7 @@ from neosim import Design, load  # noqa: E402
 from neo_compile import direct_conv  # noqa: E402
 
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv",
-       "abft_checker.sv", "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv",
+       "abft_checker.sv", "neo_mem.sv", "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv",
        "core_seq.sv", "ecc39.sv", "wbuf_mem.sv", "requant.sv", "neo_core.sv"]
 S_WAIT = 4
 
@@ -148,7 +148,7 @@ class NeoCore:
             self.p["rq_fault_inject"].v = 1 if (rq_fault and self.p["rd_valid"].v) else 0
             if poke is not None and not poked and self.p["state_dbg"].v == S_WAIT:
                 self.tick(2 * self.R + self.C + 2)   # let the pipeline land (PE_LAT = 2), then corrupt memory
-                self.d.cells[f"top.u_dp.u_acc.acc[{poke[0]},{poke[1]}]"].v ^= 1 << 5
+                self.d.cells[f"top.u_dp.u_acc.u_mem.mem[{poke[0]}]"].v ^= 1 << (5 + 32 * poke[1])   # row word, column slice (drop 0.40)
                 poked = True
             self.tick()
             if self.p["rd_valid"].v:
@@ -391,8 +391,10 @@ def late_tests(rng, fails, mult, shift, zp, x, wgt, ref):
     # C9: weight-buffer ECC: a bit flipped in a stored weight codeword is corrected on read
     core = NeoCore(16, 8, acc_rows=64, abuf_depth=256, wbuf_depth=512)
     got, acc_errs, _ = conv_on_core(core, x, wgt, 1, 1)         # loads the buffers
-    core.d.cells["top.u_wbuf.mem[50,0,0]"].v ^= 1 << 9       # a data bit of entry 100 (pair 50, lower entry), lane 0 -- pairs since drop 0.32
-    core.d.cells["top.u_wbuf.mem[3,1,1]"].v ^= 1 << 34        # a check bit of entry 7 (pair 3, upper entry), lane 1
+    # the buffer's leaf holds a pair of coded entries per word, lane l of entry e at bits [39 * (LANES * e + l) +: 39] (drop 0.40)
+    lanes = (8 * core.C + (8 + (core.R - 1).bit_length() + 1) + 31) // 32   # (COLS * 8 + WCW + 31) / 32 = 3 at 16x8
+    core.d.cells["top.u_wbuf.u_mem.mem[50]"].v ^= 1 << (9 + 39 * (lanes * 0 + 0))    # a data bit of entry 100 (pair 50, lower entry), lane 0
+    core.d.cells["top.u_wbuf.u_mem.mem[3]"].v ^= 1 << (34 + 39 * (lanes * 1 + 1))    # a check bit of entry 7 (pair 3, upper entry), lane 1
     core.p["err_clear"].v = 1; core.tick(); core.p["err_clear"].v = 0
     out, errs, _ = core.execute(6, 6, 6, 6, 1, 1, 3, 3, 36, 36)   # re-execute the same descriptor without rewriting the buffers
     got2 = np.zeros_like(ref)

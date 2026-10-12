@@ -50,7 +50,7 @@ def flit(typ, words, hdr=0, tag=0, src=(1, 1), dst=(0, 0), partition=0):
 
 class Nic:
     def __init__(self, rows=16, cols=8):
-        self.d = Design(load([os.path.join(rtl, f) for f in ("crc16_word.sv", "crc16_beat.sv", "tile_nic.sv")]))
+        self.d = Design(load([os.path.join(rtl, f) for f in ("crc16_word.sv", "crc16_beat.sv", "neo_mem.sv", "tile_nic.sv")]))
         self.rows, self.cols = rows, cols
         self.wcw = 8 + (rows - 1).bit_length() + 1
         self.wpa, self.wpw = rows * 8 // 32, (cols * 8 + self.wcw + 31) // 32

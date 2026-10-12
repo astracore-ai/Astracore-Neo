@@ -28,7 +28,7 @@ from neosim import Design, load  # noqa: E402
 from neo_compile import direct_conv  # noqa: E402
 
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv",
-       "abft_checker.sv", "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv"]
+       "abft_checker.sv", "neo_mem.sv", "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv"]
 
 
 def pow2_at_least(n):
@@ -185,8 +185,8 @@ def conv_on_core(core: CoreV02, x, wgt, s, p, poke=None):
             core.run(ky, kx, first=(i == 0), next_tile=nxt)
         if poke is not None and nt == 0:
             core.tick(core.LAT + 3)
-            cell = core.d.cells[f"top.u_acc.acc[{poke[0]},{poke[1]}]"]
-            cell.v ^= 1 << 5
+            cell = core.d.cells[f"top.u_acc.u_mem.mem[{poke[0]}]"]          # the row word; column poke[1] at bits [32 * poke[1] +: 32] (drop 0.40)
+            cell.v ^= 1 << (5 + 32 * poke[1])
         out, errs = core.drain(M)
         acc_errs.append(errs)
         cc = min(C, cout - nt * C)
