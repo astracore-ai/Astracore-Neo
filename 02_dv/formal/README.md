@@ -46,8 +46,9 @@ Mode prove is a full proof: k-induction for smtbmc (k = the induction length it 
 
 All ten are full proofs (link_pack two tasks since drop 0.42); no task needed the bounded fallback. The whole set with
 the drop 0.42 packer: 480 s sequential in the sandbox, with other agents' builds beside it (the drop 0.41 set of nine:
-214 s, link_pack 116 s of it); on the runner (run 170, A2a's PR, two at a time) 210 s, link_pack_stream 207.9 s and
-link_pack_parity 10.5 s of it. Run 159 (drop 0.40): 69 s two at a time on the runner, where the job took about two
+214 s, link_pack 116 s of it); on the runner (run 172, A2a's PR at its last RTL, two at a time) 177 s, link_pack_stream
+175.0 s and link_pack_parity 10.9 s of it (run 170, before the unpacker's last change: 210 s, 207.9 s and 10.5 s). Run
+159 (drop 0.40): 69 s two at a time on the runner, where the job took about two
 minutes with the 19 s tool install (budget: 20 minutes; the per-task timeout of 600 s keeps a hard proof from holding the
 job).
 
