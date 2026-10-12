@@ -12,6 +12,10 @@ run_tiles.py -- tile_mesh (2x2 neo_tile) under neosim: the core on the mesh.
       writes the full result to (1,1)'s bank.
   M3  a payload bit of a fetch-response flit is flipped in the destination router's output register,
       past the last link parity check: the tile's end-to-end CRC flags it, link parity stays clean.
+  ...
+  M20 (drop 0.46) a 2:4 sparse layer on the mesh of NCHK = 4 cores: neo_backend's validator, compressed weights, sparse
+      activation layout, descriptors (cfg_flags = 1) and K-split DMA programs, executed as emitted, bit-exact
+      (`python3 sim/run_tile_test.py M20`; test_tile_mesh.py's M20 is the cocotb version on three channel tiles).
 """
 import math
 import os
@@ -25,6 +29,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "compiler"))
 from neosim import Design, load  # noqa: E402
 from neo_compile import direct_conv  # noqa: E402
+import neo_backend as nb  # noqa: E402
 
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv", "neo_mem.sv",
        "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "wbuf_mem.sv", "requant.sv",
@@ -39,7 +44,8 @@ REG_RQ_TBL, REG_RQ_ADDR, REG_RQ_RELU = 0x30, 0x31, 0x32
 REG_CTRL, REG_STATUS, REG_PROG_ADDR, REG_PROG_LO, REG_PROG_HI, REG_ERR_MASK, REG_ERR_CAUSE, REG_WD_CTRL, REG_WD_KICK, REG_SELFTEST = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 REG_CFG_BASE, REG_CFG_M = 0x10, 0x24
 CFG_ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_ct0",
-             "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1"]
+             "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1",
+             "cfg_flags"]                     # 0x22 (drop 0.46): bit 0 the layer is 2:4 sparse (the NCHK = 4 core)
 OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR, OP_DRAIN_PSUM, OP_GO, OP_WAIT_FREE, OP_WAIT_DONE, OP_END = 1, 2, 3, 4, 5, 6, 7, 8
 OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE = 9, 10, 11
 
@@ -77,13 +83,15 @@ def sbits(v, w):
 
 
 class Mesh:
-    def __init__(self, fetch_timeout=8192, bist_words=4096, rows=ROWS, cols=COLS):
+    def __init__(self, fetch_timeout=8192, bist_words=4096, rows=ROWS, cols=COLS, nchk=1):
         rtl = os.path.join(HERE, "..", "rtl")
         self.d = Design(load([os.path.join(rtl, f) for f in RTL]))
         self.rows, self.cols = rows, cols
-        self.d.elaborate("tile_mesh", {"NX": NX, "NY": NY, "ROWS": rows, "COLS": cols, "ACC_ROWS": 64,
-                                       "ABUF_DEPTH": 256, "WBUF_DEPTH": 512, "BANK_DEPTH": 4096,
-                                       "FETCH_TIMEOUT": fetch_timeout, "BIST_WORDS": bist_words, "WPF": WPF})
+        params = {"NX": NX, "NY": NY, "ROWS": rows, "COLS": cols, "ACC_ROWS": 64, "ABUF_DEPTH": 256, "WBUF_DEPTH": 512,
+                  "BANK_DEPTH": 4096, "FETCH_TIMEOUT": fetch_timeout, "BIST_WORDS": bist_words, "WPF": WPF}
+        if nchk > 1:
+            params["NCHK"] = nchk                     # drop 0.46: the 2:4 sparse-capable cores (M20)
+        self.d.elaborate("tile_mesh", params)
         d = self.d
         self.N = NX * NY
         arr = lambda n: d.array_of(n)  # noqa: E731
@@ -186,39 +194,13 @@ class Mesh:
                 "lost": [c.v for c in self.lost_err], "timeout": [c.v for c in self.fetch_timeout]}
 
 
-def pack_words(x, wgt, cin_tiles, k, cout, rows=None, cols=None):
+def pack_words(x, wgt, cin_tiles, k, cout, rows=None, cols=None, nchk=1, sparse=False):
     """Activation entries (ROWS/4 words each, channel c in byte c%4 of word c//4) per channel tile, and
-    weight entries (COLS weight bytes, then the check weight in the next WCW bits) per tile row."""
-    ROWS = rows if rows is not None else globals()["ROWS"]
-    COLS = cols if cols is not None else globals()["COLS"]
-    WCW = 8 + (ROWS - 1).bit_length() + 1
-    WPA, WPW = ROWS * 8 // 32, (COLS * 8 + WCW + 31) // 32
-    cin, h, w = x.shape
-    act = []
-    for ct in range(cin_tiles):
-        rr = min(ROWS, cin - ct * ROWS)
-        for yy in range(h):
-            for xx in range(w):
-                words = [0] * WPA
-                for c in range(ROWS):
-                    val = int(x[ct * ROWS + c, yy, xx]) if c < rr else 0
-                    words[c // 4] |= (val & 0xFF) << (8 * (c % 4))
-                act.extend(words)
-    wts = []
-    for ct in range(cin_tiles):
-        rr = min(ROWS, cin - ct * ROWS)
-        for ky in range(k):
-            for kx in range(k):
-                for r in range(ROWS):
-                    words = [0] * WPW
-                    tot = 0
-                    for c in range(COLS):
-                        val = int(wgt[c, ct * ROWS + r, ky, kx]) if (r < rr and c < cout) else 0
-                        tot += val
-                        words[c // 4] |= (val & 0xFF) << (8 * (c % 4))
-                    words[(COLS * 8) // 32] |= (tot & ((1 << WCW) - 1))
-                    wts.extend(words)
-    return act, wts
+    weight entries (COLS weight bytes, then the check weight in the next WCW bits) per tile row. Drop 0.46: the
+    compiler's packer (neo_backend.pack_words) -- nchk = 4 the entry of the sparse-capable core ({indices, four check
+    weights, weights}), sparse = True a 2:4 layer (64-channel tiles, compressed weights)."""
+    return nb.pack_words(x, wgt, cin_tiles, k, cout, rows if rows is not None else ROWS, cols if cols is not None else COLS,
+                         nchk=nchk, sparse=sparse)
 
 
 def read_rows(mesh, node, addr, M):
@@ -692,6 +674,59 @@ def main():
           f"requester timed out (cause 0x{c0:05x}) and its program completed -> {'PASS' if ok13 else 'FAIL'}; same request within one partition clean "
           f"(0x{c0b:05x}/0x{c3b:05x}) -> {'PASS' if ok13b else 'FAIL'} ({time.time() - t0:.0f} s)")
     fails += not (ok13 and ok13b)
+
+    # ---------------- M20: a 2:4 sparse layer through the compiler and the DMA (drop 0.46; the NCHK = 4 cores) ----------------
+    # the neosim-sized version of test_tile_mesh.py's M20: one sparse channel tile of 2*ROWS channels (32 at 16 rows), k3,
+    # split over two tiles by the compiler (the contributor starts inside the tile, at a nonzero cfg_ky0 / cfg_kx0)
+    t0 = time.time()
+    rng20 = np.random.default_rng(23)
+    cin20 = 2 * ROWS
+    x20 = rng20.integers(-128, 128, size=(cin20, 6, 6), dtype=np.int64)
+    dense20 = rng20.integers(-128, 128, size=(7, cin20, 3, 3), dtype=np.int64)
+    try:
+        nb.check_2_4(dense20)
+        rejected = False
+    except ValueError:
+        rejected = True                                         # the validator refuses the unpruned tensor
+    w20 = nb.prune_2_4(dense20)                                 # training-side pruning; ground truth: dense arithmetic on it
+    ref20 = direct_conv(x20, w20, 1, 1)
+    ct20 = nb.geometry(cin20, 7, 3, ROWS, COLS, 4, sparse=True)[0]
+    act20, wts20 = nb.pack_words(x20, w20, ct20, 3, 7, ROWS, COLS, nchk=4, sparse=True)
+    a20, w20_base = 0, 512
+    lp = nb.compile_layer("sparse_m20", 6, 6, cin20, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(1, 1), act_base=a20,
+                          w_bank=(1, 1), w_base=w20_base, owner=(0, 0), shares=2, nchk=4, sparse=True)
+    mesh = Mesh(nchk=4)
+    for i, wd in enumerate(act20):
+        mesh.bank_write(src, a20 + i, wd)
+    for i, wd in enumerate(wts20):
+        mesh.bank_write(src, w20_base + i, wd)
+    nodes = []
+    for tp in lp.tiles:
+        n = tp.tile[1] * NX + tp.tile[0]
+        nodes.append(n)
+        for name, v in tp.descriptor.items():                  # cfg_flags = 1 through host register 0x22
+            mesh.set_cfg(n, name, v)
+        mesh.program(n, tp.program)
+    mesh.start(nodes)
+    onode = lp.out_bank[1] * NX + lp.out_bank[0]
+    wait(mesh, lambda: mesh.prog_done[onode].v)
+    wait(mesh, lambda: not mesh.drain_busy[onode].v)
+    mesh.tick(40)
+    out, chk = read_rows(mesh, onode, lp.out_base, 36)
+    got = np.zeros_like(ref20)
+    for m in range(36):
+        for c in range(7):
+            got[c, m // 6, m % 6] = out[m, c]
+    fl = mesh.flags()
+    d1 = lp.tiles[-1].descriptor
+    ok20 = (rejected and all(t.descriptor.get("cfg_flags") == 1 for t in lp.tiles) and np.array_equal(got, ref20)
+            and np.array_equal(chk, out.sum(axis=1)) and not any(sum(v) for v in fl.values()))
+    print(f"  M20: 2:4 sparse layer {cin20}x6x6 -> 7x6x6 k3 on the NCHK = 4 cores, compiled for {len(lp.tiles)} tiles (validator "
+          f"rejects the dense tensor: {rejected}; contributor from ky{d1['cfg_ky0']} kx{d1['cfg_kx0']}; {len(act20)} activation and "
+          f"{len(wts20)} weight words): {'bit-exact' if np.array_equal(got, ref20) else 'MISMATCH'} vs the dense convolution on the pruned "
+          f"weights, check column {'consistent' if np.array_equal(chk, out.sum(axis=1)) else 'BAD'}, flags clean={not any(sum(v) for v in fl.values())} "
+          f"-> {'PASS' if ok20 else 'FAIL'} ({mesh.clocks} clocks, {time.time() - t0:.0f} s)")
+    fails += not ok20
 
     print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
     return 1 if fails else 0

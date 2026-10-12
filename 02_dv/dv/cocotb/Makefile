@@ -1,6 +1,9 @@
 # cocotb + Verilator (or Icarus) for the Neo regressions (drop 0.28). Requires: pip install cocotb numpy; verilator >= 5.0.
-#   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core (16x8), bit-exact vs the golden model; C2 the core's fault hooks
+#   make -C dv/cocotb core      # test_neo_core.py: C1 convolution on neo_core (16x8), bit-exact vs the golden model; C2 the core's fault hooks;
+#                               # since drop 0.46 the 2:4 sparse-capable core (NCHK = 4) with C5, a sparse convolution
 #   make -C dv/cocotb core32    # the same on the silicon core: 32x32, ACC_ROWS 512, ABUF 2048, WBUF 1024
+#   make -C dv/cocotb tile_sp   # drop 0.46: M20 (a 2:4 sparse program through the compiler and the DMA) and M1 / M6 on the 2x2 mesh of
+#                               # 16x8 NCHK = 4 cores
 #   make -C dv/cocotb tile      # test_tile_mesh.py: M1-M13 and M15-M19 through the register bus on tile_mesh (2x2, 16x8 cores)
 #   make -C dv/cocotb tile8     # test_two_layer.py: M10, two-layer INT8 handoff on 8x8 cores (own build directory)
 #   make -C dv/cocotb tile32    # M1-M13 on the silicon core and depths: 2x2 mesh of 32x32 cores, 2 MB (512K-word) banks, 1024-bit links,
@@ -66,12 +69,16 @@ BANK_DEPTH ?= 4096
 FETCH_TIMEOUT ?= 8192
 BIST_WORDS ?= 16
 WPF ?= 1
+# NCHK (drop 0.46): the cores' check columns -- 1 the dense-only core of the tile suites, 4 the 2:4 sparse-capable silicon
+# core (the core / core32 builds and tile_sp, where C5 and M20 run sparse programs)
+NCHK ?= 1
 export NEO_NX := $(NX)
 export NEO_NY := $(NY)
 export NEO_ROWS := $(ROWS)
 export NEO_COLS := $(COLS)
 export NEO_FETCH_TIMEOUT := $(FETCH_TIMEOUT)
 export NEO_WPF := $(WPF)
+export NEO_NCHK := $(NCHK)
 # coverage: COVERAGE=1 adds Verilator line/toggle coverage (coverage.dat -> verilator_coverage --annotate),
 # and the tests sample functional covergroups through cocotb-coverage (pip install cocotb-coverage)
 # VCOV=1: Verilator line/toggle coverage plus the functional covergroups (not COVERAGE, which cocotb reads as Python coverage)
@@ -88,23 +95,33 @@ ifeq ($(TARGET),tile)
   TOPLEVEL = tile_mesh_cocotb
   MODULE ?= test_tile_mesh
   EXTRA_ARGS += -GNX=$(NX) -GNY=$(NY) -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) \
-    -GWBUF_DEPTH=$(WBUF_DEPTH) -GBANK_DEPTH=$(BANK_DEPTH) -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS) -GWPF=$(WPF)
+    -GWBUF_DEPTH=$(WBUF_DEPTH) -GBANK_DEPTH=$(BANK_DEPTH) -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS) -GWPF=$(WPF) \
+    -GNCHK=$(NCHK)
 else
   VERILOG_SOURCES = $(CORE_SRCS)
   TOPLEVEL = neo_core
   MODULE ?= test_neo_core
   # DV_HOOKS=1: the core's weight-buffer fault hook exists in the core-level build (drop 0.37; the tile builds set it in the wrapper)
-  EXTRA_ARGS += -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) -GWBUF_DEPTH=$(WBUF_DEPTH) -GDV_HOOKS=1
+  EXTRA_ARGS += -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) -GWBUF_DEPTH=$(WBUF_DEPTH) -GDV_HOOKS=1 \
+    -GNCHK=$(NCHK)
 endif
 include $(shell cocotb-config --makefiles)/Makefile.sim
 SILICON := ROWS=32 COLS=32 ACC_ROWS=512 ABUF_DEPTH=2048 WBUF_DEPTH=1024
 LINKS := WPF=32                             # the 1024-bit links (drop 0.25): 32 words per flit on the tile32 and mesh8 builds
+# the core builds are the 2:4 sparse-capable core (NCHK = 4, drop 0.46): C1-C4 dense as before (the same results and end
+# times: the dense entry is the NCHK = 1 entry with zeros above, the core's latency is unchanged), C5 a sparse convolution
 core:
-	$(MAKE) TARGET=core SIM_BUILD=sim_build_core COCOTB_RESULTS_FILE=results_core.xml
+	$(MAKE) TARGET=core NCHK=4 SIM_BUILD=sim_build_core COCOTB_RESULTS_FILE=results_core.xml
 core32:
-	$(MAKE) TARGET=core $(SILICON) SIM_BUILD=sim_build_core32 COCOTB_RESULTS_FILE=results_core32.xml
+	$(MAKE) TARGET=core $(SILICON) NCHK=4 SIM_BUILD=sim_build_core32 COCOTB_RESULTS_FILE=results_core32.xml
 tile:
 	$(MAKE) TARGET=tile
+# tile_sp (drop 0.46): the 2x2 mesh of 16x8 sparse-capable cores (NCHK = 4) -- M20, a 2:4 sparse program compiled by
+# neo_backend and run through the DMA with a K-split, and M1 / M6 dense on the same build (the weight entries of the
+# NCHK = 4 format: five words at 16x8 instead of three, so the fetches and the end times are longer by design)
+TILE_SP_TESTS ?= m20_sparse_program,m1_fetch_compute_writeback,m6_compiler_program
+tile_sp:
+	$(MAKE) TARGET=tile NCHK=4 TESTCASE=$(TILE_SP_TESTS) SIM_BUILD=sim_build_tile_sp COCOTB_RESULTS_FILE=results_tile_sp.xml
 tile8:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer SIM_BUILD=sim_build_tile8 COCOTB_RESULTS_FILE=results_tile8.xml
 tile32:
@@ -137,7 +154,7 @@ define keep_cov
 	@for f in coverage.dat $(1)/coverage.dat; do if [ -f $$f ]; then mv -f $$f $(2); fi; done
 endef
 core_cov:
-	$(MAKE) TARGET=core VCOV=1 SIM_BUILD=sim_build_cov_core COCOTB_RESULTS_FILE=results_cov_core.xml
+	$(MAKE) TARGET=core NCHK=4 VCOV=1 SIM_BUILD=sim_build_cov_core COCOTB_RESULTS_FILE=results_cov_core.xml
 	$(call keep_cov,sim_build_cov_core,coverage_core.dat)
 tile_cov:
 	$(MAKE) TARGET=tile VCOV=1 SIM_BUILD=sim_build_cov_tile COCOTB_RESULTS_FILE=results_cov_tile.xml
@@ -158,4 +175,4 @@ coverage: core_cov tile_cov tile8_cov tile32_cov
 	-verilator_coverage --annotate coverage_annotated --annotate-min 1 coverage_*.dat > /dev/null 2>&1
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
-	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_tile_sp sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_tile_sp.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated

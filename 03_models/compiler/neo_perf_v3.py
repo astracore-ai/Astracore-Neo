@@ -45,6 +45,8 @@ class Group:
 
 INHERIT_CHUNKS = False   # consistent partitioning: a layer inherits its producer's M-chunk when the grid matches
 BAND = False             # spatial banding: tile t owns output-row band t of every layer; groups align by construction
+WFACTOR = 1.0            # drop 0.46: weight bytes per weight, 1.25 on the NCHK = 4 core (an 8-bit weight and its 2-bit index in
+                         # every entry, dense layers included: one entry format) -- set by --sparse, which needs that core
 
 
 def build_groups(layers, ksplit):
@@ -53,7 +55,8 @@ def build_groups(layers, ksplit):
     prev = None
     prev_chunk, prev_M = None, None
     for li, L in enumerate(layers):
-        plan = nc.lower(L)
+        plan = nc.lower(L)                             # a 2:4 layer: half the K-passes (drop 0.46)
+        wpt = nc.ROWS * nc.COLS * WFACTOR              # weight bytes per K-pass (10-bit entries on the NCHK = 4 core)
         csize = nc.chunk_size(L, plan.n_tiles)
         banded = BAND and L.ho >= N_CORES              # hybrid: bands only where every tile gets a whole row
         if banded:
@@ -73,7 +76,7 @@ def build_groups(layers, ksplit):
                 m1 = min(L.M, m0 + csize)
                 chunk = m1 - m0
                 act_bytes = int(math.ceil(L.act_in_bytes * chunk / L.M))
-                base.append((plan.k_tiles * chunk + nc.LAT, act_bytes, plan.k_tiles * nc.ROWS * nc.COLS,
+                base.append((plan.k_tiles * chunk + nc.LAT, act_bytes, int(plan.k_tiles * wpt),
                              chunk * nc.COLS, m0, m1, chunk))
         s = nc.choose_split(len(base), plan.k_tiles, csize) if ksplit else 1
         groups = []
@@ -91,7 +94,7 @@ def build_groups(layers, ksplit):
                         break
                     role = ("owner" if part == 0 else "contrib", None, s, chunk)
                     g = Group(len(all_groups), li, kt_here * chunk + nc.LAT, int(math.ceil(act_bytes / s)),
-                              kt_here * nc.ROWS * nc.COLS, out_bytes if part == 0 else (nc.COLS + 1) * 4 * chunk, role, m0, m1)
+                              int(kt_here * wpt), out_bytes if part == 0 else (nc.COLS + 1) * 4 * chunk, role, m0, m1)
                     if part == 0:
                         owner = g
                     g.role = (role[0], owner, s, chunk)
@@ -265,12 +268,17 @@ def main():
     ap.add_argument("--rx", type=int, default=v2.RX_BYTES, help="fetch receive rate, bytes per cycle into a core (RTL since drop 0.32: 64, two entries per cycle; 32 after drop 0.30)")
     ap.add_argument("--tx", type=int, default=v2.TX_BYTES, help="drain rate, bytes per cycle out of a core (RTL since drop 0.31: 64, 16-word beats; 4 before)")
     ap.add_argument("--psum", type=int, default=v2.PSUM_BYTES, help="partial-sum receive rate, bytes per cycle (RTL since drop 0.31: 64; 4 before)")
+    ap.add_argument("--sparse", action="store_true", help="drop 0.46: every layer but the first 2:4 sparse (half the K-passes) on the "
+                    "NCHK = 4 core (every layer's weight entries 10 bits per weight: 1.25x the weight bytes)")
     a = ap.parse_args()
-    global INHERIT_CHUNKS, BAND
+    global INHERIT_CHUNKS, BAND, WFACTOR
     INHERIT_CHUNKS = a.inherit
     BAND = a.band
+    WFACTOR = 1.25 if a.sparse else 1.0
     nc.set_v02(ksplit=a.ksplit)
     layers = nc.yolov8m(a.h, a.w)
+    if a.sparse:
+        nc.sparsify(layers)
     compute_only = sum(nc.lower(L).cycles for L in layers)
     total, util, bl, bb, local, ng = simulate(layers, a.link, a.ksplit, not a.no_affinity, a.barrier, a.rx, a.tx, a.psum)
     print(f"YOLOv8-m class at {a.h}x{a.w}, 64 tiles, one bank per tile, {a.link} B/cycle links, "

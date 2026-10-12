@@ -6,7 +6,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 name = sys.argv[1]
 src = open(os.path.join(HERE, "run_tiles.py")).read()
 a = src.index('    # ---------------- M1:')
-markers = sorted([(src.index(f'    # ---------------- {m}:'), m) for m in ("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M11", "M12", "M13")])
+markers = sorted([(src.index(f'    # ---------------- {m}:'), m) for m in ("M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M11", "M12", "M13",
+                                                                         "M20")])
 d = src.index('    print(f"RESULT:')
 start = src.index(f'    # ---------------- {name}:')
 following = [p for p, m in markers if p > start]

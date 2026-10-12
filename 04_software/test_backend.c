@@ -28,5 +28,19 @@ int main(void) {
         for (int j = 0; j < out[i].nprog; j++) printf(" %016llx", (unsigned long long)out[i].prog[j]);
         printf("\n");
     }
+    /* third case (drop 0.46): a 2:4 sparse layer on the sparse-capable core (64 input channels = two 32-channel tiles at
+     * 16 rows), K-split over two tiles (M20's configuration) */
+    neo_group_t g3 = { .h = 6, .w = 6, .cin = 64, .cout = 7, .k = 3, .s = 1, .p = 1, .rows = 16, .cols = 8, .nx = 2, .ny = 2,
+                       .act_bank = {1, 1}, .act_base = 0, .w_bank = {1, 1}, .w_base = 512, .nt = 0, .oy0 = 0, .oy_n = 6,
+                       .nchk = 4, .sparse = 1 };
+    n = neo_compile_group(&g3, owner, free, 3, 2, out);
+    printf("tiles %d\n", n);
+    for (int i = 0; i < n; i++) {
+        printf("tile %d %d role %d cfg_m %u cfg", out[i].tile.x, out[i].tile.y, out[i].role, out[i].cfg_m);
+        for (int j = 0; j < NEO_NDESC; j++) printf(" %u", out[i].cfg[j]);
+        printf("\nprog");
+        for (int j = 0; j < out[i].nprog; j++) printf(" %016llx", (unsigned long long)out[i].prog[j]);
+        printf("\n");
+    }
     return 0;
 }

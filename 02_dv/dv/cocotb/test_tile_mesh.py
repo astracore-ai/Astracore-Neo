@@ -30,7 +30,12 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
       and four channel tiles, each bit-exact, weights fetched in entry-aligned chunks of at most 4,095 words
   M19 INT8 drain (drop 0.36): the requantization tables loaded through the registers, the result drained as packed INT8
       rows and checked against the requantization model (on the 16x8 and the 32x32 builds)
+  M20 2:4 sparse program (drop 0.46, the NCHK = 4 cores of tile_sp): a layer pruned to 2:4 along K through the compiler's
+      validator, compressor and layouts and its descriptors (cfg_flags = 1) and K-split DMA programs, bit-exact against
+      the dense convolution on the pruned weights
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
+     make -C dv/cocotb tile_sp (drop 0.46: the same mesh of 16x8 sparse-capable cores, NCHK = 4: M20, and M1 / M6 dense on
+                              the five-word weight entries of that core)
      make -C dv/cocotb tile32 (the silicon core and depths: 32x32 cores, ACC_ROWS 512, ABUF 2048, WBUF 1024, 2 MB banks,
                               FETCH_TIMEOUT 65535: two 4,095-word fetches queued at one bank take more than 8,192 cycles)
      make -C dv/cocotb mesh8  (the silicon mesh: 8x8 tiles of the above; the tests use tiles (0,0), (1,0), (0,1), (1,1), M14 the first rows)
@@ -62,15 +67,18 @@ WPF = int(os.environ.get("NEO_WPF", "1"))                            # words per
 DWL = 32 + 32 * WPF                                                  # link payload: {type[2:0], tag[8:0], hdr[19:0], words}
 TYPE_SHIFT = DWL - 3                                                 # the flit type at the top of the payload (bit 61 with one word)
 CNT_SHIFT = TYPE_SHIFT - 21                                          # hdr[13:8] = words carried - 1 (0 with one word per flit)
+NCHK = int(os.environ.get("NEO_NCHK", "1"))                          # the cores' check columns (drop 0.46); must match -GNCHK
 WCW = 8 + (ROWS - 1).bit_length() + 1
-WPA, WPW = ROWS * 8 // 32, (COLS * 8 + WCW + 31) // 32
+# words per weight entry: COLS x (8 + index bits) + NCHK check weights (3 at 16x8 and 9 at 32x32 with NCHK = 1; 5 and 12 with 4)
+WPA, WPW = ROWS * 8 // 32, (COLS * (8 + (2 if NCHK > 1 else 0)) + NCHK * WCW + 31) // 32
 REG_CTRL, REG_STATUS, REG_PROG_ADDR, REG_PROG_LO, REG_PROG_HI, REG_ERR_MASK, REG_ERR_CAUSE = 0, 1, 2, 3, 4, 5, 6
 REG_WD_CTRL, REG_WD_KICK, REG_SELFTEST, REG_MBIST, REG_PARTITION = 7, 8, 9, 0x0A, 0x0B
 REG_CFG_BASE, REG_CFG_M = 0x10, 0x24
 REG_RQ_TBL, REG_RQ_ADDR, REG_RQ_RELU = 0x30, 0x31, 0x32
 CAUSE_PROG_CE, CAUSE_CTRL_PATH, CAUSE_ISO, CAUSE_TIMEOUT, CAUSE_LOST, CAUSE_BIST = 15, 16, 17, 13, 12, 14
 CFG_ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_ct0",
-             "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1"]
+             "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1",
+             "cfg_flags"]                                    # 0x22 (drop 0.46): bit 0 the layer is 2:4 sparse
 T_RDRSP = 2
 CIN = 2 * ROWS + ROWS // 2                           # 40 channels at 16 rows (20 at 8, 80 at 32): two and a half channel tiles, so three, the last half filled
 CT_N = (CIN + ROWS - 1) // ROWS
@@ -310,7 +318,7 @@ def conv_data(seed=17, cin=CIN, cout=7):
     x = rng.integers(-128, 128, size=(cin, 6, 6), dtype=np.int64)
     wgt = rng.integers(-128, 128, size=(cout, cin, 3, 3), dtype=np.int64)
     ref = direct_conv(x, wgt, 1, 1)
-    act, wts = pack_words(x, wgt, (cin + ROWS - 1) // ROWS, 3, cout, rows=ROWS, cols=COLS)
+    act, wts = pack_words(x, wgt, (cin + ROWS - 1) // ROWS, 3, cout, rows=ROWS, cols=COLS, nchk=NCHK)
     return x, wgt, ref, act, wts
 
 
@@ -478,7 +486,7 @@ async def m6_compiler_program(dut):
     x, wgt, ref, act, wts = conv_data()
     await mesh.load_bank(N11, act, wts)
     lp = compile_layer("c1", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(1, 1), act_base=A0, w_bank=(1, 1), w_base=W0,
-                       owner=(0, 0), shares=3)
+                       owner=(0, 0), shares=3, nchk=NCHK)
     nodes = []
     for tp in lp.tiles:
         n = tp.tile[1] * NX + tp.tile[0]
@@ -503,8 +511,10 @@ async def m7_mchunks_partial_fetch(dut):
     mesh = await setup(dut)
     x, wgt, ref, act, wts = conv_data()
     await mesh.load_bank(N11, act, wts)
-    lps = [compile_layer("r0", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(0, 0), shares=1, oy0=0, oy_n=3),
-           compile_layer("r3", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(1, 0), shares=1, oy0=3, oy_n=3)]
+    lps = [compile_layer("r0", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(0, 0), shares=1, oy0=0, oy_n=3,
+                         nchk=NCHK),
+           compile_layer("r3", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, (1, 1), A0, (1, 1), W0, owner=(1, 0), shares=1, oy0=3, oy_n=3,
+                         nchk=NCHK)]
     nodes = []
     for lp in lps:
         for tp in lp.tiles:
@@ -570,7 +580,7 @@ async def m8_registers_selftest_watchdog(dut):
     await mesh.reg_write(0, REG_WD_CTRL, 0)
     x16, w16 = x[:ROWS], wgt[:, :ROWS]
     ref16 = direct_conv(x16, w16, 1, 1)
-    act16, wts16 = pack_words(x16, w16, 1, 3, 7, rows=ROWS, cols=COLS)
+    act16, wts16 = pack_words(x16, w16, 1, 3, 7, rows=ROWS, cols=COLS, nchk=NCHK)
     await mesh.load_bank(N11, act16, wts16)
     await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, 1, 0, 9, 0, 36)
     await mesh.program(0, [ins(OP_FETCH_A, 1, 1, A0, APT, 0), ins(OP_FETCH_W, 1, 1, W0, WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, 36),
@@ -848,7 +858,7 @@ async def m18_descriptor_sweep(dut):
         ref = direct_conv(x, wgt, s, p)
         ho, wo = ref.shape[1], ref.shape[2]
         M = ho * wo
-        act, wts = pack_words(x, wgt, ct_n, k, 7, rows=ROWS, cols=COLS)
+        act, wts = pack_words(x, wgt, ct_n, k, 7, rows=ROWS, cols=COLS, nchk=NCHK)
         a0 = 0
         w0 = _align(a0 + len(act))
         r0 = _align(w0 + len(wts))
@@ -917,6 +927,68 @@ async def m19_int8_drain(dut):
     fc.sample_drain("int8")
     fc.report(os.environ.get("NEO_FUNCOV_FILE") or "funcov_tile_mesh.yml")   # the export again from the last test of the file: M15-M19
     dut._log.info(f"M19: 36 INT8 rows ({wpr} words each) bit-exact against the requantization model in {n} clocks")   # run after M13's export
+
+
+CIN_SP = 5 * ROWS                                    # M20: 80 channels at 16 rows -- three sparse channel tiles of 2*ROWS, the last half filled
+
+
+@cocotb.test(skip=(NCHK < 4))
+async def m20_sparse_program(dut):
+    """M20 (drop 0.46; the NCHK = 4 build, make tile_sp): a 2:4 sparse layer through the compiler and the DMA. The weights,
+    magnitude-pruned to 2:4 along K (pruning is training-side), pass neo_backend's validator, which rejects the unpruned
+    tensor; pack_words lays out the activations (a pixel's 2*ROWS channels in two entries, the pair word the feeder reads)
+    and the compressed weights (each PE of a pair one nonzero weight and its 2-bit index, four check weights per row, the
+    five-word entry of the 16x8 NCHK = 4 core) in tile (1,1)'s bank; compile_layer emits the descriptors (cfg_flags = 1,
+    cfg_ct_n / cfg_ct0 / cfg_rn in 2*ROWS-channel tiles, cfg_tile_pixels in pixels) and the DMA programs of a K-split
+    over two tiles (the contributor starts mid channel tile, at a nonzero cfg_ky0 / cfg_kx0). The owner's drained rows are
+    bit-exact against the dense convolution on the pruned weights and no cause is raised on any tile."""
+    import neo_backend as nb
+    mesh = await setup(dut)
+    rng = np.random.default_rng(23)
+    x = rng.integers(-128, 128, size=(CIN_SP, 6, 6), dtype=np.int64)
+    dense = rng.integers(-128, 128, size=(7, CIN_SP, 3, 3), dtype=np.int64)
+    try:
+        nb.check_2_4(dense)
+        rejected = False
+    except ValueError:
+        rejected = True
+    assert rejected, "M20: the 2:4 validator accepted a dense weight tensor"
+    wgt = nb.prune_2_4(dense)
+    nb.check_2_4(wgt)
+    ref = direct_conv(x, wgt, 1, 1)
+    ct_n, _, _, wpw = nb.geometry(CIN_SP, 7, 3, ROWS, COLS, NCHK, sparse=True)
+    assert ct_n == 3 and wpw == WPW, f"M20: geometry {ct_n} channel tiles, {wpw} words per entry"
+    act, wts = nb.pack_words(x, wgt, ct_n, 3, 7, ROWS, COLS, nchk=NCHK, sparse=True)
+    a0 = 0
+    w0 = _align(a0 + len(act))
+    assert _align(w0 + len(wts)) + 36 * (COLS + 1) <= (1 << 12) or ROWS == 32, "M20: the bank layout overflows the small bank"
+    await mesh.load_bank(N11, act, wts, a0=a0, w0=w0)
+    lp = nb.compile_layer("sp", 6, 6, CIN_SP, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(1, 1), act_base=a0, w_bank=(1, 1),
+                          w_base=w0, owner=(0, 0), shares=2, nchk=NCHK, sparse=True)
+    assert len(lp.tiles) == 2 and all(tp.descriptor.get("cfg_flags") == 1 and tp.descriptor["cfg_ct_n"] == ct_n for tp in lp.tiles), \
+        f"M20: descriptors {[tp.descriptor for tp in lp.tiles]}"
+    nodes = []
+    for tp in lp.tiles:
+        n = tp.tile[1] * NX + tp.tile[0]
+        nodes.append(n)
+        fc.sample_descriptor(tp.descriptor)
+        for name, v in tp.descriptor.items():
+            await mesh.set_cfg(n, name, v)
+        await mesh.program(n, tp.program)
+    for i in sorted(set((np.nonzero(wgt)[1] % 4).tolist())):           # a kept weight's index is its position in its group
+        fc.sample_sparse_index(int(i))
+    await mesh.start(nodes)
+    onode = lp.out_bank[1] * NX + lp.out_bank[0]
+    n = await mesh.wait_prog(onode)
+    await mesh.tick(40)
+    got = to_image(await mesh.read_rows(onode, lp.out_base, 36), ref, 36)
+    await check_result(mesh, got, ref, "M20")
+    await expect_clean(mesh)
+    fc.report(os.environ.get("NEO_FUNCOV_FILE") or "funcov_tile_mesh.yml")
+    d = lp.tiles[1].descriptor
+    dut._log.info(f"M20: 2:4 sparse layer {CIN_SP}x6x6 -> 7x6x6 k3 compiled for two tiles ({ct_n} channel tiles of {2 * ROWS}, "
+                  f"{len(act)} activation and {len(wts)} weight words of {WPW} per entry, contributor from run "
+                  f"ct{d['cfg_ct0']} ky{d['cfg_ky0']} kx{d['cfg_kx0']}): bit-exact in {n} clocks, causes clean")
 
 
 MAX_FETCH_WORDS = (4095 // WPA) * WPA                # the longest entry-aligned fetch one DMA instruction can issue (4,088 at 8 words per entry)

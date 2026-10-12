@@ -16,6 +16,18 @@ For one layer and one output tile x M-chunk group, the backend
 compile_layer() returns a LayerProgram; run_tiles.py's M6 executes one on the 2x2 RTL mesh.
 compile_network() runs the emitter over every layer of YOLOv8-m on the 8x8 mesh and reports
 program and traffic statistics (static; execution of the whole network is beyond neosim's speed).
+
+2:4 structured sparsity (drop 0.46; the NCHK = 4 core): check_2_4() is the validator (a weight tensor
+must hold at most two nonzeros in every group of four consecutive input channels, for every output
+channel and kernel position -- pruning is training-side; prune_2_4() is the magnitude pruning a
+training flow applies, for tests and examples), compress_2_4() the compressor (group g of a 64-channel
+tile on the PE pair 2g, 2g + 1: each PE one nonzero weight and its position as a 2-bit index, the lower
+position on row 2g), check_weights() the four check weights of a row (the sum of its weights per
+index), pack_entry() / pack_words() the bank and buffer layouts: the weight entry
+{idx[COLS-1..0], wc[NCHK-1..0], w[COLS-1..0]} (wbuf_mem's), the activation layout of a sparse layer
+(a 64-channel tile per pixel: channels 0..31 in the even entry, 32..63 in the odd one -- the pair word the
+feeder reads), the descriptor's cfg_flags (host register 0x22: bit 0 sparse) and cfg_ct_n / cfg_ct0 in
+64-channel tiles; compile_group(sparse=True, nchk=4) emits the descriptors and programs of a sparse layer.
 """
 import math
 import os
@@ -81,12 +93,152 @@ class LayerProgram:
     M: int
 
 
-def geometry(cin, cout, k, rows, cols):
-    cin_tiles, cout_tiles = math.ceil(cin / rows), math.ceil(cout / cols)
-    wpa = rows * 8 // 32
-    wcw = 8 + (0 if rows <= 1 else (rows - 1).bit_length()) + 1
-    wpw = (cols * 8 + wcw + 31) // 32
+def wcw_of(rows):
+    """Check-weight width: WW + $clog2(ROWS) + 1 (neo_mac_core)."""
+    return 8 + (0 if rows <= 1 else (rows - 1).bit_length()) + 1
+
+
+def entry_bits(cols, rows, nchk=1):
+    """Weight-buffer entry width (wbuf_mem's EW): COLS x (8 + index bits) + NCHK x WCW."""
+    return cols * (8 + (2 if nchk > 1 else 0)) + nchk * wcw_of(rows)
+
+
+def geometry(cin, cout, k, rows, cols, nchk=1, sparse=False):
+    """(channel tiles, output tiles, words per pixel of a channel tile, words per weight entry). A sparse channel tile is
+    2*ROWS channels (64 at 32 rows), stored as two activation entries per pixel; the weight entry follows the core's NCHK
+    (9 words at 32x32 with NCHK = 1, 12 with NCHK = 4; 3 and 5 at 16x8)."""
+    assert nchk in (1, 4) and (nchk == 4 or not sparse), "a sparse layer needs the NCHK = 4 core"
+    ch = (2 if sparse else 1) * rows
+    cin_tiles, cout_tiles = math.ceil(cin / ch), math.ceil(cout / cols)
+    wpa = (2 if sparse else 1) * rows * 8 // 32
+    wpw = (entry_bits(cols, rows, nchk) + 31) // 32
     return cin_tiles, cout_tiles, wpa, wpw
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# 2:4 structured sparsity (drop 0.46)
+# ---------------------------------------------------------------------------------------------------------------------
+def check_2_4(wgt):
+    """The validator: wgt [cout, cin, k, k] must be 2:4 along K -- in every group of four consecutive input channels
+    (channels 4g .. 4g + 3; a last group of fewer channels is padded with zeros) at most two weights are nonzero, for every
+    output channel and kernel position. Raises ValueError naming the first group that is not."""
+    import numpy as np
+    w = np.asarray(wgt)
+    cout, cin = w.shape[0], w.shape[1]
+    pad = (-cin) % 4
+    wp = np.concatenate([w, np.zeros((cout, pad) + w.shape[2:], dtype=w.dtype)], axis=1) if pad else w
+    nz = (wp.reshape(cout, (cin + pad) // 4, 4, *w.shape[2:]) != 0).sum(axis=2)
+    bad = np.argwhere(nz > 2)
+    if bad.size:
+        co, g = int(bad[0][0]), int(bad[0][1])
+        pos = tuple(int(v) for v in bad[0][2:])
+        raise ValueError(f"weights are not 2:4 along the input channels: output channel {co}, channels {4 * g}..{4 * g + 3}, "
+                         f"kernel position {pos}: {int(nz[tuple(bad[0])])} nonzero weights in the group of four "
+                         f"({len(bad)} such groups)")
+    return True
+
+
+def prune_2_4(wgt):
+    """Magnitude pruning to 2:4 along K (what a training flow's pruning step leaves; for tests and examples): in every group
+    of four consecutive input channels the two weights of largest magnitude stay, ties to the lower channel."""
+    import numpy as np
+    w = np.array(wgt, dtype=np.int64)
+    cout, cin = w.shape[0], w.shape[1]
+    for g in range(0, cin, 4):
+        blk = w[:, g:g + 4]
+        if blk.shape[1] <= 2:
+            continue
+        order = np.argsort(-np.abs(blk), axis=1, kind="stable")      # largest magnitudes first, stable for ties
+        drop = order[:, 2:]
+        np.put_along_axis(blk, drop, 0, axis=1)
+        w[:, g:g + 4] = blk
+    return w
+
+
+def compress_2_4(wd, rows):
+    """A dense pruned tile wd [2*rows, cols] (one 64-channel run at 32 rows: wd[c][j] multiplies channel c for output
+    column j) -> the stored form W, I [rows, cols]: group g (channels 4g .. 4g + 3) on the PE pair 2g, 2g + 1, row 2g
+    holding the group's nonzero weight at the lower position, row 2g + 1 the one at the higher, each with its position in
+    the group as the index; a missing weight is (0, index 0). The model (systolic_ref.compress_2_4) follows the same rule."""
+    k, n = len(wd), len(wd[0])
+    assert k == 2 * rows
+    W = [[0] * n for _ in range(rows)]
+    I = [[0] * n for _ in range(rows)]
+    for g in range(rows // 2):
+        for j in range(n):
+            nz = [p for p in range(4) if int(wd[4 * g + p][j]) != 0]
+            if len(nz) > 2:
+                raise ValueError(f"not 2:4: channels {4 * g}..{4 * g + 3} of column {j} hold {len(nz)} nonzero weights")
+            for slot, p in enumerate(nz):
+                W[2 * g + slot][j] = int(wd[4 * g + p][j])
+                I[2 * g + slot][j] = p
+    return W, I
+
+
+def check_weights(W, I, nchk):
+    """The check columns' weights of every row: wc[r][k] = the sum of row r's weights whose index is k (nchk = 1: the row
+    sum; a dense row on the NCHK = 4 core: its sum in column 0, zeros in 1..3)."""
+    out = []
+    for r in range(len(W)):
+        wc = [0] * nchk
+        for j in range(len(W[r])):
+            wc[I[r][j] if nchk > 1 else 0] += int(W[r][j])
+        out.append(wc)
+    return out
+
+
+def pack_entry(w_row, i_row, wc_row, rows, nchk=1):
+    """One weight-buffer / bank entry as 32-bit words: {idx[COLS-1..0] (2 bits), wc[NCHK-1..0] (WCW), w[COLS-1..0] (8)},
+    LSB first -- wbuf_mem's layout (NCHK = 1: the weights, then the check weight, as before)."""
+    cols = len(w_row)
+    wcw = wcw_of(rows)
+    v = 0
+    for j in range(cols):
+        v |= (int(w_row[j]) & 0xFF) << (8 * j)
+    for k in range(nchk):
+        v |= (int(wc_row[k]) & ((1 << wcw) - 1)) << (8 * cols + wcw * k)
+    if nchk > 1:
+        for j in range(cols):
+            v |= (int(i_row[j]) & 3) << (8 * cols + wcw * nchk + 2 * j)
+    nw = (entry_bits(cols, rows, nchk) + 31) // 32
+    return [(v >> (32 * i)) & 0xFFFFFFFF for i in range(nw)]
+
+
+def pack_words(x, wgt, cin_tiles, k, cout, rows, cols, nchk=1, sparse=False, nt=0):
+    """Bank words of a layer: the activation channel tiles (row-major pixels; a dense tile is ROWS channels per pixel, one
+    entry of ROWS/4 words, channel c in byte c % 4 of word c // 4; a sparse tile 2*ROWS channels per pixel, two entries)
+    and the weight entries of output tile nt in run order (ct, ky, kx) then tile row r (pack_entry; a sparse run's tile is
+    the 2:4 compressed form of its 2*ROWS input channels, check_2_4 having passed). Channels and output columns past the
+    tensor are zero. x [cin, h, w], wgt [cout_all, cin, k, k]."""
+    if sparse:
+        check_2_4(wgt)
+    ch = (2 if sparse else 1) * rows                   # channels per channel tile
+    cin, h, w = x.shape
+    cout_all = wgt.shape[0]
+    act = []
+    for ct in range(cin_tiles):
+        for yy in range(h):
+            for xx in range(w):
+                words = [0] * (ch // 4)
+                for c in range(ch):
+                    ci = ct * ch + c
+                    val = int(x[ci, yy, xx]) if ci < cin else 0
+                    words[c // 4] |= (val & 0xFF) << (8 * (c % 4))
+                act.extend(words)
+    wts = []
+    for ct in range(cin_tiles):
+        for ky in range(k):
+            for kx in range(k):
+                tile = [[(int(wgt[nt * cols + j, ct * ch + c, ky, kx]) if (ct * ch + c < cin and nt * cols + j < min(cout, cout_all)) else 0)
+                         for j in range(cols)] for c in range(ch)]
+                if sparse:
+                    W, I = compress_2_4(tile, rows)
+                else:
+                    W, I = tile, [[0] * cols for _ in range(rows)]
+                WC = check_weights(W, I, nchk)
+                for r in range(rows):
+                    wts.extend(pack_entry(W[r], I[r], WC[r], rows, nchk))
+    return act, wts
 
 
 def nearest_free(owner, free, nx):
@@ -103,12 +255,17 @@ def single_region_tensor(bank, base, cin_tiles, h, w, wpa):
 
 
 def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank, act_base, w_bank, w_base,
-                  owner, free_tiles, nx, shares, int8_out=False, out_base=0, act=None, out_bank=None):
+                  owner, free_tiles, nx, shares, int8_out=False, out_base=0, act=None, out_bank=None, nchk=1, sparse=False):
     """One (output tile nt, output-row range) group split into `shares` contiguous run ranges.
     `act`: the input tensor's regions (neo_alloc.Tensor); when None, channel tiles whole at act_bank/act_base.
-    `out_bank`/`out_base`: where the group's M output pixels are drained (the owner's bank when out_bank is None)."""
+    `out_bank`/`out_base`: where the group's M output pixels are drained (the owner's bank when out_bank is None).
+    nchk: the core's check columns (the weight entry's format); sparse (drop 0.46, nchk = 4): a 2:4 layer -- channel tiles
+    of 2*ROWS channels (cfg_ct_n / cfg_ct0 / cfg_rn count them), two activation entries per pixel (cfg_tile_pixels stays
+    in pixels: the feeder doubles its addresses), cfg_flags = 1."""
     ho, wo = (h + 2 * p - k) // s + 1, (w + 2 * p - k) // s + 1
-    cin_tiles, _, wpa, wpw = geometry(cin, cout, k, rows, cols)
+    cin_tiles, _, wpa, wpw = geometry(cin, cout, k, rows, cols, nchk, sparse)
+    wpe = rows * 8 // 32                              # words per activation entry (the fetch cuts at entries)
+    epp = 2 if sparse else 1                          # entries per pixel
     apt, wpt_run = h * w * wpa, rows * wpw            # words per activation tile, per run's weight tile
     if act is None:
         act = single_region_tensor(act_bank, act_base, cin_tiles, h, w, wpa)
@@ -139,12 +296,16 @@ def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank,
         desc = dict(cfg_h=h, cfg_w=w, cfg_ho=ho, cfg_wo=wo, cfg_oy0=oy0, cfg_oy_n=oy_n, cfg_iy0=iy_lo, cfg_s=s, cfg_p=p,
                     cfg_k=k, cfg_ct_n=cin_tiles, cfg_ct0=ct0, cfg_ky0=ky0, cfg_kx0=kx0, cfg_rn=r1 - r0,
                     cfg_contrib_n=(shares - 1) if i == 0 else 0, cfg_tile_pixels=region_pixels, cfg_regions_m1=0xFFFF, cfg_m=M)
+        if sparse:
+            # the flags register (host 0x22, cfg[18]) appears when a flag is set; the C driver writes all 20 descriptor
+            # registers, so a dense layer after a sparse one on the same tile clears it (neo_host.c, D_FLAGS)
+            desc["cfg_flags"] = 1
         # activations: only rows iy_lo..iy_hi of each channel tile -- one FETCH_A per band of the tensor the window
-        # overlaps (rows contiguous inside a band, row-major, wpa words per pixel)
+        # overlaps (rows contiguous inside a band, row-major, wpa words per pixel); a sparse pixel is two entries
         prog = []
         for ct in range(ct_lo, ct_hi + 1):
             for bank, addr, ya, yb in act.segments(ct, iy_lo, iy_hi):
-                prog += fetch(OP_FETCH_A, bank, addr, (yb - ya + 1) * w * wpa, ct * region_pixels + (ya - iy_lo) * w, wpa)
+                prog += fetch(OP_FETCH_A, bank, addr, (yb - ya + 1) * w * wpa, (ct * region_pixels + (ya - iy_lo) * w) * epp, wpe)
         prog += fetch(OP_FETCH_W, w_bank, w_base + (nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0, wpw)
         fetch_words = (ct_hi - ct_lo + 1) * region_pixels * wpa + (r1 - r0) * wpt_run
         if i == 0:
@@ -166,13 +327,14 @@ def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank,
 
 
 def compile_layer(name, h, w, cin, cout, k, s, p, rows, cols, nx, ny, act_bank, act_base, w_bank, w_base,
-                  owner=(0, 0), shares=1, oy0=0, oy_n=None, int8_out=False, out_base=0) -> LayerProgram:
-    """Single group (one output tile, one output-row range) executable on the test mesh."""
+                  owner=(0, 0), shares=1, oy0=0, oy_n=None, int8_out=False, out_base=0, nchk=1, sparse=False) -> LayerProgram:
+    """Single group (one output tile, one output-row range) executable on the test mesh (nchk / sparse: compile_group)."""
     ho = (h + 2 * p - k) // s + 1
     oy_n = ho if oy_n is None else oy_n
     free = [(x, y) for y in range(ny) for x in range(nx) if (x, y) != owner]
     tiles, _, out_base = compile_group(h, w, cin, cout, k, s, p, rows, cols, 0, oy0, oy_n, act_bank, act_base,
-                                       w_bank, w_base, owner, free, nx, shares, int8_out=int8_out, out_base=out_base)
+                                       w_bank, w_base, owner, free, nx, shares, int8_out=int8_out, out_base=out_base,
+                                       nchk=nchk, sparse=sparse)
     return LayerProgram(name, tiles, owner, out_base, oy_n * ((w + 2 * p - k) // s + 1))
 
 

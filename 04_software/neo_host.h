@@ -48,6 +48,8 @@ typedef struct {
     int oy0, oy_n;                       /* output-row range */
     int int8_out;                        /* drain requantized INT8 rows (the next layer's input) */
     uint32_t out_base;                   /* word address of the result in the owner's bank */
+    int nchk;                            /* drop 0.46: the core's check columns, 1 (0 reads as 1) or 4 (the sparse-capable core) */
+    int sparse;                          /* drop 0.46: a 2:4 sparse layer (nchk 4): 2*rows-channel tiles, two entries per pixel */
 } neo_group_t;
 
 typedef struct {
@@ -59,9 +61,11 @@ typedef struct {
     int nprog;
 } neo_tile_prog_t;
 
-/* descriptor register order (matches neo_tile's cfg_* ports and host_if 0x10..0x23) */
+/* descriptor register order (matches neo_tile's cfg_* ports and host_if 0x10..0x23); D_FLAGS (0x22, reserved before
+ * drop 0.46): bit 0 the layer is 2:4 sparse */
 enum { D_H, D_W, D_HO, D_WO, D_OY0, D_OY_N, D_IY0, D_S, D_P, D_K, D_CT_N, D_CT0, D_KY0, D_KX0, D_RN,
-       D_CONTRIB_N, D_TILE_PIXELS, D_REGIONS_M1, D_RSV1, D_RSV2 };
+       D_CONTRIB_N, D_TILE_PIXELS, D_REGIONS_M1, D_FLAGS, D_RSV2 };
+#define NEO_FLAG_SPARSE 1u
 
 uint64_t neo_ins(int op, int x, int y, uint32_t addr, uint32_t len, uint32_t base, uint32_t arg);
 

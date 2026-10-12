@@ -67,6 +67,7 @@ class Conv:
     k: int = 3
     s: int = 1
     p: int = 1
+    sparse: bool = False     # drop 0.46: 2:4 structured sparsity along K (the NCHK = 4 core): half the K-passes
 
     @property
     def ho(self): return (self.h + 2 * self.p - self.k) // self.s + 1
@@ -81,7 +82,9 @@ class Conv:
     @property
     def macs(self): return self.M * self.K * self.N
     @property
-    def weight_bytes(self): return self.K * self.N          # INT8
+    def weight_bytes(self):
+        """INT8; a 2:4 layer stores half the weights with a 2-bit index each (10 bits per kept weight)."""
+        return (self.K * self.N * 10 + 15) // 16 if self.sparse else self.K * self.N
     @property
     def act_in_bytes(self): return self.h * self.w * self.cin
     @property
@@ -119,8 +122,9 @@ class LayerPlan:
 
     @property
     def tile_efficiency(self):
-        """MACs actually needed / MACs issued including padding of partial tiles."""
-        issued = self.k_tiles * ROWS * self.n_tiles * COLS * self.layer.M
+        """MACs actually needed / MACs issued including padding of partial tiles (a 2:4 pass issues 2*ROWS channels'
+        worth of the dense layer's MACs)."""
+        issued = self.k_tiles * ROWS * (2 if self.layer.sparse else 1) * self.n_tiles * COLS * self.layer.M
         return self.layer.macs / issued
 
 
@@ -154,7 +158,9 @@ def choose_split(n_groups: int, k_tiles: int, chunk: int) -> int:
 
 
 def lower(layer: Conv) -> LayerPlan:
-    k_tiles = math.ceil(layer.K / ROWS)
+    # a K-tile is one pass of the array: ROWS input channels dense, 2*ROWS on a 2:4 sparse layer (drop 0.46: the PE pairs
+    # cover 64 channels per pass with the same 1,024 multipliers), so a sparse layer has half the K-passes
+    k_tiles = math.ceil(layer.K / (ROWS * (2 if layer.sparse else 1)))
     n_tiles = math.ceil(layer.N / COLS)
     chunk = chunk_size(layer, n_tiles)
     m_chunks = math.ceil(layer.M / chunk)
@@ -266,8 +272,20 @@ def yolov8m(h=640, w=640, nc=80) -> List[Conv]:
 # ----------------------------------------------------------------------------
 # Report
 # ----------------------------------------------------------------------------
-def report(h=640, w=640):
+def sparsify(layers):
+    """Drop 0.46: every layer but the first (the image's 3 channels) as a 2:4 sparse layer -- the pruning is the training
+    flow's; the model only counts the K-passes and the compressed weights."""
+    for L in layers[1:]:
+        L.sparse = True
+    return layers
+
+
+def report(h=640, w=640, sparse=False):
     layers = yolov8m(h, w)
+    if sparse:
+        sparsify(layers)
+        print("2:4 structured sparsity on every layer but the first (half the K-passes, 10-bit compressed weights; "
+              "MAC counts and utilization in dense-equivalent MACs)")
     plans = [lower(L) for L in layers]
     total_macs = sum(L.macs for L in layers)
     total_cycles = sum(p.cycles for p in plans)
@@ -352,10 +370,10 @@ def run_tile_on_rtl(Xt, Wt, rows, cols):
     d = Design(load([os.path.join(rtl, f) for f in files]))
     d.elaborate("neo_mac_core", {"ROWS": rows, "COLS": cols})
     wcw = 8 + (0 if rows <= 1 else (rows - 1).bit_length()) + 1
-    cells = {n: d.cell_of(n) for n in ("rst_n", "w_load", "wc_in", "valid_in", "swap_in", "fault_inject",
-                                       "abft_clear", "valid_out", "abft_err", "y_chk")}
-    w_in, x_in, y = d.array_of("w_in"), d.array_of("x_in"), d.array_of("y")
-    for n in ("w_load", "wc_in", "valid_in", "swap_in", "fault_inject", "abft_clear"):
+    cells = {n: d.cell_of(n) for n in ("rst_n", "w_load", "wc_in", "valid_in", "swap_in", "sparse", "fault_inject",
+                                       "abft_clear", "valid_out", "abft_err", "y_chk", "x_in")}
+    w_in, y = d.array_of("w_in"), d.array_of("y")
+    for n in ("w_load", "wc_in", "valid_in", "swap_in", "sparse", "fault_inject", "abft_clear", "x_in"):
         cells[n].v = 0
     cells["rst_n"].v = 0
     d.tick(); d.tick()
@@ -375,8 +393,7 @@ def run_tile_on_rtl(Xt, Wt, rows, cols):
         m = s - 1
         cells["swap_in"].v = 1 if s == 0 else 0
         cells["valid_in"].v = 1 if 0 <= m < M else 0
-        for i in range(rows):
-            x_in[i].v = int(Xt[m, i]) & 0xFF if 0 <= m < M else 0
+        cells["x_in"].v = sum((int(Xt[m, i]) & 0xFF) << (8 * i) for i in range(rows)) if 0 <= m < M else 0   # the packed row
         d.tick()
         if cells["valid_out"].v:
             assert cells["abft_err"].v == 0
@@ -425,6 +442,7 @@ def main():
     ap.add_argument("--w", type=int, default=640)
     ap.add_argument("--v02", action="store_true", help="model the v0.2 microarchitecture")
     ap.add_argument("--ksplit", action="store_true", help="R8: K-split across cores with reduction")
+    ap.add_argument("--sparse", action="store_true", help="drop 0.46: every layer but the first 2:4 sparse (half the K-passes)")
     a = ap.parse_args()
     if a.v02 or a.ksplit:
         set_v02(ksplit=a.ksplit)
@@ -439,7 +457,7 @@ def main():
         print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
     if a.report:
         print()
-        report(a.h, a.w)
+        report(a.h, a.w, sparse=a.sparse)
     return 1 if fails else 0
 
 
