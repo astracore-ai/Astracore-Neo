@@ -12,6 +12,24 @@
 //   Weight tiles live in a buffer outside this module (wbuf_mem, read at w_raddr) so that a
 //   duplicate sequencer (R10, lockstep with comparator) shares one copy. `done` pulses for one
 //   cycle when the drain has finished.
+//   Drop 0.41 -- the cycle counts with registered buffer reads. T = the cycle f_start is asserted; S_RUN from T+1 with
+//   tcnt = 0; M = rows of the run; LAT = PE_LAT*ROWS + COLS (a row entering the array at cycle c leaves at c + LAT).
+//   The pipeline (drop 0.40 in brackets): the feeder's token at T+2 [T+1], row m at T+3+m [T+2+m], f_busy low first at
+//   B = T+M+3 [T+M+2]; PE(i, j) adopts its shadow weights at the edge ending T+2+PE_LAT*i+j, the last PE at
+//   T+2+LAT-PE_LAT; a shadow load begun at cycle L shifts at the edges ending L+1 .. L+ROWS [L .. L+ROWS-1] (neo_core's
+//   w_load_q, beside the weight buffer's registered read); row m is written at the end of T+4+m+LAT [T+2+m+LAT].
+//     shadow load       tcnt == LAT+1, unchanged    first shift at the edge ending T+LAT+4, after the last adoption: the
+//                                                   minimum is LAT-PE_LAT; token and strobe both moved one cycle, so the
+//                                                   3-cycle margin and the constant stand
+//     run to run        !f_busy && loaded && tcnt > 2, unchanged: the next S_START at max(B, T+LAT+ROWS+3) + 1, one
+//                                                   cycle later where f_busy binds -- the last run (loaded is set at its
+//                                                   start) and runs with M > LAT+ROWS; tcnt > 2 only guards the start
+//                                                   handshake (f_busy rises at tcnt = 0 and now falls at tcnt = M+2)
+//     drain wait        wcnt == LAT+4 [LAT+3]       the last row is written at the end of B+LAT [B+LAT-1]; the drain reads
+//                                                   row 0 at the end of B+2+wcnt: minimum LAT-1 [LAT-2]; +1 for the
+//                                                   accumulator's second stage, drop 0.40's margin of 5 cycles kept
+//     reduce to drain   one cycle more (red_last)   the last partial-sum row is accepted at c and written at the end of
+//                                                   c+1: the drain starts at c+2 [c+1]; reduce_ready drops at c+1
 module core_seq #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
@@ -72,6 +90,7 @@ module core_seq #(
   logic signed [15:0]  ltile;               // tile being loaded (local index)
   logic signed [15:0]  rcnt;                // runs started so far
   logic signed [31:0]  ext_cnt;             // partial-sum rows accepted
+  logic                red_last;            // drop 0.41: the count is reached; one cycle for the last row's accumulate, then the drain
 
   logic [WAW-1:0]      laddr;               // weight-buffer row of the load: tile ltile, row ROWS-1-lcnt (in the buffer's address width)
   assign laddr = WAW'(32'(ltile) * ROWS + (ROWS - 1 - 32'(lcnt)));
@@ -97,7 +116,7 @@ module core_seq #(
   assign done      = (state == S_DONE);
   assign busy      = (state != S_IDLE);
   assign state_dbg = state;
-  assign reduce_ready = (state == S_REDUCE);
+  assign reduce_ready = (state == S_REDUCE) && !red_last;
 
   // next-run enumeration (kx fastest, then ky, then ct), bounded by this core's share
   always_comb begin
@@ -117,7 +136,7 @@ module core_seq #(
     if (!rst_n) begin
       state <= S_IDLE; ct <= '0; ky <= '0; kx <= '0; first_q <= 1'b0;
       lcnt <= '0; loading <= 1'b0; loaded <= 1'b0; tcnt <= '0; wcnt <= '0; dcnt <= '0; ltile <= '0;
-      ct_free_q <= 1'b0; ct_free_idx_q <= '0; rcnt <= '0; ext_cnt <= '0;
+      ct_free_q <= 1'b0; ct_free_idx_q <= '0; rcnt <= '0; ext_cnt <= '0; red_last <= 1'b0;
     end else begin
       ct_free_q <= 1'b0;
       // shadow-load engine: ROWS cycles once started
@@ -134,7 +153,7 @@ module core_seq #(
           if (go) begin
             ct <= cfg_ct0; ky <= cfg_ky0; kx <= cfg_kx0; first_q <= 1'b1;
             ltile <= '0; lcnt <= '0; loading <= 1'b1; loaded <= 1'b0;
-            rcnt <= 16'd1; ext_cnt <= '0;
+            rcnt <= 16'd1; ext_cnt <= '0; red_last <= 1'b0;
             state <= S_LOAD0;
           end
         end
@@ -172,16 +191,19 @@ module core_seq #(
         end
         S_WAIT: begin
           wcnt <= wcnt + 1;
-          if (wcnt == 16'(LAT + 3)) begin
+          if (wcnt == 16'(LAT + 4)) begin       // the last row is written (two-cycle accumulate); see the table above
             dcnt  <= '0;
             state <= (cfg_contrib_n > 0) ? S_REDUCE : S_DRAIN;
           end
         end
         S_REDUCE: begin
           if (ext_fire) ext_cnt <= ext_cnt + 1;
-          if (ext_cnt + (ext_fire ? 1 : 0) >= cfg_contrib_n * cfg_m) begin
-            dcnt  <= '0;
-            state <= S_DRAIN;
+          if (red_last) begin                  // the last partial-sum row is in the accumulator's stage 1: written this cycle
+            red_last <= 1'b0;
+            dcnt     <= '0;
+            state    <= S_DRAIN;
+          end else if (ext_cnt + (ext_fire ? 1 : 0) >= cfg_contrib_n * cfg_m) begin
+            red_last <= 1'b1;                  // the last row accepted this cycle (stage 0); reduce_ready drops
           end
         end
         S_DRAIN: begin
