@@ -90,7 +90,8 @@ def worst_path(text):
     r["required"] = float(q.group(1)) if q else None
     r["slack"] = float(s.group(1)) if s else None
     body = text[m.start():a.end() if a else len(text)]
-    insts = re.findall(r"\s(\S+)/\S+ \(([A-Za-z0-9_]+)\)", body)
+    k = body.find(r["start"] + "/")         # from the launching register's clock pin: the launch clock path is not data
+    insts = re.findall(r"\s(\S+)/\S+ \(([A-Za-z0-9_]+)\)", body[k:] if k >= 0 else body)
     data = [(i, c) for i, c in insts if not i.startswith(("clkbuf", "clkload", "clknet"))]
     r["cells"] = len({i for i, _ in data})
     return r
@@ -149,16 +150,50 @@ def floorplan(logdir):
 
 
 def cts(logdir):
-    """TritonCTS's own lines in 4_1_cts.log: sinks, buffers created, buffers on a path, tree levels."""
+    """TritonCTS's own lines in 4_1_cts.log, over its trees (with macros it builds one for the macros' clock pins,
+    `clk`, and one for the registers, `clk_regs`; each tree's lines in the same order): sinks, buffers created, buffers
+    on a path, tree levels, and the trees with their sinks."""
     txt = read(os.path.join(logdir, "4_1_cts.log"))
 
-    def first(pat):
-        m = re.search(pat, txt)
-        return int(m.group(1)) if m else None
-    return dict(sinks=first(r"Total number of sinks:\s*(\d+)"), buffers=first(r"Created (\d+) clock buffers"),
-                min_path=first(r"Minimum number of buffers in the clock path:\s*(\d+)"),
-                max_path=first(r"Maximum number of buffers in the clock path:\s*(\d+)"),
-                levels=first(r"Max level of the clock tree:\s*(\d+)"))
+    def every(pat):
+        return [int(v) for v in re.findall(pat, txt)]
+    names = re.findall(r"Generating H-Tree topology for net (\S+?)\.?\n", txt)
+    sinks = every(r"Total number of sinks:\s*(\d+)")
+    bufs = every(r"Created (\d+) clock buffers")
+    lo, hi = every(r"Minimum number of buffers in the clock path:\s*(\d+)"), every(r"Maximum number of buffers in the clock path:\s*(\d+)")
+    lev = every(r"Max level of the clock tree:\s*(\d+)")
+    return dict(sinks=sum(sinks) if sinks else None, buffers=sum(bufs) if bufs else None, min_path=min(lo) if lo else None,
+                max_path=max(hi) if hi else None, levels=max(lev) if lev else None,
+                trees=list(zip(names, sinks)) if len(names) == len(sinks) else [])
+
+
+REPAIR_STAGES = (("2_1_floorplan.log", "floorplan (no wires, ideal clock: the synthesized estimate, then gate sizing)"),
+                 ("4_1_cts.log", "CTS (placement parasitics, the propagated clock)"),
+                 ("5_1_grt.log", "global route (its parasitics)"))
+
+
+def repair_wns(logdir):
+    """repair_timing's setup tables (`Iter | Removed | ... | WNS | TNS | ...`) in the floorplan, CTS and global-route
+    logs: [(stage, WNS before, WNS after)] in ps -- the first row of the stage's first table, the final row of its last.
+    A stage that found no setup violation prints no table and is left out."""
+    out = []
+    for log, label in REPAIR_STAGES:
+        first = last = col = None
+        for ln in read(os.path.join(logdir, log)).splitlines():
+            if re.match(r"\s*Iter\s*\|", ln):
+                cells = [c.strip() for c in ln.split("|")]
+                col = cells.index("WNS") if "WNS" in cells else None      # repair_design's table has no WNS
+                continue
+            mm = re.match(r"\s*(\d+\*?|final)\s*\|", ln) if col is not None else None
+            if mm:
+                cells = ln.split("|")
+                v = num(cells[col].strip()) if len(cells) > col else None
+                if v is not None:
+                    first = v if first is None else first
+                    last = v if mm.group(1) == "final" else last
+        if first is not None:
+            out.append((label, first, last if last is not None else first))
+    return out
 
 
 def metric(metrics, *patterns):
@@ -291,7 +326,9 @@ def main():
           f"| setup WNS / TNS | **{fmt(r_wns, 1)} ps** / {fmt(r_tns, 1)} ps ({fmt(r_sviol)} violating endpoints) |",
           f"| hold WNS / TNS | {fmt(r_hws, 1)} / {fmt(r_htns, 1)} ps ({fmt(r_hviol)} violating endpoints) |",
           f"| minimum period, register to register / with the I/O paths | {fmt(r_mp, 1)} / {fmt(r_mpp, 1)} ps ({fmt(r_fmax, 0)} MHz) |",
-          f"| clock tree: sinks, buffers (TritonCTS), buffers on a path, levels | {fmt(ct.get('sinks'))}, {fmt(ct.get('buffers'))}, "
+          f"| clock tree: sinks, buffers (TritonCTS), buffers on a path, levels | {fmt(ct.get('sinks'))}"
+          + (" (" + ", ".join(f"{n} {fmt(s)}" for n, s in ct["trees"]) + ")" if len(ct.get("trees") or []) > 1 else "")
+          + f", {fmt(ct.get('buffers'))}, "
           f"{fmt(ct.get('min_path'))}-{fmt(ct.get('max_path'))}, {fmt(ct.get('levels'))}; after routing {fmt(cls.get('clock_buffer'))} "
           f"clock buffers + {fmt(cls.get('clock_inverter'))} clock inverters |",
           f"| clock skew, setup / hold (with the 8 % setup uncertainty in the setup figure) | {fmt(skew_s, 1)} / {fmt(skew_h, 1)} ps |",
@@ -332,6 +369,11 @@ def main():
            f"| minimum period, register to register | {fmt(s_mp, 1)} ps | {fmt(r_mp, 1)} ps | {ratio(r_mp, s_mp)} |",
            f"| minimum period with the I/O paths | {fmt(s_mpp, 1)} ps | {fmt(r_mpp, 1)} ps | {ratio(r_mpp, s_mpp)} |",
            ""]
+    rw = repair_wns(os.path.join(L, "orfs", "logs"))
+    if rw:
+        md += ["Setup WNS through the flow (repair_timing's own tables, before -> after its repair): "
+               + "; ".join(f"{lab} {fmt(a, 1)} -> {fmt(b, 1)} ps" for lab, a, b in rw)
+               + f"; final (OpenRCX) {fmt(r_wns, 1)} ps.", ""]
     if s_path:
         md += [f"Synthesized worst path: `{s_path['start']}` -> `{s_path['end']}`, arrival {fmt(s_path['arrival'], 1)} ps, "
                f"slack {fmt(s_path['slack'], 1)} ps" + (f"; register to register `{s_r2r['start']}` -> `{s_r2r['end']}`, slack "

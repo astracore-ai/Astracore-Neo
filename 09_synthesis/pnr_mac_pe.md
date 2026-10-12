@@ -40,6 +40,8 @@ The synthesized estimate is the netlist ORFS placed (prep.py's) flat in OpenSTA 
 | minimum period, register to register | 1,047.5 ps | 1,008.4 ps | 0.963 |
 | minimum period with the I/O paths | 1,069.5 ps | 1,008.4 ps | 0.943 |
 
+Setup WNS through the flow (repair_timing's own tables, before -> after its repair): floorplan (no wires, ideal clock: the synthesized estimate, then gate sizing) -69.5 -> -44.0 ps; CTS (placement parasitics, the propagated clock) -17.7 -> -4.3 ps; global route (its parasitics) -55.8 -> -49.0 ps; final (OpenRCX) -8.4 ps.
+
 Synthesized worst path: `x_in[7]` -> `prod_q[14]_reg`, arrival 954.8 ps, slack -69.5 ps; register to register `w_q[1]_reg` -> `prod_q[14]_reg`, slack -47.5 ps.
 
 `synth.py`'s own figures for the units of the block (each unit with its children as extracted timing models, the synthesis job's per-unit view, 0.2 of the period on every unit's I/O):
