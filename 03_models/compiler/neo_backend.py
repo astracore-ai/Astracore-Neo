@@ -166,11 +166,15 @@ def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank,
 
 
 def compile_layer(name, h, w, cin, cout, k, s, p, rows, cols, nx, ny, act_bank, act_base, w_bank, w_base,
-                  owner=(0, 0), shares=1, oy0=0, oy_n=None, int8_out=False, out_base=0) -> LayerProgram:
-    """Single group (one output tile, one output-row range) executable on the test mesh."""
+                  owner=(0, 0), shares=1, oy0=0, oy_n=None, int8_out=False, out_base=0, exclude=()) -> LayerProgram:
+    """Single group (one output tile, one output-row range) executable on the test mesh. `exclude` lists tiles that take no
+    share (the tile-exclusion mask of compile_network, drop 0.44: the chip top's disabled tiles); act_bank / w_bank may be a
+    bridge position (x = nx, the chip top's bridge column): a bridge is addressed exactly like a bank."""
     ho = (h + 2 * p - k) // s + 1
     oy_n = ho if oy_n is None else oy_n
-    free = [(x, y) for y in range(ny) for x in range(nx) if (x, y) != owner]
+    exclude = {tuple(t) for t in exclude}
+    assert tuple(owner) not in exclude, f"owner {owner} is excluded"
+    free = [(x, y) for y in range(ny) for x in range(nx) if (x, y) != owner and (x, y) not in exclude]
     tiles, _, out_base = compile_group(h, w, cin, cout, k, s, p, rows, cols, 0, oy0, oy_n, act_bank, act_base,
                                        w_bank, w_base, owner, free, nx, shares, int8_out=int8_out, out_base=out_base)
     return LayerProgram(name, tiles, owner, out_base, oy_n * ((w + 2 * p - k) // s + 1))
