@@ -109,6 +109,7 @@ module neo_core #(
   logic signed [15:0]    f_ct, f_ky, f_kx;
   logic                  f_first, f_start, f_busy;
   logic                  w_load;
+  logic                  w_load_q;                  // drop 0.41: w_load one cycle later, beside the weight buffer's registered read
   logic [WAW-1:0]        w_raddr;
   logic signed [WW-1:0]  w_in [COLS];
   logic signed [WCW-1:0] wc_in;
@@ -168,6 +169,14 @@ module neo_core #(
     else if (seq_err)   seq_err_sticky <= 1'b1;
   end
 
+  // drop 0.41: the weight buffer's read is registered (w_in / wc_in are the entry at the w_raddr of the previous cycle),
+  // so the array takes the shadow-load strobe one cycle late, in the cycle its data is valid. The lockstep comparator
+  // above compares the two sequencers' own w_load / w_raddr, not this copy.
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) w_load_q <= 1'b0;
+    else        w_load_q <= w_load;
+  end
+
   neo_mac_core_v02 #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .WCW(WCW), .ACC_ROWS(ACC_ROWS),
                      .ABUF_DEPTH(ABUF_DEPTH), .IDXW(IDXW), .AW(AW), .PE_LAT(PE_LAT),
                      .FAULT_ROW(FAULT_ROW), .FAULT_COL(FAULT_COL)) u_dp (
@@ -176,7 +185,7 @@ module neo_core #(
     .cfg_h(cfg_h), .cfg_w(cfg_w), .cfg_ho(cfg_ho), .cfg_wo(cfg_wo), .cfg_oy0(cfg_oy0), .cfg_oy_n(cfg_oy_n), .cfg_iy0(cfg_iy0),
     .cfg_s(cfg_s), .cfg_p(cfg_p), .cfg_tile_pixels(cfg_tile_pixels), .cfg_regions_m1(cfg_regions_m1), .cfg_ct(f_ct), .cfg_ky(f_ky), .cfg_kx(f_kx), .acc_first(f_first),
     .start(f_start), .busy(f_busy),
-    .w_load(w_load), .w_in(w_in), .wc_in(wc_in),
+    .w_load(w_load_q), .w_in(w_in), .wc_in(wc_in),
     .ext_valid(ext_gated), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(acc_ext_ready),
     .rd_en(rd_en), .rd_idx(rd_idx), .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid),
     .abft_clear(err_clear), .array_abft_err(array_abft_err), .array_abft_sticky(array_abft_sticky),

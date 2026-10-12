@@ -6,9 +6,14 @@
 //   waddr[WAW-1:1], the entry inside the word waddr[0] -- and its one write port is a word wide: we writes the entry at
 //   waddr, we2 the upper entry of the same word (entry waddr + 1; the DMA asserts it only at an even waddr), each
 //   through its own LANES encoders. The read is one entry per cycle as before. Drop 0.40: the array is a neo_mem_rf
-//   leaf of DEPTH/2 words, each a pair of coded entries (2 x LANES x 39 bits) with one write-enable group per entry and
-//   an asynchronous read of the pair -- the module the synthesis flow black-boxes and a memory compiler replaces; the
-//   SECDED lanes, the pair / entry decode and the flags stay here.
+//   leaf of DEPTH/2 words, each a pair of coded entries (2 x LANES x 39 bits) with one write-enable group per entry --
+//   the module the synthesis flow black-boxes and a memory compiler replaces; the SECDED lanes, the pair / entry decode
+//   and the flags stay here.
+//   Drop 0.41: the read is the leaf's registered port B (an SRAM macro's read: address at the edge, data the cycle
+//   after), enabled every cycle; port A is tied off. rdata / rcdata are the entry at the raddr of the PREVIOUS cycle:
+//   rb_data -> the entry selected by raddr[0] delayed one cycle (ra0_q) -> the LANES decoders -> rdata. The ce / ue flags
+//   rise one cycle after the address that read the faulty codeword. The core delays the sequencer's w_load by one cycle
+//   to match (neo_core's w_load_q), so the shadow chain shifts in the cycle the data is valid.
 module wbuf_mem #(
   parameter int COLS  = 32,
   parameter int WW    = 8,
@@ -47,9 +52,10 @@ module wbuf_mem #(
   logic [PW_-1:0]  wflat, wflat2;                    // entries packed into lanes
   logic [PW_-1:0]  rflat;
   logic [EWC-1:0]  coded, coded2;                    // the two entries after coding
-  logic [CW-1:0]   pair_wdata, pair_rdata;           // the leaf's write word and the pair read at raddr's pair
+  logic [CW-1:0]   pair_wdata, pair_rdata;           // the leaf's write word and the pair read (port B: raddr's pair, one cycle later)
   logic [1:0]      pair_we;                          // write-enable per entry of the pair
-  logic [EWC-1:0]  rent;                             // the entry read (raddr[0] selects it inside the pair)
+  logic [EWC-1:0]  rent;                             // the entry read (raddr[0], delayed with the read, selects it inside the pair)
+  logic            ra0_q;                            // raddr[0] of the previous cycle: the entry of the pair now on rb_data
   logic [38:0]     rcw  [LANES];
   logic [5:0]      wp   [LANES], wp2  [LANES];
   logic            wop  [LANES], wop2 [LANES];
@@ -89,7 +95,7 @@ module wbuf_mem #(
       assign rcw[l] = rent[39*l +: 39];
     end
   endgenerate
-  assign rent = raddr[0] ? pair_rdata[CW-1:EWC] : pair_rdata[EWC-1:0];
+  assign rent = ra0_q ? pair_rdata[CW-1:EWC] : pair_rdata[EWC-1:0];
 
   always_comb begin
     any_ce = 1'b0; any_ue = 1'b0;
@@ -108,7 +114,7 @@ module wbuf_mem #(
   logic [CW-1:0]    fi_mask_w;
   logic [WAW-2:0]   fi_pair;
   logic             fi_en;
-  logic [CW-1:0]    unused_rb, unused_bd;          // the leaf's unused read ports (RB = 0, no backdoor here)
+  logic [CW-1:0]    unused_ra, unused_bd;          // the leaf's unused read ports (port A tied off, no backdoor here)
   generate
     if (DV_HOOKS != 0) begin : g_dvd
       logic [31:0] fi_shift;
@@ -122,19 +128,21 @@ module wbuf_mem #(
       assign unused_dv = ^{dv_fi_flip, dv_fi_addr, dv_fi_lane, dv_fi_mask};
     end
   endgenerate
-  neo_mem_rf #(.W(CW), .D(DEPTH/2), .G(2), .RB(0), .DV_HOOKS(DV_HOOKS)) u_mem (
+  neo_mem_rf #(.W(CW), .D(DEPTH/2), .G(2), .RB(1), .DV_HOOKS(DV_HOOKS)) u_mem (
     .clk(clk),
     .we(pair_we), .waddr(waddr[WAW-1:1]), .wdata(pair_wdata),
-    .ra_addr(raddr[WAW-1:1]), .ra_data(pair_rdata),
-    .rb_en(1'b0), .rb_addr('0), .rb_data(unused_rb),
+    .ra_addr('0), .ra_data(unused_ra),
+    .rb_en(1'b1), .rb_addr(raddr[WAW-1:1]), .rb_data(pair_rdata),
     .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_bd),
     .fi_en(fi_en), .fi_or(1'b0), .fi_addr(fi_pair), .fi_mask(fi_mask_w));
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
+      ra0_q <= 1'b0;
       ecc_ce_sticky <= 1'b0; ecc_ue_sticky <= 1'b0;
     end else begin
+      ra0_q <= raddr[0];
       if (err_clear) begin ecc_ce_sticky <= 1'b0; ecc_ue_sticky <= 1'b0; end
-      if (any_ce) ecc_ce_sticky <= 1'b1;        // the read is combinational on raddr: flags follow any read
+      if (any_ce) ecc_ce_sticky <= 1'b1;        // the read happens every cycle: flags follow any read, one cycle after its address
       if (any_ue) ecc_ue_sticky <= 1'b1;
     end
   end
