@@ -9,12 +9,15 @@
 //   Drop 0.42 (the same function, cycle for cycle; the arbitration was `(rr + 1 + k) % 5` in a priority chain behind a
 //   1,077-bit parity reduce on the FIFO head, 2.57 ns on the ASAP7 SS proxy):
 //   - the parity is computed when a flit is pushed (^in_flit, on the input side) and stored with the entry (fbad), so
-//     head_bad is a 2:1 mux of two stored bits;
-//   - the request is one-hot from the XY compares (rq[o][i]: head i valid, good parity, routed to o); the rotating
+//     head_bad is a 2:1 mux of two stored bits; so is the route: the XY compares of the pushed flit's destination with
+//     the straps my_x / my_y (static: tied by the mesh, false paths in TILE_SDC), one-hot, stored with the entry (freq);
+//   - the request is one-hot (rq[o][i]: head i valid, good parity, routed to o); the rotating
 //     priority of output o is a one-hot pointer ptr[o] = the input after the last grant; the grant is the first set bit
 //     of rq & (the bits at and above ptr) if any, else the first set bit of rq (the double-vector first-set), one-hot;
 //     the output register loads the head through an AND-OR of the grant. ptr resets to input 0 (the old rr = 4), so the
-//     order of grants is the old one.
+//     order of grants is the old one. fire needs only that a request exists; the occupancy is a 2-bit thermometer
+//     (occ; count is derived from it), so the pop updates it without an increment; the stored bits are read through
+//     rd_a, a copy of the read pointer, so the data mux's 1,077-bit fanout on rd stays off the arbitration path.
 module noc_router #(
   parameter int XW = 3,
   parameter int YW = 3,
@@ -44,33 +47,41 @@ module noc_router #(
   input  logic [2:0]    dv_port,
   input  logic [FW-1:0] dv_mask
 );
-  // ---- input FIFOs (depth 2), each entry with the parity of the flit computed at the push ----
+  // ---- input FIFOs (depth 2), each entry with the flit's parity and route computed at the push ----
   logic [FW-1:0] fifo [5][2];
   logic          fbad [5][2];   // the entry's parity failed (odd), from ^in_flit at the push
-  logic [1:0]    count [5];
+  logic [1:0]    occ   [5];     // the occupancy as a thermometer: bit 0 = at least one entry, bit 1 = two
+  logic [1:0]    count [5];     // the occupancy 0..2 (from occ; kept for the formal harness and waveforms)
+  logic          unused_count;  // (lint: count is read by nothing in here)
+  assign unused_count = ^{count[0], count[1], count[2], count[3], count[4]};
   logic          rd    [5];
+  logic          rd_a  [5];     // a copy of rd for the stored parity / route bits (rd drives the FIFO's 2:1 data mux)
   logic          wr    [5];
   logic [FW-1:0] head  [5];
   logic          head_valid [5];
   logic          head_bad [5];  // parity failure on the head flit
-  logic [4:0]    req_oh [5];    // requested output port of the head flit, one-hot (bit o = port o)
+  logic [4:0]    freq  [5][2];  // the entry's output port, one-hot (bit o = port o), from in_flit's destination at the push
+  logic [4:0]    req_oh [5];    // requested output port of the head flit, one-hot
   logic          in_bad [5];    // parity of the flit being pushed
+  logic [4:0]    in_req [5];    // output port of the flit being pushed, one-hot
 
   generate
     for (genvar i = 0; i < 5; i++) begin : g_in
-      assign in_ready[i]   = (count[i] != 2'd2);
+      assign count[i]      = {occ[i][1], occ[i][0] && !occ[i][1]};
+      assign in_ready[i]   = !occ[i][1];
       assign head[i]       = fifo[i][rd[i]];
-      assign head_valid[i] = (count[i] != 2'd0);
-      assign head_bad[i]   = fbad[i][rd[i]];
+      assign head_valid[i] = occ[i][0];
+      assign head_bad[i]   = fbad[i][rd_a[i]];
+      assign req_oh[i]     = freq[i][rd_a[i]];
       assign in_bad[i]     = (^in_flit[i]) != 1'b0;   // even parity over the whole flit
       logic [XW-1:0] dx;
       logic [YW-1:0] dy;
       logic          xe, ye;
-      assign dx = head[i][FW-2-YW -: XW];
-      assign dy = head[i][FW-2 -: YW];
+      assign dx = in_flit[i][FW-2-YW -: XW];
+      assign dy = in_flit[i][FW-2 -: YW];
       assign xe = (dx == my_x);
       assign ye = (dy == my_y);
-      assign req_oh[i] = {xe && ye,                   // 4 local
+      assign in_req[i] = {xe && ye,                   // 4 local
                           dx < my_x,                  // 3 W
                           xe && (dy > my_y),          // 2 S
                           dx > my_x,                  // 1 E
@@ -102,7 +113,7 @@ module noc_router #(
         gnt[o][i] = (masked[o] != 5'd0) ? (masked[o][i] && ((masked[o] & ((5'd1 << i) - 5'd1)) == 5'd0))
                                         : (rq[o][i] && ((rq[o] & ((5'd1 << i) - 5'd1)) == 5'd0));
       end
-      fire[o] = (gnt[o] != 5'd0) && (!out_valid[o] || out_ready[o]);
+      fire[o] = (rq[o] != 5'd0) && (!out_valid[o] || out_ready[o]);   // a grant exists exactly when a request does
     end
     for (int i = 0; i < 5; i++) begin
       drop[i] = head_valid[i] && head_bad[i];
@@ -134,7 +145,7 @@ module noc_router #(
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       for (int i = 0; i < 5; i++) begin
-        count[i] <= '0; rd[i] <= 1'b0; wr[i] <= 1'b0; ptr[i] <= 5'b00001;    // input 0 first (the old rr = 4)
+        occ[i] <= '0; rd[i] <= 1'b0; rd_a[i] <= 1'b0; wr[i] <= 1'b0; ptr[i] <= 5'b00001;   // input 0 first (the old rr = 4)
         out_valid[i] <= 1'b0; out_flit[i] <= '0;
       end
       parity_err_sticky <= 1'b0;
@@ -144,11 +155,15 @@ module noc_router #(
         if (in_valid[i] && in_ready[i]) begin
           fifo[i][wr[i]] <= in_flit[i];
           fbad[i][wr[i]] <= in_bad[i];
+          freq[i][wr[i]] <= in_req[i];
           wr[i] <= !wr[i];
         end
         if (pop[i]) rd[i] <= !rd[i];
-        if ((in_valid[i] && in_ready[i]) && !pop[i])      count[i] <= count[i] + 2'd1;
-        else if (!(in_valid[i] && in_ready[i]) && pop[i]) count[i] <= count[i] - 2'd1;
+        rd_a[i] <= rd_a[i] ^ pop[i];                     // = rd, kept apart from the data mux's fanout
+        // occupancy: a push alone shifts a one in, a pop alone shifts it out, both or neither hold (as muxes, no
+        // increment: two entries need a pop to take a push, so push && pop leaves occ as it is)
+        occ[i] <= {pop[i] ? ((in_valid[i] && in_ready[i]) && occ[i][1]) : ((in_valid[i] && in_ready[i]) ? occ[i][0] : occ[i][1]),
+                   (in_valid[i] && in_ready[i]) || (pop[i] ? occ[i][1] : occ[i][0])};
         // output stage
         if (fire[i]) begin
           out_valid[i] <= !dv_clear_o[i];
