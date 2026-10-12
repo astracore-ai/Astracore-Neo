@@ -1,0 +1,18 @@
+# abft_checker -- err == valid && (row sum != y_chk); err_sticky sets the cycle after, holds, clears on abft_clear
+# COLS = 4, PW = 8, every input free; the sum wraps at PW bits (formed in the harness as a tree, the RTL sums a chain).
+# Full proof by k-induction (drop 0.41); abft_checker_fv.sv holds the harness.
+[options]
+mode prove
+depth 2
+
+[engines]
+smtbmc yices
+
+[script]
+plugin -i slang
+read_slang -DFORMAL --top abft_checker_fv abft_checker.sv abft_checker_fv.sv
+prep -top abft_checker_fv
+
+[files]
+rtl/abft_checker.sv
+formal/abft_checker_fv.sv

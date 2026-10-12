@@ -1,0 +1,20 @@
+# lockstep_core_seq -- two core_seq (16x8), identical inputs from reset: the 12 compared outputs equal every cycle
+# neo_core's seq_err list (f_start, f_first, f_ct, f_ky, f_kx, w_load, w_raddr, rd_en, rd_idx, done, reduce_ready,
+# state_dbg) and the other outputs, every input free and shared, resets at any time after the first: the comparator never
+# fires without a fault. Full proof by k-induction, the register-by-register equality as the invariant (drop 0.41);
+# lockstep_core_seq_fv.sv holds the harness.
+[options]
+mode prove
+depth 2
+
+[engines]
+smtbmc yices
+
+[script]
+plugin -i slang
+read_slang -DFORMAL --top lockstep_core_seq_fv core_seq.sv lockstep_core_seq_fv.sv
+prep -top lockstep_core_seq_fv
+
+[files]
+rtl/core_seq.sv
+formal/lockstep_core_seq_fv.sv

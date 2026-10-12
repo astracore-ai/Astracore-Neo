@@ -1,0 +1,22 @@
+# noc_router -- FIFO invariants, XY routing, odd parity dropped and flagged, no invention, a flit token kept, fairness
+# XW = YW = 3, DW = 8, every input free: count <= 2 and in_ready == (count != 2); each output register only holds flits
+# whose XY port it is; no output ever holds odd parity, a bad head is popped the cycle it is the head and
+# parity_err_sticky is exactly "a bad head was dropped since err_clear"; every flit value that leaves was accepted; a
+# picked accepted flit stays in its FIFO slot, moves into exactly one output register (its XY port), unchanged until it
+# leaves; a requesting head is granted within 5 fires of its output. Full proof by k-induction (drop 0.41);
+# noc_router_fv.sv holds the harness.
+[options]
+mode prove
+depth 2
+
+[engines]
+smtbmc yices
+
+[script]
+plugin -i slang
+read_slang -DFORMAL --top noc_router_fv noc_router.sv noc_router_fv.sv
+prep -top noc_router_fv
+
+[files]
+rtl/noc_router.sv
+formal/noc_router_fv.sv

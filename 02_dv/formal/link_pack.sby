@@ -1,0 +1,21 @@
+# link_pack -- packer -> unpacker round trip: same words, order and fields; flit parity and size; CRC flush; progress
+# BW = 16, WPF = 32, XW = YW = 3 (the silicon links): the beats out carry the words accepted, in order, none invented or
+# repeated, with their type / tag / head / stream fields and PSUM columns; every link flit even parity and 1..WPF words,
+# every beat out even parity and 1..BW words; a CRC (any one-word type) accepted means nothing left in flight; with the
+# sink ready no beat waits more than 2 cycles. Full proof by k-induction with invariants over the pending flit
+# (drop 0.41); link_pack_fv.sv holds the harness.
+[options]
+mode prove
+depth 2
+
+[engines]
+smtbmc yices
+
+[script]
+plugin -i slang
+read_slang -DFORMAL --top link_pack_fv link_pack.sv link_pack_fv.sv
+prep -top link_pack_fv
+
+[files]
+rtl/link_pack.sv
+formal/link_pack_fv.sv
