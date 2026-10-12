@@ -1,4 +1,8 @@
-Neo NPU IP, N5A, first-order PPA (+/-30 %)
+Neo NPU IP, N5A, first-order PPA (+/-30 %) -- status (drop 0.39): every number in this file is a MODEL figure from
+  model/neo_ip_ppa.py; nothing here is synthesized or measured. The open-PDK synthesis job (ROADMAP phase 1) replaces the
+  logic areas with synthesized cell areas on the ASAP7 proxy (the arrays stay at the macro table's densities until a memory
+  compiler run), the physical proxy (phase 7) the routed figures. The 'TOPS sparse' column is PLANNED (phase 3): the 2:4
+  sparsity engine is not in the delivered RTL.
   tile area: 0.62 mm2 with its 2 MB bank (0.13 mm2 without): MAC array 0.026, accumulator 0.032, weight buffer 0.016, activation buffer 0.023, control+interface 0.020, router 0.010, bank 0.49
   performance point: 2.0 GHz at 0.75 V
     Grade 2 (Tj 125 C): per tile 4.10 TOPS peak; power 0.97 W at 100 % (0.92 dynamic + 0.045 leakage), 0.60 W at 60 %; efficiency 4.2 TOPS/W peak, 4.1 TOPS/W at 60 %
