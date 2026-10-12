@@ -17,7 +17,10 @@
 //                 copy); in the output register it is unchanged until it leaves, and that register is its XY port
 //     fairness    an input whose head requests output o is granted within 5 fires of o: at most 4 fires of o go to
 //                 other inputs while it waits (with the round-robin distance as the inductive helper)
-//   Internal names read: fifo, count, rd, wr (the FIFO state), rr (the round-robin pointer), fire, sel, pop (the grants).
+//   Internal names read (the drop 0.41 router): fifo, fbad, freq, occ, count, rd, rd_a, wr (the FIFO state with the parity
+//   and route bits stored at the push), ptr (the one-hot rotating pointer: the first input in priority), fire, gnt, pop
+//   (the grants). Helper invariants for the induction: the stored parity / route bits agree with the stored flit, rd_a
+//   mirrors rd, the occupancy is a well-formed thermometer, ptr is one-hot.
 module noc_router_fv #(
   parameter int XW = 3,
   parameter int YW = 3,
@@ -133,7 +136,7 @@ module noc_router_fv #(
     tk_dep  = (tk_st == 2'd2) && out_valid[tk_o] && out_ready[tk_o];
     tk_go   = 3'd0;
     for (int o = 4; o >= 0; o--) begin
-      tk_g[o] = u_dut.fire[o] && (u_dut.sel[o] == tk_i);
+      tk_g[o] = u_dut.fire[o] && u_dut.gnt[o][tk_i];
       if (tk_g[o]) tk_go = 3'(o);
     end
   end
@@ -166,6 +169,15 @@ module noc_router_fv #(
   function automatic logic [2:0] rr_dist(input logic [2:0] r, input logic [2:0] i);   // i's place in the search after r: 1..5
     return (i > r) ? 3'(i - r) : 3'(i + 3'd5 - r);
   endfunction
+  function automatic logic [2:0] ptr_rr(input logic [4:0] p);   // the last granted input implied by the one-hot pointer
+    case (p)
+      5'b00001: return 3'd4;
+      5'b00010: return 3'd0;
+      5'b00100: return 3'd1;
+      5'b01000: return 3'd2;
+      default:  return 3'd3;
+    endcase
+  endfunction
 
   always_comb begin
     if (rst_n) begin
@@ -174,6 +186,17 @@ module noc_router_fv #(
         assert (u_dut.count[i] <= 2'd2);
         assert (in_ready[i] == (u_dut.count[i] != 2'd2));
         assert (u_dut.wr[i] == (u_dut.rd[i] ^ (u_dut.count[i] == 2'd1)));
+        assert (!u_dut.occ[i][1] || u_dut.occ[i][0]);                                   // a thermometer
+        assert (u_dut.rd_a[i] == u_dut.rd[i]);
+        // the parity and route bits stored at the push describe the stored flit
+        if (u_dut.count[i] != 2'd0) begin
+          assert (u_dut.fbad[i][u_dut.rd[i]] == ((^u_dut.fifo[i][u_dut.rd[i]]) != 1'b0));
+          assert (u_dut.freq[i][u_dut.rd[i]] == (5'd1 << xy_port(u_dut.fifo[i][u_dut.rd[i]])));
+        end
+        if (u_dut.count[i] == 2'd2) begin
+          assert (u_dut.fbad[i][!u_dut.rd[i]] == ((^u_dut.fifo[i][!u_dut.rd[i]]) != 1'b0));
+          assert (u_dut.freq[i][!u_dut.rd[i]] == (5'd1 << xy_port(u_dut.fifo[i][!u_dut.rd[i]])));
+        end
         // parity: never in an output register
         if (out_valid[i]) assert ((^out_flit[i]) == 1'b0);
         // no invention: every copy of F inside was accepted
@@ -204,10 +227,10 @@ module noc_router_fv #(
       end
       // fairness
       for (int o = 0; o < 5; o++) begin
-        assert (u_dut.rr[o] <= 3'd4);
+        assert (u_dut.ptr[o] != 5'd0 && (u_dut.ptr[o] & (u_dut.ptr[o] - 5'd1)) == 5'd0);   // one-hot
         for (int i = 0; i < 5; i++) begin
           assert (wt[o][i] <= 3'd4);
-          if (rq[o][i]) assert (4'(wt[o][i]) + 4'(rr_dist(u_dut.rr[o], 3'(i))) <= 4'd5);
+          if (rq[o][i]) assert (4'(wt[o][i]) + 4'(rr_dist(ptr_rr(u_dut.ptr[o]), 3'(i))) <= 4'd5);
         end
       end
     end

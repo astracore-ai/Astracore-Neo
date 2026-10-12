@@ -84,6 +84,7 @@ module lockstep_core_seq_fv #(
       assert (u_a.lcnt == u_b.lcnt && u_a.loading == u_b.loading && u_a.loaded == u_b.loaded);
       assert (u_a.tcnt == u_b.tcnt && u_a.wcnt == u_b.wcnt && u_a.dcnt == u_b.dcnt);
       assert (u_a.ltile == u_b.ltile && u_a.rcnt == u_b.rcnt && u_a.ext_cnt == u_b.ext_cnt);
+      assert (u_a.red_last == u_b.red_last);                   // drop 0.41: the reduce-to-drain cycle
       assert (u_a.ct_free_q == u_b.ct_free_q && u_a.ct_free_idx_q == u_b.ct_free_idx_q);
     end
   end

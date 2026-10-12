@@ -4,8 +4,8 @@
 //   tbl_fault_inject = 0 on both. The tables are not reset (as in silicon), so the one assumption is the use the core
 //   makes of them: in_valid only once all four entries have been written, tracked here from tbl_we / tbl_addr. Asserted
 //   every cycle: out_valid equal, out_q equal while out_valid (neo_core's rq_err compares exactly that), and the parity
-//   stickies equal. Helper invariants (the written flags, the written entries, the stage-1 registers while v1) close
-//   k-induction in one step.
+//   stickies equal. Helper invariants (the written flags, the written entries, the stage-1 registers while v1 and the
+//   stage-2 registers while v2 -- the three-stage requant of drop 0.41) close k-induction in one step.
 module lockstep_requant_fv #(
   parameter int COLS = 4,
   parameter int PW   = 32,
@@ -63,9 +63,13 @@ module lockstep_requant_fv #(
         assert (u_a.wrt[j] == written[j] && u_b.wrt[j] == written[j]);
         if (written[j]) assert (u_a.mult[j] == u_b.mult[j] && u_a.shft[j] == u_b.shft[j] && u_a.zp[j] == u_b.zp[j] &&
                                 u_a.par[j] == u_b.par[j]);
-        if (u_a.v1) assert (u_a.prod[j] == u_b.prod[j] && u_a.sh1[j] == u_b.sh1[j] && u_a.zp1[j] == u_b.zp1[j]);
+        if (u_a.v1) assert (u_a.ra1[j] == u_b.ra1[j] && u_a.rb1[j] == u_b.rb1[j] && u_a.n1[j] == u_b.n1[j] &&
+                            u_a.sh1[j] == u_b.sh1[j] && u_a.zp1[j] == u_b.zp1[j]);
+        if (u_a.v2) assert (u_a.sum2[j] == u_b.sum2[j] && u_a.n2[j] == u_b.n2[j] &&
+                            u_a.sh2[j] == u_b.sh2[j] && u_a.zp2[j] == u_b.zp2[j]);
       end
       assert (u_a.v1 == u_b.v1);
+      assert (u_a.v2 == u_b.v2);
     end
   end
 endmodule
