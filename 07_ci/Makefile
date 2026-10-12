@@ -24,7 +24,9 @@
 # make nic        : the tile interface's bank-side paths at 16 words per cycle (writeback, serve, packer/unpacker; drop 0.29)
 # make two_layer  : M10: two layers back to back on the mesh with INT8 handoff through the bank
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
-# make verilator  : Verilator: streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then cocotb: M1-M13 and M10 at 16x8/8x8, M1-M13 and C1 on the 32x32 silicon configuration (drop 0.21)
+# make verilator  : Verilator: the beat CRC's equivalence (make crc16, first), streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then cocotb: M1-M13 and M10 at 16x8/8x8, M1-M13 and C1 on the 32x32 silicon configuration (drop 0.21)
+# make crc16      : the matrix-form crc16_beat (drop 0.41): the RTL is gen_crc16_beat.py's output, lint-clean at BW 16 / 4 / 1, and equal to the
+#                   serial chain it replaced (tb_crc16_beat.sv: 69,792 vectors, random and the exhaustive basis sweep) under Verilator and Icarus
 # make cocotb_mesh8 : cocotb on Verilator: the mesh-level tests on the silicon mesh, 8x8 tiles of 32x32 cores with 2 MB banks (drop 0.24; its own CI job;
 #                   hierarchical verilation since drop 0.35: the tile verilated once, 64 instances -- 0.76 GB instead of >16 GB)
 # make cocotb_coverage : the coverage report (drop 0.26): 16x8 suite, M10 and C1 with Verilator line/toggle coverage + functional covergroups
@@ -52,7 +54,7 @@ TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wra
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth crc16
 
 all: regress model
 
@@ -178,6 +180,7 @@ xrun: vectors
 	     $(RTL) $(TB) +VECDIR=$(VECDIR)
 
 verilator: vectors vectors_core
+	$(MAKE) crc16
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD +incdir+$(VECDIR) --top-module tb_neo_mac_core \
 	          $(RTL) $(TB) -o sim
 	./obj_dir/sim +VECDIR=$(VECDIR)
@@ -189,6 +192,24 @@ verilator: vectors vectors_core
 	          $(TILE) tb/tb_tile_mesh.sv -o sim_tiles
 	./obj_tiles/sim_tiles
 	$(MAKE) cocotb_tiles
+
+# the beat CRC in matrix form (drop 0.41): rtl/crc16_beat.sv must be what sim/gen_crc16_beat.py generates (the script checks its
+# tables against the serial algorithm first), lint-clean (-Wall) at the three widths the testbench instantiates, and equal to
+# crc16_beat_serial -- the chain of crc16_word stages it replaced -- in tb_crc16_beat.sv: 60,000 random vectors and, for every n,
+# every unit vector of {crc_in, words} (both modules are linear for a fixed n, so the basis sweep is exhaustive) at BW = 16, 4
+# and 1, under Verilator and Icarus (CI's Icarus 12 runs it: continuous assignments only on the new side). The target fails
+# unless both simulators print ALL PASS; `make verilator` runs it first.
+CRC16_SRC := rtl/crc16_word.sv rtl/crc16_beat.sv tb/crc16_beat_serial.sv tb/tb_crc16_beat.sv
+crc16:
+	python3 sim/gen_crc16_beat.py --check
+	for bw in 16 4 1; do verilator --lint-only -Wall -GBW=$$bw --top-module crc16_beat rtl/crc16_beat.sv || exit 1; done
+	mkdir -p build
+	verilator --binary --timing -Wall -Wno-TIMESCALEMOD --Mdir obj_crc16 --top-module tb_crc16_beat $(CRC16_SRC) -o sim_crc16
+	./obj_crc16/sim_crc16 | tee build/crc16_verilator.txt
+	grep -q "^RESULT: ALL PASS" build/crc16_verilator.txt
+	iverilog -g2012 -o build/crc16.vvp $(CRC16_SRC)
+	vvp build/crc16.vvp | tee build/crc16_iverilog.txt
+	grep -q "^RESULT: ALL PASS" build/crc16_iverilog.txt
 
 # cocotb on Verilator (drop 0.21): the mesh suite M1-M13 on 16x8 cores, M10 on the 8x8-core build, then the silicon
 # configuration: M1-M13 on 32x32 cores with the silicon depths and 2 MB banks (tile32) and C1 on the 32x32 core

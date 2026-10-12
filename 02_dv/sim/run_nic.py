@@ -15,8 +15,11 @@ bank port). tile_nic alone, its link side driven with beats and its bank side mo
   I11 PSUM rows into the reduce port at beat rate (drop 0.31): beats of random column counts, the FIFO-full stall on the check word
   I12 the drain in 16-word beats (drop 0.31): INT32 rows as 16 + 16 + 1, INT8 rows, PSUM rows with tags and column headers
   I4/I5 link_packer -> link_unpacker back to back at 32 and 1 words per flit: random beats, PSUM rows and single-word
-     types come out as the words, columns and types that went in, no flit wider than WPF"""
-import os, random, sys
+     types come out as the words, columns and types that went in, no flit wider than WPF
+  I13 crc16_beat in matrix form (drop 0.41) under neosim: the generated module and crc16_beat_serial (the chain it replaced,
+     tb/crc16_beat_serial.sv) side by side at BW = 16, 4 and 1 on random beats (n = 0 and n = BW included) agree with each
+     other and with the bit-serial model -- neosim reads the module the tile tests run (the exhaustive proof is make crc16)"""
+import os, random, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from neosim import Design, load
 rtl = os.path.join(HERE, "..", "rtl")
@@ -524,6 +527,45 @@ for wpf, label in ((32, "I4"), (1, "I5")):
     print(f"  {label} packer -> unpacker at {wpf} words per flit: 90-word serve in mixed beats, 40 drain words, two PSUM rows, single-word "
           f"types in between, output accepted at random: {nfl} link flits (widest {widest}), every word, column and type in order -> {'PASS' if ok else 'FAIL'} ({cyc} cycles)")
     fails += not ok
+
+# ---------------- I13: the matrix-form beat CRC against the serial chain and the model (drop 0.41) ----------------
+CRC_PAIR = """
+module crc16_pair #(parameter int BW = 16, parameter int CW = $clog2(BW + 1))(
+  input logic [15:0] crc_in, input logic [32*BW-1:0] words, input logic [CW-1:0] n,
+  output logic [15:0] crc_new, output logic [15:0] crc_ref);
+  crc16_beat #(.BW(BW)) u_new (.crc_in(crc_in), .words(words), .n(n), .crc_out(crc_new));
+  crc16_beat_serial #(.BW(BW)) u_ref (.crc_in(crc_in), .words(words), .n(n), .crc_out(crc_ref));
+endmodule
+"""
+
+
+def crc16_beat_test(bw, nvec, seed):
+    """Random (crc_in, words, n) into both modules: crc_new == crc_ref == crc16(words[:n], crc_in); every 8th vector n = 0,
+    the next n = BW."""
+    r = random.Random(seed)
+    with tempfile.TemporaryDirectory() as tmp:
+        wrap = os.path.join(tmp, "crc16_pair.sv")
+        open(wrap, "w").write(CRC_PAIR)
+        d = Design(load([os.path.join(rtl, "crc16_word.sv"), os.path.join(rtl, "crc16_beat.sv"),
+                         os.path.join(HERE, "..", "tb", "crc16_beat_serial.sv"), wrap]))
+    d.elaborate("crc16_pair", {"BW": bw})
+    ci, wi, ni, cn, cr = (d.cell_of(x) for x in ("crc_in", "words", "n", "crc_new", "crc_ref"))
+    bad = 0
+    for v in range(nvec):
+        n = 0 if v % 8 == 0 else bw if v % 8 == 1 else r.randint(0, bw)
+        c = r.getrandbits(16)
+        ws = [r.getrandbits(32) for _ in range(bw)]
+        ci.v, ni.v, wi.v = c, n, sum(w << (32 * k) for k, w in enumerate(ws))
+        d.settle()
+        bad += not (cn.v == cr.v == crc16(ws[:n], c))
+    return bad
+
+
+res13 = {bw: crc16_beat_test(bw, nv, 130 + bw) for bw, nv in ((16, 400), (4, 300), (1, 100))}
+ok13 = not any(res13.values())
+print(f"  I13 crc16_beat matrix form vs crc16_beat_serial and the bit-serial model under neosim: 400 / 300 / 100 random beats at BW 16 / 4 / 1 "
+      f"(n = 0 and n = BW included), mismatches {res13[16]} / {res13[4]} / {res13[1]} -> {'PASS' if ok13 else 'FAIL'}")
+fails += not ok13
 
 print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
 raise SystemExit(1 if fails else 0)
