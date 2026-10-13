@@ -82,7 +82,7 @@ jobs:
   hdl-sim:
     if: github.event_name != 'schedule' && !inputs.pnr_only
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150                           # drop 0.44: 120 -> 150 for the chip top's suite after the ~95 minutes before it
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -108,6 +108,11 @@ jobs:
       - name: verilator streaming core, neo_core, tile mesh
         if: always()
         run: set -o pipefail; make verilator 2>&1 | tee ci_logs/hdl-sim/verilator.txt
+      # the chip top (drop 0.44): neo_top -- 2x2 tiles of 16x8 cores, two bridge nodes, the AXI4-Lite control plane -- under
+      # cocotb, T1-T5 with clk / aclk at 1.0 / 1.6 ns, then the same build with aclk == clk (dv/cocotb/test_neo_top.py)
+      - name: cocotb chip top (bridges, control plane, two clock domains)
+        if: always()
+        run: set -o pipefail; make cocotb_top 2>&1 | tee ci_logs/hdl-sim/top.txt
       - name: publish logs
         if: always()
         run: |

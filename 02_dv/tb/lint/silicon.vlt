@@ -1,0 +1,8 @@
+`verilator_config
+// silicon.vlt (drop 0.44) -- for `make lint`'s two passes at the silicon parameters (the chip top's tile, and neo_top over the
+// tile stub). Exactly one finding of those passes is waived here, and it is not in B1's RTL: link_unpacker (01_rtl/link_pack.sv)
+// shifts the link flit's 32 words into `sh` and presents the low 16 as the beat, so at WPF = 32 > BW = 16 the upper half of
+// `sh` is never read (UNUSEDSIGNAL 'sh'[1023:512]). The existing lint passes run at WPF = 1 and never met it. The fix is a
+// one-line sink in link_unpacker (`logic unused_sh; assign unused_sh = ^sh;`); link_pack.sv is below neo_tile, frozen for
+// stream B1 and A2's file this week, so the sink is left to its owner and this waiver names that one signal and nothing else.
+lint_off -rule UNUSEDSIGNAL -file "*link_pack.sv" -match "*'sh'*"

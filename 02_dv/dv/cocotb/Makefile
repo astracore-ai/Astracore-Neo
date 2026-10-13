@@ -12,6 +12,9 @@
 #                               # hierarchical verilation (drop 0.35): the tile once as a library, 64 instances -- 36 s / 0.76 GB
 #   make -C dv/cocotb mesh8s    # the 8x8 mesh on 16x8 cores with the silicon depths and links, the same tests (drop 0.32; the CI
 #                               # default of drop 0.34, when the 32x32 mesh did not verilate flat in 16 GB; 21 s / 0.44 GB hierarchically)
+#   make -C dv/cocotb top       # test_neo_top.py: the chip top (drop 0.44) -- 2x2 tiles of 16x8 cores + 2 bridge nodes (row 0: memory
+#                               # and host bridge, row 1: an unused position), the AXI4-Lite control plane, clk 1.0 ns and aclk 1.6 ns
+#   make -C dv/cocotb top_sync  # the same build again with aclk == clk (both 1.0 ns, the same edges): the design does not depend on the ratio
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -19,6 +22,7 @@ CORE_SRCS := $(addprefix $(RTL)/, delay_line.sv mac_pe.sv skew_in.sv deskew_out.
   act_feeder.sv acc_bank.sv neo_mac_core_v02.sv core_seq.sv ecc39.sv wbuf_mem.sv requant.sv neo_core.sv)
 TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv crc16_beat.sv tile_nic.sv tile_dma.sv \
   prog_mem.sv host_if.sv esm.sv link_pack.sv neo_tile.sv tile_mesh.sv)
+TOP_SRCS := $(TILE_SRCS) $(addprefix $(RTL)/, cdc_bits.sv cdc_fifo.sv cdc_sync.sv noc_axi_bridge.sv top_ctrl.sv mesh_ctrl.sv neo_top.sv)
 export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH)
 # the wrapper writes design state at the falling edge for fault injection, hence MULTIDRIVEN is expected.
 # --unroll-count 1024 (drop 0.27) did not get the 8x8 build past the NIC's reset loop over NX*NY sources (BLKLOOPINIT, run 68);
@@ -72,6 +76,20 @@ export NEO_ROWS := $(ROWS)
 export NEO_COLS := $(COLS)
 export NEO_FETCH_TIMEOUT := $(FETCH_TIMEOUT)
 export NEO_WPF := $(WPF)
+# the chip top's build (drop 0.44): bridges, their AXI width and host-read timeout, and the two clock periods the suite runs
+AXI_DW ?= 512
+N_MEM_BRIDGES ?= 1
+N_HOST_BRIDGES ?= 1
+HOST_TIMEOUT ?= $(FETCH_TIMEOUT)
+CLK_PS ?= 1000
+ACLK_PS ?= 1600
+export NEO_BANK_DEPTH := $(BANK_DEPTH)
+export NEO_AXI_DW := $(AXI_DW)
+export NEO_N_MEM := $(N_MEM_BRIDGES)
+export NEO_N_HOST := $(N_HOST_BRIDGES)
+export NEO_HOST_TIMEOUT := $(HOST_TIMEOUT)
+export NEO_CLK_PS := $(CLK_PS)
+export NEO_ACLK_PS := $(ACLK_PS)
 # coverage: COVERAGE=1 adds Verilator line/toggle coverage (coverage.dat -> verilator_coverage --annotate),
 # and the tests sample functional covergroups through cocotb-coverage (pip install cocotb-coverage)
 # VCOV=1: Verilator line/toggle coverage plus the functional covergroups (not COVERAGE, which cocotb reads as Python coverage)
@@ -89,6 +107,15 @@ ifeq ($(TARGET),tile)
   MODULE ?= test_tile_mesh
   EXTRA_ARGS += -GNX=$(NX) -GNY=$(NY) -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) \
     -GWBUF_DEPTH=$(WBUF_DEPTH) -GBANK_DEPTH=$(BANK_DEPTH) -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS) -GWPF=$(WPF)
+else ifeq ($(TARGET),top)
+  # the chip top (drop 0.44): neo_top itself is the toplevel -- its AXI ports are packed vectors, the tiles' hooks are off
+  # (DV_HOOKS = 0 inside neo_top: the suite reaches everything through the control plane and the bridges, as a host does)
+  VERILOG_SOURCES = $(TOP_SRCS)
+  TOPLEVEL = neo_top
+  MODULE ?= test_neo_top
+  EXTRA_ARGS += -GNX=$(NX) -GNY=$(NY) -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) \
+    -GWBUF_DEPTH=$(WBUF_DEPTH) -GBANK_DEPTH=$(BANK_DEPTH) -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS) -GWPF=$(WPF) \
+    -GAXI_DW=$(AXI_DW) -GN_MEM_BRIDGES=$(N_MEM_BRIDGES) -GN_HOST_BRIDGES=$(N_HOST_BRIDGES) -GHOST_TIMEOUT=$(HOST_TIMEOUT)
 else
   VERILOG_SOURCES = $(CORE_SRCS)
   TOPLEVEL = neo_core
@@ -109,6 +136,13 @@ tile8:
 	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer SIM_BUILD=sim_build_tile8 COCOTB_RESULTS_FILE=results_tile8.xml
 tile32:
 	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 SIM_BUILD=sim_build_tile32 COCOTB_RESULTS_FILE=results_tile32.xml
+# the chip top (drop 0.44): one build, run twice -- unrelated clocks (clk 1.0 ns, aclk 1.6 ns), then aclk == clk. The 1024-bit
+# links (WPF 32) on 16x8 cores, as mesh8s: the bridges see the silicon's beats (up to 16 words, merged into 32-word flits on
+# the link), not one-word flits
+top:
+	$(MAKE) TARGET=top $(LINKS) SIM_BUILD=sim_build_top COCOTB_RESULTS_FILE=results_top.xml
+top_sync:
+	$(MAKE) TARGET=top $(LINKS) SIM_BUILD=sim_build_top COCOTB_RESULTS_FILE=results_top_sync.xml ACLK_PS=$(CLK_PS)
 MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_bank_ecc_in_flight,m6_compiler_program,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m12_control_path_protection,m13_partitions,m14_bank_contention,m16_link_parity
 # --build-jobs: the model's C++ compiled on several cores (drop 0.30). MESH8_BUILD_JOBS / MESH8_CFLAGS (drop 0.32) pass through
 # from the workflow. Both mesh variants verilate hierarchically (drop 0.35, HIER_ARGS): the flat 64-tile model of 32x32 cores
@@ -158,4 +192,4 @@ coverage: core_cov tile_cov tile8_cov tile32_cov
 	-verilator_coverage --annotate coverage_annotated --annotate-min 1 coverage_*.dat > /dev/null 2>&1
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
-	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated sim_build_top results_top.xml results_top_sync.xml

@@ -35,6 +35,48 @@
 #define NEO_REG_RQ_TBL 0x30
 #define NEO_REG_RQ_ADDR 0x31
 #define NEO_REG_RQ_RELU 0x32
+#define NEO_REG_ERR_MASK 0x05
+#define NEO_REG_ERR_CAUSE 0x06
+#define NEO_REG_PARTITION 0x0B
+
+/* The chip top (drop 0.44; 08_ip_product/neo_top_integration.md, 01_rtl/top_ctrl.sv): the AXI4-Lite control plane's byte
+ * addresses. A tile's host_if registers sit in a 1 KB window per tile, n = y * NX + x, register r at byte 4 * r, so a
+ * platform's neo_wr_fn / neo_rd_fn for the chip top writes NEO_TOP_TILE_REG(tile.y * nx + tile.x, reg). A disabled tile's
+ * window answers SLVERR. */
+#define NEO_TOP_TILE_WIN(n)          (0x00000u + 0x400u * (uint32_t)(n))
+#define NEO_TOP_TILE_REG(n, r)       (NEO_TOP_TILE_WIN(n) + 4u * (uint32_t)(r))
+#define NEO_TOP_NODE_WIN(b)          (0x10000u + 0x400u * (uint32_t)(b))   /* bridge node b: 0x00 CTRL (bit 1: clear parity), 0x04 STATUS (bit 8) */
+#define NEO_TOP_GLOBAL               0x20000u
+#define NEO_TOP_ID                   (NEO_TOP_GLOBAL + 0x000u)   /* r: 0x4E454F54 'NEOT' */
+#define NEO_TOP_VERSION              (NEO_TOP_GLOBAL + 0x004u)   /* r: 0x00000044 */
+#define NEO_TOP_CONFIG               (NEO_TOP_GLOBAL + 0x008u)   /* r: {COLS, ROWS, N_HOST, N_MEM, NY, NX} */
+#define NEO_TOP_CONFIG2              (NEO_TOP_GLOBAL + 0x00Cu)   /* r: {log2 bank words, WPF, AXI_DW} */
+#define NEO_TOP_SCRATCH              (NEO_TOP_GLOBAL + 0x010u)   /* r/w */
+#define NEO_TOP_TIMER_LO             (NEO_TOP_GLOBAL + 0x018u)   /* r: aclk cycles; the read latches TIMER_HI */
+#define NEO_TOP_TIMER_HI             (NEO_TOP_GLOBAL + 0x01Cu)
+#define NEO_TOP_TILE_EN_LO           (NEO_TOP_GLOBAL + 0x020u)   /* r/w: the tile-enable request, bit n = tile n (reset: all) */
+#define NEO_TOP_TILE_EN_HI           (NEO_TOP_GLOBAL + 0x024u)
+#define NEO_TOP_TILE_EN_EFF_LO       (NEO_TOP_GLOBAL + 0x028u)   /* r: the map in effect (applied while the tile is idle or the mesh in reset) */
+#define NEO_TOP_TILE_EN_EFF_HI       (NEO_TOP_GLOBAL + 0x02Cu)
+#define NEO_TOP_DONE_LO              (NEO_TOP_GLOBAL + 0x030u)   /* r: prog_done && !drain_busy, enabled tiles */
+#define NEO_TOP_DONE_HI              (NEO_TOP_GLOBAL + 0x034u)
+#define NEO_TOP_ERR_LO               (NEO_TOP_GLOBAL + 0x038u)   /* r: err_pin, enabled tiles */
+#define NEO_TOP_ERR_HI               (NEO_TOP_GLOBAL + 0x03Cu)
+#define NEO_TOP_IRQ_STATUS           (NEO_TOP_GLOBAL + 0x040u)   /* r, write 1 clears: bit 0 done, 1 err, 2 bridge */
+#define NEO_TOP_IRQ_MASK             (NEO_TOP_GLOBAL + 0x044u)   /* r/w: 1 masks (reset 0x7) */
+#define NEO_TOP_STATUS               (NEO_TOP_GLOBAL + 0x048u)   /* r: bit 0 irq, bit 1 err */
+#define NEO_TOP_BR(b, off)           (NEO_TOP_GLOBAL + 0x100u + 0x20u * (uint32_t)(b) + (uint32_t)(off))
+#define NEO_TOP_BR_WIN_LO            0x0u                        /* window base bits 31:6 */
+#define NEO_TOP_BR_WIN_HI            0x4u                        /* window base bits 39:32 */
+#define NEO_TOP_BR_CTRL              0x8u                        /* bits 3:0: the host role's partition */
+#define NEO_TOP_BR_ERR               0xCu                        /* r, write 1 clears: 0 crc, 1 lost, 2 axi, 3 timeout, 4 host; 5 parity (level) */
+#define NEO_TOP_IRQ_DONE             0x1u
+#define NEO_TOP_IRQ_ERR              0x2u
+#define NEO_TOP_IRQ_BRIDGE           0x4u
+/* A host bridge's AXI4 slave window: the tile index above the bank's byte offset (baw = log2 of the bank's words). A DMA
+ * instruction addresses a bridge at x = NX (the bridge column), y = its row, a 20-bit word address in its 4 MB window at
+ * the bridge's window base: byte = win_base + 4 * addr. */
+#define NEO_TOP_HOST_ADDR(n, word, baw) (((uint64_t)(n) << ((baw) + 2)) | ((uint64_t)(word) << 2))
 
 typedef struct { int x, y; } neo_tile_t;
 

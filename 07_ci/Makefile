@@ -4,7 +4,8 @@
 # make xrun       : Cadence Xcelium simulation of tb_neo_mac_core
 # make iverilog   : Icarus Verilog simulation (open source)
 # make verilator  : Verilator simulation (open source)
-# make lint       : Verilator lint of the RTL: four -Wall passes, nothing waived, every warning fails (drop 0.35)
+# make lint       : Verilator lint of the RTL: six -Wall passes, every warning fails (drop 0.35); the chip top's two at the silicon
+#                   parameters (drop 0.44), one pre-existing link_pack.sv line waived there (tb/lint/silicon.vlt)
 # make sim        : run the RTL under neosim (built-in subset simulator; no install needed)
 # make compile    : compiler v1 lowering verification + YOLOv8-m performance report
 # make conv       : whole convolutions on the v0.2 core RTL under neosim (feeder + accumulator + ABFT)
@@ -30,6 +31,8 @@
 # make cocotb_mesh8 : cocotb on Verilator: the mesh-level tests on the silicon mesh, 8x8 tiles of 32x32 cores with 2 MB banks (drop 0.24; its own CI job;
 #                   hierarchical verilation since drop 0.35: the tile verilated once, 64 instances -- 0.76 GB instead of >16 GB)
 # make cocotb_coverage : the coverage report (drop 0.26): 16x8 suite, M10 and C1 with Verilator line/toggle coverage + functional covergroups
+# make cocotb_top : the chip top's suite (drop 0.44): neo_top on 2x2 tiles of 16x8 cores + 2 bridge nodes, T1-T5 with clk / aclk at 1.0 / 1.6 ns,
+#                   then again with aclk == clk (the hdl-sim job's step after the tile suites)
 # make perf2      : 64-core event model with mesh and bank contention (compiler/neo_perf_v2.py)
 # make regress    : everything above that is self-checking (model, RTL v0.1/v0.2/core/NoC, compiler); hours under neosim
 # make regress_ci : the subset that finishes in minutes (drop 0.24); CI's python-regress job runs this -- the whole-convolution
@@ -54,10 +57,12 @@ RTL := rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
        rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv
 NOC := rtl/noc_router.sv rtl/noc_mesh.sv
 TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/crc16_beat.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/link_pack.sv rtl/neo_tile.sv rtl/tile_mesh.sv
+# the chip top (drop 0.44): the bridges, the control plane, the crossings
+TOPR := rtl/cdc_bits.sv rtl/cdc_fifo.sv rtl/cdc_sync.sv rtl/noc_axi_bridge.sv rtl/top_ctrl.sv rtl/mesh_ctrl.sv rtl/neo_top.sv
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth crc16
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth crc16 cocotb_top
 
 all: regress model
 
@@ -237,6 +242,14 @@ cocotb_tiles:
 	-$(call timed,coverage) $(MAKE) -j$(MESH8_BUILD_JOBS) cocotb_coverage
 	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml
 
+# the chip top (drop 0.44): neo_top's suite, one build run twice -- clk 1.0 ns / aclk 1.6 ns, then aclk == clk -- in its own build
+# directory (no clean: the tile suites' results stay); check_results.py fails the target on any failed or missing test
+cocotb_top:
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	-$(call timed,top) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb top
+	-$(call timed,top_sync) $(MAKE) -C dv/cocotb top_sync
+	python3 dv/cocotb/check_results.py dv/cocotb/results_top.xml dv/cocotb/results_top_sync.xml
+
 # the coverage report (drop 0.26, item 5): the 16x8 suite, M10 and C1 rebuilt with Verilator line/toggle coverage and the
 # functional covergroups on; the report and the raw data land in ci_logs/hdl-sim/, which the CI job publishes
 cocotb_coverage:
@@ -277,12 +290,22 @@ cocotb_mesh8s_run:
 # --unused-regexp default), and lint_off DECLFILENAME on the two files that hold two modules by design. LINTW stays for
 # a local run that wants to waive something (make lint LINTW=-Wno-UNUSEDSIGNAL).
 LINTW ?=
+# drop 0.44, the chip top at the silicon parameters (8 x 8 tiles of 32 x 32 cores, 2 MB banks, WPF 32, a 512-bit AXI4 memory
+# bridge per row, the host bridge in row 0) in two passes, because Verilator flattens every instance even with --lint-only
+# and 64 such tiles need more than 16 GB (measured in the sandbox: 2 x 2 1.5 GB, 4 x 4 over 5.8 GB): (5) the tile alone at
+# the chip top's tile parameters -- XW 4 (the bridge column at x = 8), NX 9 (its source index over 9 columns) -- and (6)
+# neo_top over tb/lint/neo_tile.sv, a ports-only stub of the tile, so the bridges, the control plane, the bridge column's
+# routers, the fences and the wiring are linted at XW 4 / YW 3. tb/lint/silicon.vlt waives the one finding of those passes,
+# which is in link_pack.sv, not in the top: link_unpacker's `sh` upper half is unread at WPF 32 (see the file).
+TOP_TILE_P := -GXW=4 -GYW=3 -GNX=9 -GNY=8 -GWPF=32 -GROWS=32 -GCOLS=32 -GACC_ROWS=512 -GABUF_DEPTH=2048 -GWBUF_DEPTH=1024 -GBANK_DEPTH=524288
 lint:
 	verilator --lint-only -Wall $(LINTW) --top-module neo_core $(RTL)
 	verilator --lint-only -Wall $(LINTW) --top-module noc_mesh $(NOC)
 	verilator --lint-only -Wall $(LINTW) --top-module neo_tile_axil $(TILE) rtl/host_axil.sv rtl/neo_tile_axil.sv
 	verilator --lint-only -Wall $(LINTW) --top-module tile_mesh $(TILE)
-	@echo "lint: four -Wall passes, nothing waived, clean"
+	verilator --lint-only -Wall $(LINTW) --top-module neo_tile $(TOP_TILE_P) tb/lint/silicon.vlt $(filter-out rtl/tile_mesh.sv,$(TILE))
+	verilator --lint-only -Wall $(LINTW) --top-module neo_top tb/lint/silicon.vlt $(filter-out rtl/neo_tile.sv rtl/tile_mesh.sv,$(TILE)) tb/lint/neo_tile.sv $(TOPR)
+	@echo "lint: six -Wall passes (the chip top's two at the silicon parameters), clean; one link_pack.sv line waived in tb/lint/silicon.vlt"
 
 # the synthesis job (drop 0.40): synth/synth.py synthesizes every unit of the tile (a module at its silicon parameters, its
 # children black-boxed; the slang front end; the memory leaves priced by a macro model) with Yosys and runs OpenSTA on each
