@@ -17,9 +17,10 @@ measured runs).
 | `neo_report.tcl` | after ORFS's final stage, on `6_final.odb` with `6_final.spef`: slacks, the register-to-register minimum period (synth.py's figure) and the one with the I/O paths, worst paths, clock skew, the cells driving clock nets, power, areas, wire length; since drop 0.43 power at the flow's default activity and again with the recorded activity (`power_default.txt`, `power_activity.txt`) |
 | `report.py` | `pnr_<block>.md` (and `metrics.json`, every ORFS metric merged) from a block's logs; the global-route stage's figures for a block that stops there; the power table, default against recorded activity |
 | `activity.sh`, `activity.py`, `activity/` | drop 0.43: the switching activity of the power figures -- two cocotb runs with Verilator's VCD (the 16 × 8 core: C1 + C5; the 2 × 2 mesh of 16 × 8 cores at 32 words per link flit: M1 + M18 + M19), the dump streamed through a named pipe into `activity.py`: per block scope every bit's toggle count and high time in a window (the core busy; tile (0,0)'s DMA running), the window's cycles and the MAC utilization -> `activity/<block>.json.gz`, recorded in the sandbox and committed |
-| `power.py` | drop 0.43: the recorded activity onto the routed block's flops (the synthesis flow names each flop after its register bit, the routed block keeps the names: `<path>/prod_q[14]_reg`) and inputs, by name or, for a unit wider than the one simulated, by the index folded into the recorded range; `in/activity.tcl` (set_power_activity per pin group) and `in/activity.json` (how many matched each way) |
+| `power.py` | drop 0.43: the recorded activity onto the routed block's flops (the synthesis flow names each flop after its register bit, the routed block keeps the names: `<path>/prod_q[14]_reg`) and inputs, by name or, for a unit wider than the one simulated, by the index folded into the recorded range (an unpacked array the synthesis flattened, `cfg[100]`, by its index split at the recorded entry width: `cfg[6][4]`); `in/activity.tcl` (set_power_activity per pin group) and `in/activity.json` (how many matched each way) |
+| `tile_table.py` | drop 0.43: from a checkout of `ci-logs-pnr` and the synthesis job's `synth_results.json`: the routed table (per block the cells and cell area synthesized / routed, the macros' LEF area against the synthesis model, the die, the utilization), the tile's routed-area estimate against the synthesis flow's tile, the tile as placed (`--json`: the floorplan sketch's input, `09_synthesis/floorplan/floorplan.py`), and with `--power` the power table, default against recorded activity |
 | `publish.sh` | a block's `ci_logs/pnr/<block>/` into `ci-logs-pnr` on top of the other blocks' (fetch, commit, push; retried on a lost race) |
-| `designs/neo_common.mk`, `designs/<block>/config.mk` | the ORFS design configurations: `mac_pe`, `c16_systolic_array`, `c16_neo_core` (+ `macro_place.tcl`, the macro-placement fallback) -- the job's default blocks -- and `noc_router`, `tile_nic` (the mesh's blocks, I/O-bound: lower utilization, pins one track apart; on demand through `pnr_blocks`); drop 0.43: the tile's other units -- `requant`, `link_packer`, `link_unpacker`, `acc_bank`, `act_feeder` (a core three times as high as wide for its 5:1 macro), `wbuf_mem`, `prog_mem`, `host_if`, `tile_dma`, `esm`, `mbist` (the small ones at a lower utilization so the die holds its pins and the power straps), `bank_bist_wrap` (16 lane macros in rows, `macro_place.tcl`) -- and `neo_core`, the 32×32 core placed and globally routed (`stages`; wire-length-driven placement, no timing repairs past the resizer: what keeps 1.86 M cells inside the job) |
+| `designs/neo_common.mk`, `designs/<block>/config.mk` | the ORFS design configurations: `mac_pe`, `c16_systolic_array`, `c16_neo_core` (+ `macro_place.tcl`, the macro-placement fallback) -- the job's default blocks -- and `noc_router`, `tile_nic` (the mesh's blocks, I/O-bound: lower utilization, pins one track apart; on demand through `pnr_blocks`); drop 0.43: the tile's other units -- `requant`, `link_packer`, `link_unpacker`, `acc_bank`, `act_feeder` (a core three times as high as wide for its 5:1 macro), `wbuf_mem` (its macro against the core's right edge, the pin edge inward: `macro_place.tcl`), `prog_mem`, `host_if`, `tile_dma`, `esm`, `mbist` (the small ones at a lower utilization so the die holds its pins and the power straps), `bank_bist_wrap` (16 lane macros in rows, `macro_place.tcl`) -- and `neo_core`, the 32×32 core placed and globally routed (`stages`; wire-length-driven placement, no timing repairs past the resizer: what keeps 1.86 M cells inside the job) |
 
 ## Tools: why the docker image
 
@@ -93,14 +94,19 @@ LEF / LIB / wrappers, prep.py's netlist statistics and checks, the SDC), `synth.
 with the swap file behind it (run 168): TritonRoute keeps every finished worker of a batch until the batch ends, and the
 32×32 core is 6.7 times the cells. `designs/neo_core/stages` stops the flow after global routing (`grt`, 5_1_grt.odb);
 the report reads the global-route stage's metrics (placement-legal cells and area, congestion, the timing on its
-parasitic estimates). What detailed routing would need is in `09_synthesis/pnr_neo_core.md`.
+parasitic estimates). What detailed routing would need is in `09_synthesis/pnr_drop043.md`.
 
 **Power from recorded activity.** `bash pnr/activity.sh` from the flat layout (Verilator 5.020 and cocotb on the path)
-builds the two traced models and writes `activity/*.json.gz` (about 10 minutes of runs on the sandbox's 2 cores beside
-the builds); the files are committed, so the `pnr` job applies them without a simulator. The activity is per clock
-cycle of the recording's window and is applied at the pnr period; blocks of the silicon tile that the 16×8 runs
-simulate narrower (requant's 32 columns, the NIC's 64 sources) take the recorded bit of the same signal at the folded
-index (`power.py`); `pnr_<block>.md` says how many flops took each kind. `09_synthesis/power_drop043.md` has the table.
+builds the two traced models and writes `activity/*.json.gz`; the files are committed, so the `pnr` job applies them
+without a simulator. The recordings (`activity/core.log`, `activity/tile.log`): the core's window -- the core busy
+through C1 and C5 -- is 2,858 cycles at 56.7 % MAC utilization (2 minutes of simulation, 100 s of parsing); the tile's
+-- tile (0,0)'s DMA running M1's, M18's and M19's programs -- 10,306 cycles at 32.8 % (the traced 2 × 2 mesh takes ~40
+minutes to build and ~45 to parse on the sandbox's 2 cores beside other jobs). The activity is per clock cycle of the
+window and is applied at the pnr period; blocks of the silicon tile that the 16×8 runs simulate narrower (requant's 32
+columns, the NIC's 64 sources, the 32×32 core: `neo_core.json.gz` is the 16×8 core's recording) take the recorded bit
+of the same signal at the folded index (`power.py`); `pnr_<block>.md` says how many flops took each kind. Verilator
+leaves an unpacked array above its `--trace-max-array` (32 elements) out of the trace: `prog_mem`'s 32 × 2 instruction
+words keep the default activity. `09_synthesis/power_drop043.md` has the table.
 
 ## Running it
 

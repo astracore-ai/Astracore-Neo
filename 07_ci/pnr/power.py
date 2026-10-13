@@ -13,8 +13,12 @@ pins), turns its path into the RTL name -- '/' -> '.', the `_reg` suffix dropped
   folded   the routed unit is wider than the simulated one (the silicon requant's 32 columns against the 16 x 8 core's
            8, the NIC's 64 sources against the 2 x 2 mesh's 4): every bracket index n becomes n mod (the largest index
            the recording has at that position + 1), so column 13 takes column 5's activity -- a recorded activity of the
-           same signal, not a default;
-  default  no recorded name: the flop keeps OpenSTA's propagated activity (from the default input activity).
+           same signal, not a default; also counted here, an unpacked array the synthesis flow flattened
+           (host_if's `cfg [20]` of 16-bit entries: `cfg[100]_reg`) where the recording keeps the entries
+           (`cfg[6][4]`): the last index split by the recorded entry width, then folded as above;
+  default  no recorded name: the flop keeps OpenSTA's propagated activity (from the default input activity). Verilator
+           leaves an unpacked array above its --trace-max-array (32 elements) out of the trace (prog_mem's 32 x 2
+           instruction words): those flops stay at the default.
 
 Writes <out>/activity.tcl -- set_power_activity commands (-activity: toggles per clock cycle of the window, applied at
 the SDC's period; -duty: the high fraction, inverted for a QN output), the annotated pins grouped by value -- and
@@ -132,18 +136,32 @@ def main():
         cur = maxi.get(sh)
         maxi[sh] = idx if cur is None else [max(a, b) for a, b in zip(cur, idx)]
 
+    def fold(name, idx, mx):
+        it = iter(n % (m + 1) for n, m in zip(idx, mx))
+        folded = IDX.sub(lambda _: f"[{next(it)}]", name)
+        return sig.get(folded)
+
     def lookup(name):
         if name in sig:
             return sig[name], "exact"
         idx = [int(x) for x in IDX.findall(name)]
-        sh = shape(name)
-        mx = maxi.get(sh)
-        if not idx or mx is None or len(mx) != len(idx):
+        if not idx:
             return None, "default"
-        it = iter(n % (m + 1) for n, m in zip(idx, mx))
-        folded = IDX.sub(lambda _: f"[{next(it)}]", name)
-        if folded in sig:
-            return sig[folded], "folded"
+        mx = maxi.get(shape(name))
+        if mx is not None and len(mx) == len(idx):
+            v = fold(name, idx, mx)
+            if v is not None:
+                return v, "folded"
+        # a flattened unpacked array: cfg[100] against the recorded cfg[#][#] -> cfg[100 // w][100 % w], w the entry width
+        k = name.rfind("[")
+        base = name[:k]
+        mx2 = maxi.get(shape(base) + "[#][#]")
+        if mx2 is not None and len(mx2) == len(idx) + 1:
+            w = mx2[-1] + 1
+            split = f"{base}[{idx[-1] // w}][{idx[-1] % w}]"
+            v = sig.get(split) or fold(split, idx[:-1] + [idx[-1] // w, idx[-1] % w], mx2)
+            if v is not None:
+                return v, "folded"
         return None, "default"
 
     with open(os.path.join(args.synth, "synth_results.json")) as f:
