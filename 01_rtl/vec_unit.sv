@@ -77,7 +77,8 @@
 //   0 PROG (16 op words), 1 LUTV (256 x {D[31:16], V[15:0]}), 2 LUTS (the same), 3 SC (COLS x INT16), 4 BI (COLS x INT32),
 //   5 K (4 x INT32). Every entry stores odd parity, formed at the write and checked on use (the op word when its slot
 //   executes, a LUT entry when an op reads it, SC / BI by MUL_SCALE, K by SLD): perr_sticky (R10-style, the requant
-//   tables' mechanism). LUTV is a leaf per lane (COLS copies written together, each read by its lane), LUTS one leaf; the
+//   tables' mechanism). LUTV is a leaf per lane (COLS copies written together, each read by its lane, the host's write
+//   registered with its parity on the way to the leaves), LUTS one leaf; the
 //   program, SC, BI and K are flops, reset to zero with their parity. The control -- state, program counter, op cycle,
 //   row index and the op decode -- is two vec_ctrl copies with a comparator (R7-style): ctrl_err_sticky. Each copy's op
 //   word is registered from the program at the next cycle's pc (vec_ctrl's pc_nx) with its parity bit, so the program's
@@ -474,25 +475,38 @@ module vec_unit #(
   logic [7:0]           lfrac [COLS];
   logic [7:0]           lfq   [COLS];                    // the fraction, registered (held: X does not change in the op)
   logic [32:0]          lrd   [COLS];                    // second cycle: the entries read
-  logic                 lut_we, luts_we;
+  logic                 luts_we;                         // the leaves' write: the host's, registered with its parity --
+  logic                 lut_we [COLS];                   // the data's fanout into the COLS + 1 leaves is not behind the
+  logic [7:0]           lut_ent;                         // bus and the parity's XOR tree in one cycle (run 201: 1,475 ps);
+  logic [32:0]          lut_wd;                          // the write enable a copy per lane (a leaf pin's load each)
+  logic                 lut_re [COLS];                   // a lane's leaf read: LUT's first cycle, from the lane's copies
   logic [7:0]           sidx, sfrac, sfq;
   logic [32:0]          srd;
   logic [32:0]          unused_lra [COLS];
   logic [32:0]          unused_lbd [COLS];
   logic [32:0]          unused_sra, unused_sbd;
-  assign lut_we  = vh_we && (vh_tbl == 4'd1);
-  assign luts_we = vh_we && (vh_tbl == 4'd2);
+  always_ff @(posedge clk or negedge rst_n) begin       // (the flop tables take a write at once: a program loaded and
+    if (!rst_n) begin                                    // started at once still runs; a LUT is read only in a run)
+      for (int j = 0; j < COLS; j++) lut_we[j] <= 1'b0;
+      luts_we <= 1'b0; lut_ent <= '0; lut_wd <= '0;
+    end else begin
+      for (int j = 0; j < COLS; j++) lut_we[j] <= lut_we[j] ^ (lut_we[j] ^ (vh_we && (vh_tbl == 4'd1)));
+      luts_we <= vh_we && (vh_tbl == 4'd2);
+      lut_ent <= vh_ent;
+      lut_wd  <= {vh_par, vh_wdata};
+    end
+  end
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_lut
       neo_mem_rf #(.W(33), .D(256), .G(1), .RB(1), .DV_HOOKS(0)) u_lutv (
-        .clk(clk), .we(lut_we), .waddr(vh_ent), .wdata({vh_par, vh_wdata}),
-        .ra_addr('0), .ra_data(unused_lra[j]), .rb_en(ex0 && (op == OP_LUT)), .rb_addr(lidx[j]), .rb_data(lrd[j]),
+        .clk(clk), .we(lut_we[j]), .waddr(lut_ent), .wdata(lut_wd),
+        .ra_addr('0), .ra_data(unused_lra[j]), .rb_en(lut_re[j]), .rb_addr(lidx[j]), .rb_data(lrd[j]),
         .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_lbd[j]),
         .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
     end
   endgenerate
   neo_mem_rf #(.W(33), .D(256), .G(1), .RB(1), .DV_HOOKS(0)) u_luts (
-    .clk(clk), .we(luts_we), .waddr(vh_ent), .wdata({vh_par, vh_wdata}),
+    .clk(clk), .we(luts_we), .waddr(lut_ent), .wdata(lut_wd),
     .ra_addr('0), .ra_data(unused_sra), .rb_en(ex0 && (op == OP_SLUT)), .rb_addr(sidx), .rb_data(srd),
     .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_sbd),
     .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
@@ -588,6 +602,7 @@ module vec_unit #(
       u16[j]   = (xs[j][31:15] == {17{xs[j][31]}}) ? xs[j][15:0] : (xs[j][31] ? 16'sh8000 : 16'sh7FFF);
       lidx[j]  = {~u16[j][15], u16[j][14:8]};
       lfrac[j] = u16[j][7:0];
+      lut_re[j] = lc_ex[j] && (lc_op[j] == OP_LUT) && (lc_cq[j] == 3'd0);
       // the row after this cycle: written in the op's last cycle
       xn[j] = xr[j];
       if (lc_ld[j]) xn[j] = acc_in[j];
