@@ -74,9 +74,10 @@
 //     operand drives all COLS lanes (run 196: sh's buffer chain into the 32 lanes' shifters, 0.7 ns of the 3.2 ns). A copy's
 //     D is formed through its own output (q ^ (q ^ d) = d), so the synthesis keeps the copies apart instead of merging
 //     identical flops (noc_router's rd_a); S[a] / S[b] are copied the cycle the op starts, so BSUB and CLAMP read them
-//     from their second cycle. X itself is held three times the same way: the multiplier's partial products read their
+//     from their second cycle. X itself is held four times the same way: the multiplier's partial products read their
 //     own copy, the requantizers another (out_row: in neo_core the requantizer's carry-save stage follows it in the same
-//     cycle), so X's fanout in front of the adders and comparators is the rest.
+//     cycle), ADD_ROW's and BSUB's adders a third (run 209: X's fanout put 230 ps in front of ADD_ROW's 35-bit sum), the
+//     comparators, the tree, the LUT's shifter and X's hold the row itself.
 //
 //   Tables, written through the host bus (host_if's VEC_ADDR / VEC_DATA; vh_addr[11:8] the table, [7:0] the entry):
 //   0 PROG (16 op words), 1 LUTV (256 x {D[31:16], V[15:0]}), 2 LUTS (the same), 3 SC (COLS x INT16), 4 BI (COLS x INT32),
@@ -520,6 +521,7 @@ module vec_unit #(
   logic signed [PW-1:0] xr [COLS];                       // the row
   logic signed [PW-1:0] xm [COLS];                       // its copy for the multipliers' partial products
   logic signed [PW-1:0] xo [COLS];                       // its copy for the requantizers (out_row: a flop's output alone)
+  logic signed [PW-1:0] xa [COLS];                       // its copy for ADD_ROW's and BSUB's adders
   logic signed [31:0]   sr [4];                          // the scalars
   logic signed [31:0]   sa, sb;                          // S[a], S[b] (K[a], K[b] with ka, kb)
   logic signed [31:0]   sa_q, sb_q;                      // registered (the scalar ops' second cycle on)
@@ -600,8 +602,8 @@ module vec_unit #(
       // ADD_ROW, BSUB, CLAMP
       rsw[j]  = 40'(rbb[j]) <<< shl[j];
       rsc[j]  = (rsw[j][39:33] == {7{rsw[j][39]}}) ? rsw[j][33:0] : (rsw[j][39] ? 34'sh200000000 : 34'sh1FFFFFFFF);
-      asum[j] = 35'(xr[j]) + 35'(rsq[j]);
-      bsum[j] = 33'(xr[j]) - 33'(lc_sa[j / 2]);
+      asum[j] = 35'(xa[j]) + 35'(rsq[j]);
+      bsum[j] = 33'(xa[j]) - 33'(lc_sa[j / 2]);
       cres[j] = c_ab[j] ? lc_sb[j / 2] : c_lt[j] ? lc_sa[j / 2] : c_gt[j] ? lc_sb[j / 2] : xr[j];
       // LUT: the entry index and fraction from sat16(X >>> sh)
       xs[j]    = xr[j] >>> shl[j];
@@ -743,12 +745,12 @@ module vec_unit #(
   end
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      for (int j = 0; j < COLS; j++) begin xr[j] <= '0; xm[j] <= '0; xo[j] <= '0; end
+      for (int j = 0; j < COLS; j++) begin xr[j] <= '0; xm[j] <= '0; xo[j] <= '0; xa[j] <= '0; end
       for (int i = 0; i < 4; i++) sr[i] <= '0;
       rsh[0] <= '0; rsh[1] <= '0; rbe <= '0; rb_sel_q <= 1'b0;
     end else begin
       for (int j = 0; j < COLS; j++) begin
-        xr[j] <= xn[j]; xm[j] <= xm[j] ^ (xm[j] ^ xn[j]); xo[j] <= xo[j] ^ (xo[j] ^ xn[j]);
+        xr[j] <= xn[j]; xm[j] <= xm[j] ^ (xm[j] ^ xn[j]); xo[j] <= xo[j] ^ (xo[j] ^ xn[j]); xa[j] <= xa[j] ^ (xa[j] ^ xn[j]);
       end
       rb_sel_q <= rd_idx[0];
       if (ld) begin
