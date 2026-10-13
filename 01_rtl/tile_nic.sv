@@ -261,16 +261,19 @@ module tile_nic #(
   logic [FW-1:0]   lb_flit;
   logic            st_free;                               // the stage takes a beat this cycle (empty, or its beat consumed)
   logic            rq_hold;                               // the link's beat is a request that must wait outside the stage
-  logic            i_take;                                // the stage takes the input's beat
+  logic            i_take;                                // the stage takes the input's beat (for its control)
+  logic            i_load;                                // = i_take, the stage registers' load (on lb_valid, below)
   logic [FW-1:0]   i_flit;                                // the input's beat: the loopback's or the link's
   logic            serve_self;                            // the server serves this tile's own fetch (its beats loop back)
   logic            sq_v;                                  // this tile's fetch from its own bank waits for the server
-  // lb_valid selects the beat for the stage's register -- every bit of the flit, a deep buffer tree -- and lb_csel, the
-  // same value in a register of its own (its next state reads itself, so the synthesis keeps the two apart), selects
-  // everything decoded from the header, so the decode does not wait for the beat's fanout
+  // lb_valid selects the beat for the stage's registers and loads them -- every bit of the flit, a deep buffer tree --
+  // and lb_csel, the same value in a register of its own (its next state reads itself, so the synthesis keeps the two
+  // apart), selects everything decoded from the header and the control behind it, so the decode does not wait for the
+  // beat's fanout
   assign i_flit   = lb_valid ? lb_flit : rx_flit;
   assign rq_hold  = (rx_flit[DW-1 -: 3] == T_RDREQ) && (serve_self || sq_v);
   assign i_take   = lb_csel || (rx_valid && !rq_hold);
+  assign i_load   = lb_valid || (rx_valid && !rq_hold);
   assign in_type  = lb_csel ? lb_flit[DW-1 -: 3] : rx_flit[DW-1 -: 3];
   assign in_hdr   = lb_csel ? lb_flit[VW +: 14] : rx_flit[VW +: 14];
   assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
@@ -297,8 +300,8 @@ module tile_nic #(
       q_valid <= 1'b0; q_flit <= '0; q_nw <= '0; q_nwc_n <= '1; q_nwo <= BW'(2); q_pschk <= 1'b0; q_pcm <= '0; q_c0 <= '0;
       q_tt <= '0; q_nwt <= BW'(1); q_foreign <= 1'b0;
     end else if (st_free) begin
-      q_valid <= i_take;
-      if (i_take) begin
+      q_valid <= i_load;
+      if (i_load) begin
         q_flit  <= i_flit;
         q_nw    <= in_nw;
         q_nwc_n <= ~in_nw;
