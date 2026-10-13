@@ -22,6 +22,10 @@
 //   carry the shadow-chain entry {index, weight} per column (wdata / rdata, WW + 2 bits) and the NCHK check weights
 //   packed (wcdata / rcdata, column k at [k*WCW +: WCW]); the SECDED lanes are simply more numerous: LANES =
 //   ceil(EW / 32) = 12 at 32x32 (376 bits; 9 before), 5 at 16x8 (132 bits; 3 before).
+//   Drop 0.43 (D2): raddr_q is the address of the entry rdata shows -- the leaf's latched pair address (neo_mem_rf
+//   RBQ = 1: rb_addr_q) above ra0_q -- for the core's lockstep comparator (neo_core compares it with the duplicate
+//   sequencer's w_raddr delayed by one cycle). A wrong entry read is a valid codeword of another row, so the SECDED lanes
+//   cannot see it, and the ABFT check weight travels with its row, so the check column cannot either.
 module wbuf_mem #(
   parameter int COLS  = 32,
   parameter int WW    = 8,
@@ -46,6 +50,7 @@ module wbuf_mem #(
   input  logic [WAW-1:0]        raddr,
   output logic [WW+IW-1:0]      rdata [COLS],
   output logic [NCHK*WCW-1:0]   rcdata,
+  output logic [WAW-1:0]        raddr_q,                  // drop 0.43: the address of the entry on rdata / rcdata (the leaf's latch, ra0_q)
   input  logic                  err_clear,
   output logic                  ecc_ce_sticky,
   output logic                  ecc_ue_sticky,
@@ -163,11 +168,13 @@ module wbuf_mem #(
       assign unused_dv = ^{dv_fi_flip, dv_fi_addr, dv_fi_lane, dv_fi_mask};
     end
   endgenerate
-  neo_mem_rf #(.W(CW), .D(DEPTH/2), .G(2), .RB(1), .DV_HOOKS(DV_HOOKS)) u_mem (
+  logic [WAW-2:0]   rb_addr_q;                     // drop 0.43: the leaf's latched pair address
+  assign raddr_q = {rb_addr_q, ra0_q};
+  neo_mem_rf #(.W(CW), .D(DEPTH/2), .G(2), .RB(1), .RBQ(1), .DV_HOOKS(DV_HOOKS)) u_mem (
     .clk(clk),
     .we(pair_we), .waddr(waddr[WAW-1:1]), .wdata(pair_wdata),
     .ra_addr('0), .ra_data(unused_ra),
-    .rb_en(1'b1), .rb_addr(raddr[WAW-1:1]), .rb_data(pair_rdata),
+    .rb_en(1'b1), .rb_addr(raddr[WAW-1:1]), .rb_data(pair_rdata), .rb_addr_q(rb_addr_q),
     .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_bd),
     .fi_en(fi_en), .fi_or(1'b0), .fi_addr(fi_pair), .fi_mask(fi_mask_w));
   always_ff @(posedge clk or negedge rst_n) begin

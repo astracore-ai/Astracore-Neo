@@ -9,6 +9,13 @@
 //   bit 0 on the tile) selects the sparse mode of the feeder and the row buses. The sequencer is unchanged: cfg_ct_n,
 //   cfg_ct0 and the run count are in the mode's channel tiles (64 channels in sparse mode at 32 rows), and a sparse
 //   run's weight tile is ROWS entries as a dense one is. NCHK = 1 is the core of drop 0.41.
+//   Drop 0.43 (D2): the storage drop 0.41's synchronous reads put behind the R10 comparator joins its list (seq_err):
+//   w_load_q against the duplicate's own d_w_load_q (d_w_load delayed), the weight buffer's latched read address
+//   (wbuf_mem raddr_q: the leaf's port-B latch and ra0_q, the entry rdata shows) against d_w_raddr_q (d_w_raddr delayed),
+//   and the accumulator's stage-0 control and port-B latch against their complemented copies (acc_bank ctrl_err). Each
+//   of these, corrupted, feeds the array or the accumulator a consistent wrong row -- a weight row loaded a cycle early or
+//   late or from another entry, a partial-sum row added to the wrong row, overwritten instead of accumulated, or the wrong
+//   row drained -- which neither the SECDED lanes nor the ABFT check sees.
 module neo_core #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
@@ -120,6 +127,10 @@ module neo_core #(
   logic                  w_load;
   logic                  w_load_q;                  // drop 0.41: w_load one cycle later, beside the weight buffer's registered read
   logic [WAW-1:0]        w_raddr;
+  logic [WAW-1:0]        w_raddr_q;                 // drop 0.43: the address of the entry the weight buffer shows (its latch)
+  logic                  d_w_load_q;                // drop 0.43: the duplicate's w_load and w_raddr delayed one cycle
+  logic [WAW-1:0]        d_w_raddr_q;
+  logic                  acc_ctrl_err;              // drop 0.43: the accumulator's stage-0 control against its copies
   wire  [WW+IW-1:0]      w_in [COLS];               // nets (drop 0.43), as rd_data and rq_q
   logic [NCHK*WCW-1:0]   wc_in;
   logic                  rd_en;
@@ -142,7 +153,7 @@ module neo_core #(
   wbuf_mem #(.COLS(COLS), .WW(WW), .WCW(WCW), .DEPTH(WBUF_DEPTH), .WAW(WAW), .NCHK(NCHK), .DV_HOOKS(DV_HOOKS)) u_wbuf (
     .clk(clk), .rst_n(rst_n), .we(wbuf_we), .waddr(wbuf_waddr), .wdata(wbuf_wdata), .wcdata(wcbuf_wdata),
     .we2(wbuf_we2), .wdata2(wbuf_wdata2), .wcdata2(wcbuf_wdata2),
-    .raddr(w_raddr), .rdata(w_in), .rcdata(wc_in),
+    .raddr(w_raddr), .rdata(w_in), .rcdata(wc_in), .raddr_q(w_raddr_q),
     .err_clear(err_clear), .ecc_ce_sticky(wbuf_ce_sticky), .ecc_ue_sticky(wbuf_ue_sticky),
     .dv_fi_flip(dv_wbuf_flip), .dv_fi_addr(dv_wbuf_addr), .dv_fi_lane(dv_wbuf_lane), .dv_fi_mask(dv_wbuf_mask));
 
@@ -171,7 +182,11 @@ module neo_core #(
     .rd_en(d_rd_en), .rd_idx(d_rd_idx));
   assign seq_err = (f_start != d_start) || (f_first != d_first) || (f_ct != d_ct) || (f_ky != d_ky) || (f_kx != d_kx) ||
                    (w_load != d_w_load) || (w_raddr != d_w_raddr) || (rd_en != d_rd_en) || (rd_idx != d_rd_idx) ||
-                   (done != d_done) || (reduce_ready != d_reduce_ready) || (state_dbg != d_state);
+                   (done != d_done) || (reduce_ready != d_reduce_ready) || (state_dbg != d_state) ||
+                   // drop 0.43 (the header): the delayed load strobe; the latched entry address while either copy of
+                   // the strobe has the shadow chain take it (the leaf's latch has no reset); the accumulator's control
+                   (w_load_q != d_w_load_q) || ((w_load_q || d_w_load_q) && (w_raddr_q != d_w_raddr_q)) ||
+                   acc_ctrl_err;
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)         seq_err_sticky <= 1'b0;
     else if (err_clear) seq_err_sticky <= 1'b0;
@@ -184,6 +199,11 @@ module neo_core #(
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) w_load_q <= 1'b0;
     else        w_load_q <= w_load;
+  end
+  // drop 0.43: the duplicate sequencer's copies of the same delay (each from its own sequencer, so synthesis keeps two)
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin d_w_load_q <= 1'b0; d_w_raddr_q <= '0; end
+    else        begin d_w_load_q <= d_w_load; d_w_raddr_q <= d_w_raddr; end
   end
 
   neo_mac_core_v02 #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .WCW(WCW), .ACC_ROWS(ACC_ROWS),
@@ -199,7 +219,7 @@ module neo_core #(
     .rd_en(rd_en), .rd_idx(rd_idx), .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid),
     .abft_clear(err_clear), .array_abft_err(array_abft_err), .array_abft_err_valid(array_abft_err_valid), .array_abft_sticky(array_abft_sticky),
     .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid), .acc_abft_sticky(acc_abft_sticky),
-    .ctrl_err(ctrl_err), .ctrl_err_sticky(ctrl_err_sticky),
+    .ctrl_err(ctrl_err), .ctrl_err_sticky(ctrl_err_sticky), .acc_ctrl_err(acc_ctrl_err),
     .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject));
 
   // requantization, duplicated with a comparator (R10); the fault hook corrupts the primary's input only

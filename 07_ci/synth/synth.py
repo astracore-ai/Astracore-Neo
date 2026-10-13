@@ -501,7 +501,7 @@ def write_macro_lib(recs, pdk, path, libname="neo_macros"):
                     body.append(arc_su())
             else:
                 body.append("      max_capacitance : 500.0;")
-                if pn in ("rdata", "rb_data"):
+                if pn in ("rdata", "rb_data", "rb_addr_q"):    # rb_addr_q (drop 0.43): the latched address, clock-to-Q
                     body.append(arc_cq("clk", "timing_type : rising_edge;"))
                 elif pn == "ra_data":           # the asynchronous read: an arc from every address bit (a bus-to-bus arc of
                     aw = r["AW"]                  # different widths is not taken by OpenSTA)
