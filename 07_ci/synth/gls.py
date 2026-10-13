@@ -10,7 +10,7 @@ pinned ORFS commit of synth/tools.sh fetches them): UDP flops with timing checks
 iverilog) simulates in zero delay -- Icarus 12 does not drive the checks' delayed nets and Verilator takes no UDP tables.
 
 The testbench is generated per unit from the RTL's ports (neosim elaborates the module at the unit's parameters): every
-input random each cycle (seeded $urandom, drawn at the falling edge), rst_n low for the first 4 cycles and high after,
+input random each cycle (seeded $random, drawn at the falling edge), rst_n low for the first 4 cycles and high after,
 the outputs compared just before each falling edge from cycle `warmup` on. An unpacked RTL port is the netlist's flat
 vector with element 0 in the top bits (slang's flattening); the testbench packs and unpacks. Per-unit input constraints
 keep to the port contracts where an out-of-contract value is undefined behaviour of the RTL (crc16_beat's word count
@@ -45,11 +45,13 @@ def rtl_ports(rtl, module, params, files):
     d = neosim.Design(neosim.load([os.path.join(rtl, f) for f in files]))
     d.top_ports = {}
     d._elab_module(module, dict(params), "top", None, is_top=True)
-    out = []
+    out, signed = [], set()
     for name, hier in d.top_ports.items():
         s = d.sigs[hier]
         out.append((name, s.is_port, s.width, [n for _, n in s.dims]))
-    return out
+        if getattr(s, "signed", False):
+            signed.add(name)
+    return out, signed
 
 
 def netlist_ports(path):
@@ -74,8 +76,10 @@ def rand_expr(w, constraint=None):
     return e
 
 
-def gen_tb(unit, module, params, ports, nports, cycles, warmup, constraints):
-    """The testbench text, and the list of compared outputs."""
+def gen_tb(unit, module, params, ports, nports, cycles, warmup, constraints, signed=()):
+    """The testbench text, and the list of compared outputs. `signed`: the RTL ports declared signed -- an unpacked
+    port's testbench array must have the port's element type, signedness included (Icarus: "Element types are not
+    compatible in array assignment"; requant's in_acc / out_q)."""
     L = ["`timescale 1ns/1ps", f"module tb_gls_{unit};", "  integer seed;", "  reg clk = 1'b0;", "  always #0.5 clk = ~clk;",
          "  integer cyc, mism, xonly, xfirst, xlast, first_mism;"]
     ins = [p for p in ports if p[1] == "input"]
@@ -95,7 +99,7 @@ def gen_tb(unit, module, params, ports, nports, cycles, warmup, constraints):
     for name, d, w, dims in ins + outs:
         if dims:
             n = dims[0]
-            L.append(f"  wire [{w - 1}:0] a_{name} [{n}];")
+            L.append(f"  wire {'signed ' if name in signed else ''}[{w - 1}:0] a_{name} [{n}];")
             for i in range(n):
                 lo = (n - 1 - i) * w
                 if d == "input":
@@ -192,7 +196,7 @@ def main():
         # the leaf units' RTL: the one file that defines the module (they have no children)
         files = [f for f in S.RTL_FILES if os.path.isfile(os.path.join(args.rtl, f))
                  and re.search(rf"^\s*module\s+{re.escape(module)}\b", open(os.path.join(args.rtl, f)).read(), flags=re.M)]
-        ports = rtl_ports(args.rtl, module, params, files)
+        ports, signed = rtl_ports(args.rtl, module, params, files)
         nl = os.path.join(args.synth, unit, "netlist.v")
         with open(nl) as f:
             text = f.read()
@@ -204,7 +208,7 @@ def main():
         if module == "crc16_beat":
             bw = int(params.get("BW", 16))
             cons["n"] = f"($unsigned($random(seed)) % {bw + 1})"
-        tb = gen_tb(unit, module, params, ports, netlist_ports(glv), args.cycles, WARMUP, cons)
+        tb = gen_tb(unit, module, params, ports, netlist_ports(glv), args.cycles, WARMUP, cons, signed)
         tbv = os.path.join(args.out, f"tb_gls_{unit}.sv")
         with open(tbv, "w") as f:
             f.write(tb)
