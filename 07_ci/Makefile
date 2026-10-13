@@ -202,6 +202,7 @@ regress: vectors vectors_sp
 	python3 sim/run_mbist.py
 	python3 sim/run_nic.py
 	python3 sim/run_vec_unit.py
+	python3 compiler/neo_xfmr.py
 	$(MAKE) cdriver
 
 regress_ci: vectors vectors_sp
@@ -217,6 +218,7 @@ regress_ci: vectors vectors_sp
 	python3 sim/run_mbist.py
 	python3 sim/run_nic.py
 	python3 sim/run_vec_unit.py
+	python3 compiler/neo_xfmr.py
 	$(MAKE) cdriver
 
 iverilog: vectors

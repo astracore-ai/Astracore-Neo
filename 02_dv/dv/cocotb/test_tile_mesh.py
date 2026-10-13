@@ -33,6 +33,18 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
   M20 2:4 sparse program (drop 0.42, the NCHK = 4 cores of tile_sp): a layer pruned to 2:4 along K through the compiler's
       validator, compressor and layouts and its descriptors (cfg_flags = 1) and K-split DMA programs, bit-exact against
       the dense convolution on the pruned weights
+  M21 one attention head (drop 0.43; the 2x2 mesh of 16x8 cores): T = 64 tokens, model and head dim 32 -- the Q / K / V
+      projections, Q K^T, the softmax and P V through compiler/neo_xfmr.py's programs (K drained transposed as weight
+      entries, V as weight entries, Q and P as padded activations, the softmax's two rounds on the vector unit, the 1 / sum
+      on P V's drain), bit-exact against the compiler's mesh model and the independent integer chain, the error against
+      the float attention and the cycles against the perf model reported
+  M23 a ViT block (drop 0.43): T = 32 tokens, model / head dim 32, MLP hidden 64, INT8 weights -- layer norm (an identity
+      GEMM's statistics and apply rounds on the vector unit, the gain folded into the next layer), attention, Wo + the
+      residual (the residual buffer filled by the DMA), layer norm, W1 + GELU, W2 + the residual: bit-exact against the
+      compiler's mesh model, the error against the float block reported
+  M24 an LLM layer (drop 0.43): the same shape with RMS norm, causal attention (the diagonal key tile masked through the
+      residual buffer, the later key tiles skipped), a SiLU MLP and INT4 weights with per-output-channel scales (FETCH_W
+      arg 1: the NIC expands the nibbles; the scales in the requantizer's and the unit's per-column tables)
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
      make -C dv/cocotb tile_sp (drop 0.42: the same mesh of 16x8 sparse-capable cores, NCHK = 4: M20, and M1 / M6 dense on
                               the five-word weight entries of that core)
@@ -75,6 +87,7 @@ REG_CTRL, REG_STATUS, REG_PROG_ADDR, REG_PROG_LO, REG_PROG_HI, REG_ERR_MASK, REG
 REG_WD_CTRL, REG_WD_KICK, REG_SELFTEST, REG_MBIST, REG_PARTITION = 7, 8, 9, 0x0A, 0x0B
 REG_CFG_BASE, REG_CFG_M = 0x10, 0x24
 REG_RQ_TBL, REG_RQ_ADDR, REG_RQ_RELU = 0x30, 0x31, 0x32
+REG_VEC_ADDR, REG_VEC_DATA = 0x38, 0x39                              # drop 0.43: the vector unit's tables and program
 CAUSE_PROG_CE, CAUSE_CTRL_PATH, CAUSE_ISO, CAUSE_TIMEOUT, CAUSE_LOST, CAUSE_BIST = 15, 16, 17, 13, 12, 14
 CFG_ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_ct0",
              "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1",
@@ -311,6 +324,66 @@ class Mesh:
 
     def pins(self):
         return [self.status("err_pin", n) for n in range(self.N)]
+
+    # ---- drop 0.43: the tiles' registers written in parallel (one write per tile per clock), phases of the compiler's plans
+    async def reg_stream(self, per_node):
+        """per_node {node: [(addr, value), ...]}: every tile's list written in the same clocks, one write per tile per clock."""
+        n = max([len(v) for v in per_node.values()] + [0])
+        for i in range(n):
+            for nd, lst in per_node.items():
+                if i < len(lst):
+                    self.we[nd], self.addr[nd], self.wdata[nd] = 1, lst[i][0], lst[i][1] & 0xFFFFFFFF
+                else:
+                    self.we[nd] = 0
+            self._drive()
+            await RisingEdge(self.dut.clk)
+        for nd in per_node:
+            self.we[nd] = 0
+        self._drive()
+
+    def step_writes(self, st, cache):
+        """A plan step's register writes: the descriptor, the requantizer's tables, the vector unit's tables (those the tile
+        does not hold already: cache[node] = {table: values}) and program, the DMA program."""
+        import neo_vec as nv
+        import vec_ref as vr
+        w = [(REG_CFG_BASE + CFG_ORDER.index(k), bits(v, 16)) for k, v in st.desc.items() if k != "cfg_m"]
+        w.append((REG_CFG_M, st.desc["cfg_m"]))
+        mult, shift, zp = st.rq
+        for c in range(COLS):
+            w += [(REG_RQ_ADDR, c), (REG_RQ_TBL, ((int(zp[c]) & 0xFF) << 24) | (int(shift[c]) << 16) | int(mult[c]))]
+        w.append((REG_RQ_RELU, st.relu))
+        held = cache.setdefault(st.node, {})
+        skip = []
+        for tbl, vals in ((vr.T_LUTV, st.vec.lutv), (vr.T_LUTS, st.vec.luts), (vr.T_SC, st.vec.sc), (vr.T_BI, st.vec.bi),
+                          (vr.T_K, st.vec.k)):
+            if vals is not None:
+                if held.get(tbl) == tuple(vals):
+                    skip.append(tbl)
+                held[tbl] = tuple(vals)
+        w += nv.host_writes(st.vec.table_writes(skip=skip))
+        for a, wd in enumerate(st.prog):
+            fc.sample_dma_op((wd >> 60) & 0xF)
+            w += [(REG_PROG_ADDR, a), (REG_PROG_LO, wd & 0xFFFFFFFF), (REG_PROG_HI, wd >> 32)]
+        return w
+
+    async def run_phase(self, ph, cache, limit=60000):
+        """Load every step of a phase in parallel, start the tiles together, wait until every program is done and its
+        drain sent. Returns (cycles from the start to the last tile's end, the clocks the loading took)."""
+        writes = {st.node: self.step_writes(st, cache) for st in ph.steps}
+        load = max(len(v) for v in writes.values()) + 1
+        await self.reg_stream(writes)
+        await self.tick(1)                      # prog_we is registered: the last word lands one clock after the PROG_HI write
+        await self.reg_stream({st.node: [(REG_CTRL, 1)] for st in ph.steps})
+        nodes, n = [st.node for st in ph.steps], 0
+        while True:
+            await RisingEdge(self.dut.clk)
+            await ReadOnly()
+            n += 1
+            if all(self.prog_done(nd) and not self.drain_busy(nd) for nd in nodes):
+                break
+            assert n < limit, f"phase {ph.name}: not done within {limit} clocks (done {[self.prog_done(nd) for nd in nodes]})"
+        await RisingEdge(self.dut.clk)
+        return n, load
 
 
 def conv_data(seed=17, cin=CIN, cout=7):
@@ -989,6 +1062,153 @@ async def m20_sparse_program(dut):
     dut._log.info(f"M20: 2:4 sparse layer {CIN_SP}x6x6 -> 7x6x6 k3 compiled for two tiles ({ct_n} channel tiles of {2 * ROWS}, "
                   f"{len(act)} activation and {len(wts)} weight words of {WPW} per entry, contributor from run "
                   f"ct{d['cfg_ct0']} ky{d['cfg_ky0']} kx{d['cfg_kx0']}): bit-exact in {n} clocks, causes clean")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# drop 0.43 (stream C2): transformer layers through compiler/neo_xfmr.py's plans, checked against its mesh model
+# ---------------------------------------------------------------------------------------------------------------------
+XFMR_GEO = ROWS == 16 and COLS == 8 and NX * NY == 4 and NCHK == 1     # the plans are written for the 2x2 mesh of 16x8 cores
+
+
+def sample_plan(plan_phases):
+    """Functional coverage of a plan: the vector unit's ops, the fetch formats and the drain layouts it uses."""
+    import vec_ref as vr
+    for ph in plan_phases:
+        for st in ph.steps:
+            for w0 in st.vec.prog:
+                fc.sample_vec_op(vr.OP_NAMES[w0 & 15])
+            for wd in st.prog:
+                op, base, arg = (wd >> 60) & 15, (wd >> 4) & 0xFFFF, wd & 15
+                if op == OP_FETCH_A:
+                    fc.sample_fetch("rbuf" if arg & 1 else "act")
+                elif op == OP_FETCH_W:
+                    fc.sample_fetch("w_int4" if arg & 1 else "w_int8")
+                elif op == OP_DRAIN_WR and arg & 1:
+                    for bit, name in ((15, "transpose"), (14, "entry"), (13, "pad")):
+                        if (base >> bit) & 1:
+                            fc.sample_drain_layout(name)
+                    fc.sample_drain_layout("grouped" if base & 0x1FFF else "rows")
+
+
+async def run_plan(mesh, dut, phases, loads, tag):
+    """Load the banks, run every phase on the mesh and on the compiler's mesh model; returns (model, cycles per phase,
+    loading clocks per phase)."""
+    import neo_xfmr as nx
+    mm = nx.MeshModel(nx.Geo())
+    for node, base, words in loads:
+        mm.load(node, base, words)
+        await mesh.load_words(node, base, words)
+    cache, cyc, load = {}, {}, {}
+    for ph in phases:
+        mm.run_phase(ph)
+        cyc[ph.name], load[ph.name] = await mesh.run_phase(ph, cache)
+    sample_plan(phases)
+    return mm, cyc, load
+
+
+async def read_words(mesh, node, base, n):
+    return [await mesh.bank_read(node, base + i) for i in range(n)]
+
+
+async def compare_regions(mesh, mm, regions, tag):
+    """Bank regions [(name, node, base, words)] against the model's, the first difference reported."""
+    bad = []
+    for name, node, base, n in regions:
+        got = await read_words(mesh, node, base, n)
+        exp = mm.read(node, base, n)
+        diff = [i for i in range(n) if got[i] != exp[i]]
+        if diff:
+            i = diff[0]
+            bad.append(f"{name}: {len(diff)}/{n} words differ, first at {base + i}: 0x{got[i]:08x} expected 0x{exp[i]:08x}")
+    return bad
+
+
+@cocotb.test(skip=not XFMR_GEO)
+async def m21_attention_head(dut):
+    """M21 (drop 0.43): one attention head on the 2x2 mesh of 16x8 cores -- T = 64 tokens, model dim 32, head dim 32,
+    INT8 -- compiled by compiler/neo_xfmr.py's attention_plan: the projections (tile t: output tile t of Q, K and V; Q
+    drained padded into Q's activation layout, K drained transposed as S's weight entries, V drained as P V's weight
+    entries, one DMA program of three GO / WAIT_DONE pairs on one descriptor), the scores of query block t (16 queries) per
+    key tile with the softmax's max round and exp round on the vector unit (RS0 / RS1 across the eight key tiles; P
+    drained padded as P V's activations), P V with V's entries as the weights and the 1 / sum (reciprocal table and a
+    Newton step) on the drain. The output rows equal the compiler's mesh model bit for bit and the model equals the
+    independent integer chain (attention_ref); no cause is raised; the error against the float attention and the cycles
+    per phase against the perf model are reported."""
+    import neo_xfmr as nx
+    mesh = await setup(dut)
+    X8, Wq, Wk, Wv, s_x, s_w = nx.m21_data()
+    plan = nx.attention_plan(X8, Wq, Wk, Wv, s_x, s_w)
+    mm, cyc, load = await run_plan(mesh, dut, plan.phases, plan.loads, "M21")
+    g, QB, ctq = plan.geo, plan.meta["QB"], plan.meta["ctq"]
+    words = {}
+    for t, (node, base) in plan.out.items():
+        words[(node, base)] = await read_words(mesh, node, base, ctq * QB * g.ni8)
+    got = nx.read_attention_out(lambda node, base, n: words[(node, base)][:n], plan)
+    exp = nx.read_attention_out(mm.read, plan)
+    if not np.array_equal(got, exp):
+        bad = await compare_regions(mesh, mm, [("Q", 1, 0, 1024), ("K^T entries", 2, 0, 1536), ("V entries", 3, 0, 1536)]
+                                    + [(f"P tile {t}", t, 2048, 512) for t in range(4)], "M21")
+        c = await mesh.causes()
+        raise AssertionError(f"M21: {int((got != exp).sum())}/{got.size} output values differ from the mesh model; "
+                             f"intermediates: {bad or 'all equal'}; causes {causes_str(c)}")
+    ref = nx.attention_ref(X8, Wq, Wk, Wv, plan)
+    assert np.array_equal(exp, ref), "M21: the compiler's mesh model differs from the integer chain"
+    await expect_clean(mesh)
+    s_o, Of = plan.meta["s_o"], plan.meta["Of"]
+    err = float(np.abs(got * s_o - Of).max() / s_o)
+    pred = {ph.name: nx.phase_prediction(mm, ph.name, g) for ph in plan.phases}
+    total, ptotal = sum(cyc.values()), sum(pred.values())
+    dut._log.info(f"M21: attention head T {plan.T} d {plan.d} on 2x2 16x8 cores, {len(plan.phases)} phases / "
+                  f"{sum(len(p.steps) for p in plan.phases)} programs: {got.size} output values bit-exact (mesh model = integer "
+                  f"chain), causes clean; max |error| against the float attention {err:.2f} LSB; cycles "
+                  + ", ".join(f"{k} {cyc[k]} (model {pred[k]})" for k in cyc)
+                  + f"; {total} in all (model {ptotal}), host loading {sum(load.values())} clocks")
+    fc.report(os.environ.get("NEO_FUNCOV_FILE") or "funcov_tile_mesh.yml")
+
+
+async def run_block(dut, cfg, seed, tag):
+    """M23 / M24: a transformer block compiled by neo_xfmr.block_plan, run on the mesh and on the compiler's mesh model."""
+    import neo_xfmr as nx
+    mesh = await setup(dut)
+    x8, s_x, Wf, g1, g2 = nx.block_data(cfg, seed)
+    plan = nx.block_plan(cfg, x8, s_x, Wf, g1, g2)
+    mm, cyc, load = await run_plan(mesh, dut, plan.phases, plan.loads, tag)
+    g, QB = plan.geo, plan.meta["QB"]
+    n = (cfg.D // g.cols) * QB * g.ni8
+    words = {t: await read_words(mesh, t, plan.out_base, n) for t in range(NX * NY)}
+    got = nx.read_block_out(lambda node, base, k: words[node][:k], plan)
+    exp = nx.read_block_out(mm.read, plan)
+    if not np.array_equal(got, exp):
+        c = await mesh.causes()
+        raise AssertionError(f"{tag}: {int((got != exp).sum())}/{got.size} output values differ from the compiler's mesh model; "
+                             f"causes {causes_str(c)}")
+    await expect_clean(mesh)
+    err, err_q = nx.block_errors(plan, got)
+    pred = {ph.name: nx.phase_prediction(mm, ph.name, g) for ph in plan.phases}
+    total, ptotal = sum(cyc.values()), sum(pred.values())
+    dut._log.info(f"{tag}: {cfg.name} T {cfg.T} D {cfg.D} H {cfg.H} ({'RMS norm' if cfg.rms else 'layer norm'}, {cfg.act}, "
+                  f"{'INT4' if cfg.int4 else 'INT8'} weights{', causal' if cfg.causal else ''}), {len(plan.phases)} phases / "
+                  f"{sum(len(p.steps) for p in plan.phases)} programs: {got.size} output values bit-exact against the mesh model, "
+                  f"causes clean; max |error| {err_q:.2f} LSB against the float block with the quantized weights, {err:.2f} "
+                  f"against the float block; {total} cycles (perf model {ptotal}), host loading {sum(load.values())} clocks; "
+                  + ", ".join(f"{k} {cyc[k]}/{pred[k]}" for k in cyc))
+    fc.report(os.environ.get("NEO_FUNCOV_FILE") or "funcov_tile_mesh.yml")
+
+
+@cocotb.test(skip=not XFMR_GEO)
+async def m23_vit_block(dut):
+    """M23 (drop 0.43): a ViT block end to end on the 2x2 mesh of 16x8 cores (neo_xfmr.M23_CFG: layer norm, attention,
+    residual, layer norm, GELU MLP, residual; INT8 weights) -- the output bit-exact against the compiler's mesh model."""
+    import neo_xfmr as nx
+    await run_block(dut, nx.M23_CFG, 23, "M23")
+
+
+@cocotb.test(skip=not XFMR_GEO)
+async def m24_llm_layer(dut):
+    """M24 (drop 0.43): an LLM layer with INT4 weights (neo_xfmr.M24_CFG: RMS norm, causal attention, SiLU MLP) -- the
+    output bit-exact against the compiler's mesh model; the INT4 entries expanded by the NIC on every weight fetch."""
+    import neo_xfmr as nx
+    await run_block(dut, nx.M24_CFG, 24, "M24")
 
 
 MAX_FETCH_WORDS = (4095 // WPA) * WPA                # the longest entry-aligned fetch one DMA instruction can issue (4,088 at 8 words per entry)
