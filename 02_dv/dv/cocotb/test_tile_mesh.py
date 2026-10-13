@@ -362,7 +362,10 @@ class Mesh:
                 if held.get(tbl) == tuple(vals):
                     skip.append(tbl)
                 held[tbl] = tuple(vals)
-        w += nv.host_writes(st.vec.table_writes(skip=skip))
+        vw = st.vec.table_writes(skip=skip)
+        w += nv.host_writes(vw)
+        if vw:                                  # where VEC_ADDR then stands: after the last entry (VEC_DATA increments it)
+            held["vec_addr"] = (vw[-1][0] + 1) & 0xFFF
         for a, wd in enumerate(st.prog):
             fc.sample_dma_op((wd >> 60) & 0xF)
             w += [(REG_PROG_ADDR, a), (REG_PROG_LO, wd & 0xFFFFFFFF), (REG_PROG_HI, wd >> 32)]
@@ -1094,7 +1097,7 @@ def sample_plan(plan_phases):
 
 async def run_plan(mesh, dut, phases, loads, tag):
     """Load the banks, run every phase on the mesh and on the compiler's mesh model; returns (model, cycles per phase,
-    loading clocks per phase)."""
+    loading clocks per phase). Each tile's VEC_ADDR then reads back where its last table load left it."""
     import neo_xfmr as nx
     mm = nx.MeshModel(nx.Geo())
     for node, base, words in loads:
@@ -1104,6 +1107,10 @@ async def run_plan(mesh, dut, phases, loads, tag):
     for ph in phases:
         mm.run_phase(ph)
         cyc[ph.name], load[ph.name] = await mesh.run_phase(ph, cache)
+    for nd, held in sorted(cache.items()):
+        if "vec_addr" in held:
+            rb = await mesh.reg_read(nd, REG_VEC_ADDR)
+            assert rb == held["vec_addr"], f"{tag}: tile {nd}'s VEC_ADDR reads 0x{rb:03x}, expected 0x{held['vec_addr']:03x}"
     sample_plan(phases)
     return mm, cyc, load
 

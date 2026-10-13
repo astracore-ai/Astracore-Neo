@@ -82,7 +82,9 @@ jobs:
   hdl-sim:
     if: github.event_name != 'schedule' && !inputs.pnr_only
     runs-on: ubuntu-latest
-    timeout-minutes: 150                           # drop 0.42: 120 -> 150 for the chip top's suite after the ~95 minutes before it
+    # drop 0.42: 120 -> 150 for the chip top's suite after the ~95 minutes before it; drop 0.43: 150 -> 200 (run 209 took
+    # 145 min: the four coverage builds one after another, 80 min of them, and M21 / M23 / M24 in tile and tile_cov)
+    timeout-minutes: 200
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

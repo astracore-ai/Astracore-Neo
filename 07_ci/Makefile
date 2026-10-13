@@ -308,7 +308,7 @@ cocotb_tiles:
 	-$(call timed,core32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core32
 	-$(call timed,tile_sp) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_sp
 # drop 0.43: the coverage builds one after another (run 196's step ran the four at once and peaked at 15.6 GB in one
-# process of the runner's 16 GB; runs 201 / 202 lost the runner there): each still compiles with the jobs above
+# process of the runner's 16 GB; runs 201 / 205 lost the runner there): each still compiles with the jobs above
 	-$(call timed,core_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core_cov
 	-$(call timed,tile_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_cov
 	-$(call timed,tile8_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile8_cov
