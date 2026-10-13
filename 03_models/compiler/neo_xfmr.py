@@ -369,36 +369,41 @@ class MeshModel:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# the perf model: cycles of a phase from its steps (calibrated against the 2x2 16x8 mesh's measured runs)
+# the perf model: cycles of a phase from its steps. The array's M x runs and the unit's cycles (vec_ref's count) are
+# exact; the other constants are fitted (non-negative least squares) to the 136 phases of M21 / M23 / M24 measured on the
+# 2 x 2 mesh of 16x8 cores (cocotb tile, drop 0.43): mean |error| 6.8 % a phase, the three layers' totals within 4 %. The
+# first guess (3 cycles an instruction, 24 a fetch's request, 40 a run's fill, 12 a drain's tail) predicted 30 % low:
+# an instruction costs more than its issue (a fetch's request and the first word's return, a drain's set-up, WAIT_DONE's
+# poll), and the two tiles of a pair fetch from one bank, so a word takes two cycles at WPF = 1.
 # ---------------------------------------------------------------------------------------------------------------------
-PERF = dict(instr=3,          # cycles per DMA instruction: fetch from the program memory, issue
-            fetch_req=24,     # a fetch's request, the server's start and the last word's arrival beyond the words
-            run_fill=40,      # a descriptor's array fill, the accumulator's last row, the done
-            drain_tail=12)    # the requantizer and the drain FIFO before the NIC's last word
+PERF = dict(instr=21,         # cycles per DMA instruction (issue, request / response latency, set-up)
+            fetch_word=2.0,   # cycles per fetched word at WPF = 1 (the pair's two tiles interleaved on one server)
+            run_fill=4,       # a run's cycles beyond its M x runs and its drain (the fill, the last row, the done)
+            drain_word=0.8)   # cycles per drained word beyond the drain's rows (the NIC's beats, headers, CRC)
 
 
 def step_cycles(stats, geo, pm=PERF):
-    """One step's cycles on its own tile: the instructions, every fetch (words over the link at WPF words a cycle plus its
-    request), every run (the array's M x runs, the fill, then the sequencer's drain of M rows or the vector unit's
-    cycles). Fetch and drain overlap nothing in this estimate except a drain with the next run's fetch."""
+    """One step's cycles on its own tile: the instructions, every fetch's words, every run (the array's M x runs, the
+    fill, the sequencer's drain of M rows or the vector unit's cycles, the drained words)."""
     c = stats["instr"] * pm["instr"]
     for src, words, kind in stats["fetch"]:
-        c += pm["fetch_req"] + -(-words // geo.wpf)
+        c += words * pm["fetch_word"] / geo.wpf
     for go in stats["gos"]:
-        c += pm["run_fill"] + go["M"] * go["runs"] + (go["ucyc"] if go["vec"] else go["M"]) + pm["drain_tail"]
-    return c
+        c += (pm["run_fill"] + go["M"] * go["runs"] + (go["ucyc"] if go["vec"] else go["M"])
+              + go["drain_words"] * pm["drain_word"] / geo.wpf)
+    return int(round(c))
 
 
 def phase_prediction(model, phase_name, geo, pm=PERF):
-    """A phase's predicted cycles: the slowest tile's step, or the busiest bank's serving (every word a server sends
-    goes out one per cycle at WPF = 1), whichever is longer."""
+    """A phase's predicted cycles: the slowest tile's step, or the busiest bank's serving (one word a cycle at WPF = 1),
+    whichever is longer."""
     tiles, served = {}, {}
     for ph, node, st in model.log:
         if ph != phase_name:
             continue
         tiles[node] = tiles.get(node, 0) + step_cycles(st, geo, pm)
         for src, words, kind in st["fetch"]:
-            served[src] = served.get(src, 0) + -(-words // geo.wpf) + pm["fetch_req"]
+            served[src] = served.get(src, 0) + -(-words // geo.wpf)
     return max(list(tiles.values()) + list(served.values()) + [0])
 
 
