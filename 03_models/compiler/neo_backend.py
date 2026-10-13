@@ -14,6 +14,9 @@ For one layer and one output tile x M-chunk group, the backend
     its share, FETCH_W for its runs, DRAIN_WR/PSUM, GO, WAIT_REDUCE + NOTIFY on the owner,
     WAIT_RDY on contributors, WAIT_DONE, END), using exactly the protocol tile_dma executes.
 compile_layer() returns a LayerProgram; run_tiles.py's M6 executes one on the 2x2 RTL mesh.
+compile_pair() (drop 0.43) is the dual-tile lockstep form: the same layer whole on each tile of a pair -- the same
+descriptor, the same fetches from the same banks, each tile draining into its own bank at the same address -- so the two
+NICs drain the same messages and the control plane compares them (mesh_ctrl.sv, top_ctrl's LS_PAIR).
 compile_network() runs the emitter over every layer of YOLOv8-m on the 8x8 mesh and reports
 program and traffic statistics (static; execution of the whole network is beyond neosim's speed).
 
@@ -340,6 +343,47 @@ def compile_layer(name, h, w, cin, cout, k, s, p, rows, cols, nx, ny, act_bank, 
                                        w_bank, w_base, owner, free, nx, shares, int8_out=int8_out, out_base=out_base,
                                        nchk=nchk, sparse=sparse)
     return LayerProgram(name, tiles, owner, out_base, oy_n * ((w + 2 * p - k) // s + 1))
+
+
+def compile_pair(name, h, w, cin, cout, k, s, p, rows, cols, nx, ny, act_bank, act_base, w_bank, w_base, pair,
+                 oy0=0, oy_n=None, int8_out=False, out_base=0, nchk=1, sparse=False) -> LayerProgram:
+    """Dual-tile lockstep (drop 0.43): the layer whole (one share) on each tile of `pair` = (a, b), both programs fetching
+    the same inputs from the same banks, each draining its M rows into its own bank at out_base -- the two tiles' drain
+    messages are then identical word for word (the CRC the NIC exports covers the data, not the destination). The returned
+    LayerProgram lists both tiles (a first); its out_bank is a's, b's copy is at the same address of b's bank."""
+    a, b = (tuple(t) for t in pair)
+    assert a != b, "a lockstep pair is two tiles"
+    progs = [compile_layer(name, h, w, cin, cout, k, s, p, rows, cols, nx, ny, act_bank, act_base, w_bank, w_base, owner=t,
+                           shares=1, oy0=oy0, oy_n=oy_n, int8_out=int8_out, out_base=out_base, nchk=nchk, sparse=sparse)
+             for t in (a, b)]
+    for lp in progs:
+        assert len(lp.tiles) == 1 and lp.tiles[0].role == "solo"
+    da, db = progs[0].tiles[0].descriptor, progs[1].tiles[0].descriptor
+    assert da == db, "the pair's descriptors differ"
+    return LayerProgram(name, progs[0].tiles + progs[1].tiles, a, out_base, progs[0].M)
+
+
+CQ_CFG20 = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_ct0",
+            "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1", "cfg_flags", "cfg_rsv2"]
+
+
+def cq_image(tiles, nx, extra=()):
+    """The command queue's register image of tile programs (drop 0.43; top_ctrl.sv, neo_host.c's neo_cq_image): per tile,
+    single-tile entries {1 << 14 | tile << 8 | register} (tile = y * nx + x) -- the twenty descriptor registers 0x10 .. 0x23
+    (0 where the descriptor has no such field) and cfg_m (0x24), as neo_load_and_start writes them, then the program
+    (PROG_ADDR 0x02, PROG_LO 0x03, PROG_HI 0x04 per instruction); then `extra` [(word 0, value)]; then CTRL (0x00) = 1
+    broadcast to the command's mask. Returns [(word 0, value)]."""
+    ent = []
+    for tp in tiles:
+        one = (1 << 14) | ((tp.tile[1] * nx + tp.tile[0]) << 8)
+        for i, name in enumerate(CQ_CFG20):
+            ent.append((one | (0x10 + i), tp.descriptor.get(name, 0) & 0xFFFF))
+        ent.append((one | 0x24, tp.descriptor["cfg_m"]))
+        for a, wd in enumerate(tp.program):
+            ent += [(one | 0x02, a), (one | 0x03, wd & 0xFFFFFFFF), (one | 0x04, wd >> 32)]
+    ent += list(extra)
+    ent.append((0x00, 1))
+    return ent
 
 
 def compile_network(h=640, w=640, nx=8, ny=8, rows=32, cols=32, exclude=(), bank_words=na.BANK_WORDS, verbose=False):

@@ -18,20 +18,29 @@
 //   cdc_fifo of beat flits per direction.
 //   Control plane: top_ctrl (aclk: the AXI4-Lite slave, the global registers, the interrupt) -> cdc_sync -> mesh_ctrl (clk:
 //   the tiles' register buses, the tile-enable map in effect, the status levels) -- see those modules for the map and rules.
-//   Tile enable: a tile whose bit is clear in the map in effect is fenced here: on each of its four mesh inputs a flit
-//   addressed to it (dst = its coordinates) is consumed and dropped before the tile sees it, every other flit passes, so its
-//   router forwards and its bank and registers do not answer (mesh_ctrl.sv says why it is not held in reset).
+//   Tile enable = the power map (drop 0.43): a tile that is not on (its TILE_EN bit cleared and applied, or its power
+//   sequence under way -- mesh_ctrl.sv) is fenced here: on each of its four mesh inputs a flit addressed to it (dst = its
+//   coordinates) is consumed and dropped before the tile sees it, every other flit passes; its router keeps forwarding --
+//   neo_tile's router is on rst_n (router_rst_n) and the ungated clock -- while the rest of the tile is isolated, clocked
+//   off, held in reset (tile_rst_n) and unpowered (tile_pwr_en, a port of this module for the integrator's power switches;
+//   the isolation and clock enable per tile are inside neo_tile). Nothing is retained (08_ip_product/neo_top_integration.md).
+//   Dual-tile lockstep (drop 0.43): every tile's drain_crc_last / drain_msg_cnt go to mesh_ctrl, which compares the pairs
+//   top_ctrl's LS_PAIR registers name; a pair's mismatch is a sticky level crossed to top_ctrl like the tiles' err_pin.
 //   Clock domains and the crossings, exactly: (1) every bridge's data path, a cdc_fifo per direction (gray pointers, two-flop
 //   synchronizers); (2) the register bus, cdc_sync (a request / acknowledge handshake with held payloads); (3) levels
 //   through cdc_bits: the tiles' done and err_pin (masked by the enable map) and the effective enable map and the bridge
-//   routers' parity flags into aclk, the tile-enable request into clk. No other signal crosses: the bridges' window bases,
-//   partitions and error events are aclk signals between aclk modules.
+//   routers' parity flags into aclk, the tile-enable request into clk; since drop 0.43 also the power sequencers' states
+//   (gray-coded) and the lockstep pairs' errors into aclk, the bridge column's priority map and the lockstep pairs'
+//   configuration (static: written before use) into clk. No other signal crosses: the bridges' window bases, partitions and
+//   error events are aclk signals between aclk modules.
 //   Resets: rst_n (clk: the mesh, the bridges' mesh sides, mesh_ctrl) and aresetn (aclk: top_ctrl, the bridge engines) are
 //   asserted together; at power-up aresetn is released first -- the control plane comes up and the tile-enable map can be
 //   written -- then rst_n, and the tiles leave reset with that map in effect.
 module neo_top #(
   parameter int NX = 8, NY = 8,
   parameter int ROWS = 32, COLS = 32, PW = 32,
+  parameter int NCHK = 4,                    // drop 0.43: the cores' check columns -- 4, the 2:4 sparse-capable silicon core
+                                             // (the tile was elaborated at its default NCHK = 1 before, against synth.py's units)
   parameter int ACC_ROWS = 512, ABUF_DEPTH = 2048, WBUF_DEPTH = 1024, BANK_DEPTH = 524288,
   parameter int WPF = 32,                    // words per link flit: 32 = the 1024-bit links
   parameter int FETCH_TIMEOUT = 1048575,     // the tiles' fetch watchdog (tile_nic.sv)
@@ -43,6 +52,7 @@ module neo_top #(
   parameter int HOST_TIMEOUT = FETCH_TIMEOUT,  // aclk cycles a host read waits for its tile
   parameter int CTRL_AW = 18,                // the AXI4-Lite byte-address width
   parameter int CDC_DEPTH = 8,               // entries of each bridge FIFO (a power of two, >= 4)
+  parameter int LS_PAIRS = 4,                // drop 0.43: lockstep pairs the control plane compares (1 .. 8)
   parameter int XW  = $clog2(NX + 1),        // coordinate widths with the bridge column
   parameter int YW  = (NY > 1) ? $clog2(NY) : 1,
   parameter int NT  = NX * NY,
@@ -132,7 +142,9 @@ module neo_top #(
   output logic [NM-1:0]           m_axi_rready,
   // to the host and the safety island
   output logic                    irq,
-  output logic                    err
+  output logic                    err,
+  // drop 0.43: each tile's power switch enable (tile n = y * NX + x; mesh clock, a flop per tile in mesh_ctrl)
+  output logic [NT-1:0]           tile_pwr_en
 );
   localparam int NC  = NX + 1;               // node columns: the tiles and the bridge column
   localparam int NN  = NC * NY;              // mesh nodes, indexed y * NC + x
@@ -143,6 +155,7 @@ module neo_top #(
   localparam int FB  = 2 * (XW + YW) + 8 + DWB;       // a beat flit without its parity bit (the bridge FIFOs' width)
   localparam int TGW = $clog2(NT + NY);
   localparam int RQW = 1 + TGW + 8 + 32;
+  localparam int LSW = 1 + 2 * NTW;          // a lockstep pair's configuration
 
   // ------------------------------------------------------------------ the mesh links
   logic          o_valid [NN][4];
@@ -157,13 +170,17 @@ module neo_top #(
   logic [31:0]      h_wdata;
   logic [NT*32-1:0] h_rdata;
   logic [NT-1:0]    t_err_pin, t_prog_done, t_drain_busy;
-  logic [NT-1:0]    en_eff;                  // the tile-enable map in effect (mesh_ctrl, clk)
+  logic [NT-1:0]    en_eff;                  // the tiles that are on (mesh_ctrl, clk)
+  logic [NT-1:0]    t_rst_n, t_clk_en, t_iso_en;   // drop 0.43: each tile's switchable domain (mesh_ctrl's sequencers)
+  logic [16*NT-1:0] t_dcrc, t_dcnt;          // drop 0.43: each tile's last drain CRC and drain message count (lockstep)
   // the bridge nodes' routers (row y)
   logic [NY-1:0]    rtr_clear, rtr_parity;
+  logic [15:0]      prio_c;                  // drop 0.43: their priority map (top_ctrl's PRIO, synchronized into clk)
   // bridges, aclk side (row y)
   logic [NY*34-1:0] win_base;
   logic [NY*4-1:0]  br_part;
   logic [NY-1:0]    ev_crc, ev_lost, ev_axi, ev_timeout, ev_host;
+  logic [NY-1:0]    ev_rdw, ev_wrw, br_busy;   // drop 0.43: the memory roles' AXI wait cycles (telemetry), unanswered writes
 
   generate
     for (genvar y = 0; y < NY; y++) begin : g_y
@@ -211,22 +228,25 @@ module neo_top #(
           logic [38:0]    t_bd_rdata;
           logic [4:0]     t_rt_valid;
           logic [FWL-1:0] t_rt_flit4;
+          logic [31:0]    t_obs;
           neo_tile #(.XW(XW), .YW(YW), .NX(NC), .NY(NY), .WPF(WPF), .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS),
                      .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT),
-                     .BIST_WORDS(BIST_WORDS), .DV_HOOKS(0)) u_t (
-            .clk(clk), .rst_n(rst_n), .my_x(XW'(x)), .my_y(YW'(y)),
+                     .BIST_WORDS(BIST_WORDS), .NCHK(NCHK), .DV_HOOKS(0)) u_t (
+            .clk(clk), .rst_n(t_rst_n[n]), .router_rst_n(rst_n), .tile_clk_en(t_clk_en[n]), .iso_en(t_iso_en[n]),
+            .my_x(XW'(x)), .my_y(YW'(y)),
             .in_valid(t_in_valid), .in_flit(t_in_flit), .in_ready(t_in_ready),
             .out_valid(t_out_valid), .out_flit(t_out_flit), .out_ready(t_out_ready),
             .h_we(h_we[n]), .h_re(h_re[n]), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata[32*n +: 32]), .err_pin(t_err_pin[n]),
             .prog_done(t_prog_done[n]), .drain_busy(t_drain_busy[n]), .done(t_done), .parity_err(t_parity), .crc_err(t_crc),
             .array_abft_sticky(t_aabft), .acc_abft_sticky(t_cabft), .ctrl_err_sticky(t_ctrl), .seq_err_sticky(t_seq),
             .rq_err_sticky(t_rq), .ecc_ce(t_ece), .ecc_ue(t_eue), .wbuf_ce(t_wce), .wbuf_ue(t_wue), .rq_tbl_perr(t_tbl),
-            .lost_err(t_lost), .fetch_timeout(t_tmo),
+            .lost_err(t_lost), .fetch_timeout(t_tmo), .drain_crc_last(t_dcrc[16*n +: 16]), .drain_msg_cnt(t_dcnt[16*n +: 16]),
             .dv_bd_we(1'b0), .dv_bd_addr('0), .dv_bd_wdata('0), .dv_bd_rdata(t_bd_rdata),
-            .dv_fi_en(1'b0), .dv_fi_sel('0), .dv_fi_idx('0), .dv_fi_mask('0), .dv_rt_valid(t_rt_valid), .dv_rt_flit4(t_rt_flit4));
+            .dv_fi_en(1'b0), .dv_fi_sel('0), .dv_fi_idx('0), .dv_fi_mask('0), .dv_rt_valid(t_rt_valid), .dv_rt_flit4(t_rt_flit4),
+            .dv_obs(t_obs));
           logic unused_tile;                 // the tile's flags are read through its registers; the testbench hooks are off
           assign unused_tile = ^{t_done, t_parity, t_crc, t_aabft, t_cabft, t_ctrl, t_seq, t_rq, t_ece, t_eue, t_wce, t_wue, t_tbl,
-                                 t_lost, t_tmo, t_bd_rdata, t_rt_valid, t_rt_flit4};
+                                 t_lost, t_tmo, t_bd_rdata, t_rt_valid, t_rt_flit4, t_obs};
         end else begin : g_bnode
           // ---- the bridge node of row y: a router, its local port into the bridge ----
           localparam int MEMY  = (y < N_MEM_BRIDGES) ? 1 : 0;
@@ -245,12 +265,15 @@ module neo_top #(
             assign o_flit[m][p]   = r_out_flit[p];
             assign r_out_ready[p] = o_ready[m][p];
           end
+          logic [4:0] r_stage_en;            // (the output stages' clock enables: not observed here)
           noc_router #(.XW(XW), .YW(YW), .DW(DWL), .FW(FWL), .DV_HOOKS(0)) u_rt (
-            .clk(clk), .rst_n(rst_n), .my_x(XW'(NX)), .my_y(YW'(y)),
+            .clk(clk), .rst_n(rst_n), .my_x(XW'(NX)), .my_y(YW'(y)), .prio(prio_c),
             .in_valid(r_in_valid), .in_flit(r_in_flit), .in_ready(r_in_ready),
             .out_valid(r_out_valid), .out_flit(r_out_flit), .out_ready(r_out_ready),
-            .err_clear(rtr_clear[y]), .parity_err_sticky(rtr_parity[y]),
+            .err_clear(rtr_clear[y]), .parity_err_sticky(rtr_parity[y]), .stage_en(r_stage_en),
             .dv_flit_flip(1'b0), .dv_valid_clear(1'b0), .dv_port('0), .dv_mask('0));
+          logic unused_r_stage_en;
+          assign unused_r_stage_en = ^r_stage_en;
           if ((MEMY != 0) || (HOSTY != 0)) begin : g_bridge
             // mesh side (clk): the packer / unpacker pair the NIC uses, beats of 16 words
             logic          up_valid, up_ready, pk_valid, pk_ready;
@@ -301,6 +324,7 @@ module neo_top #(
               .rx_valid(rx_valid), .rx_flit(rx_flit), .rx_ready(rx_ready), .tx_valid(tx_valid), .tx_flit(tx_flit), .tx_ready(tx_ready),
               .win_base(win_base[34*y +: 34]), .partition(br_part[4*y +: 4]),
               .ev_crc(ev_crc[y]), .ev_lost(ev_lost[y]), .ev_axi(ev_axi[y]), .ev_timeout(ev_timeout[y]), .ev_host(ev_host[y]),
+              .ev_rd_wait(ev_rdw[y]), .ev_wr_wait(ev_wrw[y]), .wr_busy(br_busy[y]),
               .m_awaddr(b_awaddr), .m_awlen(b_awlen), .m_awsize(b_awsize), .m_awburst(b_awburst), .m_awvalid(b_awvalid),
               .m_awready(b_awready), .m_wdata(b_wdata), .m_wstrb(b_wstrb), .m_wlast(b_wlast), .m_wvalid(b_wvalid),
               .m_wready(b_wready), .m_bresp(b_bresp_m), .m_bvalid(b_bvalid), .m_bready(b_bready),
@@ -393,7 +417,7 @@ module neo_top #(
             assign r_in_flit[4]  = '0;
             assign r_out_ready[4] = 1'b1;
             assign ev_crc[y] = 1'b0; assign ev_lost[y] = 1'b0; assign ev_axi[y] = 1'b0; assign ev_timeout[y] = 1'b0;
-            assign ev_host[y] = 1'b0;
+            assign ev_host[y] = 1'b0; assign ev_rdw[y] = 1'b0; assign ev_wrw[y] = 1'b0; assign br_busy[y] = 1'b0;
             logic unused_sink;
             assign unused_sink = ^{r_in_ready[4], r_out_valid[4], r_out_flit[4], win_base[34*y +: 34], br_part[4*y +: 4]};
           end
@@ -427,25 +451,32 @@ module neo_top #(
   logic [32:0]      rqa_rsp, rqb_rsp;
   logic [NT-1:0]    tile_en_a, en_req_c, st_done_c, st_err_c, st_done_a, st_err_a, st_en_a;
   logic [NY-1:0]    st_par_a;
+  logic [15:0]      prio_a;
+  logic [LS_PAIRS*LSW-1:0] ls_cfg_a, ls_cfg_c;
+  logic [LS_PAIRS-1:0]     ls_err_c, ls_err_a;
+  logic [3*NT-1:0]  pwr_st_c, pwr_st_a;
   top_ctrl #(.NX(NX), .NY(NY), .ROWS(ROWS), .COLS(COLS), .BAW(BAW), .WPF(WPF), .AXI_DW(AXI_DW), .N_MEM(N_MEM_BRIDGES),
-             .N_HOST(N_HOST_BRIDGES), .CTRL_AW(CTRL_AW)) u_ctrl (
+             .N_HOST(N_HOST_BRIDGES), .CTRL_AW(CTRL_AW), .NLS(LS_PAIRS)) u_ctrl (
     .clk(aclk), .rst_n(aresetn),
     .s_awaddr(s_axil_awaddr), .s_awvalid(s_axil_awvalid), .s_awready(s_axil_awready), .s_wdata(s_axil_wdata), .s_wstrb(s_axil_wstrb),
     .s_wvalid(s_axil_wvalid), .s_wready(s_axil_wready), .s_bresp(s_axil_bresp), .s_bvalid(s_axil_bvalid), .s_bready(s_axil_bready),
     .s_araddr(s_axil_araddr), .s_arvalid(s_axil_arvalid), .s_arready(s_axil_arready), .s_rdata(s_axil_rdata), .s_rresp(s_axil_rresp),
     .s_rvalid(s_axil_rvalid), .s_rready(s_axil_rready),
     .rq_req(rqa_req), .rq_data(rqa_data), .rq_busy(rqa_busy), .rq_done(rqa_done), .rq_rsp(rqa_rsp),
-    .st_done(st_done_a), .st_err(st_err_a), .st_en(st_en_a), .st_parity(st_par_a), .tile_en(tile_en_a),
+    .st_done(st_done_a), .st_err(st_err_a), .st_en(st_en_a), .st_parity(st_par_a), .tile_en(tile_en_a), .prio(prio_a),
+    .ls_cfg(ls_cfg_a), .st_ls(ls_err_a), .st_pwr(pwr_st_a),
     .win_base(win_base), .br_part(br_part), .ev_crc(ev_crc), .ev_lost(ev_lost), .ev_axi(ev_axi), .ev_timeout(ev_timeout),
-    .ev_host(ev_host), .irq(irq), .err(err));
+    .ev_host(ev_host), .ev_rd_wait(ev_rdw), .ev_wr_wait(ev_wrw), .br_busy(br_busy), .irq(irq), .err(err));
   // crossing (2): the register bus
   cdc_sync #(.RW(RQW), .SW(33)) u_rq (
     .a_clk(aclk), .a_rst_n(aresetn), .a_req(rqa_req), .a_req_data(rqa_data), .a_busy(rqa_busy), .a_done(rqa_done), .a_rsp_data(rqa_rsp),
     .b_clk(clk), .b_rst_n(rst_n), .b_req(rqb_req), .b_req_data(rqb_data), .b_done(rqb_done), .b_rsp_data(rqb_rsp));
-  mesh_ctrl #(.NX(NX), .NY(NY)) u_mctrl (
+  mesh_ctrl #(.NX(NX), .NY(NY), .NLS(LS_PAIRS)) u_mctrl (
     .clk(clk), .rst_n(rst_n), .rq_req(rqb_req), .rq_data(rqb_data), .rq_done(rqb_done), .rq_rsp(rqb_rsp),
     .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata), .rtr_clear(rtr_clear), .rtr_parity(rtr_parity),
     .prog_done(t_prog_done), .drain_busy(t_drain_busy), .err_pin(t_err_pin), .en_req(en_req_c), .en_eff(en_eff),
+    .tile_rst_n(t_rst_n), .tile_clk_en(t_clk_en), .tile_iso_en(t_iso_en), .tile_pwr_en(tile_pwr_en), .pwr_state(pwr_st_c),
+    .drain_crc(t_dcrc), .drain_cnt(t_dcnt), .ls_cfg(ls_cfg_c), .ls_err(ls_err_c),
     .st_done(st_done_c), .st_err(st_err_c));
   // crossing (3): levels -- the enable request into clk (no reset: it holds the request through the mesh reset), the
   // status into aclk
@@ -454,4 +485,8 @@ module neo_top #(
   cdc_bits #(.W(NT))            u_err_sync  (.clk(aclk), .rst_n(aresetn), .d(st_err_c),   .q(st_err_a));
   cdc_bits #(.W(NT))            u_eff_sync  (.clk(aclk), .rst_n(aresetn), .d(en_eff),     .q(st_en_a));
   cdc_bits #(.W(NY))            u_par_sync  (.clk(aclk), .rst_n(aresetn), .d(rtr_parity), .q(st_par_a));
+  cdc_bits #(.W(16))            u_prio_sync (.clk(clk),  .rst_n(rst_n),   .d(prio_a),     .q(prio_c));   // static: set before use
+  cdc_bits #(.W(LS_PAIRS*LSW))  u_ls_sync   (.clk(clk),  .rst_n(rst_n),   .d(ls_cfg_a),   .q(ls_cfg_c)); // static: set before use
+  cdc_bits #(.W(LS_PAIRS))      u_lse_sync  (.clk(aclk), .rst_n(aresetn), .d(ls_err_c),   .q(ls_err_a));
+  cdc_bits #(.W(3*NT))          u_pwr_sync  (.clk(aclk), .rst_n(aresetn), .d(pwr_st_c),   .q(pwr_st_a)); // gray per tile
 endmodule
