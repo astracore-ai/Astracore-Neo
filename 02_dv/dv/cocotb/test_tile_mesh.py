@@ -1128,15 +1128,16 @@ async def compare_regions(mesh, mm, regions, tag):
 @cocotb.test(skip=not XFMR_GEO)
 async def m21_attention_head(dut):
     """M21 (drop 0.43): one attention head on the 2x2 mesh of 16x8 cores -- T = 64 tokens, model dim 32, head dim 32,
-    INT8 -- compiled by compiler/neo_xfmr.py's attention_plan: the projections (two output tiles of Q, K or V on each
-    producer tile, every output tile drained into two copies by a second GO on the same weights: Q padded into Q's
-    activation layout, K transposed as S's weight entries, V as P V's weight entries; no tile addresses its own bank -- the
-    self-serve deadlock stream B2 fixes), the scores of query block t (16 queries) per
-    key tile with the softmax's max round and exp round on the vector unit (RS0 / RS1 across the eight key tiles; P
-    drained padded as P V's activations), P V with V's entries as the weights and the 1 / sum (reciprocal table and a
-    Newton step) on the drain. The output rows equal the compiler's mesh model bit for bit and the model equals the
-    independent integer chain (attention_ref); no cause is raised; the error against the float attention and the cycles
-    per phase against the perf model are reported."""
+    INT8 -- compiled by compiler/neo_xfmr.py's attention_plan: the projections (three of the twelve output tiles of Q, K
+    and V on each tile, in two halves of 32 tokens -- a descriptor drains at most ACC_ROWS - 1 rows --, every output tile
+    drained into two copies by a second GO on the same weights: Q padded into Q's activation layout, K transposed as S's
+    weight entries, V as P V's weight entries), the scores of query block t (16 queries) per key tile with the softmax's
+    max round and exp round on the vector unit (RS0 / RS1 across the eight key tiles; P drained padded as P V's
+    activations), P V with V's entries as the weights and the 1 / sum (reciprocal table and a Newton step) on the drain.
+    Every phase runs on one pair of tiles at a time, fetching from the other pair's banks (neo_xfmr's PAIRS: the NIC's
+    serve / send deadlock, stream B2's fix). The output rows equal the compiler's mesh model bit for bit and the model
+    equals the independent integer chain (attention_ref); no cause is raised; the error against the float attention and
+    the cycles per phase against the perf model are reported."""
     import neo_xfmr as nx
     mesh = await setup(dut)
     X8, Wq, Wk, Wv, s_x, s_w = nx.m21_data()
@@ -1177,8 +1178,10 @@ async def run_block(dut, cfg, seed, tag):
     mm, cyc, load = await run_plan(mesh, dut, plan.phases, plan.loads, tag)
     g, QB = plan.geo, plan.meta["QB"]
     n = (cfg.D // g.cols) * QB * g.ni8
-    words = {t: await read_words(mesh, t, plan.out_base, n) for t in range(NX * NY)}
-    got = nx.read_block_out(lambda node, base, k: words[node][:k], plan)
+    words = {}
+    for t, (node, base) in plan.out.items():                # query block t's rows: in bank home(t)
+        words[(node, base)] = await read_words(mesh, node, base, n)
+    got = nx.read_block_out(lambda node, base, k: words[(node, base)][:k], plan)
     exp = nx.read_block_out(mm.read, plan)
     if not np.array_equal(got, exp):
         c = await mesh.causes()

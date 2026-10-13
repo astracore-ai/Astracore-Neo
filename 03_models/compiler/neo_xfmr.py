@@ -25,12 +25,11 @@ The hardware this compiles for (drop 0.43):
     vector unit's per-column SC. Per-group scales along K are not supported.
 
 Attention (one head, T tokens, head dim d, the 2 x 2 mesh of 16x8 cores; attention_plan):
-  1. projections: each output tile (COLS channels) of Q, K and V over all T tokens (M = T, the input's channel tiles
-     fetched once) on a producer tile, two output tiles each (Q on tiles 0 / 1, K on 1 / 3, V on 0 / 2: no tile drains into
-     its own bank -- see Banks), every output tile drained into two copies (a second GO on the same weights): Q padded
-     (DR_P) into Q's activation layout, K transposed as weight entries (DR_T | DR_E, stride = one key tile's weight block)
-     -- K^T for Q K^T, a transpose by the DMA's addressing -- and V as weight entries (DR_E, stride = one key tile's rows
-     in P V's padded channel tiles).
+  1. projections: the twelve output tiles (COLS channels) of Q, K and V, three a tile, in two halves of 32 tokens (a
+     descriptor drains at most ACC_ROWS - 1 rows: core_seq's cfg_m), every output tile drained into two copies (a second
+     GO on the same weights; one copy for each pair of tiles, see PAIRS): Q padded (DR_P) into Q's activation layout, K
+     transposed as weight entries (DR_T | DR_E, stride = one key tile's weight block) -- K^T for Q K^T, a transpose by the
+     DMA's addressing -- and V as weight entries (DR_E, stride = one key tile's rows in P V's padded channel tiles).
   2. S = Q K^T per query block (tile t: queries 16t .. 16t + 15) and key tile (COLS keys a run): the softmax over all T
      keys in two rounds of the key tiles (neo_vec: RED max into RS0 (store, then max), then exp((s - RS0) * scale) EMIT ->
      P (INT8, padded), RS1 (+)= the sum); P's key tiles land as channel tiles of P V's activations.
@@ -232,7 +231,9 @@ class MeshModel:
         self.banks = [[0] * geo.bank for _ in range(geo.nx * geo.ny)]
         self.tiles = [TileModel(geo) for _ in range(geo.nx * geo.ny)]
         self.log = []                                    # (phase, node, stats)
-        self.no_self = True                              # plans never address the executing tile's own bank (see Banks)
+        self.no_self = True                              # the placement rule (see Banks): checked per phase
+        self.touched = {}                                # phase -> [(bank, first word, words)] its drains wrote
+        self.phase = None
 
     def load(self, node, base, words):
         self.banks[node][base:base + len(words)] = [int(w) & 0xFFFFFFFF for w in words]
@@ -241,6 +242,15 @@ class MeshModel:
         return list(self.banks[node][base:base + n])
 
     def run_phase(self, ph):
+        if self.no_self:                                 # no tile that runs a program has its bank read in the phase
+            g = self.geo
+            run = {st.node for st in ph.steps}
+            read = {((w >> 52) & 15) * g.nx + ((w >> 56) & 15) for st in ph.steps for w in st.prog
+                    if (w >> 60) & 15 in (OP_FETCH_A, OP_FETCH_W)}
+            assert not (run & read), (f"phase {ph.name}: tiles {sorted(run & read)} run programs while their banks are read "
+                                      f"-- the serve / send deadlock (see Banks)")
+        self.phase = ph.name
+        self.touched[ph.name] = []
         for st in ph.steps:
             self.log.append((ph.name, st.node, self.run_step(st)))
 
@@ -254,9 +264,6 @@ class MeshModel:
             op, x, y = (w >> 60) & 15, (w >> 56) & 15, (w >> 52) & 15
             addr, ln, base, arg = (w >> 32) & 0xFFFFF, (w >> 20) & 0xFFF, (w >> 4) & 0xFFFF, w & 15
             src = y * g.nx + x
-            if op in (OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR):
-                assert src != st.node or not self.no_self, (f"tile {st.node} addresses its own bank (op {op}): the self-serve "
-                                                            f"deadlock -- a tile that serves its bank while it fetches from it")
             if op == OP_FETCH_A:
                 words = self.banks[src][addr:addr + ln]
                 assert ln % g.wpa == 0, f"FETCH_A of {ln} words: not whole entries"
@@ -306,7 +313,8 @@ class MeshModel:
         g = self.geo
         M, ct_n, tp = d["cfg_m"], d["cfg_ct_n"], d["cfg_tile_pixels"]
         assert d["cfg_k"] == 1 and d["cfg_s"] == 1 and d["cfg_p"] == 0 and d["cfg_ct0"] == 0 and d["cfg_rn"] == ct_n
-        assert M <= g.acc_rows and tp == M
+        assert M < g.acc_rows and tp == M, (f"M = {M}: core_seq's cfg_m holds IDXW bits, so a descriptor of ACC_ROWS rows "
+                                            f"(cfg_m written as 0) never ends its drain -- at most ACC_ROWS - 1 rows")
         acc = [[0] * g.cols for _ in range(M)]
         for ct in range(ct_n):
             Wt = [t.wbuf[ct * g.rows + r] for r in range(g.rows)]
@@ -333,6 +341,7 @@ class MeshModel:
             for i, r in enumerate(rows):
                 ws = [v & 0xFFFFFFFF for v in r] + [sum(r) & 0xFFFFFFFF]
                 self.banks[dst][addr + i * (g.cols + 1):addr + (i + 1) * (g.cols + 1)] = ws
+                self.touched.setdefault(self.phase, []).append((dst, addr + i * (g.cols + 1), g.cols + 1))
             st["drain_words"] = len(rows) * (g.cols + 1)
             return st
         mult, shift, zp = t.rq
@@ -355,6 +364,7 @@ class MeshModel:
             ws += [0] * (nw - len(ws))
             a = addr + ((i // C) * stride + (i % C) * nw if stride else i * nw)
             self.banks[dst][a:a + nw] = ws
+            self.touched.setdefault(self.phase, []).append((dst, a, nw))
         return len(q) * nw
 
 
@@ -393,16 +403,31 @@ def phase_prediction(model, phase_name, geo, pm=PERF):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# placement: no tile addresses its own bank. A tile that fetches from its own bank while serving another tile's fetch can
-# deadlock (tile_nic holds the other RDREQ at its input while its server is busy, and its own response must return through
-# that router port -- test_neo_top.py's note; stream B2 adds the NIC's loopback). Until then the plans keep every tile's
-# private tensors in its neighbour's bank (home(t) = t + 1 mod 4), hold the tensors every tile reads (weights, K and V
-# entries) twice, in two banks, each tile reading the copy outside its own bank, and give each tensor a producer that
-# drains outside its own bank. MeshModel asserts the rule.
+# placement and scheduling: the serving banks and the computing tiles of a phase are disjoint. The NIC serves a fetch with
+# its one transmit engine and holds the next read request at its input while it does, so a tile whose bank is read blocks
+# every flit addressed to it -- responses to its own fetches, writes into its bank -- until its server is free; two tiles
+# that both serve and fetch (or drain into each other) can wait on each other for ever (test_neo_top.py's self-serve note:
+# runs 185 / 186 hung M21's projections and M23's P V that way; stream B2 adds the NIC's loopback and keeps a router
+# entry for responses). Until then the plans run the tiles in two pairs, U = {0, 1} and L = {2, 3}: in a phase only one
+# pair runs programs, fetching from the other pair's banks (which only serve) and draining into either; a tile's own
+# tensors live in the other pair's bank (home(t) = t xor 2), and every tensor all tiles read (the weights, X, the K / V
+# entries) is held twice, a copy in each pair. MeshModel asserts the rule per phase.
 # ---------------------------------------------------------------------------------------------------------------------
+PAIRS = ((0, 1), (2, 3))
+
+
+def pair_of(t):
+    return 0 if t in PAIRS[0] else 1
+
+
+def home(t, nt=4):
+    """Tile t's own tensors: in the other pair's bank."""
+    return t ^ 2
+
+
 class Banks:
-    """A bump allocator per bank: alloc(node, words) -> base; copies(words, avoid) places two copies in the two banks with
-    the most room outside `avoid` and returns {bank: base}."""
+    """A bump allocator per bank: alloc(node, words) -> base; pair_copies(words, upper, lower) places a copy in an upper and
+    a lower bank and returns {bank: base}."""
 
     def __init__(self, geo, start=0):
         self.geo = geo
@@ -414,23 +439,18 @@ class Banks:
         assert self.top[node] <= self.geo.bank, f"bank {node}: {self.top[node]} words past the bank's {self.geo.bank}"
         return base
 
-    def copies(self, n, avoid=(), banks=None):
-        cand = [b for b in (banks or range(len(self.top))) if b not in avoid]
-        pick = sorted(cand, key=lambda b: (self.top[b], b))[:2]
-        assert len(pick) == 2, "two banks for a shared tensor"
-        return {b: self.alloc(b, n) for b in sorted(pick)}
+    def pair_copies(self, n, upper=None, lower=None):
+        u = upper if upper is not None else min(PAIRS[0], key=lambda b: (self.top[b], b))
+        lo = lower if lower is not None else min(PAIRS[1], key=lambda b: (self.top[b], b))
+        return {u: self.alloc(u, n), lo: self.alloc(lo, n)}
 
 
 def other(cp, t):
-    """The copy a tile reads: the first bank of the copies that is not its own."""
+    """The copy tile t reads: the one in the other pair's bank."""
     for b in sorted(cp):
-        if b != t:
+        if pair_of(b) != pair_of(t):
             return b, cp[b]
-    raise AssertionError("no copy outside the tile's bank")
-
-
-def home(t, nt=4):
-    return (t + 1) % nt
+    raise AssertionError("no copy in the other pair")
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -480,21 +500,25 @@ def attention_plan(X8, Wq8, Wk8, Wv8, s_x, s_w, geo=None, seed_note=""):
     KT = T // C                                       # key tiles
     ctp = KT                                          # P's channel tiles (half-filled)
     s_qkv, s_o, Of = attention_scales(X8, s_x, Wq8, Wk8, Wv8, s_w, d)
-    # placement (no tile addresses its own bank): X and the three weight matrices twice (banks 0 and 1); Q produced by tiles
-    # 0 / 1 into banks 2 and 3, K by tiles 1 / 3 into banks 0 and 2, V by tiles 0 / 2 into banks 1 and 3 (two output tiles a
-    # producer, each drained into both copies); P and O of query block t in bank home(t)
+    # placement and schedule (see PAIRS): X and the three weight matrices in banks 0 and 2, the K entries in 0 and 2, V's
+    # and Q in 1 and 3; P and O of query block t in bank home(t). The twelve output tiles of Q / K / V are computed three a
+    # tile, in two halves of TH = 32 tokens (a descriptor drains at most ACC_ROWS - 1 rows: core_seq's cfg_m), each
+    # drained into both copies (a second GO on the same weights): the first half on pair U (fetching from bank 2), then on
+    # pair L (from bank 0), then the second half; then the attention of query blocks 0 / 1 on pair U, reading the lower
+    # copies, and of blocks 2 / 3 on pair L
     WT = ctx * R * WPW                                # words of one output tile's weights (32 entries)
     KTB = ctq * R * WPW                               # one key tile's weight block in S = Q K^T: ctq channel tiles x R rows
     VTB = ctp * R * WPW                               # one output tile's weight block in P V: ctp channel tiles x R rows
     QW = ctq * T * WPA                                # Q in the padded activation layout
     bk = Banks(geo)
-    xw = {b: bk.alloc(b, ctx * T * WPA + 3 * ctq * WT) for b in (0, 1)}
+    xw = {b: bk.alloc(b, ctx * T * WPA + 3 * ctq * WT) for b in (0, 2)}
     kc = {b: bk.alloc(b, KT * KTB) for b in (0, 2)}
     vc = {b: bk.alloc(b, ctq * VTB) for b in (1, 3)}
-    qc = {b: bk.alloc(b, QW) for b in (2, 3)}
+    qc = {b: bk.alloc(b, QW) for b in (1, 3)}
     pb = {t: bk.alloc(home(t), ctp * QB * WPA) for t in range(NT)}
     ob = {t: bk.alloc(home(t), ctq * QB * geo.ni8) for t in range(NT)}
-    prod = {"q": {0: [0, 1], 1: [2, 3]}, "k": {1: [0, 1], 3: [2, 3]}, "v": {0: [0, 1], 2: [2, 3]}}
+    work = {0: [("q", 0), ("q", 1), ("q", 2)], 1: [("q", 3), ("k", 0), ("k", 1)],
+            2: [("k", 2), ("k", 3), ("v", 0)], 3: [("v", 1), ("v", 2), ("v", 3)]}
     X0, WQ0, WK0, WV0 = 0, ctx * T * WPA, ctx * T * WPA + ctq * WT, ctx * T * WPA + 2 * ctq * WT    # offsets in a copy
     loads = []
     xwords = [w for ct in range(ctx) for m in range(T) for w in act_words([X8[m, ct * R:(ct + 1) * R]], geo)]
@@ -517,31 +541,36 @@ def attention_plan(X8, Wq8, Wk8, Wv8, s_x, s_w, geo=None, seed_note=""):
     lut_e, lut_r = nv.lut_exp(), nv.lut_recip()
     phases = []
 
-    # 1. projections: each output tile of Q / K / V on its producer, drained into both copies (two GOs on one weight tile)
-    def drains(kk, nt):
+    # 1. projections: each output tile of Q / K / V on its producer, token half h (TH rows) drained into both copies (two
+    #    GOs on one weight tile): Q's rows at token 32 h of its channel tile, K's blocks from key tile TH / C h, V's too
+    TH = T // 2
+
+    def drains(kk, nt, h):
         out = []
         for b in sorted({"q": qc, "k": kc, "v": vc}[kk]):
             base = {"q": qc, "k": kc, "v": vc}[kk][b]
             if kk == "q":                              # padded activation entries: channel tile nt of Q
-                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * T * WPA, T, DR_P, 1))
+                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * T * WPA + h * TH * WPA, TH, DR_P, 1))
             elif kk == "k":                            # transposed, as S's weight entries: channel tile nt of key tile kt
-                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * R * WPW, T, DR_T | DR_E | KTB, 1))
+                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * R * WPW + h * (TH // C) * KTB, TH, DR_T | DR_E | KTB, 1))
             else:                                      # weight entries of P V's output tile nt: key tile kt = channel tile kt
-                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * VTB, T, DR_E | (R * WPW), 1))
+                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * VTB + h * (TH // C) * R * WPW, TH, DR_E | (R * WPW), 1))
         return out
 
-    steps = []
-    for t in range(NT):
-        b, base = other(xw, t)
-        prog = [ins(OP_FETCH_A, *geo.xy(b), base + X0 + ct * T * WPA, T * WPA, ct * T) for ct in range(ctx)]
-        for kk, off in (("q", WQ0), ("k", WK0), ("v", WV0)):
-            for nt in prod[kk].get(t, []):
+    proj = []
+    for h in range(2):
+        steps = []
+        for t in range(NT):
+            b, base = other(xw, t)
+            prog = [ins(OP_FETCH_A, *geo.xy(b), base + X0 + ct * T * WPA + h * TH * WPA, TH * WPA, ct * TH) for ct in range(ctx)]
+            for kk, nt in work[t]:
+                off = {"q": WQ0, "k": WK0, "v": WV0}[kk]
                 prog.append(ins(OP_FETCH_W, *geo.xy(b), base + off + nt * WT, WT, 0))
-                for dr in drains(kk, nt):
+                for dr in drains(kk, nt, h):
                     prog += [dr, ins(OP_GO), ins(OP_WAIT_DONE)]
-        prog.append(ins(OP_END))
-        steps.append(Step(t, gemm_desc(T, ctx), prog, nv.PASS, rq_qkv, note=f"projections on tile {t}"))
-    phases.append(Phase("projections", steps))
+            prog.append(ins(OP_END))
+            steps.append(Step(t, gemm_desc(TH, ctx), prog, nv.PASS, rq_qkv, note=f"projections, tokens {TH * h}.., on tile {t}"))
+        proj.append(Phase(f"projections h{h}", steps))
 
     def q_fetch(t):
         b, base = other(qc, t)
@@ -587,6 +616,10 @@ def attention_plan(X8, Wq8, Wk8, Wv8, s_x, s_w, geo=None, seed_note=""):
         vcfg = nv.VecConfig(nv.prog_softmax_norm(15), luts=lut_r, k=[nv.RCP_K_OFF, nv.RCP_K_TWO, 0, 0], name="norm")
         steps.append(Step(t, dO, prog, vcfg, rq_o))
     phases.append(Phase("PV", steps))
+    # the schedule: every phase in two halves (pair U's steps, then pair L's), the projections first for both pairs, then
+    # the attention rounds of pair U, then pair L's
+    halves = lambda ph, h: Phase(f"{ph.name} {'UL'[h]}", [st for st in ph.steps if pair_of(st.node) == h])  # noqa: E731
+    phases = [halves(ph, h) for ph in proj for h in (0, 1)] + [halves(ph, h) for h in (0, 1) for ph in phases]
     for ph in phases:
         for st in ph.steps:
             assert len(st.prog) <= nb.PROG_DEPTH, f"{ph.name}: program of {len(st.prog)} instructions"
@@ -807,7 +840,7 @@ class BlockPlan:
     geo: Geo
     phases: List[Phase]
     loads: List[Tuple[int, int, List[int]]]
-    out_base: int
+    out: Dict[int, Tuple[int, int]]                   # query block -> (node, base) of its output rows
     s_out: float
     ref: dict
     meta: dict = field(default_factory=dict)
@@ -862,7 +895,8 @@ def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
         V = (v8 * v8).sum(axis=1) if cfg.rms else D * (v8 * v8).sum(axis=1) - v8.sum(axis=1) ** 2
         return float(np.median(V))
 
-    # ---- placement: tile t's tensors in bank home(t); the weights twice; the K / V entries of key tile kt twice
+    # ---- placement (see PAIRS): tile t's tensors in bank home(t), in the other pair; the weights and the K / V entries of
+    #      every key tile once in each pair; every phase below runs in two halves, pair U's tiles then pair L's
     WTQ = cd * R * nwe                                 # one output tile's weights, input D (4 padded channel tiles)
     WT2 = ch * R * nwe                                 # W2's: input H (H / 8 padded channel tiles)
     WTI = R * geo.wp4                                  # the identity block: one channel tile's 16 INT4 entries (8 real rows)
@@ -872,12 +906,12 @@ def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
                 pz=max(KT, ch) * QB * WPA, out=cd * QB * geo.ni8, mask=(2 * QB * WPA if cfg.causal else 0))
     bk = Banks(geo)
     pv = {t: {k: bk.alloc(home(t), n) for k, n in PRIV.items()} for t in range(NT)}
-    kcp = {kt: {b: bk.alloc(b, KTB) for b in sorted({home(kt), (kt + 2) % NT})} for kt in range(KT)}
-    vcp = {kt: {b: bk.alloc(b, cdd * VNB) for b in sorted({home(kt), (kt + 2) % NT})} for kt in range(KT)}
+    kcp = {kt: bk.pair_copies(KTB) for kt in range(KT)}
+    vcp = {kt: bk.pair_copies(cdd * VNB) for kt in range(KT)}
     wcp = {}
     for kk, n in (("w1", (H // C) * WTQ), ("w2", cd * WT2), ("q", cdd * WTQ), ("k", cdd * WTQ), ("v", cdd * WTQ),
                   ("o", cd * cdd * R * nwe), ("i", WTI)):
-        wcp[kk] = bk.copies(n)
+        wcp[kk] = bk.pair_copies(n)
     loads = []
     for t in range(NT):                                # x: the tile's tokens, padded channel tiles
         loads.append((home(t), pv[t]["x"], act_words([x8[t * QB + m, ct * C:(ct + 1) * C] for ct in range(cd) for m in range(QB)], geo)))
@@ -1044,12 +1078,15 @@ def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
     layer("W2+h", range(D // C), "pz", ch, "w2", WT2,
           lambda t, nt: [ins(OP_DRAIN_WR, *hm(t), pv[t]["out"] + nt * QB * geo.ni8, QB, 0, 1)], sc["z"] * sw["w2"], sc["out"],
           s_res=sc["h"], res_src="h")
+    # the schedule: every phase in two halves, pair U's steps then pair L's (a half with no step -- a causal round of
+    # tile 0 -- is dropped)
+    phases = [Phase(f"{ph.name} {'UL'[h]}", [st for st in ph.steps if pair_of(st.node) == h]) for ph in phases for h in (0, 1)]
+    phases = [ph for ph in phases if ph.steps]
     for ph in phases:
         for st in ph.steps:
             assert len(st.prog) <= nb.PROG_DEPTH, f"{ph.name}: program of {len(st.prog)} instructions"
-    meta = dict(sc=sc, s_n=s_n, QB=QB, ref_q=ref_q, out={t: (home(t), pv[t]["out"]) for t in range(NT)},
-                priv=pv, top=list(bk.top))
-    return BlockPlan(cfg, geo, phases, loads, 0, sc["out"], ref, meta)
+    meta = dict(sc=sc, s_n=s_n, QB=QB, ref_q=ref_q, priv=pv, top=list(bk.top))
+    return BlockPlan(cfg, geo, phases, loads, {t: (home(t), pv[t]["out"]) for t in range(NT)}, sc["out"], ref, meta)
 
 
 def read_block_out(read, plan):
@@ -1058,7 +1095,7 @@ def read_block_out(read, plan):
     g, QB, cfg = plan.geo, plan.meta["QB"], plan.cfg
     out = np.zeros((cfg.T, cfg.D), dtype=np.int64)
     for t in range(g.nx * g.ny):
-        node, base = plan.meta["out"][t]
+        node, base = plan.out[t]
         words = read(node, base, (cfg.D // g.cols) * QB * g.ni8)
         for nt in range(cfg.D // g.cols):
             for i in range(QB):
