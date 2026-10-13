@@ -85,7 +85,10 @@
 //     tokens x channels into the channels x tokens of K^T; [12:0] the group stride -- when nonzero, every group of COLS
 //     rows starts at the address of the group before plus the stride (a WRHDR before each group), so a block's entries
 //     land in the weight region of the output tile they belong to. The message stays one message (one CRC, the count of
-//     its data words); the receiver takes a WRHDR in the middle of a message as it takes the first.
+//     its data words); the receiver takes a WRHDR in the middle of a message as it takes the first. A formatted row (any
+//     of [15:13]) passes three register stages before the drain FIFO -- the source row, its bytes' partial sums in groups
+//     of eight, its check weight -- so the block buffer's read select and the check weight's adder tree are neither in the
+//     FIFO's write path nor in one cycle; the plain INT8 rows are pushed as before.
 //   Commands from the host or sequencer: FETCH_A / FETCH_W pull `len` words from a remote bank into the activation /
 //   weight buffer at entry `base`; DRAIN_WR / DRAIN_PSUM route the core's drained rows to a remote bank address / to the
 //   owner core's reduce port. crc_err_sticky is the end-to-end protection the FMEDA counts on (row 12): it covers
@@ -919,39 +922,55 @@ module tile_nic #(
   logic        drain_int8;
   logic        drain_push;
   // the INT8 row pushed (drop 0.43): the requantized row as before for the plain format; a formatted drain (transpose,
-  // entry, pad) takes one register stage more -- its row (the requantized one, or the block buffer's row, registered as it
-  // is read out) and its check weight (the sum of its bytes) beside it -- so neither the block buffer's read select nor
-  // the check weight's adder sits in the drain FIFO's write path (the plain INT8 / INT32 / PSUM pushes as before)
-  logic              dfmt;                                // a formatted INT8 drain
-  logic signed [7:0] drow [COLS];
-  logic signed [7:0] tr_row [COLS];
-  logic signed [7:0] trq [COLS];                          // the block buffer's row, registered
-  logic signed [7:0] fsrc [COLS];                         // the formatted path's source row
-  logic signed [7:0] fa_row [COLS];                       // the formatted path's register stage
-  logic signed [WCW-1:0] fsum, fa_chk;
-  logic              tr_out_v;                            // a block is being read out (one row per cycle)
-  logic              trq_v, fa_v;
+  // entry, pad) takes three register stages more -- its source row (the requantized one, or the block buffer's row as it
+  // is read out), then the row with the partial sums of its bytes in groups of eight, then the row with its check weight
+  // (the sum of the partials) -- so neither the block buffer's read select nor the check weight's adder tree sits in the
+  // drain FIFO's write path or in one cycle (run 196: the source select and the sum of the row's bytes in one stage,
+  // 1,640 ps on the ASAP7 SS proxy). The plain INT8 / INT32 / PSUM pushes as before
+  localparam int NPS = (COLS + 7) / 8;                    // partial sums: lanes 8k .. 8k + 7 (11 bits each)
+  logic               dfmt;                               // a formatted INT8 drain
+  logic signed [7:0]  drow   [COLS];
+  logic signed [7:0]  tr_row [COLS];
+  logic signed [7:0]  f1_row [COLS];                      // stage 1: the source row
+  logic signed [7:0]  f2_row [COLS];                      // stage 2: the row and its partial sums
+  logic signed [10:0] f2_ps  [NPS];
+  logic signed [7:0]  f3_row [COLS];                      // stage 3: the row and its check weight -- pushed
+  logic signed [WCW-1:0] f3_chk;
+  logic signed [10:0] psum   [NPS];
+  logic signed [WCW-1:0] fsum;
+  logic               tr_out_v;                           // a block is being read out (one row per cycle)
+  logic               f1_v, f2_v, f3_v;
   assign dfmt = drain_tr || drain_ent || drain_pad;
-  assign drain_push = drain_int8 ? (dfmt ? fa_v : rq_valid) : rd_valid;
+  assign drain_push = drain_int8 ? (dfmt ? f3_v : rq_valid) : rd_valid;
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_drow
-      assign fsrc[j] = drain_tr ? trq[j] : rq_q[j];
-      assign drow[j] = dfmt ? fa_row[j] : rq_q[j];
+      assign drow[j] = dfmt ? f3_row[j] : rq_q[j];
     end
   endgenerate
-  always_comb begin                                       // the entry format's check weight (WCW bits)
+  always_comb begin                                       // stage 2's partial sums, stage 3's check weight (WCW bits)
+    for (int k = 0; k < NPS; k++) begin
+      psum[k] = '0;
+      for (int i = 0; i < 8; i++)
+        if (8 * k + i < COLS) psum[k] = psum[k] + 11'(f1_row[8 * k + i]);
+    end
     fsum = '0;
-    for (int j = 0; j < COLS; j++) fsum = fsum + WCW'(fsrc[j]);
+    for (int k = 0; k < NPS; k++) fsum = fsum + WCW'(f2_ps[k]);
   end
   always_ff @(posedge clk) begin                          // the formatted path's data (no reset: the valids qualify it)
-    for (int j = 0; j < COLS; j++) begin trq[j] <= tr_row[j]; fa_row[j] <= fsrc[j]; end
-    fa_chk <= fsum;
+    for (int j = 0; j < COLS; j++) begin
+      f1_row[j] <= drain_tr ? tr_row[j] : rq_q[j];
+      f2_row[j] <= f1_row[j];
+      f3_row[j] <= f2_row[j];
+    end
+    for (int k = 0; k < NPS; k++) f2_ps[k] <= psum[k];
+    f3_chk <= fsum;
   end
   always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin trq_v <= 1'b0; fa_v <= 1'b0; end
+    if (!rst_n) begin f1_v <= 1'b0; f2_v <= 1'b0; f3_v <= 1'b0; end
     else begin
-      trq_v <= drain_int8 && drain_tr && tr_out_v;
-      fa_v  <= drain_int8 && dfmt && (drain_tr ? trq_v : rq_valid);
+      f1_v <= drain_int8 && dfmt && (drain_tr ? tr_out_v : rq_valid);
+      f2_v <= f1_v;
+      f3_v <= f2_v;
     end
   end
   // the transpose (drop 0.43): block k of COLS INT8 rows is written into tb by rows (k even) or by columns (k odd) and read
@@ -1023,7 +1042,7 @@ module tile_nic #(
         dfifo_wrow[k * PW +: PW] = PW'({drow[4 * k + 3], drow[4 * k + 2], drow[4 * k + 1], drow[4 * k]});
       for (int k = COLS / 4; k <= COLS; k++)
         dfifo_wrow[k * PW +: PW] = '0;
-      if (drain_ent) dfifo_wrow[(COLS / 4) * PW +: WCW] = fa_chk;
+      if (drain_ent) dfifo_wrow[(COLS / 4) * PW +: WCW] = f3_chk;
     end
     dfifo_wrow[(COLS + 1) * PW +: IDXW] = IDXW'(drain_sent) + IDXW'(dfifo_np - dfifo_nq);   // rows sent + rows in the FIFO: rows arrive in order 0..M-1 (the index wraps)
     for (int w = 0; w <= COLS; w++)
