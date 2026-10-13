@@ -1,4 +1,8 @@
 /* verilator lint_off DECLFILENAME */        // four modules -- vec_ctrl, vec_mul, vec_interp, vec_unit -- in one file by design
+/* verilator coverage_off */                 // the whole file: no line / toggle points in Verilator's coverage builds -- the
+                                             // tile32 coverage build (run 196: 15.6 GB of the runner's 16 GB) runs out of
+                                             // memory with the pipelined unit's; V1 checks it bit for bit, the functional
+                                             // bins sample its ops (a comment to every other tool)
 // vec_unit.sv -- the vector unit on the core's drain path (drop 0.43, stream C2): a row-wide micro-op engine between the
 //   accumulator and the requantizer that executes a per-layer program of up to 16 micro-ops on every output row.
 //
@@ -198,8 +202,6 @@ module vec_mul (
   input  logic [4:0]         sh3,
   output logic signed [31:0] res
 );
-  /* verilator coverage_off */                           // the compressor rows: no toggle points (the tile32 coverage build
-                                                         // ran out of the runner's 16 GB with them; V1 checks the arithmetic)
   localparam int SW   = 64;
   localparam int NP0  = 17;                              // the rows before c: 16 partial products and the sign's + 1
   localparam int NIN  = NP0 + 1;
@@ -234,7 +236,6 @@ module vec_mul (
   assign ss   = s[SW-1:31] ^ {(SW-31){s[SW-1]}};
   assign fits = (ss & ({(SW-31){1'b1}} << sh3)) == '0;
   assign res  = fits ? 32'(s >> sh3) : (s[SW-1] ? 32'sh80000000 : 32'sh7FFFFFFF);
-  /* verilator coverage_on */
 endmodule
 
 // vec_interp: a LUT entry e = {D[31:16], V[15:0]} at fraction frac -> V + round(D * frac / 256) = floor((D frac + 128 +
@@ -248,7 +249,6 @@ module vec_interp (
   input  logic [7:0]         frac,
   output logic signed [17:0] y
 );
-  /* verilator coverage_off */                           // as vec_mul's
   localparam int SW   = 26;
   localparam int NP0  = 8;                               // frac's partial products; the row of V joins first (QI = 0)
   localparam int NC   = NP0 - 1;
@@ -275,7 +275,6 @@ module vec_interp (
   assign y = s[SW-1:8];
   logic unused_s;                                        // the fraction's bits below the result
   assign unused_s = ^s[7:0];
-  /* verilator coverage_on */
 endmodule
 
 module vec_unit #(
@@ -517,9 +516,6 @@ module vec_unit #(
     .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
 
   // ---------------------------------------------------------------------------------------------------- registers
-  /* verilator coverage_off */                           // the datapath from here to the parity checks: no line / toggle
-                                                         // points (the tile32 coverage build ran out of the runner's 16 GB
-                                                         // with them; V1 checks it bit for bit, the functional bins its ops)
   logic signed [PW-1:0] xr [COLS];                       // the row
   logic signed [PW-1:0] xm [COLS];                       // its copy for the multipliers' partial products
   logic signed [31:0]   sr [4];                          // the scalars
@@ -779,7 +775,6 @@ module vec_unit #(
     end
   endgenerate
 
-  /* verilator coverage_on */
   // ---------------------------------------------------------------------------------------------------- parity
   logic perr;
   always_comb begin
@@ -814,3 +809,4 @@ module vec_unit #(
     end
   endgenerate
 endmodule
+/* verilator coverage_on */

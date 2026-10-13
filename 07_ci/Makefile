@@ -74,7 +74,7 @@ TOPR := rtl/cdc_bits.sv rtl/cdc_fifo.sv rtl/cdc_sync.sv rtl/noc_axi_bridge.sv rt
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth crc16 cocotb_top vectors_sp iverilog_sp vectors_vec iverilog_vec vec
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage cocotb_coverage_report synth crc16 cocotb_top vectors_sp iverilog_sp vectors_vec iverilog_vec vec
 
 all: regress model
 
@@ -307,7 +307,13 @@ cocotb_tiles:
 	-$(call timed,tile32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32
 	-$(call timed,core32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core32
 	-$(call timed,tile_sp) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_sp
-	-$(call timed,coverage) $(MAKE) -j$(MESH8_BUILD_JOBS) cocotb_coverage
+# drop 0.43: the coverage builds one after another (run 196's step ran the four at once and peaked at 15.6 GB in one
+# process of the runner's 16 GB; runs 201 / 202 lost the runner there): each still compiles with the jobs above
+	-$(call timed,core_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core_cov
+	-$(call timed,tile_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_cov
+	-$(call timed,tile8_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile8_cov
+	-$(call timed,tile32_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32_cov
+	-$(MAKE) cocotb_coverage_report
 	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml dv/cocotb/results_tile_sp.xml
 
 # the chip top (drop 0.42): neo_top's suite, one build run twice -- clk 1.0 ns / aclk 1.6 ns, then aclk == clk -- in its own build
@@ -322,6 +328,10 @@ cocotb_top:
 # functional covergroups on; the report and the raw data land in ci_logs/hdl-sim/, which the CI job publishes
 cocotb_coverage:
 	-$(MAKE) -C dv/cocotb coverage
+	$(MAKE) cocotb_coverage_report
+# the report of coverage builds already run (cocotb_tiles runs them one by one, drop 0.43)
+cocotb_coverage_report:
+	-$(MAKE) -C dv/cocotb coverage_report
 	mkdir -p ci_logs/hdl-sim
 	-cp dv/cocotb/coverage_report.md dv/cocotb/coverage_*.dat dv/cocotb/funcov_*.yml ci_logs/hdl-sim/ 2>/dev/null
 
