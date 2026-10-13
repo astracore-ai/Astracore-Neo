@@ -1,0 +1,32 @@
+$ docker run --rm --init --name neo-pnr-c16_systolic_array-do-finish-3283 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/c16_systolic_array/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/in do-finish
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 6_1_fill density_fill
+Running density_fill.tcl, stage 6_1_fill
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_route.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_route.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_route.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_1_fill.odb
+Elapsed time: 0:02.91[h:]min:sec. CPU time: user 2.58 sys 0.32 (99%). Peak memory: 991700KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+6_1_fill               .odb          2        3     1.00      968 8c7ab3ec06
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_route.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_1_fill.sdc
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 6_report final_report
+Running final_report.tcl, stage 6_report
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_1_fill.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_1_fill.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_final.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_final.sdc
+Deleted 0 routing obstructions
