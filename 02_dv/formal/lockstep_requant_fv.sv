@@ -34,16 +34,17 @@ module lockstep_requant_fv #(
   endgenerate
 
   logic                a_valid, b_valid, a_perr, b_perr;
+  logic                a_cg, b_cg;                  // drop 0.43: the copies' clock enables (the gate's formal model: ungated)
   logic signed [7:0]   a_q [COLS];
   logic signed [7:0]   b_q [COLS];
   requant #(.COLS(COLS), .PW(PW), .MW(MW)) u_a (
     .clk(clk), .rst_n(rst_n), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
     .tbl_zp(tbl_zp), .relu(relu), .in_valid(in_valid), .in_acc(in_acc), .out_valid(a_valid), .out_q(a_q),
-    .err_clear(err_clear), .tbl_perr_sticky(a_perr), .tbl_fault_inject(1'b0));
+    .err_clear(err_clear), .tbl_perr_sticky(a_perr), .tbl_fault_inject(1'b0), .cg_en(a_cg));
   requant #(.COLS(COLS), .PW(PW), .MW(MW)) u_b (
     .clk(clk), .rst_n(rst_n), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
     .tbl_zp(tbl_zp), .relu(relu), .in_valid(in_valid), .in_acc(in_acc), .out_valid(b_valid), .out_q(b_q),
-    .err_clear(err_clear), .tbl_perr_sticky(b_perr), .tbl_fault_inject(1'b0));
+    .err_clear(err_clear), .tbl_perr_sticky(b_perr), .tbl_fault_inject(1'b0), .cg_en(b_cg));
 
   // the entries written since reset (a write takes effect at the clock edge)
   logic [COLS-1:0] written = '0;
@@ -70,6 +71,7 @@ module lockstep_requant_fv #(
       end
       assert (u_a.v1 == u_b.v1);
       assert (u_a.v2 == u_b.v2);
+      assert (a_cg == b_cg);                        // drop 0.43: the two gates open in the same cycles
     end
   end
 endmodule

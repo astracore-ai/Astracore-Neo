@@ -255,6 +255,40 @@ def simulate(layers, link_bytes, ksplit, affinity, barrier, rx_bytes=v2.RX_BYTES
     return total, util, busiest_link, busiest_bank, local_reads, len(all_groups)
 
 
+def tile_layer(h, w, cin, cout, k, s, p, rows=None, cols=None, nchk=1, rx_bytes=v2.RX_BYTES, tx_bytes=v2.TX_BYTES, hops=2,
+               run_spacing=False):
+    """Drop 0.43 (stream B2): one layer on one tile, its activations and weights fetched from one remote bank, the INT32
+    result drained to another -- the model's terms for a single group, to set beside the RTL's telemetry (the tile suite's
+    M23 measures array-valid cycles and the window's cycles of exactly this). The model's group: the fetches at rx_bytes per
+    cycle before the compute (no prefetch for a lone group), k_tiles x M cycles of streaming plus the pipeline latency LAT,
+    the drain at tx_bytes per cycle, hops x HOP_LAT each way. MAC utilization = streaming cycles / all cycles: the array
+    is valid exactly k_tiles x M cycles (one row per cycle per K-pass), which the counter checks. rx_bytes / tx_bytes are
+    the link's bytes per cycle (4 x WPF of the build: 4 on the 16x8 tile suite's one-word flits, 128 in silicon).
+    run_spacing (the term the M23 measurement asked for): the sequencer starts a K-pass at most every LAT + ROWS + 4 cycles
+    -- the next pass's weights shadow-load ROWS rows while the array drains the previous pass's LAT -- so a pass costs
+    max(M, LAT + ROWS + 4) cycles, not M: at the small M of a 6 x 6 test layer (36 or 9 rows against 60 at 16 x 8) the
+    passes, not the rows, set the compute time. What both forms still leave out: the DMA's per-fetch round trip (one
+    fetch outstanding) and the register writes before the start."""
+    rows = rows or nc.ROWS
+    cols = cols or nc.COLS
+    ho, wo = (h + 2 * p - k) // s + 1, (w + 2 * p - k) // s + 1
+    M = ho * wo
+    ct_n = math.ceil(cin / rows)
+    k_tiles = ct_n * k * k                                   # the runs: one K-pass of ROWS channels each
+    lat = nc.PE_LAT * rows + cols
+    run = max(M, lat + rows + 4) if run_spacing else M      # the cycles of one K-pass
+    wcw = 8 + (rows - 1).bit_length() + 1
+    wpw = (cols * (8 + (2 if nchk > 1 else 0)) + nchk * wcw + 31) // 32   # words per weight entry, as the RTL stores them
+    act_bytes = ct_n * h * w * rows                          # INT8 activations, a channel tile per entry
+    w_bytes = k_tiles * rows * wpw * 4
+    fetch = math.ceil((act_bytes + w_bytes) / rx_bytes)
+    compute = k_tiles * run + lat
+    drain = math.ceil(M * (cols + 1) * 4 / tx_bytes)
+    cycles = fetch + compute + drain + 2 * hops * v2.HOP_LAT
+    return dict(M=M, k_tiles=k_tiles, fetch=fetch, compute=compute, drain=drain, cycles=cycles,
+                streaming=k_tiles * M, utilization=k_tiles * M / cycles)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--h", type=int, default=736)

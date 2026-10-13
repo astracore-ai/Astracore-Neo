@@ -56,12 +56,12 @@ COLS   ?= 32
 M      ?= 64
 SEED   ?= 1
 
-RTL := rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
+RTL := rtl/neo_icg.sv rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
        rtl/systolic_array.sv rtl/abft_checker.sv rtl/neo_mem.sv rtl/neo_mac_core.sv \
        rtl/act_feeder.sv rtl/acc_bank.sv rtl/neo_mac_core_v02.sv \
        rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv
-NOC := rtl/noc_router.sv rtl/noc_mesh.sv
-TILE := $(RTL) rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/crc16_beat.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/link_pack.sv rtl/neo_tile.sv rtl/tile_mesh.sv
+NOC := rtl/neo_icg.sv rtl/noc_router.sv rtl/noc_mesh.sv
+TILE := $(RTL) rtl/tile_telem.sv rtl/neo_iso.sv rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/crc16_beat.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/link_pack.sv rtl/neo_tile.sv rtl/tile_mesh.sv
 # the chip top (drop 0.42): the bridges, the control plane, the crossings
 TOPR := rtl/cdc_bits.sv rtl/cdc_fifo.sv rtl/cdc_sync.sv rtl/noc_axi_bridge.sv rtl/top_ctrl.sv rtl/mesh_ctrl.sv rtl/neo_top.sv
 TBC := tb/tb_neo_core.sv

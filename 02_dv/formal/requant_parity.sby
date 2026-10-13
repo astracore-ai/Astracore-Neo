@@ -2,7 +2,8 @@
 # requant at COLS = 4 (PW = 32, MW = 16), every input free, tbl_fault_inject included: tbl_perr_sticky is exactly "the
 # fault met a written entry 0 during in_valid since err_clear" -- with the fault off it never rises, whatever the
 # unwritten entries hold; with it, it is 1 one cycle later and holds until err_clear. Full proof by k-induction
-# (drop 0.41); requant_parity_fv.sv holds the harness.
+# (drop 0.41); requant_parity_fv.sv holds the harness. Drop 0.43: after a cycle with the block's clock enable low, no
+# valid, written entry or sticky has changed (the gate's formal model neo_icg_formal.sv, ungated: gating it is invisible).
 [options]
 mode prove
 depth 4
@@ -12,9 +13,10 @@ smtbmc yices
 
 [script]
 plugin -i slang
-read_slang -DFORMAL --top requant_parity_fv requant.sv requant_parity_fv.sv
+read_slang -DFORMAL --top requant_parity_fv neo_icg_formal.sv requant.sv requant_parity_fv.sv
 prep -top requant_parity_fv
 
 [files]
+formal/neo_icg_formal.sv
 rtl/requant.sv
 formal/requant_parity_fv.sv

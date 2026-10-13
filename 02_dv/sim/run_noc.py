@@ -11,7 +11,12 @@ run_noc.py -- noc_mesh (3x3 of noc_router) under neosim.
       in tb/noc_router_ref.sv, side by side on the same inputs (tb's noc_router_pair, XW = YW = 3): random coordinates,
       flits aimed at the neighbourhood so that the five inputs contend for the outputs, bad parity, random back-pressure,
       err_clear and the output-register hooks; every output (in_ready, out_valid, out_flit, parity_err_sticky) equal in
-      every cycle -- the same grant order, cycle for cycle
+      every cycle -- the same grant order, cycle for cycle (drop 0.43: with the priority map all zero, i.e. one class)
+  N4  per-partition priority (drop 0.43): one router, inputs 0-1 sending partition 1 and inputs 2-4 partition 0, all five
+      saturating the local output (70 % ready): with equal priority one round robin (at most 4 fires to others while a head
+      waits); with partition 1 the high class (prio = 0x0002) its mean latency below the low class's and every waiting head
+      within the bounds the formal harness proves -- 5 + floor(4 / PRIO_N) fires to others for the high class,
+      5 PRIO_N + 4 for the low class -- at PRIO_N = 8 (the default) and 2
 """
 import os
 import sys
@@ -226,6 +231,57 @@ def equivalence(seed, cycles, hooks):
     return mism, first, fires, contended
 
 
+def priority(seed, cycles, prio, prio_n=8, hi_inputs=(0, 1)):
+    """N4 (drop 0.43): one router, all five inputs saturating output 4 (every flit addressed to the router's own node), the
+    inputs in hi_inputs sending partition 1 and the others partition 0, prio the router's map, out_ready random (70 %).
+    Per granted head: the cycles from its arrival at the head of its FIFO to its grant and the fires of output 4 that went to
+    other inputs meanwhile, per class. Returns {class: (grants, mean cycles, max cycles, max fires to others)}."""
+    rng = np.random.default_rng(seed)
+    xw = yw = 3
+    dw = 16
+    fw = 1 + 2 * (xw + yw) + 8 + dw
+    rtl = os.path.join(HERE, "..", "rtl")
+    d = Design(load([os.path.join(rtl, "noc_router.sv")]))
+    d.elaborate("noc_router", {"XW": xw, "YW": yw, "DW": dw, "DV_HOOKS": 0, "PRIO_N": prio_n})
+    c = {n: d.cell_of(n) for n in ("rst_n", "my_x", "my_y", "prio", "err_clear", "dv_flit_flip", "dv_valid_clear", "dv_port", "dv_mask")}
+    in_valid, in_flit, out_ready = d.array_of("in_valid"), d.array_of("in_flit"), d.array_of("out_ready")
+    rq = [d.cells[f"top.rq[{o}]"] for o in range(5)]
+    gnt = [d.cells[f"top.gnt[{o}]"] for o in range(5)]
+    fire = [d.cells[f"top.fire[{o}]"] for o in range(5)]
+    for n in ("err_clear", "dv_flit_flip", "dv_valid_clear", "dv_port", "dv_mask"):
+        c[n].v = 0
+    c["my_x"].v, c["my_y"].v, c["prio"].v = 3, 3, prio
+    c["rst_n"].v = 0
+    for i in range(5):
+        in_valid[i].v = 0
+        out_ready[i].v = 1
+    d.tick(); d.tick()
+    c["rst_n"].v = 1
+    since, waited = [None] * 5, [0] * 5                   # per input: the cycle its head started requesting, fires to others
+    stats = {0: [], 1: []}                                # class -> [(cycles, fires to others)]
+    for t in range(cycles):
+        for i in range(5):
+            part = 1 if i in hi_inputs else 0
+            v = (3 << (fw - 1 - yw)) | (3 << (fw - 1 - yw - xw)) | (i << (dw + 8)) | (part << dw) | int(rng.integers(0, 1 << dw))
+            in_valid[i].v = 1
+            in_flit[i].v = ((bin(v).count("1") & 1) << (fw - 1)) | v
+        out_ready[4].v = int(rng.random() < 0.7)
+        d.settle()
+        r, g, f = rq[4].v, gnt[4].v, fire[4].v
+        for i in range(5):
+            if (r >> i) & 1:
+                if since[i] is None:
+                    since[i], waited[i] = t, 0
+                if f and (g >> i) & 1:
+                    stats[1 if (prio >> (1 if i in hi_inputs else 0)) & 1 else 0].append((t - since[i], waited[i]))
+                    since[i] = None
+                elif f:
+                    waited[i] += 1
+        d.tick()
+    return {k: (len(v), float(np.mean([a for a, _ in v])) if v else 0.0, max((a for a, _ in v), default=0),
+                max((b for _, b in v), default=0)) for k, v in stats.items()}
+
+
 def main():
     fails_total = 0
     print(f"noc_mesh {NX}x{NY}, {FW}-bit flits, XY routing, 2-entry input FIFOs, registered outputs (neosim):")
@@ -258,6 +314,21 @@ def main():
           f"{tot[0]} cycles with any output different -> {'PASS' if ok else 'FAIL'} ({time.time() - t0:.1f} s)")
     for s, f in firsts[:3]:
         print(f"      seed {s}: first difference at cycle {f[0]} on {f[1]}")
+    fails_total += not ok
+    # N4 (drop 0.43): two partitions contending for one output, equal priority and then partition 1 high, at PRIO_N = 8 and 2
+    t0 = time.time()
+    eq = priority(41, 3000, 0x0000)
+    ok = eq[0][0] > 0 and eq[1][0] == 0 and eq[0][3] <= 4        # one class: drop 0.41's round robin, 4 fires to others at most
+    lines = [f"equal priority: {eq[0][0]} grants, mean {eq[0][1]:.1f} cycles, max {eq[0][2]}, at most {eq[0][3]} fires to others"]
+    for n in (8, 2):
+        st = priority(42 + n, 3000, 0x0002, prio_n=n)
+        b_hi, b_lo = 5 + 4 // n, 5 * n + 4
+        good = st[1][0] > 0 and st[0][0] > 0 and st[1][3] <= b_hi and st[0][3] <= b_lo and st[1][1] < st[0][1]
+        ok = ok and good
+        lines.append(f"PRIO_N {n}: high {st[1][0]} grants, mean {st[1][1]:.1f} cycles (max {st[1][2]}), at most {st[1][3]} fires to "
+                     f"others (bound {b_hi}); low {st[0][0]} grants, mean {st[0][1]:.1f} (max {st[0][2]}), at most {st[0][3]} (bound {b_lo})")
+    print(f"  N4 per-partition priority: one router, inputs 0-1 partition 1, 2-4 partition 0, all five saturating the local output "
+          f"(70 % ready): {'; '.join(lines)} -> {'PASS' if ok else 'FAIL'} ({time.time() - t0:.1f} s)")
     fails_total += not ok
     print(f"RESULT: {'ALL PASS' if fails_total == 0 else f'{fails_total} FAILURES'}")
     return 1 if fails_total else 0

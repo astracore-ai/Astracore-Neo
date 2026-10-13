@@ -64,6 +64,37 @@
 //     registers, and the flit's parity formed from word parities -- the bank row's under the beat's lane mask for a
 //     served beat, the beat's parity stored with the drain FIFO's row at the push for a drained one -- instead of one
 //     XOR tree over the 560 bits behind the words' select.
+//   Drop 0.43 (stream B2, the self-serve deadlock B1 found): a tile that fetched from its own bank while it served another
+//   tile could deadlock -- the other tile's RDREQ waited in this RX stage for the server, the server's beats to this tile
+//   came back through the router's local port into the same stage, behind the request. Now:
+//   - a fetch of this tile from its own bank never enters the mesh. A FETCH whose bank is this tile's sends no RDREQ: the
+//     command waits in sq_* (one fetch is outstanding at most, so one register) and goes to the server directly when it is
+//     free; the serve's beats and CRC flit for that fetch go into the loopback register lb_* instead of the link, and from
+//     there into the RX stage, which takes them before the link's beat. The loopback is a channel of its own into the
+//     stage (registered on the way, so the transmit beat's assembly and the stage's input logic stay two paths). A drain
+//     into the own bank still goes out and back through the router, as before: it needs no server, so it cannot close the
+//     cycle, and on the link every pattern without a self fetch stays cycle-identical to drop 0.42 (M6 / M7, whose owners
+//     drain into their own banks, and the mesh8 suite included);
+//   - while the server serves this tile's own fetch, or that fetch waits for it, a request from the link is not taken into
+//     the stage: it waits in the link's channel (the unpacker and the router's local output register) and cannot sit in
+//     front of a loopback beat; any other link beat is taken as before. With neither, the stage takes the link's beats
+//     exactly as before (a request may wait in the stage for the server, the head-of-line blocking of drop 0.42), so
+//     every traffic pattern without self-traffic is cycle-identical to drop 0.42.
+//   Of the two router-side remedies the brief offered (an entry of the router's local port reserved for responses, or
+//   separate virtual channels for requests and responses on it), it is the second, and it is here, not in the router: the
+//   loopback is the responses' own channel into the RX stage (taken before the link's beat), and the link's requests are
+//   kept out of the stage while a self serve is pending -- which is all a request / response split of the local port
+//   would buy, because with the loopback no response of this tile to itself crosses the router's local port at all, and
+//   the blocking point was the RX stage (where the request waited), not the router. A reserved entry in the router would
+//   cost a 1,077-bit register per local port of every router and still leave the request in the stage; noc_router.sv is
+//   unchanged by this item (its drop-0.43 change is the priority classes).
+//   Drop 0.43, clock gating: the receive half (the stage, the per-source state, the fetch receive, the reduce FIFO, the
+//   serve request, the flags, the loopback register) runs on clk_rx and the transmit half (the engine, the commands, the
+//   drain FIFO, the serve's position) on clk_tx, two neo_icg whose enables (en_rx / en_tx, at the end of the module) are
+//   on in every cycle in which a register of that half may change; cg_en shows them to the testbench, tel_drain is the
+//   telemetry's drain event.
+//   Drop 0.43, lockstep: drain_crc_last / drain_msg_cnt -- the CRC of the last drain message's CRC flit and the count of
+//   drain messages since reset, updated at that flit -- for the control plane's comparison of a lockstep pair.
 //   Commands from the host or sequencer: FETCH_A / FETCH_W pull `len` words from a remote bank into the activation /
 //   weight buffer at entry `base`; DRAIN_WR / DRAIN_PSUM route the core's drained rows to a remote bank address / to the
 //   owner core's reduce port. crc_err_sticky is the end-to-end protection the FMEDA counts on (row 12): it covers
@@ -164,8 +195,16 @@ module tile_nic #(
   output logic                  iso_err_sticky,      // a flit from another partition arrived and was dropped
   output logic                  lost_err_sticky,     // word count at the CRC flit differed from the words received
   output logic                  fetch_timeout_sticky, // a fetch response did not complete within FETCH_TIMEOUT cycles
-  input  logic                  dv_tx_hold           // testbench hook (drop 0.35; DV_HOOKS = 1): the transmit engine held in
+  input  logic                  dv_tx_hold,          // testbench hook (drop 0.35; DV_HOOKS = 1): the transmit engine held in
                                                      // X_SERVE_RD at every falling edge while high -- a dead server
+  // drop 0.43: observation -- the two halves' clock enables {transmit, receive}, and the telemetry's drain cycles (the
+  // transmit engine sending a drain message: its header, beats or CRC flit)
+  output logic [1:0]            cg_en,
+  output logic                  tel_drain,
+  // drop 0.43, dual-tile lockstep: the CRC-16 of the last drain message sent (its CRC flit's) and the count of drain
+  // messages sent since reset -- two tiles running the same layer on the same data show the same pairs in the same order
+  output logic [15:0]           drain_crc_last,
+  output logic [15:0]           drain_msg_cnt
 );
   localparam logic [2:0] T_RDREQ = 3'd1, T_RDRSP = 3'd2, T_WRHDR = 3'd3, T_WRDATA = 3'd4,
                          T_PSUM = 3'd5, T_CRC = 3'd6, T_RDY = 3'd7;
@@ -175,6 +214,10 @@ module tile_nic #(
   localparam int SEQ_LO = DW;                              // seq field above the payload
   localparam int SRCX_LO = DW + 8;
   localparam int SRCY_LO = DW + 8 + XW;
+  // drop 0.43: the receive half (the stage, the per-source state, the fetch receive, the reduce FIFO, the serve request,
+  // the flags, the loopback register) runs on clk_rx, the transmit half (the engine, the commands, the drain FIFO, the
+  // serve's position) on clk_tx -- two neo_icg at the end of the module, where their enables are formed
+  logic clk_rx, clk_tx;
 
   // ------------------------------------------------------------------ RX stage (drop 0.42)
   // The beat from the unpacker is registered (q_*) before anything acts on it: every action of the receive side below is
@@ -211,13 +254,27 @@ module tile_nic #(
   logic [BW-1:0]   in_cge;                                // the count field >= m (m >= 1; data types or not)
   logic [BW-1:0]   q_nwt;                                 // thermometer of the word count (the WRDATA crossing test)
   logic            q_foreign;                             // the beat is of another partition (the compare with it)
-  assign in_type  = rx_flit[DW-1 -: 3];
-  assign in_hdr   = rx_flit[VW +: 14];
+  // the stage's input (drop 0.43): the loopback register's beat when it holds one, else the link's; a request from the
+  // link waits outside the stage while a self serve is in progress or pending (rq_hold, the header's second point)
+  logic            lb_valid;                              // the loopback register holds a flit of this tile to itself
+  logic [FW-1:0]   lb_flit;
+  logic            st_free;                               // the stage takes a beat this cycle (empty, or its beat consumed)
+  logic            rq_hold;                               // the link's beat is a request that must wait outside the stage
+  logic            i_take;                                // the stage takes the input's beat
+  logic [FW-1:0]   i_flit;                                // the input's beat: the loopback's or the link's
+  logic            serve_self;                            // the server serves this tile's own fetch (its beats loop back)
+  logic            sq_v;                                  // this tile's fetch from its own bank waits for the server
+  assign i_flit   = lb_valid ? lb_flit : rx_flit;
+  assign rq_hold  = (rx_flit[DW-1 -: 3] == T_RDREQ) && (serve_self || sq_v);
+  assign i_take   = lb_valid || (rx_valid && !rq_hold);
+  assign in_type  = i_flit[DW-1 -: 3];
+  assign in_hdr   = i_flit[VW +: 14];
   assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
   assign in_nw    = in_data ? CW'(in_hdr[13:8]) + CW'(1) : CW'(1);
   localparam int PMW = COLS + 1;                           // the columns and the check value
   assign in_pmask = PMW'(in_nwt) << in_hdr[7:0];          // column j: words > j - col0 (j >= col0)
-  assign rx_ready = !q_valid || q_ready;
+  assign st_free  = !q_valid || q_ready;
+  assign rx_ready = st_free && !lb_valid && !rq_hold;     // the link's beat: when the loopback has none and it may enter
   always_comb begin
     for (int j = 0; j < BW; j++) in_cnto[j] = in_data && (in_hdr[13:8] == 6'(j));
     for (int m = 0; m < BW; m++) begin                    // count field >= m, by its one-hot (the type applied after)
@@ -231,14 +288,14 @@ module tile_nic #(
         if ((k <= j) || ((k - j < BW) && in_data && in_cge[(k - j) % BW])) in_tt[k] = in_tt[k] | sg_on[j];
     end
   end
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge clk_rx or negedge rst_n) begin
     if (!rst_n) begin
       q_valid <= 1'b0; q_flit <= '0; q_nw <= '0; q_nwc_n <= '1; q_nwo <= BW'(2); q_pschk <= 1'b0; q_pcm <= '0; q_c0 <= '0;
       q_tt <= '0; q_nwt <= BW'(1); q_foreign <= 1'b0;
-    end else if (rx_ready) begin
-      q_valid <= rx_valid;
-      if (rx_valid) begin
-        q_flit  <= rx_flit;
+    end else if (st_free) begin
+      q_valid <= i_take;
+      if (i_take) begin
+        q_flit  <= i_flit;
         q_nw    <= in_nw;
         q_nwc_n <= ~in_nw;
         for (int k = 0; k < BW; k++)                      // words mod BW = (count field + 1) mod BW; 1 for the other types
@@ -249,7 +306,7 @@ module tile_nic #(
           q_c0[k] <= in_hdr[LW-1:0] == LW'(k);
         q_tt    <= in_tt;
         q_nwt   <= in_nwt;
-        q_foreign <= rx_flit[SEQ_LO +: 4] != partition;
+        q_foreign <= i_flit[SEQ_LO +: 4] != partition;
       end
     end
   end
@@ -329,6 +386,16 @@ module tile_nic #(
   logic [XW-1:0]        serve_x;
   logic [YW-1:0]        serve_y;
   logic [11:0]          serve_len;
+  // this tile's fetch from its own bank (drop 0.43): the command's address and length wait in sq_* for the server, and
+  // sq_start hands them to it when it is free and no request of the link is in the stage (that one was there first)
+  logic [19:0]          sq_addr;
+  logic [11:0]          sq_len;
+  logic                 sq_start;
+  logic                 cmd_self;                         // the command's bank is this tile's
+  logic                 srv_go;                           // a serve starts: the link's request or the self request
+  logic [19:0]          srv_addr;                         // ... its word address and length
+  logic [11:0]          srv_len;
+  assign cmd_self = (cmd_x == my_x) && (cmd_y == my_y);
 
   // PSUM beat (drop 0.31): columns col0 .. col0 + words - 1 of row rx_tag (col0 = hdr[7:0]); column COLS is the check
   // value and completes the row (8-bit columns for COLS up to 255, drop 0.21). Drop 0.42: the columns covered (q_pcm),
@@ -463,7 +530,7 @@ module tile_nic #(
   // compared as the stage takes the beat, drop 0.42), the tag above IDXW, the header half of the one-word view, the
   // entry index above the buffer address widths
   logic unused_nic_bits;
-  assign unused_nic_bits = ^{q_flit[FW-1 -: 1 + XW + YW], q_flit[SEQ_LO +: 8], rx_tag, rx_data, fetch_entry};
+  assign unused_nic_bits = ^{q_flit[FW-1 -: 1 + XW + YW], q_flit[SEQ_LO +: 8], rx_tag, rx_data, fetch_entry, srv_addr};
 
   // the next staged count, beat position and entry index (drop 0.42): each formed for the cases side by side and chosen
   // by the decision at the end; fx_held / fx_lt follow a beat that stays. The beat position after a stash or with no
@@ -488,7 +555,7 @@ module tile_nic #(
   assign fx_bo_n = fx_more ? (fx_two ? fx_bo2 : fx_bo1) : fetch_cmd ? BW'(1) : fx_stash ? fx_bneg_c : fx_bneg_s;
   assign fe_p1   = fetch_entry + 16'd1;
   assign fe_p2   = fetch_entry + 16'd2;
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge clk_rx or negedge rst_n) begin
     if (!rst_n) begin
       sg_t <= '0; fx_bo <= BW'(1); fx_held <= 1'b0; fx_lt <= '0; fetch_entry <= '0;
     end else begin
@@ -534,6 +601,10 @@ module tile_nic #(
   assign fire_psum  = rx_ok && (rx_type == T_PSUM) && !(ps_has_chk && efifo_full);
   assign fire_crc   = rx_ok && (rx_type == T_CRC);
   assign fire_rdy   = rx_ok && (rx_type == T_RDY);
+  assign sq_start   = sq_v && !serve_busy && !(rx_ok && (rx_type == T_RDREQ));
+  assign srv_go     = fire_rdreq || sq_start;
+  assign srv_addr   = sq_start ? sq_addr : rx_data[19:0];
+  assign srv_len    = sq_start ? sq_len : rx_data[31:20];
 
   // CRC update for what is received this cycle: the whole data beat (its first rx_nw words), otherwise the one word; on
   // the source's accumulator registered with the beat (drop 0.42: was crc_acc[rx_src]), the count from the CRC's copy
@@ -601,7 +672,7 @@ module tile_nic #(
     end
   endgenerate
   neo_mem_rf #(.W(COLS * PW), .D(NSRC), .G(COLS), .RB(0), .DV_HOOKS(0)) u_prow (
-    .clk(clk),
+    .clk(clk_rx),
     .we(prow_we), .waddr(rx_src), .wdata(prow_wdata),
     .ra_addr(rx_src), .ra_data(prow_rd),
     .rb_en(1'b0), .rb_addr('0), .rb_data(unused_prow_rb),
@@ -612,7 +683,7 @@ module tile_nic #(
   // register when that source's state leaves st_* (drop 0.42; before, by each beat of the source)
   generate
     for (genvar s = 0; s < NSRC; s++) begin : g_src
-      always_ff @(posedge clk or negedge rst_n) begin
+      always_ff @(posedge clk_rx or negedge rst_n) begin
         if (!rst_n) begin
           wr_ptr[s] <= '0; crc_acc[s] <= 16'hFFFF; rx_cnt[s] <= '0;
         end else if (wb3_v && (wb3_src == s)) begin
@@ -624,8 +695,8 @@ module tile_nic #(
 
   // the registered beat's source state (drop 0.42): u_* = st_* after this cycle's beat, as the g_src registers were updated
   // before; lk_* = the state of the port's beat's source, from wb3_* when it is the source going back this cycle
-  assign in_src  = SRCW'(32'(rx_flit[SRCY_LO +: YW]) * NX + 32'(rx_flit[SRCX_LO +: XW]));
-  assign st_load = rx_valid && rx_ready && (!st_v || (in_src != st_src));
+  assign in_src  = SRCW'(32'(i_flit[SRCY_LO +: YW]) * NX + 32'(i_flit[SRCX_LO +: XW]));
+  assign st_load = i_take && st_free && (!st_v || (in_src != st_src));
   always_comb begin
     u_ptr = st_ptr; u_crc = st_crc; u_cnt = st_cnt;
     if (fire_wrhdr) u_ptr = rx_word[BAW-1:0];
@@ -673,7 +744,7 @@ module tile_nic #(
       end
     end
   end
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge clk_rx or negedge rst_n) begin
     if (!rst_n) begin
       st_v <= 1'b0; st_src <= '0; st_ptr <= '0; st_crc <= 16'hFFFF; st_cnt <= '0;
       wb3_v <= 1'b0; wb3_src <= '0; wb3_ptr <= '0; wb3_crc <= 16'hFFFF; wb3_cnt <= '0;
@@ -694,7 +765,7 @@ module tile_nic #(
     end
   end
 
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge clk_rx or negedge rst_n) begin
     if (!rst_n) begin
       lost_err_sticky <= 1'b0; fetch_timeout_sticky <= 1'b0; fetch_timer <= '0; iso_err_sticky <= 1'b0;
       fetch_busy <= 1'b0; fetch_is_w <= 1'b0; fetch_src <= '0;
@@ -702,7 +773,8 @@ module tile_nic #(
       efifo_valid[0] <= 1'b0; efifo_valid[1] <= 1'b0; efifo_wr <= 1'b0; efifo_rd <= 1'b0;
       efifo_idx[0] <= '0; efifo_idx[1] <= '0; efifo_chk[0] <= '0; efifo_chk[1] <= '0;
       for (int j = 0; j < COLS; j++) begin efifo_y[0][j] <= '0; efifo_y[1][j] <= '0; end
-      serve_busy <= 1'b0; serve_x <= '0; serve_y <= '0; serve_len <= '0;
+      serve_busy <= 1'b0; serve_x <= '0; serve_y <= '0; serve_len <= '0; serve_self <= 1'b0;
+      sq_v <= 1'b0; sq_addr <= '0; sq_len <= '0;
       crc_err_sticky <= 1'b0; rdy_seen <= 1'b0;
       wb_phase <= 1'b0;
     end else begin
@@ -739,11 +811,17 @@ module tile_nic #(
           efifo_y[efifo_wr][j] <= q_pcm[j] ? prow_wdata[PW * j +: PW] : prow_rd[PW * j +: PW];
         efifo_wr <= !efifo_wr;
       end
-      if (fire_rdreq) begin
+      if (fetch_cmd && cmd_self) begin                     // a fetch from the own bank: no RDREQ, the server takes it (drop 0.43)
+        sq_v <= 1'b1; sq_addr <= cmd_addr; sq_len <= cmd_len;
+      end else if (sq_start) begin
+        sq_v <= 1'b0;
+      end
+      if (srv_go) begin                                    // the link's request, or this tile's own fetch
         serve_busy <= 1'b1;
-        serve_y    <= YW'(rx_data[39:36]);                 // the request carries 4-bit coordinates and a 20-bit address
-        serve_x    <= XW'(rx_data[35:32]);
-        serve_len  <= rx_data[31:20];
+        serve_self <= sq_start;
+        serve_y    <= sq_start ? my_y : YW'(rx_data[39:36]);   // the request carries 4-bit coordinates and a 20-bit address
+        serve_x    <= sq_start ? my_x : XW'(rx_data[35:32]);
+        serve_len  <= srv_len;
         // (the address: s_row / s_room / s_sel, loaded with the request in the transmit block -- drop 0.42)
       end
       if (fire_rdy) rdy_seen <= 1'b1;
@@ -752,7 +830,7 @@ module tile_nic #(
         if (st_cnt != rx_data[31:16]) lost_err_sticky <= 1'b1;
         if (fetch_busy && rx_src == fetch_src) fetch_busy <= 1'b0;   // our fetch response is complete
       end
-      if (serve_done) serve_busy <= 1'b0;
+      if (serve_done) begin serve_busy <= 1'b0; serve_self <= 1'b0; end
     end
   end
 
@@ -812,7 +890,8 @@ module tile_nic #(
                          X_SERVE_CRC = 4'd4, X_DRAIN_HDR = 4'd5, X_DRAIN_WORD = 4'd6, X_DRAIN_CRC = 4'd7,
                          X_NOTIFY = 4'd8;
   logic [3:0]  tx_state;
-  logic        tx_fire;                                   // the link side takes the flit presented
+  logic        tx_fire;                                   // the link side (or the loopback, drop 0.43) takes the flit presented
+  logic        tv;                                        // the engine presents a flit (tx_valid: when it is not to this tile)
   logic        ntf_pending;
   logic [XW-1:0] ntf_x;
   logic [YW-1:0] ntf_y;
@@ -837,7 +916,7 @@ module tile_nic #(
   logic           serve_last;
   logic [VW-1:0]  serve_beat;
   assign serve_cur  = b_rvalid ? b_rdata : serve_row;
-  assign rq_addr    = BAW'(rx_data[19:0]);
+  assign rq_addr    = BAW'(srv_addr);                     // the link's request's, or this tile's own fetch's (drop 0.43)
   assign serve_last = s_last;
   assign s_n        = serve_last ? CW'(s_rem) : s_room;
   always_comb begin                                       // word i of the beat = word i + lane of the row (zero past its end)
@@ -907,7 +986,7 @@ module tile_nic #(
   assign d_pop        = (tx_state == X_DRAIN_WORD) && tx_fire && d_row_done;
   assign dfifo_rd_nxt = !d_pop ? dfifo_rd : (dfifo_rd == DFW'(DFD - 1)) ? '0 : dfifo_rd + 1;
   neo_mem_rf #(.W(DFWD), .D(DFD), .G(1), .RB(1), .DV_HOOKS(0)) u_dfifo (
-    .clk(clk),
+    .clk(clk_tx),
     .we(drain_push), .waddr(dfifo_wr), .wdata(dfifo_wrow),
     .ra_addr('0), .ra_data(unused_dfifo_ra),
     .rb_en(1'b1), .rb_addr(dfifo_rd_nxt), .rb_data(dfifo_head),
@@ -947,25 +1026,25 @@ module tile_nic #(
   logic [YW-1:0] tx_dy;
   logic [FW-2:0] tx_body;
   always_comb begin
-    tx_type = 3'd0; tx_tag = 9'd0; tx_hdr = 20'd0; tx_words = '0; tx_n = CW'(1); tx_dx = '0; tx_dy = '0; tx_valid = 1'b0;
+    tx_type = 3'd0; tx_tag = 9'd0; tx_hdr = 20'd0; tx_words = '0; tx_n = CW'(1); tx_dx = '0; tx_dy = '0; tv = 1'b0;
     case (tx_state)
       X_REQ: begin
         tx_type = T_RDREQ; tx_dx = req_x; tx_dy = req_y;
         tx_hdr = {12'd0, 4'(my_y), 4'(my_x)}; tx_words = VW'({req_len, req_addr});
-        tx_valid = 1'b1;
+        tv = 1'b1;
       end
       X_SERVE_SEND: begin
         tx_type = T_RDRSP; tx_dx = serve_x; tx_dy = serve_y;
-        tx_hdr = {6'd0, 6'(s_n - CW'(1)), 8'd0}; tx_words = serve_beat; tx_n = s_n; tx_valid = 1'b1;
+        tx_hdr = {6'd0, 6'(s_n - CW'(1)), 8'd0}; tx_words = serve_beat; tx_n = s_n; tv = 1'b1;
       end
       X_SERVE_CRC: begin                                     // once the last beat's CRC is in (drop 0.42)
-        tx_type = T_CRC; tx_dx = serve_x; tx_dy = serve_y; tx_words = VW'({tx_cnt, tx_crc}); tx_valid = !txc_v;
+        tx_type = T_CRC; tx_dx = serve_x; tx_dy = serve_y; tx_words = VW'({tx_cnt, tx_crc}); tv = !txc_v;
       end
       X_DRAIN_HDR: begin
-        tx_type = T_WRHDR; tx_dx = drain_x; tx_dy = drain_y; tx_words = VW'({12'd0, drain_addr}); tx_valid = 1'b1;
+        tx_type = T_WRHDR; tx_dx = drain_x; tx_dy = drain_y; tx_words = VW'({12'd0, drain_addr}); tv = 1'b1;
       end
       X_DRAIN_WORD: begin
-        tx_dx = drain_x; tx_dy = drain_y; tx_words = drain_beat; tx_n = d_n; tx_valid = 1'b1;
+        tx_dx = drain_x; tx_dy = drain_y; tx_words = drain_beat; tx_n = d_n; tv = 1'b1;
         if (drain_mode_psum) begin
           tx_type = T_PSUM; tx_tag = 9'(dfifo_head_idx); tx_hdr = {6'd0, 6'(d_n - CW'(1)), 8'(dword)};
         end else begin
@@ -973,10 +1052,10 @@ module tile_nic #(
         end
       end
       X_DRAIN_CRC: begin
-        tx_type = T_CRC; tx_dx = drain_x; tx_dy = drain_y; tx_words = VW'({tx_cnt, tx_crc}); tx_valid = !txc_v;
+        tx_type = T_CRC; tx_dx = drain_x; tx_dy = drain_y; tx_words = VW'({tx_cnt, tx_crc}); tv = !txc_v;
       end
       X_NOTIFY: begin
-        tx_type = T_RDY; tx_dx = ntf_x; tx_dy = ntf_y; tx_valid = 1'b1;
+        tx_type = T_RDY; tx_dx = ntf_x; tx_dy = ntf_y; tv = 1'b1;
       end
       default: ;
     endcase
@@ -1006,7 +1085,26 @@ module tile_nic #(
   end
   assign tx_flit = {^{tx_dy, tx_dx, my_y, my_x, 4'd0, partition, tx_type, tx_tag, tx_hdr} ^ tw_par, tx_body};
 
-  assign tx_fire = tx_valid && tx_ready;
+  // the flit's way out (drop 0.43): to the link, or -- a beat or the CRC flit of the serve of this tile's own fetch -- into
+  // the loopback register, which hands it to the RX stage ahead of the link's beat (lb_take: the stage takes it this cycle).
+  // The choice is the message's (serve_self holds through the serve), so no message is split between the two ways.
+  logic tx_self;                                          // the flit presented goes to the loopback
+  logic tr;                                               // the way it goes takes it
+  logic lb_take;
+  assign tx_self  = serve_self && ((tx_state == X_SERVE_SEND) || (tx_state == X_SERVE_CRC));
+  assign lb_take  = lb_valid && st_free;
+  assign tr       = tx_self ? (!lb_valid || lb_take) : tx_ready;
+  assign tx_valid = tv && !tx_self;
+  assign tx_fire  = tv && tr;
+  always_ff @(posedge clk_rx or negedge rst_n) begin
+    if (!rst_n) begin
+      lb_valid <= 1'b0; lb_flit <= '0;
+    end else if (tv && tx_self && tr) begin
+      lb_valid <= 1'b1; lb_flit <= tx_flit;
+    end else if (lb_take) begin
+      lb_valid <= 1'b0;
+    end
+  end
   assign serve_done = (tx_state == X_SERVE_CRC) && tx_fire;
   assign drain_busy = drain_armed;
   assign ntf_busy   = ntf_pending;
@@ -1025,7 +1123,7 @@ module tile_nic #(
     end
   endgenerate
 
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge clk_tx or negedge rst_n) begin
     if (!rst_n) begin
       tx_state <= X_IDLE; serve_row <= '0; sr_wp <= '0; dbeat <= '0; tx_crc <= 16'hFFFF; tx_cnt <= '0;
       s_row <= '0; s_rem <= '0; s_room <= CW'(BW); s_sel <= BW'(1); s_msk <= '1; s_last <= 1'b1;
@@ -1035,9 +1133,10 @@ module tile_nic #(
       dfifo_wr <= '0; dfifo_rd <= '0; dfifo_np <= '0; dfifo_nq <= '0; dfifo_npq <= '0; dfifo_push_q <= 1'b0;
       drain_mode_psum <= 1'b0; drain_x <= '0; drain_y <= '0; drain_addr <= '0; drain_int8 <= 1'b0;
       drain_rows <= '0; drain_sent <= '0; drain_armed <= 1'b0;
+      drain_crc_last <= '0; drain_msg_cnt <= '0;
     end else begin
       // commands
-      if (cmd_valid && (cmd_op == 3'd1 || cmd_op == 3'd2) && !fetch_busy) begin
+      if (fetch_cmd && !cmd_self) begin                   // (a fetch from the own bank goes to sq_*, drop 0.43)
         req_pending <= 1'b1; req_x <= cmd_x; req_y <= cmd_y; req_addr <= cmd_addr; req_len <= cmd_len;
       end
       if (cmd_valid && (cmd_op == 3'd3 || cmd_op == 3'd4)) begin
@@ -1061,10 +1160,10 @@ module tile_nic #(
 
       // the serve's position from the request as it is taken (drop 0.42; a request is taken only with no serve going on,
       // so this is the serve's start -- also for an engine held past X_IDLE, the dead-server fault of M9b)
-      if (fire_rdreq) begin
-        s_row     <= rq_addr[BAW-1:LW]; s_rem <= {1'b0, rx_data[31:20]};
+      if (srv_go) begin
+        s_row     <= rq_addr[BAW-1:LW]; s_rem <= {1'b0, srv_len};
         s_room    <= CW'(BW) - CW'(rq_addr[LW-1:0]);
-        s_last    <= {1'b0, rx_data[31:20]} <= 13'(BW) - 13'(rq_addr[LW-1:0]);
+        s_last    <= {1'b0, srv_len} <= 13'(BW) - 13'(rq_addr[LW-1:0]);
         for (int k = 0; k < BW; k++) begin s_sel[k] <= rq_addr[LW-1:0] == LW'(k); s_msk[k] <= rq_addr[LW-1:0] <= LW'(k); end
       end
       // the CRC one cycle behind the beats (drop 0.42); a message starts (tx_crc <= 0xFFFF below) only with no beat pending
@@ -1128,10 +1227,32 @@ module tile_nic #(
           end
         end
         X_DRAIN_CRC: begin
-          if (tx_fire) begin drain_armed <= 1'b0; tx_state <= X_IDLE; end
+          if (tx_fire) begin
+            drain_armed <= 1'b0; tx_state <= X_IDLE;
+            drain_crc_last <= tx_crc; drain_msg_cnt <= drain_msg_cnt + 16'd1;   // the message's CRC flit carries tx_crc
+          end
         end
         default: tx_state <= X_IDLE;
       endcase
     end
   end
+
+  // ------------------------------------------------------------------ clock gating (drop 0.43)
+  // Each half's clock is on in every cycle in which one of its registers may change: the receive half while a beat is at
+  // the stage's input or in it (link or loopback), the per-source write-back runs, a fetch is outstanding (its watchdog
+  // counts), a command arrives (a fetch's state), the reduce FIFO is popped, the serve ends or a self serve starts, the
+  // flags are cleared, RDY is cleared; the transmit half while the engine is not idle or has work waiting (a request, a
+  // notify, a serve, a drain with a readable row), a command arrives, a drained row is pushed or becomes readable, a serve
+  // starts (its position), a bank row arrives, a sent beat's CRC is pending. Both run through the reset. Registers that
+  // follow their inputs every cycle hold instead while off only where nothing reads them then (fx_lt: read only while a
+  // beat stays; fetch_timer: zeroed at the next fetch command, whose cycle is on).
+  logic en_rx, en_tx;
+  assign en_rx = rx_valid || q_valid || lb_valid || (tv && tx_self) || wb3_v || fetch_busy || cmd_valid || (ext_valid && ext_ready) ||
+                 serve_done || sq_start || err_clear || rdy_clear || !rst_n;
+  assign en_tx = (tx_state != X_IDLE) || req_pending || ntf_pending || serve_busy || (drain_armed && (dfifo_vis != '0)) || cmd_valid ||
+                 drain_push || dfifo_push_q || srv_go || b_rvalid || txc_v || !rst_n;
+  neo_icg u_icg_rx (.clk(clk), .en(en_rx), .te(1'b0), .gclk(clk_rx));
+  neo_icg u_icg_tx (.clk(clk), .en(en_tx), .te(1'b0), .gclk(clk_tx));
+  assign cg_en     = {en_tx, en_rx};
+  assign tel_drain = (tx_state == X_DRAIN_HDR) || (tx_state == X_DRAIN_WORD) || (tx_state == X_DRAIN_CRC);
 endmodule

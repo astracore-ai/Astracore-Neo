@@ -24,6 +24,30 @@ WCW = 8 + (ROWS - 1).bit_length() + 1                 # check-weight width
 EW = COLS * (8 + (2 if NCHK > 1 else 0)) + NCHK * WCW   # the weight entry (wbuf_mem's EW)
 LANES = (EW + 31) // 32                              # its SECDED lanes
 CIN = 3 * ROWS - 8                                   # 40 at 16 rows, 88 at 32
+CG = ["datapath", "requant", "requant_dup"]           # drop 0.43: the core's clock enables (cg_en bits 0..2)
+
+
+async def _gating(dut, tag):
+    """Drop 0.43: count the cycles each of the core's three clock enables is high; report, as the test ends, the fraction
+    of its cycles each gated block spent with its clock off (the gated fractions of the stream's report)."""
+    hist = {}
+    try:
+        while True:
+            await RisingEdge(dut.clk)
+            v = int(dut.cg_en.value)
+            hist[v] = hist.get(v, 0) + 1
+    finally:
+        cyc = sum(hist.values())
+        if cyc:
+            on = [sum(c for v, c in hist.items() if (v >> b) & 1) for b in range(len(CG))]
+            dut._log.info(f"{tag} gated fractions (% of {cyc} cycles off): " +
+                          " ".join(f"{n} {100.0 * (1 - on[b] / cyc):.0f}" for b, n in enumerate(CG)))
+
+
+def start_clock(dut, tag):
+    cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    if hasattr(dut, "cg_en"):
+        cocotb.start_soon(_gating(dut, tag))
 
 
 def packed_act(x, cin_tiles, h, w):
@@ -204,7 +228,7 @@ def flags(dut):
 
 @cocotb.test()
 async def c1_conv(dut):
-    cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    start_clock(dut, "C1")
     rng = np.random.default_rng(9)
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
     wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
@@ -229,7 +253,7 @@ async def c2_fault_hooks(dut):
     stays silent as in neosim's C7), rq_fault_inject (the primary requant's input corrupted: the duplicated-stage
     comparator flags, C8), rq_tbl_fault_inject (a multiplier bit flipped against the stored parity). Each flag is
     checked alone, and every run still finishes."""
-    cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    start_clock(dut, "C2")
     rng = np.random.default_rng(11)
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
     wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
@@ -255,7 +279,7 @@ async def c3_wbuf_ecc(dut):
     """The weight buffer's SECDED through its hook (drop 0.37): one bit of a stored codeword flipped (a data bit of entry 5's
     lane 0, a check bit of entry 40's last lane) is corrected on read -- wbuf_ce, result bit-exact, nothing else; two bits
     of one lane (entry 7) are uncorrectable -- wbuf_ue, the run completes (neosim's C9 pokes the same cells directly)."""
-    cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    start_clock(dut, "C3")
     rng = np.random.default_rng(13)
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
     wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
@@ -289,7 +313,7 @@ async def c4_reduce_forward(dut):
     drain reads first, so the drain must start a cycle after that row's write (core_seq's red_last). The drained rows are
     the whole convolution, bit-exact, with every flag clean -- without the forward or without the extra cycle a row loses a
     contributor's partial sum (consistently with its check sum, so only the comparison with the golden model sees it)."""
-    cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    start_clock(dut, "C4")
     rng = np.random.default_rng(17)
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
     wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
@@ -327,7 +351,7 @@ async def c5_sparse_conv(dut):
     equal the dense convolution on the pruned weights, every flag clean; every index value 0..3 is held by some PE (each
     check column covers weights)."""
     import neo_backend as nb
-    cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    start_clock(dut, "C5")
     rng = np.random.default_rng(31)
     cin = 4 * ROWS
     x = rng.integers(-128, 128, size=(cin, 6, 6), dtype=np.int64)

@@ -9,6 +9,10 @@
 //     detection       the model set implies tbl_perr_sticky -- 1 in the cycle after the fault, written entry 0 and
 //                     in_valid coincide (the brief's "within two cycles", met in one)
 //   Helper invariants (the written flags, odd parity stored with every written entry) close k-induction in one step.
+//   Drop 0.43: the block runs on a gated clock (requant.sv); the harness reads the gate's formal model (neo_icg_formal.sv,
+//   ungated) and asserts that after a cycle with cg_en low nothing a reader samples has changed -- the valids (v1, v2,
+//   out_valid), the written flags and the written entries, the sticky -- so gating that cycle is invisible (the stage
+//   registers that load the row unconditionally are read only under their valids).
 module requant_parity_fv #(
   parameter int COLS = 4,
   parameter int PW   = 32,
@@ -36,12 +40,13 @@ module requant_parity_fv #(
       assign in_acc[j] = in_acc_v[PW*j +: PW];
     end
   endgenerate
-  logic                out_valid, perr;
+  logic                out_valid, perr, cg_en;
   logic signed [7:0]   out_q [COLS];
   requant #(.COLS(COLS), .PW(PW), .MW(MW)) u_dut (
     .clk(clk), .rst_n(rst_n), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
     .tbl_zp(tbl_zp), .relu(relu), .in_valid(in_valid), .in_acc(in_acc), .out_valid(out_valid), .out_q(out_q),
-    .err_clear(err_clear), .tbl_perr_sticky(perr), .tbl_fault_inject(fault));   // out_valid / out_q: lockstep_requant's
+    .err_clear(err_clear), .tbl_perr_sticky(perr), .tbl_fault_inject(fault),   // out_valid / out_q: lockstep_requant's
+    .cg_en(cg_en));
 
   logic [COLS-1:0] written = '0;
   logic            exp_perr = 1'b0;
@@ -63,6 +68,30 @@ module requant_parity_fv #(
       for (int j = 0; j < COLS; j++) begin                 // helpers
         assert (u_dut.wrt[j] == written[j]);
         if (written[j]) assert ((^{u_dut.mult[j], u_dut.shft[j], u_dut.zp[j], u_dut.par[j]}) == 1'b1);
+      end
+    end
+  end
+  // the clock gating (drop 0.43): a cycle with cg_en low changes nothing a reader samples
+  logic                p_off = 1'b0;
+  logic                p_v1, p_v2, p_ov, p_perr;
+  logic [COLS-1:0]     p_wrt;
+  logic [MW-1:0]       p_mult [COLS];
+  logic [4:0]          p_shft [COLS];
+  logic signed [7:0]   p_zp   [COLS];
+  logic                p_par  [COLS];
+  always_ff @(posedge clk) begin
+    p_off <= rst_n && !cg_en;
+    p_v1 <= u_dut.v1; p_v2 <= u_dut.v2; p_ov <= out_valid; p_perr <= perr;
+    for (int j = 0; j < COLS; j++) begin
+      p_wrt[j] <= u_dut.wrt[j]; p_mult[j] <= u_dut.mult[j]; p_shft[j] <= u_dut.shft[j]; p_zp[j] <= u_dut.zp[j]; p_par[j] <= u_dut.par[j];
+    end
+  end
+  always_comb begin
+    if (rst_n && p_off) begin
+      assert (u_dut.v1 == p_v1 && u_dut.v2 == p_v2 && out_valid == p_ov && perr == p_perr);
+      for (int j = 0; j < COLS; j++) begin
+        assert (u_dut.wrt[j] == p_wrt[j]);
+        if (p_wrt[j]) assert (u_dut.mult[j] == p_mult[j] && u_dut.shft[j] == p_shft[j] && u_dut.zp[j] == p_zp[j] && u_dut.par[j] == p_par[j]);
       end
     end
   end

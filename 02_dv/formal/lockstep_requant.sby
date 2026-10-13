@@ -4,6 +4,7 @@
 # the table multiplier narrowed to MW = 4: at MW = 16 the induction step holds two 32x17 multipliers on equal inputs, an
 # identical-circuit miter none of yices / bitwuzla / z3 / abc pdr closes in 150 s (a two-register micro test times out
 # the same way), while the property does not depend on the width -- the copies compute one function. README.md.
+# Drop 0.43: the copies' clock enables equal every cycle (the gate's formal model neo_icg_formal.sv, ungated).
 [options]
 mode prove
 depth 2
@@ -13,9 +14,10 @@ smtbmc yices
 
 [script]
 plugin -i slang
-read_slang -DFORMAL -G MW=4 --top lockstep_requant_fv requant.sv lockstep_requant_fv.sv
+read_slang -DFORMAL -G MW=4 --top lockstep_requant_fv neo_icg_formal.sv requant.sv lockstep_requant_fv.sv
 prep -top lockstep_requant_fv
 
 [files]
+formal/neo_icg_formal.sv
 rtl/requant.sv
 formal/lockstep_requant_fv.sv

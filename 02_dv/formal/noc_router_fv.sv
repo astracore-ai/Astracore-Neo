@@ -15,17 +15,29 @@
 //                 while in its FIFO slot that slot is valid and holds it; the grant that pops it loads exactly one
 //                 output register and a grant of its input always pops it (nothing lost, nothing left behind as a
 //                 copy); in the output register it is unchanged until it leaves, and that register is its XY port
-//     fairness    an input whose head requests output o is granted within 5 fires of o: at most 4 fires of o go to
-//                 other inputs while it waits (with the round-robin distance as the inductive helper)
-//   Internal names read (the drop 0.41 router): fifo, fbad, freq, occ, count, rd, rd_a, wr (the FIFO state with the parity
-//   and route bits stored at the push), ptr (the one-hot rotating pointer: the first input in priority), fire, gnt, pop
-//   (the grants). Helper invariants for the induction: the stored parity / route bits agree with the stored flit, rd_a
-//   mirrors rd, the occupancy is a well-formed thermometer, ptr is one-hot.
+//     fairness    drop 0.43, two priority classes (prio, a free constant: every map of the 16 partitions): while
+//                 input i's head requests output o, the fires of o that go to other inputs number at most
+//                 5 + floor(4 / PRIO_N) when the head is of the high class and 5 PRIO_N + 4 when it is of the low class
+//                 (with prio = 0 the low class is the only one and no promotion ever happens: drop 0.41's 4). Inductive
+//                 helpers: the round-robin distance of i from its class's pointer (d, 1..5) and the promotion counter
+//                 c = wcnt -- high: wt + (d - 1) + P(c, d - 1) <= 5 + floor(4 / N) with P(c, h) the promotions that can
+//                 still come before i (one if c = N, then one per N high grants); low: wt + (N + 1)(d - 1) + (N - c) <=
+//                 5 N + 4; wsat == (wcnt == N), wcnt <= N, wcnt > 0 only while a low-class request waits; the class bit
+//                 stored at the push agrees with prio and the stored flit
+//     gating      drop 0.43: each output stage runs on a gated clock enabled by stage_en; the harness reads the formal
+//                 model of the gate (neo_icg_formal.sv, ungated) and asserts that every register of the stage
+//                 (out_valid, out_flit, ptr_lo, ptr_hi, wcnt, wsat) is unchanged after a cycle with stage_en low
+//   Internal names read (the drop 0.43 router): fifo, fbad, freq, fcls, occ, count, rd, rd_a, wr (the FIFO state with the
+//   parity, route and class bits stored at the push), hcls (the heads' class), ptr_lo / ptr_hi (the per-class one-hot
+//   rotating pointers), wcnt / wsat / rq_lo (the promotion counter), fire, gnt, pop (the grants). Helper invariants for
+//   the induction: the stored bits agree with the stored flit, rd_a mirrors rd, the occupancy is a well-formed
+//   thermometer, the pointers are one-hot.
 module noc_router_fv #(
   parameter int XW = 3,
   parameter int YW = 3,
   parameter int DW = 8,
-  parameter int FW = 1 + 2 * (XW + YW) + 8 + DW
+  parameter int FW = 1 + 2 * (XW + YW) + 8 + DW,
+  parameter int PRIO_N = 8           // the router's default promotion bound (drop 0.43)
 )(
   input  logic            clk,
   input  logic [4:0]      in_valid_v,
@@ -38,14 +50,16 @@ module noc_router_fv #(
   logic rst_n = 1'b0;
   always_ff @(posedge clk) rst_n <= 1'b1;
 
-  // free constants: the coordinates the mesh straps, the value watched for invention
+  // free constants: the coordinates the mesh straps, the value watched for invention, the priority map (drop 0.43)
   logic [XW-1:0] my_x;
   logic [YW-1:0] my_y;
   logic [FW-1:0] F;
+  logic [15:0]   prio;
   always_ff @(posedge clk) begin
     my_x <= my_x;
     my_y <= my_y;
     F    <= F;
+    prio <= prio;
   end
 
   logic          in_valid  [5];
@@ -62,11 +76,12 @@ module noc_router_fv #(
       assign out_ready[i] = out_ready_v[i];
     end
   endgenerate
-  noc_router #(.XW(XW), .YW(YW), .DW(DW), .DV_HOOKS(0)) u_dut (
-    .clk(clk), .rst_n(rst_n), .my_x(my_x), .my_y(my_y),
+  logic [4:0]    stage_en;
+  noc_router #(.XW(XW), .YW(YW), .DW(DW), .DV_HOOKS(0), .PRIO_N(PRIO_N)) u_dut (
+    .clk(clk), .rst_n(rst_n), .my_x(my_x), .my_y(my_y), .prio(prio),
     .in_valid(in_valid), .in_flit(in_flit), .in_ready(in_ready),
     .out_valid(out_valid), .out_flit(out_flit), .out_ready(out_ready),
-    .err_clear(err_clear), .parity_err_sticky(sticky),
+    .err_clear(err_clear), .parity_err_sticky(sticky), .stage_en(stage_en),
     .dv_flit_flip(1'b0), .dv_valid_clear(1'b0), .dv_port(3'd0), .dv_mask({FW{1'b0}}));
 
   // flit fields
@@ -151,8 +166,12 @@ module noc_router_fv #(
     end
   end
 
-  // fairness: fires of output o that went elsewhere while input i's head requested o
-  logic [2:0] wt [5][5];
+  // fairness: fires of output o that went elsewhere while input i's head requested o (drop 0.43: up to 5 PRIO_N + 4)
+  localparam int WTW = $clog2(5 * PRIO_N + 6);
+  localparam int B_HI = 5 + 4 / PRIO_N;             // the bounds of the two classes (fires to other inputs)
+  localparam int B_LO = 5 * PRIO_N + 4;
+  localparam int WCW = $clog2(PRIO_N + 1);
+  logic [WTW-1:0] wt [5][5];
   logic       rq [5][5];                            // rq[o][i]: input i's head is valid, good and requests o
   always_comb begin
     for (int o = 0; o < 5; o++)
@@ -162,8 +181,8 @@ module noc_router_fv #(
   always_ff @(posedge clk) begin
     for (int o = 0; o < 5; o++)
       for (int i = 0; i < 5; i++) begin
-        if (!rst_n || !rq[o][i] || u_dut.pop[i]) wt[o][i] <= 3'd0;
-        else if (u_dut.fire[o])                  wt[o][i] <= wt[o][i] + 3'd1;
+        if (!rst_n || !rq[o][i] || u_dut.pop[i]) wt[o][i] <= '0;
+        else if (u_dut.fire[o])                  wt[o][i] <= wt[o][i] + WTW'(1);
       end
   end
   function automatic logic [2:0] rr_dist(input logic [2:0] r, input logic [2:0] i);   // i's place in the search after r: 1..5
@@ -177,6 +196,11 @@ module noc_router_fv #(
       5'b01000: return 3'd2;
       default:  return 3'd3;
     endcase
+  endfunction
+  // the promotions that can still come before a waiting high-class head with h other high-class heads ahead of it, the
+  // counter at c (drop 0.43): one now if c = PRIO_N (a low-class request waits and goes next), then one per PRIO_N high grants
+  function automatic int prom_left(input int c, input int h);
+    return (c == PRIO_N) ? 1 + h / PRIO_N : (c + h) / PRIO_N;
   endfunction
 
   always_comb begin
@@ -225,12 +249,31 @@ module noc_router_fv #(
         assert (out_valid[tk_o] && out_flit[tk_o] == tk_v);
         assert (tk_o == xy_port(tk_v));
       end
-      // fairness
+      // the class bits stored at the push describe the stored flits (drop 0.43)
+      for (int i = 0; i < 5; i++) begin
+        if (u_dut.count[i] != 2'd0) assert (u_dut.fcls[i][u_dut.rd[i]] == prio[u_dut.fifo[i][u_dut.rd[i]][DW +: 4]]);
+        if (u_dut.count[i] == 2'd2) assert (u_dut.fcls[i][!u_dut.rd[i]] == prio[u_dut.fifo[i][!u_dut.rd[i]][DW +: 4]]);
+        assert (u_dut.hcls[i] == u_dut.fcls[i][u_dut.rd[i]]);
+      end
+      // fairness, two classes (drop 0.43)
       for (int o = 0; o < 5; o++) begin
-        assert (u_dut.ptr[o] != 5'd0 && (u_dut.ptr[o] & (u_dut.ptr[o] - 5'd1)) == 5'd0);   // one-hot
+        assert (u_dut.ptr_lo[o] != 5'd0 && (u_dut.ptr_lo[o] & (u_dut.ptr_lo[o] - 5'd1)) == 5'd0);   // one-hot
+        assert (u_dut.ptr_hi[o] != 5'd0 && (u_dut.ptr_hi[o] & (u_dut.ptr_hi[o] - 5'd1)) == 5'd0);
+        assert (32'(u_dut.wcnt[o]) <= PRIO_N);
+        assert (u_dut.wsat[o] == (32'(u_dut.wcnt[o]) == PRIO_N));
+        if (u_dut.wcnt[o] != '0) assert (u_dut.rq_lo[o] != 5'd0);                 // the counter runs only while a low request waits
         for (int i = 0; i < 5; i++) begin
-          assert (wt[o][i] <= 3'd4);
-          if (rq[o][i]) assert (4'(wt[o][i]) + 4'(rr_dist(ptr_rr(u_dut.ptr[o]), 3'(i))) <= 4'd5);
+          if (rq[o][i] && u_dut.hcls[i]) begin                                  // a high-class head
+            assert (32'(wt[o][i]) <= B_HI);
+            assert (32'(wt[o][i]) + 32'(rr_dist(ptr_rr(u_dut.ptr_hi[o]), 3'(i))) - 1 +
+                    prom_left(32'(u_dut.wcnt[o]), 32'(rr_dist(ptr_rr(u_dut.ptr_hi[o]), 3'(i))) - 1) <= B_HI);
+          end
+          if (rq[o][i] && !u_dut.hcls[i]) begin                                 // a low-class head
+            assert (32'(wt[o][i]) <= B_LO);
+            assert (32'(wt[o][i]) + (PRIO_N + 1) * (32'(rr_dist(ptr_rr(u_dut.ptr_lo[o]), 3'(i))) - 1) +
+                    (PRIO_N - 32'(u_dut.wcnt[o])) <= B_LO);
+          end
+          if (!rq[o][i]) assert (wt[o][i] == '0);
         end
       end
     end
@@ -249,5 +292,26 @@ module noc_router_fv #(
   always_comb begin
     if (rst_n && prev_valid)
       for (int i = 0; i < 5; i++) if (prev_drop[i]) assert (u_dut.rd[i] != prev_rd[i]);
+  end
+  // the output stages' clock gating (drop 0.43): after a cycle with stage_en[o] low, none of the stage's registers changed
+  logic [4:0]     prev_off;
+  logic           p_ov  [5];
+  logic [FW-1:0]  p_of  [5];
+  logic [4:0]     p_plo [5], p_phi [5];
+  logic [WCW-1:0] p_wc  [5];
+  logic           p_ws  [5];
+  always_ff @(posedge clk) begin
+    for (int o = 0; o < 5; o++) begin
+      prev_off[o] <= rst_n && !stage_en[o];
+      p_ov[o] <= out_valid[o]; p_of[o] <= out_flit[o]; p_plo[o] <= u_dut.ptr_lo[o]; p_phi[o] <= u_dut.ptr_hi[o];
+      p_wc[o] <= u_dut.wcnt[o]; p_ws[o] <= u_dut.wsat[o];
+    end
+  end
+  always_comb begin
+    if (rst_n && prev_valid)
+      for (int o = 0; o < 5; o++)
+        if (prev_off[o])
+          assert (out_valid[o] == p_ov[o] && out_flit[o] == p_of[o] && u_dut.ptr_lo[o] == p_plo[o] && u_dut.ptr_hi[o] == p_phi[o] &&
+                  u_dut.wcnt[o] == p_wc[o] && u_dut.wsat[o] == p_ws[o]);
   end
 endmodule

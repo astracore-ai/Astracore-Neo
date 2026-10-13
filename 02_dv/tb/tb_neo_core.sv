@@ -50,6 +50,8 @@ module tb_neo_core;
   logic                  rd_valid;
   logic                  err_clear, array_abft_sticky, acc_abft_err, acc_abft_err_valid, acc_abft_sticky, ctrl_err_sticky;
   logic                  fault_inject, ctrl_fault_inject;
+  logic [2:0]            cg_en;              // drop 0.43: the core's clock enables and telemetry events, unused here
+  logic [1:0]            tel_ev;
 
   neo_core #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .ACC_ROWS(ACC_ROWS),
              .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH)) dut (
@@ -74,7 +76,8 @@ module tb_neo_core;
     .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject),
     .seq_fault_inject(seq_fault_inject), .rq_fault_inject(rq_fault_inject), .rq_tbl_fault_inject(rq_tbl_fault_inject),
     .dv_wbuf_flip(1'b0), .dv_wbuf_addr('0), .dv_wbuf_lane('0), .dv_wbuf_mask('0),          // the weight-buffer hook (drop 0.37), tied off
-    .wbuf_ce_sticky(wbuf_ce_sticky), .wbuf_ue_sticky(wbuf_ue_sticky), .rq_tbl_perr_sticky(rq_tbl_perr_sticky));
+    .wbuf_ce_sticky(wbuf_ce_sticky), .wbuf_ue_sticky(wbuf_ue_sticky), .rq_tbl_perr_sticky(rq_tbl_perr_sticky),
+    .cg_en(cg_en), .tel_ev(tel_ev));                                                     // drop 0.43: observation, unused here
 
   // vectors
   logic [8*ROWS-1:0]       abuf_mem [0:`CORE_N_ABUF-1];

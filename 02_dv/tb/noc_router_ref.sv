@@ -148,11 +148,14 @@ module noc_router_pair #(
   output logic [FW-1:0] r_out_flit  [5],
   output logic          r_perr
 );
+  logic [4:0] n_stage_en;                    // drop 0.43: the new router's priority map all zero (one class: the order under test),
+  logic       unused_stage_en;               // its output stages' clock enables unobserved
+  assign unused_stage_en = ^n_stage_en;
   noc_router #(.XW(XW), .YW(YW), .DW(DW), .FW(FW), .DV_HOOKS(DV_HOOKS)) u_new (
-    .clk(clk), .rst_n(rst_n), .my_x(my_x), .my_y(my_y),
+    .clk(clk), .rst_n(rst_n), .my_x(my_x), .my_y(my_y), .prio(16'd0),
     .in_valid(in_valid), .in_flit(in_flit), .in_ready(n_in_ready),
     .out_valid(n_out_valid), .out_flit(n_out_flit), .out_ready(out_ready),
-    .err_clear(err_clear), .parity_err_sticky(n_perr),
+    .err_clear(err_clear), .parity_err_sticky(n_perr), .stage_en(n_stage_en),
     .dv_flit_flip(dv_flit_flip), .dv_valid_clear(dv_valid_clear), .dv_port(dv_port), .dv_mask(dv_mask));
   noc_router_ref #(.XW(XW), .YW(YW), .DW(DW), .FW(FW), .DV_HOOKS(DV_HOOKS)) u_ref (
     .clk(clk), .rst_n(rst_n), .my_x(my_x), .my_y(my_y),

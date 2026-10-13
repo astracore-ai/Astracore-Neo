@@ -18,10 +18,15 @@ module neo_tile #(
   parameter int BIST_WORDS = BANK_DEPTH,
   parameter int PDEPTH = 32,
   parameter int PAW = $clog2(PDEPTH),
+  parameter int NCHK = 1,
+  parameter int IW = (NCHK > 1) ? 2 : 0,
   parameter int DV_HOOKS = 0
 )(
   input  logic          clk,
   input  logic          rst_n,
+  input  logic          router_rst_n,
+  input  logic          tile_clk_en,
+  input  logic          iso_en,
   input  logic [XW-1:0] my_x,
   input  logic [YW-1:0] my_y,
   input  logic [3:0]       in_valid,
@@ -53,6 +58,8 @@ module neo_tile #(
   output logic          rq_tbl_perr,
   output logic          lost_err,
   output logic          fetch_timeout,
+  output logic [15:0]   drain_crc_last,
+  output logic [15:0]   drain_msg_cnt,
   input  logic          dv_bd_we,
   input  logic [BAW-1:0] dv_bd_addr,
   input  logic [38:0]   dv_bd_wdata,
@@ -62,16 +69,17 @@ module neo_tile #(
   input  logic [19:0]   dv_fi_idx,
   input  logic [DWL-1:0] dv_fi_mask,
   output logic [4:0]    dv_rt_valid,
-  output logic [FWL-1:0] dv_rt_flit4
+  output logic [FWL-1:0] dv_rt_flit4,
+  output logic [31:0]   dv_obs
 );
   assign in_ready = '0; assign out_valid = '0; assign out_flit = '0; assign h_rdata = '0; assign err_pin = 1'b0;
   assign prog_done = 1'b0; assign drain_busy = 1'b0; assign done = 1'b0; assign parity_err = 1'b0; assign crc_err = 1'b0;
   assign array_abft_sticky = 1'b0; assign acc_abft_sticky = 1'b0; assign ctrl_err_sticky = 1'b0; assign seq_err_sticky = 1'b0;
   assign rq_err_sticky = 1'b0; assign ecc_ce = 1'b0; assign ecc_ue = 1'b0; assign wbuf_ce = 1'b0; assign wbuf_ue = 1'b0;
   assign rq_tbl_perr = 1'b0; assign lost_err = 1'b0; assign fetch_timeout = 1'b0; assign dv_bd_rdata = '0; assign dv_rt_valid = '0;
-  assign dv_rt_flit4 = '0;
-  localparam int UNUSED_PARAMS = NX + NY + ROWS + COLS + PW + WCW + IDXW + AW + WAW + FETCH_TIMEOUT + BIST_WORDS + PAW + DV_HOOKS;
+  assign dv_rt_flit4 = '0; assign dv_obs = '0; assign drain_crc_last = '0; assign drain_msg_cnt = '0;
+  localparam int UNUSED_PARAMS = NX + NY + ROWS + COLS + PW + WCW + IDXW + AW + WAW + FETCH_TIMEOUT + BIST_WORDS + PAW + NCHK + IW + DV_HOOKS;
   logic unused_stub;
-  assign unused_stub = ^{clk, rst_n, my_x, my_y, in_valid, in_flit, out_ready, h_we, h_re, h_addr, h_wdata, dv_bd_we, dv_bd_addr,
+  assign unused_stub = ^{clk, rst_n, router_rst_n, tile_clk_en, iso_en, my_x, my_y, in_valid, in_flit, out_ready, h_we, h_re, h_addr, h_wdata, dv_bd_we, dv_bd_addr,
                          dv_bd_wdata, dv_fi_en, dv_fi_sel, dv_fi_idx, dv_fi_mask, 32'(UNUSED_PARAMS)};
 endmodule
