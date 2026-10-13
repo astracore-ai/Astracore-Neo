@@ -32,6 +32,12 @@ sandbox's memory in Yosys's own front end, while slang reads one module in secon
      minimum period, the worst path; and the verdict over the silicon tile's units -- the smallest swept period at which
      every unit but the PE-limited ones (mac_pe, mac_pe_chk, systolic_array, neo_mac_core and their parents) is clean,
      the PE's own stage, the period the tile runs at on the proxy (the larger of the two).
+  7. (drop 0.43) the clock gate: neo_icg (01_rtl/neo_icg.sv, a latch-based ICG in behavioural form) is black-boxed in every
+     unit and mapped onto the library's integrated clock-gating cell after the synthesis (a techmap of the black box onto
+     ICGx1_ASAP7_75t_R / CLKGATETST_X1: the enable on ENA / E, the test enable on SE), so no latch reaches the netlist and the
+     latch gate stands; a gated clock net is a clock (no repeater tree: the clock tree is the physical flow's). Per unit
+     the ICG cells and the flops whose clock pin a gate drives -- with the children's flops when the child's clk is gated --
+     and the gate: every unit has exactly the ICG cells its definition declares (U(..., icg=N)), none left unmapped.
   Then report.py writes synth_report.md from synth_results.json (and, given two outputs, the two libraries side by side).
   Drop 0.42 also made Nangate45 a full second library: its macro model is derived from the platform's FakeRAM45 liberty
   files (derive_macro), and a memory leaf is priced by the read ports it uses (macro_kind), not by its RB parameter.
@@ -73,6 +79,9 @@ PDKS = {
         dont_use=["*x1p*_ASAP7*", "*xp*_ASAP7*", "SDF*", "ICG*"],      # ORFS's list: fractional drives, scan flops, gaters
         abc_driver="BUFx2_ASAP7_75t_R", abc_load_ff=3.898,
         repeater=("BUFx2_ASAP7_75t_R", "A", "Y"),   # the buffer of the fanout trees (cell, input pin, output pin)
+        # drop 0.43: the integrated clock gate neo_icg maps onto (cell, clock, enable, test enable, gated clock pins) and
+        # the flops' clock pin
+        icg=("ICGx1_ASAP7_75t_R", "CLK", "ENA", "SE", "GCLK"), flop_clk="CLK",
         # the macro model: ABKGroup FakeRAM2.0 at ORFS's asap7 fakeram.cfg -- bit cell 10 fin pitches (27 nm) x 2 CPP (54 nm)
         # = 0.0292 um2, x 1.2 x 1.2 periphery = 0.042 um2 per bit; access 218 ps, setup / hold 50 ps, 5 fF per input
         macro=dict(area_per_bit_um2=0.0292 * 1.44, tcq=218.0, tsu=50.0, th=50.0, cap=5.0, min_period=157.0,
@@ -89,6 +98,7 @@ PDKS = {
         dont_use=["TAPCELL_X1", "FILLCELL_X1", "AOI211_X1", "OAI211_X1"],      # ORFS's DONT_USE_CELLS for the platform
         abc_driver="BUF_X1", abc_load_ff=3.898,                               # ORFS's ABC_DRIVER_CELL / ABC_LOAD_IN_FF
         repeater=("BUF_X2", "A", "Z"),
+        icg=("CLKGATETST_X1", "CK", "E", "SE", "GCK"), flop_clk="CK",          # drop 0.43, as for ASAP7
         # the macro model from ORFS's FakeRAM45 macros (drop 0.42; derive_macro below reads them): the area per bit is the
         # sum of their areas over the sum of their bits, the access time the slowest clock-to-output, setup / hold and the
         # minimum period the largest; this dict is the fallback when no FakeRAM45 liberty is found (the 2048 x 39 alone)
@@ -157,7 +167,8 @@ def derive_macro(pdk, libdir):
                  f"their bits), {m['tcq']:g} {unit} access (the slowest), {m['tsu']:g} {unit} setup/hold")
     return m, found
 
-RTL_FILES = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv", "neo_mem.sv",
+ICG_MODULE = "neo_icg"                                # drop 0.43: the clock gate, black-boxed and mapped in every unit
+RTL_FILES = ["neo_icg.sv", "neo_iso.sv", "tile_telem.sv", "delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv", "neo_mem.sv",
              "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "ecc39.sv", "wbuf_mem.sv",
              "requant.sv", "neo_core.sv", "host_if.sv", "noc_router.sv", "sram_bank.sv", "mbist.sv", "bank_bist_wrap.sv",
              "crc16_word.sv", "crc16_beat.sv", "tile_nic.sv", "tile_dma.sv", "prog_mem.sv", "esm.sv", "link_pack.sv", "neo_tile.sv"]
@@ -177,10 +188,11 @@ TILE = dict(XW=3, YW=3, NX=8, NY=8, WPF=32, ROWS=32, COLS=32, ACC_ROWS=512, ABUF
 CORE16 = dict(ROWS=16, COLS=8, ACC_ROWS=64, ABUF_DEPTH=256, WBUF_DEPTH=512, NCHK=4)
 
 
-def U(name, module, params, desc, children=None, macros=(), pe=None, tile=False):
-    """children: {child module: [unit names that synthesize its parameterizations]}; macros: leaf modules to black-box."""
+def U(name, module, params, desc, children=None, macros=(), pe=None, tile=False, icg=0):
+    """children: {child module: [unit names that synthesize its parameterizations]}; macros: leaf modules to black-box;
+    icg (drop 0.43): the neo_icg instances of the unit's own logic (the gate checks the count)."""
     return dict(name=name, module=module, params=dict(params), desc=desc, children=dict(children or {}), macros=list(macros),
-                pe_expected=pe, tile=tile)
+                pe_expected=pe, tile=tile, icg_expected=icg)
 
 
 def core_units(c, p, desc):
@@ -212,12 +224,13 @@ def core_units(c, p, desc):
           children={"neo_mac_core": [p + "neo_mac_core"], "act_feeder": [p + "act_feeder"], "acc_bank": [p + "acc_bank"]}),
         U(p + "wbuf_mem", "wbuf_mem", dict(COLS=C, WW=8, WCW=WCW, DEPTH=c["WBUF_DEPTH"], WAW=WAW, **nk, DV_HOOKS=0),
           f"weight buffer ({desc}): {lanes} SECDED lanes around the {c['WBUF_DEPTH'] // 2} x {2 * lanes * 39} pair leaf (macro)", macros=["neo_mem_rf"]),
-        U(p + "requant", "requant", dict(COLS=C, PW=PW, MW=16), f"requantizer ({desc}): {C} columns of 32x17 multiply, shift, round, saturate; table parity"),
+        U(p + "requant", "requant", dict(COLS=C, PW=PW, MW=16), f"requantizer ({desc}): {C} columns of 32x17 multiply, shift, round, saturate; table parity; its own clock gate",
+          icg=1),
         U(p + "core_seq", "core_seq", dict(ROWS=R, COLS=C, IDXW=IDXW, WBUF_DEPTH=c["WBUF_DEPTH"], WAW=WAW, PE_LAT=2), f"sequencer ({desc}; a lockstep pair in the core)"),
         U(p + "neo_core", "neo_core", dict(ROWS=R, COLS=C, PW=PW, ACC_ROWS=c["ACC_ROWS"], ABUF_DEPTH=c["ABUF_DEPTH"], WBUF_DEPTH=c["WBUF_DEPTH"], **nk, DV_HOOKS=0),
-          f"the {R}x{C} core: datapath, weight buffer, two sequencers, two requantizers, the comparators and flags",
+          f"the {R}x{C} core: datapath, weight buffer, two sequencers, two requantizers, the comparators and flags; the datapath's clock gate",
           children={"neo_mac_core_v02": [p + "neo_mac_core_v02"], "wbuf_mem": [p + "wbuf_mem"], "requant": [p + "requant"], "core_seq": [p + "core_seq"]},
-          pe=R * (C + NCHK)),
+          pe=R * (C + NCHK), icg=1),
     ]
 
 
@@ -244,18 +257,20 @@ def tile_units(T):
         U("link_unpacker", "link_unpacker", dict(XW=XW, YW=YW, BW=BW, WPF=WPF), "32-word link flits to beats"),
         U("tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX, NSRC=NX * NY, BW=BW, ROWS=R, COLS=C, WCW=WCW, IDXW=IDXW, AW=AW, WAW=WAW, BAW=BAW, PW=PW,
                                        **nk, DFD=T["ACC_ROWS"], FETCH_TIMEOUT=T["FETCH_TIMEOUT"], DV_HOOKS=0),
-          "tile interface: fetch (two entries per cycle), serve, writeback, partial sums, CRC per beat, per-source state for 64 sources; the drain FIFO 512 x 1,068 and the partial-sum rows 64 x 1,024 are leaves (macros)",
-          macros=["neo_mem_rf"]),
-        U("noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router: 1077-bit flits, 2-entry input FIFOs, parity at the FIFO head, round-robin outputs"),
-        U("tile_dma", "tile_dma", dict(XW=XW, YW=YW, PDEPTH=PDEPTH, DV_HOOKS=0), "DMA program engine (a lockstep pair in the tile)"),
+          "tile interface: fetch (two entries per cycle), serve, writeback, partial sums, CRC per beat, per-source state for 64 sources; the drain FIFO 512 x 1,068 and the partial-sum rows 64 x 1,024 are leaves (macros); the receive and transmit halves on two clock gates",
+          macros=["neo_mem_rf"], icg=2),
+        U("noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router: 1077-bit flits, 2-entry input FIFOs, parity at the FIFO head, two priority classes, the output stages on five clock gates",
+          icg=5),
+        U("tile_dma", "tile_dma", dict(XW=XW, YW=YW, PDEPTH=PDEPTH, DV_HOOKS=0), "DMA program engine (a lockstep pair in the tile), its own clock gate", icg=1),
+        U("tile_telem", "tile_telem", dict(NCNT=12), "the telemetry: 12 saturating 32-bit counters and their snapshots (drop 0.43)"),
         U("prog_mem", "prog_mem", dict(DEPTH=PDEPTH, DV_HOOKS=0), "32 x 64-bit program memory as two SECDED lanes (flops)"),
         U("host_if", "host_if", dict(IDXW=IDXW, PAW=clog2(PDEPTH), DV_HOOKS=0), "host register interface"),
         U("esm", "esm", dict(NFLAGS=18), "error-signaling module: 18 causes, the mask, the windowed watchdog"),
-        U("neo_tile", "neo_tile", dict(T), "the silicon tile: 8x8 mesh position, 32x32 core, 2 MB bank, 1024-bit links, DV_HOOKS = 0 (own logic: flags, the hooks' tie-offs, the register decode)",
+        U("neo_tile", "neo_tile", dict(T), "the silicon tile: 8x8 mesh position, 32x32 core, 2 MB bank, 1024-bit links, DV_HOOKS = 0 (own logic: flags, the hooks' tie-offs, the register decode, the power domain's clock gate and isolation cells)",
           children={"neo_core": ["neo_core"], "tile_nic": ["tile_nic"], "noc_router": ["noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
                     "tile_dma": ["tile_dma"], "prog_mem": ["prog_mem"], "host_if": ["host_if"], "esm": ["esm"],
-                    "link_packer": ["link_packer"], "link_unpacker": ["link_unpacker"]},
-          pe=R * (C + NCHK), tile=True),
+                    "link_packer": ["link_packer"], "link_unpacker": ["link_unpacker"], "tile_telem": ["tile_telem"]},
+          pe=R * (C + NCHK), tile=True, icg=1),
     ]
     return units
 
@@ -275,7 +290,7 @@ UNITS = tile_units(TILE) + core_units(CORE16, "c16_", "16x8")
 # port named clk is neo_top's aclk, so each is timed against the period like any unit; in the neo_top unit only clk is
 # constrained (the aclk-side flops of the flattened FIFOs and synchronizers are not timed there).
 # ---------------------------------------------------------------------------------------------------------------------
-TOP = dict(NX=8, NY=8, ROWS=32, COLS=32, ACC_ROWS=512, ABUF_DEPTH=2048, WBUF_DEPTH=1024, BANK_DEPTH=524288, WPF=32,
+TOP = dict(NX=8, NY=8, ROWS=32, COLS=32, NCHK=4, ACC_ROWS=512, ABUF_DEPTH=2048, WBUF_DEPTH=1024, BANK_DEPTH=524288, WPF=32,
            FETCH_TIMEOUT=1048575, AXI_DW=512, AXI_IDW=4, N_MEM_BRIDGES=8, N_HOST_BRIDGES=1, CTRL_AW=18, CDC_DEPTH=8)
 RTL_FILES += ["cdc_bits.sv", "cdc_fifo.sv", "cdc_sync.sv", "noc_axi_bridge.sv", "top_ctrl.sv", "mesh_ctrl.sv", "neo_top.sv"]
 
@@ -293,29 +308,32 @@ def top_units(P):
         U("top_link_packer", "link_packer", dict(XW=XW, YW=YW, BW=BW, WPF=TT["WPF"]), "beats to 32-word link flits at the chip top's 4-bit x"),
         U("top_link_unpacker", "link_unpacker", dict(XW=XW, YW=YW, BW=BW, WPF=TT["WPF"]), "32-word link flits to beats at the chip top's 4-bit x"),
         U("top_tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX + 1, NSRC=NSRC, BW=BW, ROWS=R, COLS=C, WCW=WCW, IDXW=IDXW, AW=AW, WAW=WAW,
-                                           BAW=BAW, PW=PW, DFD=TT["ACC_ROWS"], FETCH_TIMEOUT=TT["FETCH_TIMEOUT"], DV_HOOKS=0),
+                                           BAW=BAW, PW=PW, NCHK=TT["NCHK"], DFD=TT["ACC_ROWS"], FETCH_TIMEOUT=TT["FETCH_TIMEOUT"], DV_HOOKS=0),
           f"the chip top's tile interface: per-source state for {NSRC} sources (the bridge column has its own); the drain FIFO and the "
-          f"partial-sum rows {NSRC} x 1,024 are leaves (macros)", macros=["neo_mem_rf"]),
-        U("top_noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router at the chip top's widths (the tiles' and the bridge column's)"),
-        U("top_tile_dma", "tile_dma", dict(XW=XW, YW=YW, PDEPTH=32, DV_HOOKS=0), "DMA program engine at the chip top's coordinate width"),
+          f"partial-sum rows {NSRC} x 1,024 are leaves (macros)", macros=["neo_mem_rf"], icg=2),
+        U("top_noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router at the chip top's widths (the tiles' and the bridge column's)", icg=5),
+        U("top_tile_dma", "tile_dma", dict(XW=XW, YW=YW, PDEPTH=32, DV_HOOKS=0), "DMA program engine at the chip top's coordinate width", icg=1),
         U("top_neo_tile", "neo_tile", dict(TT), "the chip top's tile: XW 4, the source index over 9 columns; 32x32 core, 2 MB bank, 1024-bit links",
           children={"neo_core": ["neo_core"], "tile_nic": ["top_tile_nic"], "noc_router": ["top_noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
                     "tile_dma": ["top_tile_dma"], "prog_mem": ["prog_mem"], "host_if": ["host_if"], "esm": ["esm"],
-                    "link_packer": ["top_link_packer"], "link_unpacker": ["top_link_unpacker"]},
-          pe=R * (C + 1)),
+                    "link_packer": ["top_link_packer"], "link_unpacker": ["top_link_unpacker"], "tile_telem": ["tile_telem"]},
+          pe=R * (C + TT["NCHK"]), icg=1),
         U("noc_axi_bridge", "noc_axi_bridge", dict(br, MEM=1, HOST=1),
-          f"NoC-to-AXI4 bridge engine, memory and host roles ({P['AXI_DW']}-bit AXI4; per-source receive state for {NSRC} sources; two CRC beats)"),
-        U("noc_axi_bridge_mem", "noc_axi_bridge", dict(br, MEM=1, HOST=0), "NoC-to-AXI4 bridge engine, the memory role alone"),
+          f"NoC-to-AXI4 bridge engine, memory and host roles ({P['AXI_DW']}-bit AXI4; per-source receive state for {NSRC} sources; two CRC beats; "
+          f"the read queue of 4 and the write buffer {4096 * 8 // P['AXI_DW']} x {P['AXI_DW'] + P['AXI_DW'] // 32} (a leaf, macro))", macros=["neo_mem_rf"]),
+        U("noc_axi_bridge_mem", "noc_axi_bridge", dict(br, MEM=1, HOST=0), "NoC-to-AXI4 bridge engine, the memory role alone", macros=["neo_mem_rf"]),
         U("top_ctrl", "top_ctrl", dict(NX=NX, NY=NY, ROWS=R, COLS=C, BAW=BAW, WPF=TT["WPF"], AXI_DW=P["AXI_DW"], N_MEM=P["N_MEM_BRIDGES"],
                                        N_HOST=P["N_HOST_BRIDGES"], CTRL_AW=P["CTRL_AW"]),
-          "the control plane, AXI side: the AXI4-Lite slave, the global registers, the interrupt"),
-        U("mesh_ctrl", "mesh_ctrl", dict(NX=NX, NY=NY), "the control plane, mesh side: 64 register buses, the tile-enable map, the status levels"),
+          "the control plane, AXI side: the AXI4-Lite slave, the global registers, the interrupt; the lockstep pairs, the bridges' "
+          "counters, the command queue and its 1,024 x 32 command memory (a leaf, macro)", macros=["neo_mem_rf"]),
+        U("mesh_ctrl", "mesh_ctrl", dict(NX=NX, NY=NY), "the control plane, mesh side: 64 register buses, the tile-enable (power) map and its "
+          "64 sequencers, the lockstep comparison, the status levels"),
         U("neo_top", "neo_top", dict(P),
           f"the chip top: {NX}x{NY} tiles and {NY} bridge nodes (own logic: the fences, the bridge FIFOs and the synchronizers)",
           children={"neo_tile": ["top_neo_tile"], "noc_router": ["top_noc_router"], "link_packer": ["top_link_packer"],
                     "link_unpacker": ["top_link_unpacker"], "noc_axi_bridge": ["noc_axi_bridge", "noc_axi_bridge_mem"],
                     "top_ctrl": ["top_ctrl"], "mesh_ctrl": ["mesh_ctrl"]},
-          pe=NX * NY * R * (C + 1)),
+          pe=NX * NY * R * (C + TT["NCHK"])),
     ]
 
 
@@ -519,7 +537,7 @@ def write_macro_lib(recs, pdk, path, libname="neo_macros"):
 # step 1: the unit's first read (slang) and its analysis
 # ---------------------------------------------------------------------------------------------------------------------
 def slang_read_cmd(u, rtl):
-    bb = " ".join(f"--blackboxed-module {m}" for m in list(u["children"]) + u["macros"])
+    bb = " ".join(f"--blackboxed-module {m}" for m in list(u["children"]) + u["macros"] + [ICG_MODULE])
     g = " ".join(f"-G {k}={v}" for k, v in u["params"].items())
     files = " ".join(os.path.join(rtl, f) for f in RTL_FILES)
     return f"read_slang --ignore-timing {bb} --top {u['module']} {g} {files}"
@@ -537,9 +555,13 @@ def analyse(u, nl, pdk):
     the macro records, the child instance counts and the hierarchy-check findings."""
     plan, stubs, macros, kids, problems = [], {}, {}, {}, []
     seen_children = set()
+    icgs = 0
     for ty, groups in nl.groups().items():
         for key, cells in groups.items():
             p = dict(key)
+            if ty == ICG_MODULE:                       # the clock gate (drop 0.43): mapped onto the library's cell after synthesis
+                icgs += len(cells)
+                continue
             if ty in u["macros"]:
                 if "W" not in p or "D" not in p:
                     problems.append(f"{ty}: leaf instance without W / D parameters ({p})")
@@ -573,7 +595,9 @@ def analyse(u, nl, pdk):
     for ty in u["children"]:
         if ty not in seen_children:
             problems.append(f"{ty} is declared a child but the module instantiates none")
-    return dict(plan=plan, stubs=stubs, macros=macros, children=kids, problems=problems)
+    if icgs != u.get("icg_expected", 0):
+        problems.append(f"{icgs} neo_icg instances, the unit declares {u.get('icg_expected', 0)}")
+    return dict(plan=plan, stubs=stubs, macros=macros, children=kids, problems=problems, icgs=icgs)
 
 
 def stub_verilog(name, pins):
@@ -632,7 +656,7 @@ def synth_script(u, an, t, pdk, period_ps, rtl, udir):
         f"abc -script {os.path.join(HERE, 'abc_speed.script')} {libs} {dont} -D {int(round(period_ps))} -constr abc.constr",
         "opt_clean -purge",
         "# the library cells as black boxes, so the JSON carries every pin's direction (the repeater trees need it)",
-    ] + [f"read_liberty -lib {l}" for l in t["libs"]] + [
+    ] + [f"read_liberty -lib {l}" for l in t["libs"]] + icg_map(an, pdk, udir) + [
         f"tee -q -o stat.json stat {libs} -json",
         f"tee -q -o stat.txt stat {libs}",
         "write_verilog -noattr -noexpr -nohex -nodec netlist.v",
@@ -641,10 +665,23 @@ def synth_script(u, an, t, pdk, period_ps, rtl, udir):
     return "\n".join(L) + "\n"
 
 
+def icg_map(an, pdk, udir):
+    """Drop 0.43: the script lines mapping the unit's neo_icg black boxes onto the library's ICG cell (a techmap whose map
+    module is named neo_icg and instantiates the cell as _TECHMAP_REPLACE_, so the instance keeps its name)."""
+    if not an.get("icgs"):
+        return []
+    cell, ck, en, te, gck = pdk["icg"]
+    with open(os.path.join(udir, "icg_map.v"), "w") as f:
+        f.write(f"module {ICG_MODULE} (clk, en, te, gclk);\n  input clk, en, te;\n  output gclk;\n"
+                f"  {cell} _TECHMAP_REPLACE_ (.{ck}(clk), .{en}(en), .{te}(te), .{gck}(gclk));\nendmodule\n")
+    return ["# the clock gates onto the library's integrated clock-gating cell (drop 0.43)", "techmap -map icg_map.v",
+            "opt_clean"]
+
+
 MAX_FANOUT = 32
 
 
-def buffer_fanout(json_path, pdk, skip_ports=("clk", "rst_n")):
+def buffer_fanout(json_path, pdk, skip_ports=("clk", "rst_n", "aclk", "aresetn")):
     """Repeater trees on every net of the unit's top module whose fanout exceeds MAX_FANOUT (what the physical flow
     inserts; the per-unit synthesis cannot see the loads behind its black-box children, so a strobe into 1,056 PEs would
     otherwise be timed as one driver): 4-ary trees of the library's buffer, the clock and the reset nets excepted. The
@@ -663,6 +700,10 @@ def buffer_fanout(json_path, pdk, skip_ports=("clk", "rst_n")):
     for pn in skip_ports:
         if pn in m["ports"]:
             skip_bits.update(b for b in m["ports"][pn]["bits"] if isinstance(b, int))
+    icg_cell, _, _, _, icg_gck = pdk["icg"]            # drop 0.43: a gated clock is a clock -- the clock tree is not ours
+    for cn, c in m["cells"].items():
+        if c["type"] == icg_cell:
+            skip_bits.update(b for b in c["connections"].get(icg_gck, []) if isinstance(b, int))
     # the sinks of every bit: (cell, port, index) of input pins, and ("", port, index) of the module's output ports
     sinks = {}
     for cn, c in m["cells"].items():
@@ -851,11 +892,37 @@ def run_unit(u, t, pdk, args, out, rtl):
     res["own_cells"] = sum(v for k, v in by_type.items() if k not in own_targets)      # library cells of this unit
     res["own_area_um2"] = float(s.get("area", 0.0) or 0.0)
     res["own_flops"] = sum(v for k, v in by_type.items() if "DFF" in k.upper() or k.startswith(("DHL", "DL")))
+    res.update(clock_gating(Netlist(os.path.join(udir, "netlist.json")), pdk, an))
     res["cells_by_type"] = by_type
     res["latches"] = latches(udir)
     res["check"] = check_problems(udir)
     log(f"{u['name']}: yosys done in {res['synth_seconds']:.0f} s: {res['own_cells']:,} cells, {res['own_area_um2']:,.0f} um2")
     return res
+
+
+def clock_gating(nl, pdk, an):
+    """Drop 0.43: the unit's ICG cells, the flops whose clock pin an ICG's gated clock drives, the neo_icg black boxes left
+    unmapped (the gate: none), and per child unit the instances whose clk is a gated clock (their flops count as gated in
+    the subtree's sum)."""
+    icg_cell, _, _, _, icg_gck = pdk["icg"]
+    gated = set()
+    icgs, unmapped = 0, 0
+    for cn, c in nl.cells().items():
+        if c["type"] == icg_cell:
+            icgs += 1
+            gated.update(b for b in c["connections"].get(icg_gck, []) if isinstance(b, int))
+        elif c["type"] == ICG_MODULE:
+            unmapped += 1
+    kids = {target for _, _, target, _ in an["plan"]}
+    own_gated, gated_children = 0, {}
+    for cn, c in nl.cells().items():
+        ty = c["type"]
+        ck = c["connections"].get(pdk["flop_clk"], [])
+        if ("DFF" in ty.upper() or ty.startswith(("DHL", "DL"))) and ck and ck[0] in gated:
+            own_gated += 1
+        elif ty in kids and any(b in gated for b in c["connections"].get("clk", []) if isinstance(b, int)):
+            gated_children[ty] = gated_children.get(ty, 0) + 1
+    return dict(icg_cells=icgs, icg_unmapped=unmapped, own_gated_flops=own_gated, gated_children=gated_children)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -879,6 +946,8 @@ def totals(name, results, memo):
         memo[name] = None
         return None
     cells, area, flops, marea = r["own_cells"], r["own_area_um2"], r["own_flops"], 0.0
+    icgs, gflops = r.get("icg_cells", 0), r.get("own_gated_flops", 0)     # drop 0.43
+    gch = r.get("gated_children") or {}
     pes = 1 if UNIT[name]["module"] == "mac_pe" else 0
     for m, rec in (r.get("macros") or {}).items():
         marea += rec["area_um2"] * rec["instances"]
@@ -888,7 +957,10 @@ def totals(name, results, memo):
             memo[name] = None
             return None
         cells += n * ct["cells"]; area += n * ct["cell_area_um2"]; flops += n * ct["flops"]; marea += n * ct["macro_area_um2"]; pes += n * ct["pe_count"]
-    memo[name] = dict(cells=cells, cell_area_um2=area, flops=flops, macro_area_um2=marea, total_area_um2=area + marea, pe_count=pes)
+        g = gch.get(child, 0)                          # instances whose clk is a gated clock: all their flops are gated
+        icgs += n * ct["icgs"]; gflops += g * ct["flops"] + (n - g) * ct["gated_flops"]
+    memo[name] = dict(cells=cells, cell_area_um2=area, flops=flops, macro_area_um2=marea, total_area_um2=area + marea, pe_count=pes,
+                      icgs=icgs, gated_flops=gflops)
     return memo[name]
 
 
@@ -1419,6 +1491,10 @@ def main():
             continue
         if r.get("latches"):
             gates.append(f"{n}: {r['latches']} latches")
+        if r.get("icg_unmapped"):
+            gates.append(f"{n}: {r['icg_unmapped']} neo_icg not mapped onto the library's ICG cell")
+        if r.get("icg_cells", 0) != UNIT[n].get("icg_expected", 0):
+            gates.append(f"{n}: {r.get('icg_cells', 0)} ICG cells, {UNIT[n].get('icg_expected', 0)} declared")
         if r.get("check") and r["check"].get("multiple_drivers"):
             gates.append(f"{n}: {r['check']['multiple_drivers']} multiply-driven nets")
         if not r.get("pe_check", True):
@@ -1434,7 +1510,7 @@ def main():
         log("GATES FAILED: " + "; ".join(gates))
         return 1
     log("GATES: all passed (every unit synthesized, no latch, no multiply-driven net, the hierarchy consistent, the PE counts, "
-        "DV_HOOKS = 0 clean, every timing run complete)")
+        "DV_HOOKS = 0 clean, every clock gate mapped onto the library's ICG cell as declared, every timing run complete)")
     return 0
 
 

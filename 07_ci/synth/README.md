@@ -88,7 +88,13 @@ figures come from a memory compiler on the target node; these keep the tile's ar
 Every unit synthesizes; no latch in the generic netlist; no multiply-driven net (`check`); the hierarchy check; the
 `mac_pe` count equals ROWS × (COLS + 1) on the 16×8 core (144) and the tile (1,056); at `DV_HOOKS = 0`, on the synthesized
 netlists, no `dv_*` input of any unit drives logic and every `dv_*` output is a constant or a child's output — over the
-whole tile tree; every OpenSTA run completes and writes its model. **Timing is reported, not gated**: ASAP7 is an academic
+whole tile tree; every OpenSTA run completes and writes its model; and (drop 0.43) the clock gates: every unit holds exactly
+the `neo_icg` instances its definition declares (`U(..., icg=N)`: the core's datapath, each requantizer, the NIC's two halves,
+the router's five output stages, each DMA engine, the tile's power domain), each mapped onto the library's integrated
+clock-gating cell (`ICGx1_ASAP7_75t_R`, `CLKGATETST_X1`: a techmap of the black-boxed `neo_icg` after synthesis — its
+behavioural latch never reaches the netlist, so the latch gate stands) and none left unmapped. The report adds per unit the
+ICG cells and the clock-gated flops (the flops whose clock pin a gate drives, a child's all when the child's clk is a gated
+net) with their fraction of the unit's flops. **Timing is reported, not gated**: ASAP7 is an academic
 predictive 7 nm PDK without foundry data; its SS corner is slower than an N5A worst-case corner by a factor the report does
 not know — the picoseconds are the library's, the *paths* and the *shares* are the design's. A path that is 3 × over 500 ps
 here is a design item; one 20 % over is a question for the real library. Nangate45 (45 nm) is a second data point for the
