@@ -282,7 +282,10 @@ UNITS = tile_units(TILE) + core_units(CORE16, "c16_", "16x8")
 # port named clk is neo_top's aclk, so each is timed against the period like any unit; in the neo_top unit only clk is
 # constrained (the aclk-side flops of the flattened FIFOs and synchronizers are not timed there).
 # ---------------------------------------------------------------------------------------------------------------------
-TOP = dict(NX=8, NY=8, ROWS=32, COLS=32, ACC_ROWS=512, ABUF_DEPTH=2048, WBUF_DEPTH=1024, BANK_DEPTH=524288, WPF=32,
+# NCHK (drop 0.43, an integration fix of the 0.42 merge): neo_top's tiles are the silicon tile, NCHK = 4 as TILE -- neo_top
+# passes it to neo_tile (default 1, the cocotb top suite's dense tiles); before, the top's tile unit took TILE's NCHK = 4
+# while neo_top instantiated neo_tile at the default 1, and the hierarchy and PE-count gates failed (run 180)
+TOP = dict(NCHK=4, NX=8, NY=8, ROWS=32, COLS=32, ACC_ROWS=512, ABUF_DEPTH=2048, WBUF_DEPTH=1024, BANK_DEPTH=524288, WPF=32,
            FETCH_TIMEOUT=1048575, AXI_DW=512, AXI_IDW=4, N_MEM_BRIDGES=8, N_HOST_BRIDGES=1, CTRL_AW=18, CDC_DEPTH=8)
 RTL_FILES += ["cdc_bits.sv", "cdc_fifo.sv", "cdc_sync.sv", "noc_axi_bridge.sv", "top_ctrl.sv", "mesh_ctrl.sv", "neo_top.sv"]
 
@@ -299,7 +302,7 @@ def top_units(P):
     return [
         U("top_link_packer", "link_packer", dict(XW=XW, YW=YW, BW=BW, WPF=TT["WPF"]), "beats to 32-word link flits at the chip top's 4-bit x"),
         U("top_link_unpacker", "link_unpacker", dict(XW=XW, YW=YW, BW=BW, WPF=TT["WPF"]), "32-word link flits to beats at the chip top's 4-bit x"),
-        U("top_tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX + 1, NSRC=NSRC, BW=BW, ROWS=R, COLS=C, WCW=WCW, IDXW=IDXW, AW=AW, WAW=WAW,
+        U("top_tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX + 1, NSRC=NSRC, BW=BW, ROWS=R, COLS=C, WCW=WCW, NCHK=P["NCHK"], IDXW=IDXW, AW=AW, WAW=WAW,
                                            BAW=BAW, PW=PW, DFD=TT["ACC_ROWS"], FETCH_TIMEOUT=TT["FETCH_TIMEOUT"], DV_HOOKS=0),
           f"the chip top's tile interface: per-source state for {NSRC} sources (the bridge column has its own); the drain FIFO and the "
           f"partial-sum rows {NSRC} x 1,024 are leaves (macros)", macros=["neo_mem_rf"]),
@@ -309,7 +312,7 @@ def top_units(P):
           children={"neo_core": ["neo_core"], "tile_nic": ["top_tile_nic"], "noc_router": ["top_noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
                     "tile_dma": ["top_tile_dma"], "prog_mem": ["prog_mem"], "host_if": ["host_if"], "esm": ["esm"],
                     "link_packer": ["top_link_packer"], "link_unpacker": ["top_link_unpacker"]},
-          pe=R * (C + 1)),
+          pe=R * (C + P["NCHK"])),
         U("noc_axi_bridge", "noc_axi_bridge", dict(br, MEM=1, HOST=1),
           f"NoC-to-AXI4 bridge engine, memory and host roles ({P['AXI_DW']}-bit AXI4; per-source receive state for {NSRC} sources; two CRC beats)"),
         U("noc_axi_bridge_mem", "noc_axi_bridge", dict(br, MEM=1, HOST=0), "NoC-to-AXI4 bridge engine, the memory role alone"),
@@ -322,7 +325,7 @@ def top_units(P):
           children={"neo_tile": ["top_neo_tile"], "noc_router": ["top_noc_router"], "link_packer": ["top_link_packer"],
                     "link_unpacker": ["top_link_unpacker"], "noc_axi_bridge": ["noc_axi_bridge", "noc_axi_bridge_mem"],
                     "top_ctrl": ["top_ctrl"], "mesh_ctrl": ["mesh_ctrl"]},
-          pe=NX * NY * R * (C + 1)),
+          pe=NX * NY * R * (C + P["NCHK"])),
     ]
 
 

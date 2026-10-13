@@ -18,7 +18,7 @@ as well).
 
 The design is synthesized as **units**: one Yosys run per module at its silicon parameters, every child module that is a
 unit of its own black-boxed — so each module's logic is synthesized once and instantiated by name (the 32×32 array is
-1,024 instances of the `mac_pe` unit and 32 of `mac_pe_chk`, not 1,056 copies through ABC) — while the small helpers
+1,024 instances of the `mac_pe` unit and 128 of `mac_pe_chk`, not 1,152 copies through ABC) — while the small helpers
 (delay lines, ECC, CRC, the checkers) flatten into their parents. The unit table is `UNITS` in `synth.py`: the tile's units
 (`mac_pe`, `mac_pe_chk`, `systolic_array`, `neo_mac_core`, `act_feeder`, `acc_bank`, `neo_mac_core_v02`, `wbuf_mem`,
 `requant`, `core_seq`, `neo_core`, `sram_bank`, `mbist`, `bank_bist_wrap`, `crc16_beat`, `ecc39_enc`, `ecc39_dec`,
@@ -86,7 +86,8 @@ figures come from a memory compiler on the target node; these keep the tile's ar
 ## Gates (the job fails on any)
 
 Every unit synthesizes; no latch in the generic netlist; no multiply-driven net (`check`); the hierarchy check; the
-`mac_pe` count equals ROWS × (COLS + 1) on the 16×8 core (144) and the tile (1,056); at `DV_HOOKS = 0`, on the synthesized
+`mac_pe` count equals ROWS × (COLS + NCHK) on the 16×8 core (192), the tile (1,152) and the chip top (73,728; NCHK = 4
+throughout since drop 0.42, the chip top's since drop 0.43); at `DV_HOOKS = 0`, on the synthesized
 netlists, no `dv_*` input of any unit drives logic and every `dv_*` output is a constant or a child's output — over the
 whole tile tree; every OpenSTA run completes and writes its model. **Timing is reported, not gated**: ASAP7 is an academic
 predictive 7 nm PDK without foundry data; its SS corner is slower than an N5A worst-case corner by a factor the report does
