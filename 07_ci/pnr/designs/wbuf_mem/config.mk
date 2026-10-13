@@ -2,3 +2,8 @@
 # fakeram7_512x936_g2_1w1r (121.4 x 166.6 um); 6.5 k cells -- drop 0.43, stream A3
 export DESIGN_NAME = wbuf_mem
 include $(dir $(DESIGN_CONFIG))../neo_common.mk
+
+# the macro against the right edge with its pin edge inward (macro_place.tcl), and room around it: run 183's 55 % core
+# (195 um square) left the 1,872 data pins 11 um from the die edge and global routing overflowed
+export CORE_UTILIZATION = 45
+export MACRO_PLACEMENT_TCL = $(dir $(DESIGN_CONFIG))macro_place.tcl
