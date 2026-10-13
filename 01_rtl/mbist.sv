@@ -6,6 +6,13 @@
 //   coupling faults between adjacent columns. The engine owns the bank's ports while running
 //   (bist_active), goes through the ECC encoder/decoder like normal traffic, and reports the first
 //   failing address. Scheduled by the safety island inside the FTTI on banks not in use.
+//   Drop 0.43 -- the check registered: the read data reaches the engine through the bank's 16 SECDED decoders (the macro's
+//   access, then the decode: 683 ps of the bank's timing model on ASAP7 SS), and the compare against the background, the
+//   first failing lane and its word address took 622 ps more inside the engine -- 1,345 ps register to register, the
+//   bank wrapper's period. The S_CHK cycle now registers only the lanes that failed (hit_q: mismatch or correction, 16
+//   flops), whether any mismatched (mism_q) and the row (row_q); the cycle after records the first failure (fail,
+//   fail_ce, fail_addr) from those registers. The March sequence and its cycle count are unchanged; done rises one cycle
+//   after the last check (chk_q: a registered check is still to be recorded), so fail is final when done is seen.
 module mbist #(
   parameter int AW    = 12,                  // word address width (fail_addr)
   parameter int WORDS = 4096,                // words tested, a multiple of LANES
@@ -46,6 +53,10 @@ module mbist #(
   logic          up;
   logic          has_read, has_write;
   logic [31:0]   exp_rd, wr_val;
+  logic          chk_q;           // drop 0.43: a check registered last cycle, recorded this cycle
+  logic [LANES-1:0] hit_q;        // its lanes that failed
+  logic          mism_q;          // some lane mismatched (else every failing lane was a correction)
+  logic [RAW-1:0] row_q;          // its row
 
   assign bg     = (elem < 4'd6) ? 32'h00000000 : 32'h55555555;
   assign bg_inv = ~bg;
@@ -63,7 +74,7 @@ module mbist #(
   end
   assign addr   = up ? idx[RAW-1:0] : RAW'(ROWS - 1 - 32'(idx));
   assign active = (state != S_IDLE) && (state != S_DONE);
-  assign done   = (state == S_DONE);
+  assign done   = (state == S_DONE) && !chk_q;
   assign re     = (state == S_R);
   assign rrow   = addr;
   assign we     = (state == S_W);
@@ -74,20 +85,24 @@ module mbist #(
     first_lane = 4'd0;
     for (int l = 0; l < LANES; l++) lane_bad[l] = (rdata[32*l +: 32] != exp_rd);
     lane_hit = lane_bad | ce_lane;
-    for (int l = LANES - 1; l >= 0; l--) if (lane_hit[l]) first_lane = 4'(l);
+    for (int l = LANES - 1; l >= 0; l--) if (hit_q[l]) first_lane = 4'(l);
   end
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state <= S_IDLE; elem <= '0; idx <= '0; fail <= 1'b0; fail_addr <= '0; fail_ce <= 1'b0;
+      chk_q <= 1'b0; hit_q <= '0; mism_q <= 1'b0; row_q <= '0;
     end else begin
+      // the check of the read data, registered (S_CHK), and the first failure recorded from the registers a cycle later
+      chk_q <= (state == S_CHK) && rvalid;
+      if (state == S_CHK) begin hit_q <= lane_hit; mism_q <= (lane_bad != '0); row_q <= addr; end
+      if (chk_q && (hit_q != '0) && !fail) begin
+        fail <= 1'b1; fail_ce <= !mism_q; fail_addr <= AW'(row_q) * AW'(LANES) + AW'(first_lane);
+      end
       case (state)
         S_IDLE: if (start) begin elem <= '0; idx <= '0; fail <= 1'b0; fail_ce <= 1'b0; fail_addr <= '0; state <= has_read ? S_R : S_W; end
         S_R:    state <= S_CHK;                                  // rdata valid next cycle
         S_CHK: begin
-          if (rvalid && (lane_hit != '0) && !fail) begin
-            fail <= 1'b1; fail_ce <= (lane_bad == '0); fail_addr <= AW'(addr) * AW'(LANES) + AW'(first_lane);
-          end
           state <= has_write ? S_W : S_IDLE;                    // S_IDLE here means "advance" (see below)
           if (!has_write) begin
             if (idx == IW'(ROWS - 1)) begin

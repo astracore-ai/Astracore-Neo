@@ -18,6 +18,11 @@
 //   The sequencer starts the first run of channel tile ct only when tiles_ready > ct, which is what
 //   makes a 2-region activation buffer safe: FETCH_A ct0, FETCH_A ct1, GO, WAIT_FREE 0, FETCH_A ct2
 //   into region 0, ... with the core never reading a region being refilled.
+//   Drop 0.43 -- the program memory's read is registered (prog_mem: the decoded word at the previous cycle's address), so
+//   pc_out presents the pc this engine will have in the next cycle (pc_nx: 0 at a start, pc + 1 in S_FETCH, else pc) and
+//   ins_in is the instruction at the current pc in every cycle, as the combinational read gave it: the engine's timing
+//   is unchanged (no cycle per instruction). The alternative, one more state per instruction to wait for the registered
+//   word, costs a cycle per executed instruction (synth_report_drop043.md measures both).
 module tile_dma #(
   parameter int XW = 2,
   parameter int YW = 2,
@@ -67,8 +72,14 @@ module tile_dma #(
   logic signed [15:0] tiles_freed;
   logic        done_seen;
   logic signed [15:0] ready_q;
+  logic [PAW-1:0] pc_nx;           // drop 0.43: the pc of the next cycle, the program memory's read address
 
-  assign pc_out  = pc;
+  always_comb begin
+    pc_nx = pc;
+    if (((state == S_IDLE) || (state == S_END)) && prog_start) pc_nx = '0;
+    else if (state == S_FETCH)                                 pc_nx = pc + 1;
+  end
+  assign pc_out  = pc_nx;
   assign fsm_err = (state > S_WAITNTF);
 
   assign op       = ins[63:60];

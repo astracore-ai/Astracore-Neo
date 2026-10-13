@@ -1,6 +1,11 @@
 // prog_mem.sv -- the DMA program memory with SECDED (drop 0.16; 32 entries since drop 0.22): DEPTH x 64-bit instructions stored as two
 //   (39,32) lanes; every fetch is corrected (prog_ce) or flagged uncorrectable (prog_ue), both sticky.
 //   Shared by the lockstep pair of DMA engines in neo_tile.
+//   Drop 0.43 -- the decoded instruction registered: rdata is the corrected word at the address of the previous cycle (the
+//   32:1 read mux and the two decoders, 770 ps from raddr, were a combinational read into the DMA's instruction register;
+//   now they end in rdata's 64 flops). The DMA presents the address of the instruction it will hold next (tile_dma's
+//   pc_out = the next value of its pc), so the registered word is always the one at its pc: no cycle is added. The sticky
+//   flags are set from the decode of the address presented, as before.
 module prog_mem #(parameter int DEPTH = 32, AW = $clog2(DEPTH), DV_HOOKS = 0) (
   input  logic          clk,
   input  logic          rst_n,
@@ -26,7 +31,10 @@ module prog_mem #(parameter int DEPTH = 32, AW = $clog2(DEPTH), DV_HOOKS = 0) (
   ecc39_enc u_e1 (.d(wdata[63:32]), .p(wp[1]), .op(wop[1]));
   ecc39_dec u_d0 (.d(mem[raddr][0][31:0]), .p(mem[raddr][0][37:32]), .op(mem[raddr][0][38]), .d_out(rfix[0]), .ce(ce[0]), .ue(ue[0]));
   ecc39_dec u_d1 (.d(mem[raddr][1][31:0]), .p(mem[raddr][1][37:32]), .op(mem[raddr][1][38]), .d_out(rfix[1]), .ce(ce[1]), .ue(ue[1]));
-  assign rdata = {rfix[1], rfix[0]};
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) rdata <= '0;
+    else        rdata <= {rfix[1], rfix[0]};
+  end
   always_ff @(posedge clk) begin
     if (we) begin
       mem[waddr][0] <= {wop[0], wp[0], wdata[31:0]};
