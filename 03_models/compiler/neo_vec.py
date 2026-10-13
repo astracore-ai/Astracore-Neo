@@ -347,15 +347,16 @@ def golden_epilogue(ep, rows, rbuf_rows=None, cols=None, acc_rows=64, vu=None):
     return q, out, vu
 
 
-def cycles_per_row(prog):
-    """The unit's cycles per row for a program (vec_ref's count: the row's load, its ops, END)."""
+def cycles_per_row(prog, cols=32):
+    """The unit's cycles per row for a program on COLS lanes (vec_ref's count: the row's load, its ops, END -- none after
+    a sixteenth op)."""
     n = 1
-    for w in prog:
+    for w in list(prog)[:16]:
         op = w & 15
         if op == vr.OP_END:
-            break
-        n += 2 if op in vr.TWO_CYCLE else 1
-    return n + 1
+            return n + 1
+        n += vr.op_cycles(op, cols)
+    return n if len(prog) >= 16 else n + 1
 
 
 if __name__ == "__main__":

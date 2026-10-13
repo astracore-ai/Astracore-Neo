@@ -501,7 +501,7 @@ async def c14_row_norm(dut):
     for w0 in ep.vec.prog:
         fc.sample_vec_op(vr.OP_NAMES[w0 & 15])
     dut._log.info(f"C14: conv + in-row layer norm over {COLS} channels, clip 3 sigma ({len(ep.vec.prog)} ops, "
-                  f"{nv.cycles_per_row(ep.vec.prog)} cycles a row): {M} INT8 rows bit-exact, the unit {ecyc} cycles, flags clean; "
+                  f"{nv.cycles_per_row(ep.vec.prog, COLS)} cycles a row): {M} INT8 rows bit-exact, the unit {ecyc} cycles, flags clean; "
                   f"max |error| against the float norm {err:.2f} LSB")
     fc.report("funcov_neo_core.yml")
 

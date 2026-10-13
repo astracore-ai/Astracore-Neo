@@ -13,9 +13,13 @@ saturates to INT32 unless noted; a rounding shift is round half up: (v + 2^(sh-1
            ka / kb: operand a / b is the constant K[a] / K[b] instead of the scalar register S[a] / S[b]
   table    host address [11:8]: 0 PROG, 1 LUTV, 2 LUTS, 3 SC, 4 BI, 5 K; [7:0] the entry (host_if's VEC_ADDR / VEC_DATA)
 
-Cycles: a row costs 2 (its load and its END) plus its ops' cycles (two for MUL_SCALE, LUT, RED, BMUL, SQR, SMUL, SLUT, one
-for the others; a row also ends after slot 15 without an END), the first row one more (its read); the unit starts the
-cycle after the sequencer's done and its own done pulses after the last row (VecUnit.run returns the count).
+Cycles: a row costs 2 (its load and its END) plus its ops' cycles (op_cycles: the unit's pipeline -- four for the
+multiplies MUL_SCALE / BMUL / SQR / SMUL (the operand registered, then vec_mul's three stages), three for LUT / SLUT,
+CLAMP, ADD_ROW, BSUB, RSST and SALU, log2 COLS / 2 + 2 for RED (the lane tree's stages -- pairwise, then
+radix 4 -- and the result: 4 at 32 lanes, 3 at 8), one for END, EMIT, SLD and RELOAD; a row also ends after slot 15
+without an END), the
+first row one more (its read); the unit starts the cycle after the sequencer's done and its own done pulses after the
+last row (VecUnit.run returns the count).
 
 Used by run_vec_unit.py (V1 / V2 under neosim), tb/tb_vec_unit.sv's vectors (--out), compiler/neo_vec.py (the programs and
 tables of the transformer operators) and the tests' end-to-end golden models.
@@ -27,7 +31,8 @@ OP_END, OP_EMIT, OP_ADD_ROW, OP_MUL_SCALE, OP_CLAMP, OP_LUT, OP_RED, OP_BSUB = r
 OP_BMUL, OP_SQR, OP_SLD, OP_RSST, OP_SALU, OP_SMUL, OP_SLUT, OP_RELOAD = range(8, 16)
 OP_NAMES = ["END", "EMIT", "ADD_ROW", "MUL_SCALE", "CLAMP", "LUT", "RED", "BSUB", "BMUL", "SQR", "SLD", "RSST", "SALU",
             "SMUL", "SLUT", "RELOAD"]
-TWO_CYCLE = {OP_MUL_SCALE, OP_LUT, OP_RED, OP_BMUL, OP_SQR, OP_SMUL, OP_SLUT}
+OP_CYCLES = {OP_END: 1, OP_EMIT: 1, OP_ADD_ROW: 3, OP_MUL_SCALE: 4, OP_CLAMP: 3, OP_LUT: 3, OP_BSUB: 3, OP_BMUL: 4,
+             OP_SQR: 4, OP_SLD: 1, OP_RSST: 3, OP_SALU: 3, OP_SMUL: 4, OP_SLUT: 3, OP_RELOAD: 1}
 T_PROG, T_LUTV, T_LUTS, T_SC, T_BI, T_K = range(6)
 I32_MIN, I32_MAX = -(1 << 31), (1 << 31) - 1
 
@@ -48,6 +53,18 @@ def disasm(w):
     f = decode(w)
     return (f"{OP_NAMES[f['op']]}(d={f['d']},a={'K' if f['ka'] else 'S'}{f['a']},b={'K' if f['kb'] else 'S'}{f['b']},"
             f"sh={f['sh']},k={f['k']},t={f['t']},mode={f['mode']})")
+
+
+def red_cycles(cols):
+    """RED's cycles: the lane tree's log2 COLS levels (lanes padded to a power of two) in stages -- the first pairwise,
+    then radix 4 (radix 2 for a last pair) --, each registered, then the result into S[d]."""
+    lv = (cols - 1).bit_length() if cols > 1 else 1
+    return 1 + lv // 2 + 1
+
+
+def op_cycles(op, cols):
+    """An op's cycles on the unit of COLS lanes (rtl/vec_unit.sv's header)."""
+    return red_cycles(cols) if op == OP_RED else OP_CYCLES[op]
 
 
 def sat(v, bits=32):
@@ -142,7 +159,7 @@ class VecUnit:
             if op == OP_END:
                 cyc += 1
                 break
-            cyc += 2 if op in TWO_CYCLE else 1
+            cyc += op_cycles(op, self.C)
             if op == OP_EMIT:
                 out.append(list(X))
             elif op == OP_ADD_ROW:

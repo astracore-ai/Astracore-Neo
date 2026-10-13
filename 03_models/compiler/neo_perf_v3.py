@@ -50,7 +50,7 @@ WFACTOR = 1.0            # drop 0.42: weight bytes per weight, 1.25 on the NCHK 
                          # drop 0.43: x 0.5 with --int4 (the bank holds 4-bit weights, the NIC expands them at the fetch)
 VEC_ROW = 0              # drop 0.43: the vector unit's cycles per output row after the sequencer's drain (an owner's or a solo
                          # group's epilogue; 0 = the bypass) -- --vec-silu: every layer's SiLU exact on the unit (neo_vec's
-                         # prog_activation, 7 cycles a row) instead of the requantizer's ReLU
+                         # prog_activation: 10 cycles a row on the pipelined unit) instead of the requantizer's ReLU
 
 
 def build_groups(layers, ksplit):
