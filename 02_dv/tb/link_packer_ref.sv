@@ -1,9 +1,12 @@
 /* verilator lint_off DECLFILENAME */        // two modules, the reference and the pair, in one file by design
 // link_packer_ref.sv -- the drop-0.40 link_packer (rtl/link_pack.sv as it was before drop 0.41), kept as the golden model
 //   of the flit stream: the link side combinational from core_flit (the merge, the 1,077-bit output mux and its parity in
-//   the beat's cycle). Never to change. link_packer_pair puts it and rtl/link_pack.sv's link_packer on the same beats
-//   (sim/run_nic.py I13): with link_ready held high the registered packer must show the reference's link flit one cycle
-//   later, bit for bit, and the same core_ready in every cycle.
+//   the beat's cycle). Never to change. link_packer_pair puts it beside rtl/link_pack.sv's link_packer, each with its own
+//   beat port (sim/run_nic.py I14): drop 0.41 drove both with the same beats, and with link_ready held high the packer with
+//   the registered link side showed the reference's link flit one cycle later, bit for bit, with the same core_ready in
+//   every cycle; since drop 0.42 the packer registers the beat too, so the test feeds the reference through a model of
+//   that input register (a one-beat pipeline stage) and checks the same two things -- the link flit two cycles after the
+//   bare reference would show it.
 module link_packer_ref #(
   parameter int XW = 2, YW = 2, BW = 16, WPF = 1,
   parameter int DWB = 32 + 32 * BW,                        // beat payload (interface side)
@@ -135,7 +138,8 @@ module link_packer_ref #(
 endmodule
 
 
-// the reference and the design on the same beats; link_ready per side (n_* the design, r_* the reference)
+// the reference and the design side by side; a beat port and link_ready per side (n_* / core_* the design, r_* the
+// reference)
 module link_packer_pair #(
   parameter int XW = 2, YW = 2, BW = 16, WPF = 32,
   parameter int DWB = 32 + 32 * BW,
@@ -147,6 +151,8 @@ module link_packer_pair #(
   input  logic           rst_n,
   input  logic           core_valid,
   input  logic [FWB-1:0] core_flit,
+  input  logic           r_core_valid,
+  input  logic [FWB-1:0] r_core_flit,
   input  logic           n_link_ready,
   input  logic           r_link_ready,
   output logic           n_core_ready,
@@ -160,6 +166,6 @@ module link_packer_pair #(
     .clk(clk), .rst_n(rst_n), .core_valid(core_valid), .core_flit(core_flit), .core_ready(n_core_ready),
     .link_valid(n_link_valid), .link_flit(n_link_flit), .link_ready(n_link_ready));
   link_packer_ref #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_ref (
-    .clk(clk), .rst_n(rst_n), .core_valid(core_valid), .core_flit(core_flit), .core_ready(r_core_ready),
+    .clk(clk), .rst_n(rst_n), .core_valid(r_core_valid), .core_flit(r_core_flit), .core_ready(r_core_ready),
     .link_valid(r_link_valid), .link_flit(r_link_flit), .link_ready(r_link_ready));
 endmodule

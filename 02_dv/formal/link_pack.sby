@@ -1,12 +1,20 @@
 # link_pack -- packer -> unpacker round trip: same words, order and fields; flit parity and size; CRC flush; progress
-# BW = 16, WPF = 32, XW = YW = 3 (the silicon links), the drop 0.41 packer with its registered link side: the beats out
-# carry the words accepted, in order, none invented or repeated, with their type / tag / head / stream fields and PSUM
-# columns; every link flit even parity and 1..WPF words, every beat out even parity and 1..BW words; a CRC (any one-word
-# type) accepted leaves only itself in flight; with the sink ready no beat waits more than 2 cycles (the bound of the
-# combinational link side: the register did not add a cycle). Full proof by k-induction with invariants over the output
-# register, the pending flit and a ghost of its prefix word parities (drop 0.41); link_pack_fv.sv holds the harness.
+# BW = 16, WPF = 32, XW = YW = 3 (the silicon links), the drop 0.42 packer with both sides registered (the beat in an input
+# register, the link flit in an output register): the beats out carry the words accepted, in order, none invented or
+# repeated, with their type / tag / head / stream fields and PSUM columns; every link flit even parity and 1..WPF words,
+# every beat out even parity and 1..BW words; a CRC (any one-word type) taken from the input register leaves only itself
+# in flight besides the beat behind it; with the sink ready no beat waits more than 2 cycles (the bound of the
+# combinational packer: the registers add no cycle to it). Full proof by k-induction with invariants over the input
+# register, the output register, the pending flit and a ghost of its prefix word parities; link_pack_fv.sv holds the
+# harness. Two tasks (drop 0.42; one took 788 s in the sandbox, above the job's 600 s per task), each a full proof of
+# its group of properties with the structural invariants: stream (the round trip, the counts in flight, the sizes, the
+# CRC flush, the wait bound) and parity (the parity of every link flit and beat out, the running-parity invariants).
 # The engine is bitwuzla: the running parity's induction step (word parities through the merge's barrel shift) does not
-# close with yices in 540 s, bitwuzla closes the whole set in about two minutes.
+# close with yices in 540 s; for the stream group bitwuzla took 323 s, yices 690 s.
+[tasks]
+stream
+parity
+
 [options]
 mode prove
 depth 2
@@ -16,7 +24,8 @@ smtbmc bitwuzla
 
 [script]
 plugin -i slang
-read_slang -DFORMAL --top link_pack_fv link_pack.sv link_pack_fv.sv
+stream: read_slang -DFORMAL -DLP_NO_PARITY --top link_pack_fv link_pack.sv link_pack_fv.sv
+parity: read_slang -DFORMAL -DLP_NO_STREAM --top link_pack_fv link_pack.sv link_pack_fv.sv
 prep -top link_pack_fv
 
 [files]

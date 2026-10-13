@@ -27,6 +27,14 @@
 //   beat) registered as it joins and folded into a running bit when the next beat joins, so the emitted parity is a
 //   reduction of 24 registered bits instead of 1,077. Throughput is unchanged (a 32-word flit every second cycle at 16
 //   words per beat, back-to-back flits one per cycle while link_ready is high); latency +1 cycle.
+//   Drop 0.42: the beat side registered too. The merge decision (same / fits: the beat's type, head, tag, hdr[19:14],
+//   PSUM column and word count against the pending flit's) was in the input cycle, from core_flit through the compares
+//   into the ~60 count and thermometer flops (the unit's worst path on the ASAP7 SS proxy, -263 ps at 500 ps with 0.2 of
+//   the period of input delay; in the tile, behind the NIC's transmit beat). An input register (iv / ib: one beat, its
+//   fields and 16 words) now holds the beat the pending logic decides on, so same / fits compare register against
+//   register, and core_flit reaches nothing but that register. It is a plain pipeline stage: it takes a beat when it is
+//   empty or when its own beat moves on this cycle (core_ready = !iv || the decision's ready), so the throughput is the
+//   one above, a beat per cycle while the decision takes them; latency +1 cycle (two against the drop 0.40 packer).
 //   Packer, WPF < BW (the 16x8 and 8x8-core builds, WPF = 1): a beat is sent as ceil(n / WPF) flits of up to WPF words, so
 //   the link sees the same single-word flits, in the same order, as before drop 0.29.
 //   Unpacker: a flit of n words is presented as ceil(n / BW) beats of up to BW words (two per 32-word flit; one, as it is,
@@ -55,23 +63,37 @@ module link_packer #(
   localparam int BWL = $clog2(BW);                         // the low bits of a beat's count field (drop 0.41)
   localparam int VWB = 32 * BW;
   localparam int VWL = 32 * WPF;
-  logic [HW-1:0]  in_head;
-  logic [2:0]     in_type;
-  logic [8:0]     in_tag;
-  logic [19:0]    in_hdr;
-  logic [VWB-1:0] in_words;
-  logic           in_data;
-  assign in_head  = core_flit[DWB +: HW];
-  assign in_type  = core_flit[DWB-1 -: 3];
-  assign in_tag   = core_flit[DWB-4 -: 9];
-  assign in_hdr   = core_flit[DWB-13 -: 20];
-  assign in_words = core_flit[VWB-1:0];
-  assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
   logic unused_core_parity;                                // the flit's parity is the router's business (lint)
   assign unused_core_parity = core_flit[FWB-1];
 
   generate
     if (WPF >= BW) begin : g_merge
+      // the input register (drop 0.42): the beat the pending logic below decides on, without its parity
+      logic           iv;                                   // it holds a beat
+      logic [FWB-2:0] ib;                                   // {head, type, tag, hdr, words} of that beat
+      logic           i_ready;                              // the pending logic takes the registered beat this cycle
+      logic [HW-1:0]  in_head;
+      logic [2:0]     in_type;
+      logic [8:0]     in_tag;
+      logic [19:0]    in_hdr;
+      logic [VWB-1:0] in_words;
+      logic           in_data;
+      assign in_head  = ib[DWB +: HW];
+      assign in_type  = ib[DWB-1 -: 3];
+      assign in_tag   = ib[DWB-4 -: 9];
+      assign in_hdr   = ib[DWB-13 -: 20];
+      assign in_words = ib[VWB-1:0];
+      assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
+      assign core_ready = !iv || i_ready;                   // empty, or its beat moves on this cycle
+      always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)          iv <= 1'b0;
+        else if (core_ready) iv <= core_valid;
+      end
+      // the beat itself without reset (a plain flop: the reset flop's clock-to-output, behind the count field's fanout into
+      // the merge arithmetic, was the unit's worst path): read only while iv, written with every beat taken
+      always_ff @(posedge clk) begin
+        if (core_ready && core_valid) ib <= core_flit[FWB-2:0];
+      end
       // The pending flit lives in one of two word buffers (cur). A data beat that is taken is written, unconditionally,
       // into the pending buffer at word pend_cnt (where it goes if it merges) AND into the other buffer at word 0 (where
       // it goes if it starts the next flit); the merge decision then only picks the buffer (cur flips on a start) and the
@@ -118,14 +140,14 @@ module link_packer #(
       assign fits      = (in_hdr[13:8] < 6'(BW)) && (room_big || (in_hdr[8 +: BWL] < pend_room[BWL-1:0]));
       assign same      = (in_type == pend_type) && (in_head == pend_head) && (in_tag == pend_tag) &&
                          (in_hdr[19:14] == pend_hhi) && (in_type != T_PSUM || in_hdr[7:0] == pend_ncol);
-      assign mergeable = pend_valid && core_valid && in_data && same && fits;
+      assign mergeable = pend_valid && iv && in_data && same && fits;
       // the pending flit goes out when it is full, or when the next beat cannot join it
-      assign emit_pend = pend_valid && (full || (core_valid && !mergeable));
-      assign pass      = core_valid && !in_data && !pend_valid;      // single-word types pass through
+      assign emit_pend = pend_valid && (full || (iv && !mergeable));
+      assign pass      = iv && !in_data && !pend_valid;              // single-word types pass through
       // a data beat joins or starts the pending flit when the stage could take a flit that leaves; a single-word beat
       // passes when nothing is pending and the stage takes it
-      assign core_ready = core_valid && (in_data ? (!pend_valid || oready) : (!pend_valid && oready));
-      assign take      = core_ready && in_data;
+      assign i_ready   = iv && (in_data ? (!pend_valid || oready) : (!pend_valid && oready));
+      assign take      = i_ready && in_data;
       logic [VWL-1:0] pend_words;                           // the pending flit's words, zero at and above pend_cnt
       always_comb begin
         for (int s = 0; s < WPF; s++)
@@ -193,6 +215,18 @@ module link_packer #(
         end
       end
     end else begin : g_split
+      logic [HW-1:0]  in_head;                              // the beat as presented (this side is combinational)
+      logic [2:0]     in_type;
+      logic [8:0]     in_tag;
+      logic [19:0]    in_hdr;
+      logic [VWB-1:0] in_words;
+      logic           in_data;
+      assign in_head  = core_flit[DWB +: HW];
+      assign in_type  = core_flit[DWB-1 -: 3];
+      assign in_tag   = core_flit[DWB-4 -: 9];
+      assign in_hdr   = core_flit[DWB-13 -: 20];
+      assign in_words = core_flit[VWB-1:0];
+      assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
       logic [CWB-1:0] in_n;                                 // words in the beat
       logic [CWB-1:0] idx;                                  // chunk of WPF words being sent
       logic [CWB-1:0] base, left, cn;
@@ -252,10 +286,10 @@ module link_unpacker #(
   logic [8:0]     l_tag;
   logic [19:0]    l_hdr;
   logic           l_data;
-  logic [CWL-1:0] n_words;                                  // words in this flit
   logic [VWL-1:0] l_words;
   logic [CWL-1:0] idx;                                      // beat of BW words presented now
-  logic [CWL-1:0] base, left, bn;
+  logic [CWL-1:0] idx_w;                                    // the same, for the word select (drop 0.42, below)
+  logic [CWL-1:0] base;
   logic           last;
   logic [VWL-1:0] sh;
   logic [VWB-1:0] bvec;
@@ -266,23 +300,61 @@ module link_unpacker #(
   assign l_tag   = link_flit[DWL-4 -: 9];
   assign l_hdr   = link_flit[DWL-13 -: 20];
   assign l_data  = (l_type == T_RDRSP) || (l_type == T_WRDATA) || (l_type == T_PSUM);
-  assign n_words = l_data ? CWL'(l_hdr[13:8]) + CWL'(1) : CWL'(1);
   assign l_words = link_flit[VWL-1:0];
-  assign base    = CWL'(32'(idx) * BW);
-  assign left    = n_words - base;                          // words from this beat on
-  assign last    = (32'(left) <= BW);
-  assign bn      = last ? left : CWL'(BW);
+  assign base    = CWL'(32'(idx_w) * BW);
   assign sh      = l_words >> (32 * base);
   assign bvec    = VWB'(sh);                                // positions above bn are not read by the interface
-  assign hdr_out = l_data ? {l_hdr[19:14], 6'(bn) - 6'd1, (l_type == T_PSUM) ? l_hdr[7:0] + 8'(base) : l_hdr[7:0]} : l_hdr;
+  // Drop 0.42: the beat index drives the beat's 512-bit word select, a deep buffer tree, and the count / column
+  // arithmetic and the last flag waited behind it (0.89 ns to the count field on the ASAP7 SS proxy, into the NIC's input
+  // register in the tile). So the word select has its own copy of the index (idx_w, equal to idx in every cycle: the same
+  // reset and update; written from itself so that synthesis keeps the two apart), and the header and last flag of every
+  // beat index b are formed from the flit alone and selected by idx at the end.
+  // No adder on the count either: with BW a power of two, beat b holds the flit's last word iff the count field (words -
+  // 1) is below (b + 1) BW, i.e. its bits above the lane bits are at most b, and then its own count field is the flit's
+  // low lane bits (else BW - 1) -- the same values as words - b BW compared and decremented, for every beat a flit within
+  // the source's contract presents.
+  localparam int NB  = (WPF + BW - 1) / BW;                 // beats per flit at most
+  localparam int LWB = $clog2(BW);                          // the lane bits of a count (BW = 2^LWB)
+  localparam int CHB = 6 - LWB;                             // the count field's bits above them
+  logic [19:0]    hdr_b  [NB];
+  logic [NB-1:0]  last_b;
+  always_comb begin
+    for (int b = 0; b < NB; b++) begin
+      last_b[b] = !l_data || (32'(l_hdr[13 -: CHB]) <= b);  // count field >> LWB <= b
+      hdr_b[b]  = l_data ? {l_hdr[19:14], last_b[b] ? 6'(l_hdr[8 +: LWB]) : 6'(BW - 1),
+                            (l_type == T_PSUM) ? l_hdr[7:0] + 8'(b * BW) : l_hdr[7:0]} : l_hdr;
+    end
+    hdr_out = hdr_b[0];
+    last    = last_b[0];
+    for (int b = 1; b < NB; b++)
+      if (32'(idx) == b) begin hdr_out = hdr_b[b]; last = last_b[b]; end
+  end
+  // the beat's parity the same way (drop 0.42): the fields' part (with the beat's header) and the words' part of every beat
+  // index formed from the flit and selected by idx -- where one XOR tree over the 564-bit beat followed the selects, the
+  // count arithmetic in series with it (0.82 ns from the count field to the parity bit on the ASAP7 SS proxy); a beat
+  // index past the flit's beats (none for a flit within the source's contract) presents beat 0's header and no words
+  logic [NB-1:0]  par_f, par_w;                             // per beat index: the parity of its fields, of its words
+  logic           par_sel;
+  always_comb begin
+    par_w = '0;
+    for (int w = 0; w < WPF; w++) par_w[w / BW] = par_w[w / BW] ^ (^l_words[32 * w +: 32]);
+    for (int b = 0; b < NB; b++) par_f[b] = ^{l_head, l_type, l_tag, hdr_b[b]};
+    par_sel = (idx == '0) ? par_f[0] ^ par_w[0] : par_f[0];
+    for (int b = 1; b < NB; b++)
+      if (32'(idx) == b) par_sel = par_f[b] ^ par_w[b];
+  end
   logic unused_link_parity;                                 // the flit's parity is the router's business (lint)
   assign unused_link_parity = link_flit[FWL-1];
   assign body    = {l_head, l_type, l_tag, hdr_out, bvec};
-  assign core_flit  = {^body, body};
+  assign core_flit  = {par_sel, body};                      // = {^body, body}
   assign core_valid = link_valid;
   assign link_ready = core_ready && last;
   always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) idx <= '0;
-    else if (link_valid && core_ready) idx <= last ? '0 : idx + 1;
+    if (!rst_n) begin
+      idx <= '0; idx_w <= '0;
+    end else if (link_valid && core_ready) begin
+      idx   <= last ? '0 : idx + 1;
+      idx_w <= last ? '0 : idx_w + 1;
+    end
   end
 endmodule

@@ -3,6 +3,8 @@
 bank port). tile_nic alone, its link side driven with beats and its bank side modelled as a word array:
   I1 writeback: WRHDR to an unaligned address, WRDATA beats of 1..16 words that start inside a row and cross row boundaries,
      then the CRC flit: every word lands at its address, the masked lanes only, no crc_err / lost_err; a wrong count flags lost_err
+  I1c three WRDATA streams from three sources interleaved beat by beat (drop 0.42: each source's state registered with its
+     beat, the outgoing one written back): every word at its stream's address, each stream's CRC flit clean
   I2 serve: RDREQ for len words from an unaligned address: the beats carry the words in order (partial first beat, full rows,
      partial last), hdr[13:8] = words - 1, and the CRC flit's count and CRC-16 match a software model
   I3 serve under back-pressure: the link accepts every third beat only; the data and the CRC are unchanged
@@ -19,12 +21,16 @@ bank port). tile_nic alone, its link side driven with beats and its bank side mo
   I13 crc16_beat in matrix form (drop 0.41) under neosim: the generated module and crc16_beat_serial (the chain it replaced,
      tb/crc16_beat_serial.sv) side by side at BW = 16, 4 and 1 on random beats (n = 0 and n = BW included) agree with each
      other and with the bit-serial model -- neosim reads the module the tile tests run (the exhaustive proof is make crc16)
-  I14 the registered link_packer (drop 0.41) at the silicon widths (XW = YW = 3, BW = 16, WPF = 32) against the drop-0.40
-     packer kept in tb/link_packer_ref.sv: (a) link_ready high, the same beats (streams of RDRSP / WRDATA beats of random
-     sizes with garbage above their count, PSUM rows with consecutive and broken columns, single-word types, head changes,
-     gaps): core_ready equal in every cycle and every link flit equal to the reference's of the cycle before, bit for bit
-     -- the throughput unchanged, one cycle of latency; (b) link_ready at random: every link flit has even parity, at most
-     WPF words and zeros above its count, and the words, columns and single-word flits come out in order"""
+  I14 the registered link_packer (drop 0.41: the link side; drop 0.42: the beat side too) at the silicon widths (XW = YW
+     = 3, BW = 16, WPF = 32) against the drop-0.40 packer kept in tb/link_packer_ref.sv: (a) link_ready high, the same beats
+     (streams of RDRSP / WRDATA beats of random sizes with garbage above their count, PSUM rows with consecutive and broken
+     columns, single-word types, head changes, gaps), the reference fed through a model of the packer's input register (a
+     one-beat pipeline stage: it takes a beat when empty or when the reference takes its beat): core_ready equal to the
+     model's in every cycle and every link flit equal to the reference's of the cycle before, bit for bit -- the throughput
+     unchanged, two cycles of latency against the bare drop-0.40 packer; (b) link_ready at random: every link flit has even
+     parity, at most WPF words and zeros above its count, and the words, columns and single-word flits come out in order
+  I15 every flit the interface presents in I1-I12 has even parity (drop 0.42: the transmit parity is formed from the
+     words' parities -- the bank row's under the beat's lane mask, the drain FIFO row's beat parity -- instead of one XOR tree)"""
 import os, random, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from neosim import Design, load
@@ -58,6 +64,8 @@ def flit(typ, words, hdr=0, tag=0, src=(1, 1), dst=(0, 0), partition=0):
 
 
 class Nic:
+    tx_flits, tx_par_bad = 0, 0                          # every flit any instance transmits, and those with odd parity (I15)
+
     def __init__(self, rows=16, cols=8):
         self.d = Design(load([os.path.join(rtl, f) for f in ("crc16_word.sv", "crc16_beat.sv", "neo_mem.sv", "tile_nic.sv")]))
         self.rows, self.cols = rows, cols
@@ -94,6 +102,9 @@ class Nic:
         (abuf_we / wbuf_we) are recorded as (address, bytes[, check]) in self.abuf / self.wbuf."""
         p = self.p
         self.d.settle()
+        if p["tx_valid"].v:                              # the flit's parity bit makes the whole flit even (I15)
+            Nic.tx_flits += 1
+            Nic.tx_par_bad += bin(p["tx_flit"].v).count("1") & 1
         if p["ext_valid"].v and p["ext_ready"].v:
             self.ext_rows.append((p["ext_idx"].v, [c.v & 0xFFFFFFFF for c in self.ext_y], p["ext_chk"].v & 0xFFFFFFFF))
         if p["abuf_we"].v:
@@ -207,6 +218,32 @@ print(f"  I1 writeback: {len(words)} words in {beats} beats of 1..16 words from 
       f"a dropped beat -> lost_err {nic.p['lost_err_sticky'].v}, crc_err {nic.p['crc_err_sticky'].v} -> {'PASS' if ok1b else 'FAIL'}")
 fails += not (ok1 and ok1b)
 
+# ---------------- I1c: three writeback streams interleaved beat by beat (drop 0.42: the source state registered with the beat) ----------------
+# the beats of three sources in a random order (a source's beat after another source's, back to the first the next beat,
+# runs of one source): each source's state goes to st_* with its beat and back through wb3_* when another source's beat
+# comes; every word must land at its own stream's address and every CRC flit find its stream's count and CRC
+r1c = random.Random(1029)                            # its own stream: the later tests keep theirs
+nic = Nic()
+srcs, bases = [(1, 0), (0, 1), (1, 1)], [0x205, 0x31C, 0x40F]
+streams = [[r1c.getrandbits(32) for _ in range(70 + 13 * k)] for k in range(3)]
+for s, b in zip(srcs, bases):
+    nic.send(flit(T_WRHDR, [b], src=s))
+pos, switches, prev_k, cycles1c = [0, 0, 0], 0, None, 0
+while any(pos[k] < len(streams[k]) for k in range(3)):
+    k = r1c.choice([q for q in range(3) if pos[q] < len(streams[q])])
+    n = min(r1c.choice([1, 5, 11, 16, 16]), len(streams[k]) - pos[k])
+    cycles1c += nic.send(flit(T_WRDATA, streams[k][pos[k]:pos[k] + n], src=srcs[k]))
+    switches += prev_k is not None and k != prev_k
+    pos[k] += n; prev_k = k
+for k in (2, 0, 1):
+    nic.send(flit(T_CRC, [(len(streams[k]) << 16) | crc16(streams[k])], src=srcs[k]))
+nic.tick(); nic.tick()
+ok1c = (all(nic.mem.get(bases[k] + i) == w for k in range(3) for i, w in enumerate(streams[k]))
+        and len(nic.mem) == sum(len(s) for s in streams) and nic.p["crc_err_sticky"].v == 0 and nic.p["lost_err_sticky"].v == 0)
+print(f"  I1c writeback of three sources interleaved: {sum(len(s) for s in streams)} words, {switches} source switches between consecutive beats, "
+      f"{cycles1c} cycles for the data beats: every word at its stream's address, CRC and count clean per stream -> {'PASS' if ok1c else 'FAIL'}")
+fails += not ok1c
+
 # ---------------- I2: serve ----------------
 nic = Nic()
 base, length = 0x2C5, 77                             # lane 5 of row 44, 77 words: 11 + 16 + 16 + 16 + 16 + 2
@@ -255,6 +292,8 @@ ts = nic.d.cells["top.tx_state"]
 sb = nic.d.cells["top.serve_busy"]
 ts.v = 2
 nic.send(flit(T_RDREQ, [(length << 20) | base], hdr=(1 << 4) | 1, src=(1, 1)))
+ts.v = 2
+nic.tick()                                               # drop 0.42: the port registers the beat, the request is taken a cycle later
 emitted, taken = 0, sb.v
 nic.p["tx_ready"].v = 1
 for _ in range(200):
@@ -630,8 +669,8 @@ def packer_ref_test(seed):
     fwb, fwl = 1 + hw + dwb, 1 + hw + dwl
     d = Design(load([os.path.join(rtl, "link_pack.sv"), os.path.join(HERE, "..", "tb", "link_packer_ref.sv")]))
     d.elaborate("link_packer_pair", {"XW": xw, "YW": yw, "BW": BW, "WPF": wpf})
-    p = {n: d.cell_of(n) for n in ("rst_n", "core_valid", "core_flit", "n_link_ready", "r_link_ready", "n_core_ready", "n_link_valid",
-                                    "n_link_flit", "r_core_ready", "r_link_valid", "r_link_flit")}
+    p = {n: d.cell_of(n) for n in ("rst_n", "core_valid", "core_flit", "r_core_valid", "r_core_flit", "n_link_ready", "r_link_ready",
+                                    "n_core_ready", "n_link_valid", "n_link_flit", "r_core_ready", "r_link_valid", "r_link_flit")}
     data_types = (T_RDRSP, T_WRDATA, T_PSUM)
 
     def beat(typ, words, head, lo=0, tag=0):
@@ -673,24 +712,31 @@ def packer_ref_test(seed):
             seq.append(beat(r.choice([T_RDREQ, T_RDY]), [r.getrandbits(32)], head)); expect["single"].append(seq[-1])
 
     def reset():
-        p["core_valid"].v = 0; p["n_link_ready"].v = 1; p["r_link_ready"].v = 1
+        p["core_valid"].v = 0; p["r_core_valid"].v = 0; p["n_link_ready"].v = 1; p["r_link_ready"].v = 1
         p["rst_n"].v = 0; d.tick(); d.tick(); p["rst_n"].v = 1; d.tick()
 
-    # (a) link_ready high: cycle for cycle against the reference, one cycle later
+    # (a) link_ready high: cycle for cycle against the reference behind a model of the input register (riv / rib: the beat
+    # it holds), the reference's link flit one cycle later -- two cycles after the bare reference
     reset()
-    i, cyc, bad, prev, flits_a = 0, 0, [], (0, 0), 0
-    while i < len(seq) or prev[0] or p["n_link_valid"].v:
+    i, cyc, bad, prev, flits_a, riv, rib = 0, 0, [], (0, 0), 0, 0, 0
+    while i < len(seq) or riv or prev[0] or p["n_link_valid"].v:
         v = int(i < len(seq) and r.random() < 0.85)
+        f = seq[i] if v else r.getrandbits(fwb)
         p["core_valid"].v = v
-        p["core_flit"].v = seq[i] if v else r.getrandbits(fwb)
+        p["core_flit"].v = f
+        p["r_core_valid"].v = riv
+        p["r_core_flit"].v = rib
         d.settle()
-        if p["n_core_ready"].v != p["r_core_ready"].v:
+        r_ready = int(not riv or p["r_core_ready"].v)          # the register takes a beat when empty or when its beat moves on
+        if p["n_core_ready"].v != r_ready:
             bad.append((cyc, "core_ready"))
         if p["n_link_valid"].v != prev[0] or (prev[0] and p["n_link_flit"].v != prev[1]):
             bad.append((cyc, "link"))
         flits_a += prev[0]
         prev = (p["r_link_valid"].v, p["r_link_flit"].v)
         took = v and p["n_core_ready"].v
+        if r_ready:
+            riv, rib = v, (f if v else rib)
         d.tick(); cyc += 1
         i += took
         if cyc > 20000:
@@ -733,11 +779,18 @@ def packer_ref_test(seed):
 
 
 ok_a, bad, nfa, nbeats, ok_b, nfb, props = packer_ref_test(14)
-print(f"  I14 registered packer vs the drop-0.40 packer at WPF 32: {nbeats} beats; (a) link_ready high: {nfa} flits, core_ready equal "
-      f"every cycle and every flit equal to the reference's one cycle earlier -> {'PASS' if ok_a else 'FAIL ' + str(bad)}; "
+print(f"  I14 registered packer vs the drop-0.40 packer at WPF 32: {nbeats} beats; (a) link_ready high, the reference behind a model of the "
+      f"input register: {nfa} flits, core_ready equal every cycle and every flit equal to the reference's one cycle earlier (two cycles "
+      f"after the bare reference) -> {'PASS' if ok_a else 'FAIL ' + str(bad)}; "
       f"(b) link_ready at random: {nfb} flits, {props} with odd parity / too many words / stale words, streams in order -> "
       f"{'PASS' if ok_b else 'FAIL'}")
 fails += (not ok_a) + (not ok_b)
+
+# ---------------- I15: the transmit side's parity (drop 0.42: formed from word and beat parities, no longer one XOR tree) ----------------
+ok15 = Nic.tx_flits > 0 and Nic.tx_par_bad == 0
+print(f"  I15 every flit the interface presented in I1-I12 has even parity: {Nic.tx_flits} cycles with tx_valid (RDREQ, served beats, "
+      f"CRC flits, WRHDR, drained INT32 / INT8 / PSUM beats, RDY), {Nic.tx_par_bad} odd -> {'PASS' if ok15 else 'FAIL'}")
+fails += not ok15
 
 print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
 raise SystemExit(1 if fails else 0)

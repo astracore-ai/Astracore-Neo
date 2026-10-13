@@ -37,15 +37,18 @@ Mode prove is a full proof: k-induction for smtbmc (k = the induction length it 
 | `ecc39` | for all 2^32 data words: decode(encode(d)) = d with ce = ue = 0; any single flip of the 39 stored bits ({op, p, d}) gives d, ce = 1, ue = 0; any two distinct flips give ue = 1, ce = 0 | — | prove (combinational) | `abc collapse -r; muxes; strash; pdr` | 0.5 s | 0.5 s |
 | `crc16_beat_bw4` | `rtl/crc16_beat` (the matrix form of drop 0.41) = `crc16_beat_ref` for every crc_in, every beat, every n = 0..BW (one instance pair per n) | BW = 4 | prove (combinational) | same | 1.5 s | 1.1 s |
 | `crc16_beat_bw16` | the same at the silicon width | BW = 16 | prove (combinational) | same | 22.5 s | 31 s |
-| `link_pack` | packer → unpacker, the packer of drop 0.41 with its registered link side: the beats out carry the accepted words in order, none invented or repeated, each with its head, type, tag, hdr[19:14], PSUM column (one-word types their whole hdr); link flits even parity and 1..32 words, beats out even parity and 1..16 words; accepting a one-word type (the CRC closing a stream) leaves only that word in flight, everything accepted before it presented (drop 0.40, the link side combinational: nothing in flight); with the sink ready no beat waits more than 2 cycles — the bound of drop 0.40, the register adds no cycle to it (below) | BW = 16, WPF = 32, XW = YW = 3 (silicon) | prove, depth 2 (k = 1) | `smtbmc bitwuzla` | 116.0 s | 49 s (yices, the drop 0.40 harness) |
+| `link_pack` `stream` / `parity` | packer → unpacker, the packer of drop 0.42 with both sides registered (the beat in an input register, the link flit in an output register): the beats out carry the accepted words in order, none invented or repeated, each with its head, type, tag, hdr[19:14], PSUM column (one-word types their whole hdr); link flits and beats out 1..32 / 1..16 words; a one-word type (the CRC closing a stream) taken from the input register leaves only itself in flight besides the beat accepted behind it, everything accepted before it presented (drop 0.41: accepting it did; drop 0.40: nothing left in flight at all); with the sink ready no beat waits more than 2 cycles — the bound of drop 0.40, the two registers add no cycle to it (below) — that is task `stream`; task `parity`: link flits and beats out even parity, with the running-parity invariants | BW = 16, WPF = 32, XW = YW = 3 (silicon) | prove, depth 2 (k = 1) | `smtbmc bitwuzla` | 332.7 s / 13.2 s (drop 0.41, one task: 116.0 s) | 49 s (yices, the drop 0.40 harness) |
 | `noc_router` | count <= 2, in_ready == (count != 2); each output register holds only flits whose XY port it is; no output register ever holds odd parity, a bad head is popped the cycle it is the head and `parity_err_sticky` is exactly "a bad head was dropped since err_clear"; every flit value that leaves was accepted; a picked accepted flit stays in its FIFO slot, moves into exactly one output register, unchanged until it leaves, and that register is its XY port; a requesting head is granted within 5 fires of its output. The router of drop 0.41 stores the parity and the route with the entry at the push (`fbad`, `freq`), keeps the occupancy as a thermometer (`occ`) and arbitrates with a one-hot rotating pointer (`ptr`, `gnt`; `rr` / `sel` are gone): helper invariants tie the stored bits to the stored flit, `rd_a` to `rd`, `ptr` one-hot | XW = YW = 3, DW = 8, DV_HOOKS = 0 | prove, depth 2 (k = 1) | `smtbmc yices` | 53.6 s | 18 s |
 | `lockstep_core_seq` | two `core_seq` with identical inputs from reset: neo_core's twelve compared outputs (f_start, f_first, f_ct, f_ky, f_kx, w_load, w_raddr, rd_en, rd_idx, done, reduce_ready, state_dbg) and the other three equal every cycle; resets at any time (drop 0.41's `red_last` joins the register-by-register invariant) | ROWS = 16, COLS = 8, IDXW = 6, WBUF_DEPTH = 512 | prove, depth 2 (k = 1) | `smtbmc yices` | 1.2 s | 1.2 s |
 | `lockstep_requant` | two `requant` (three stages since drop 0.41), the stream only once all four table entries are written: out_valid equal, out_q equal while out_valid, the parity stickies equal; helper invariants: the stage-1 registers (`ra1`, `rb1`, `n1`, `sh1`, `zp1`) equal while `v1`, the stage-2 registers (`sum2`, `n2`, `sh2`, `zp2`) while `v2` (the two-stage form's `prod` is gone) | COLS = 4, PW = 32, **MW = 4** (below) | prove, depth 2 (k = 1) | `smtbmc yices` | 16.6 s | 21 s |
 | `requant_parity` | `tbl_perr_sticky` is exactly "tbl_fault_inject met a written entry 0 under in_valid since err_clear": with the fault off it never rises whatever the unwritten entries hold; with it, 1 the next cycle (the brief's "within two"), held until err_clear | COLS = 4, PW = 32, MW = 16 | prove, depth 4 (k = 1) | `smtbmc yices` | 1.5 s | 0.7 s |
 | `abft_checker` | the two-stage checker of drop 0.41: the row presented with valid in cycle t has its verdict in cycle t + 2, err == (sum of the row != y_chk) with err_valid (valid delayed by two), err never without err_valid; the sum wrapped to PW bits (formed as a tree in the harness, the RTL as carry-save rows and a carry-free compare); err_sticky sets the cycle after err, holds, clears on abft_clear (drop 0.40: err combinational from valid) | COLS = 4, PW = 8 | prove, depth 2 (k = 2) | `smtbmc yices` | 0.5 s | 0.3 s |
 
-All nine are full proofs; no task needed the bounded fallback. The whole set on the merged tree: 214 s sequential in the
-sandbox (209 s in an earlier run), link_pack 116 s of it. Run 159 (drop 0.40): 69 s two at a time on the runner, where the job took about two
+All ten are full proofs (link_pack two tasks since drop 0.42); no task needed the bounded fallback. The whole set with
+the drop 0.42 packer: 480 s sequential in the sandbox, with other agents' builds beside it (the drop 0.41 set of nine:
+214 s, link_pack 116 s of it); on the runner (run 172, A2a's PR at its last RTL, two at a time) 177 s, link_pack_stream
+175.0 s and link_pack_parity 10.9 s of it (run 170, before the unpacker's last change: 210 s, 207.9 s and 10.5 s). Run
+159 (drop 0.40): 69 s two at a time on the runner, where the job took about two
 minutes with the 19 s tool install (budget: 20 minutes; the per-task timeout of 600 s keeps a hard proof from holding the
 job).
 
@@ -110,12 +113,25 @@ Every harness holds the DUT's reset in the first cycle (an initialised register)
   merge's barrel shift) or through a ghost of the prefix parities (one bit per word, rebuilt from the RTL's `take` /
   `mergeable` / `in_wp` on every taken beat). bitwuzla closes the ghost form in 112-116 s and the direct form in 138 s
   (boolector: over 330 s), so the task runs on bitwuzla with the ghost.
+  Drop 0.42 (stream A2a) put an input register in front of the merge decision (`iv` / `ib`: one beat, taken when the
+  register is empty or its beat moves on, `core_ready = !iv || i_ready`). The harness carries it: the words in flight are
+  the output register's, the pending flit's, then the input register's (`fl = l_left + p_left + i_left`, at most WPF +
+  2 BW); word j is in one of the three, at `(j - out_cnt) - l_left - p_left` in the input register with that beat's
+  fields; the input register's beat satisfies the source's contract (hdr[13:8] <= 15, hdr[7:0] = 0 on RDRSP / WRDATA);
+  the flush is stated when a one-word type leaves the input register (`prev_flush` from `i_ready`): only it and the beat
+  accepted behind it are in flight; and a held source beat waits exactly as long as the input register's beat, whose
+  remaining wait (`r_data` / `r_one` of that beat) makes the bound inductive (`held_v -> iv`, `wcnt + r <= 1 / 2`). All
+  of it in one task closed at k = 1 but took 788 s in the sandbox, above the job's 600 s per task; the properties are
+  split into two tasks of one harness (`ifndef LP_NO_STREAM` / `LP_NO_PARITY`), each a full proof of its group with the
+  structural invariants (the input register's fields, the counts, the output register, the unpacker): `stream` 333 s
+  and `parity` 13 s with bitwuzla in the sandbox, two agents beside it (`stream` with yices: 690 s).
 
 ## Non-vacuity: each harness against a broken RTL
 
 Each harness was run against a copy of `01_rtl/` with one deliberate bug; every one stops the job (not PASS). On the
-merged tree (9f834a1 with this link_pack harness), except the two ecc39 rows (d69b862; the SECDED RTL and its harness
-did not change since):
+merged tree (9f834a1 with the drop 0.41 link_pack harness), except the two ecc39 rows (d69b862; the SECDED RTL and its
+harness did not change since) and the link_pack rows, re-run on the drop 0.42 packer and harness (stream A2a; the
+assertion the induction step breaks in brackets):
 
 | Mutation | Task | Result |
 | --- | --- | --- |
@@ -131,18 +147,21 @@ did not change since):
 | `noc_router`: S routed to N | noc_router | UNKNOWN 3.9 s |
 | `noc_router`: parity never checked | noc_router | UNKNOWN 2.4 s |
 | `noc_router`: a granted head not popped | noc_router | UNKNOWN 2.6 s |
-| `link_unpacker`: the second beat one word early | link_pack | UNKNOWN 6.7 s; bmc FAIL at step 5, a word out differs (37 s) |
-| `link_packer`: beats of different tags merged | link_pack | UNKNOWN 12.0 s; bmc FAIL at step 4, flit parity (7.4 s) |
-| `link_packer`: a merge does not fold the last beat's word parities into pend_par0 | link_pack | UNKNOWN 11.8 s; bmc FAIL at step 4, flit parity (7.4 s) |
-| `link_packer`: the output register not reloaded as it drains (oready = !link_valid) | link_pack | UNKNOWN 7.5 s; bmc FAIL at step 3, a word out never accepted (4.4 s) |
-| `link_packer`: a beat that would merge never taken | link_pack | UNKNOWN 13.2 s; bmc FAIL at step 5, the wait bound (19.2 s) |
+| `link_unpacker`: the second beat one word early (the word select's base (BW - 1) idx_w) | link_pack stream | UNKNOWN 16.5 s (a word out differs) |
+| `link_packer`: beats of different tags merged | link_pack stream | UNKNOWN 15.4 s (the pending flit's fields against the word's) |
+| `link_packer`: a merge does not fold the last beat's word parities into pend_par0 | link_pack parity | UNKNOWN 17.5 s (the running-parity invariant) |
+| `link_packer`: the output register not reloaded as it drains (oready = !link_valid) | link_pack stream | UNKNOWN 7.6 s (the words in flight) |
+| `link_packer`: a beat that would merge never taken | link_pack stream | UNKNOWN 9.4 s (the wait bound) |
+| `link_packer`: the input register not reloaded as its beat moves on (core_ready = !iv) | link_pack stream | UNKNOWN 6.6 s (the words in flight) |
+| `link_unpacker`: the word select's index copy stepping by 2 | link_pack stream | UNKNOWN 8.5 s (idx_w == idx) |
 
 UNKNOWN is a failed induction step (the counterexample to induction is `engine_0/trace_induct.vcd`, copied to
 `ci_logs/formal/`): the router, ABFT and link_pack basecases are 2 steps deep, shorter than the bug's first appearance
 (a deeper bmc of the router and link_pack costs minutes per step, above). For a real trace after an UNKNOWN, run the task
 as a bmc: copy the `.sby`, set `mode bmc` and `depth 8`, run it with `sby -f -d formal_out/<name>_bmc <copy>.sby`. The
-link_pack traces above come from a bmc of depth 10 with bitwuzla of the harness without its invariants (the asserted
-properties alone): with them, a bmc stops at the first broken invariant, often a step earlier.
+drop 0.41 link_pack mutations were also run as a bmc of depth 10 with bitwuzla of the harness without its invariants
+(the asserted properties alone), each failing at step 3-5 (a word out differs, flit parity, a word never accepted, the
+wait bound): with the invariants, a bmc stops at the first broken invariant, often a step earlier.
 
 ## Internal names the harnesses read
 
@@ -151,7 +170,7 @@ A restructuring of these signals changes the harness with the RTL (the property 
 | Harness | Reads |
 | --- | --- |
 | `noc_router_fv` | `fifo`, `fbad`, `freq` (the parity and route bits stored at the push), `occ`, `count`, `rd`, `rd_a`, `wr` (the FIFOs), `ptr` (the one-hot rotating pointer), `fire`, `gnt`, `pop` (the grants) |
-| `link_pack_fv` | `u_pk.g_merge.pend_valid / cur / pbuf0 / pbuf1 / pend_cnt / pend_thr / pend_cm1 / pend_room / pend_head / pend_type / pend_tag / pend_hhi / pend_col0 / pend_ncol / pend_par0 / last_wp` and, for the parity ghost, `take / mergeable / in_wp`; `u_up.idx` |
+| `link_pack_fv` | `u_pk.g_merge.iv / ib / i_ready` (the input register, drop 0.42), `pend_valid / cur / pbuf0 / pbuf1 / pend_cnt / pend_thr / pend_cm1 / pend_room / pend_head / pend_type / pend_tag / pend_hhi / pend_col0 / pend_ncol / pend_par0 / last_wp` and, for the parity ghost, `take / mergeable / in_wp`; `u_up.idx / idx_w` (the unpacker's word-select copy, drop 0.42) |
 | `lockstep_core_seq_fv` | every register of `core_seq`: `state`, `ct`, `ky`, `kx`, `first_q`, `lcnt`, `loading`, `loaded`, `tcnt`, `wcnt`, `dcnt`, `ltile`, `rcnt`, `ext_cnt`, `red_last`, `ct_free_q`, `ct_free_idx_q` |
 | `lockstep_requant_fv` | `wrt`, `mult`, `shft`, `zp`, `par`, `v1`, `ra1`, `rb1`, `n1`, `sh1`, `zp1`, `v2`, `sum2`, `n2`, `sh2`, `zp2` |
 | `requant_parity_fv` | `wrt`, `mult`, `shft`, `zp`, `par` |
@@ -160,7 +179,8 @@ A restructuring of these signals changes the harness with the RTL (the property 
 The A1 merge (drop 0.41) changed five harnesses with the RTL: `abft_checker_fv` (the verdict two cycles after valid, with
 `err_valid`), `lockstep_requant_fv` (the three stages' registers), `noc_router_fv` (the stored parity and route bits, the
 occupancy thermometer, the one-hot pointer), `lockstep_core_seq_fv` (`red_last`) and `link_pack_fv`, rewritten for the
-registered packer; the matrix-form `crc16_beat` needed no change.
+registered packer; the matrix-form `crc16_beat` needed no change. Drop 0.42 (A2a) changed `link_pack_fv` with the
+packer's input register and split `link_pack.sby` into the tasks `stream` and `parity`.
 
 ## Running it
 
@@ -184,6 +204,7 @@ group of its own, so killing sby or its group leaves solvers running (seen in th
 None: all nine proofs pass on the merged tree of drop 0.41 (main 9f834a1 with this link_pack harness; on d69b862 before
 it). The interface facts the proofs rest on, for the integrator: the packer keeps the first beat's hdr[7:0] for RDRSP /
 WRDATA (tile_nic sends 0 there), and since drop 0.41 a CRC it accepts is still in flight for at least a cycle, in its
-output register; the requant tables are unreset and every compared output is clean only because in_valid follows the
+output register -- since drop 0.42 it may also wait in the input register behind the pending flit, the stream flushed
+when it leaves that register; the requant tables are unreset and every compared output is clean only because in_valid follows the
 table load; the router forwards a flit to exactly one register and only to its XY port, and its one-hot rotating
 arbitration is fair (within 5 fires).
