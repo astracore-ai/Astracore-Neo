@@ -1,0 +1,14 @@
+19:23:58 tools: {'yosys': 'Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)', 'sta': '3.1.0'}
+19:23:58 library asap7 SS, period 1000.0 ps, output /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out; macro model: FakeRAM2.0 7 nm (ORFS asap7/fakeram.cfg): 0.042 um2/bit, 218 ps access, 50 ps setup/hold
+19:23:58 units: ['c16_mac_pe', 'c16_mac_pe_chk', 'c16_systolic_array']
+19:23:59 c16_mac_pe_chk: yosys (mac_pe {'XW': 8, 'WW': 13, 'PW': 32})
+19:23:59 c16_mac_pe: yosys (mac_pe {'XW': 8, 'WW': 8, 'PW': 32, 'NB': 4})
+19:24:00 c16_mac_pe_chk: yosys done in 2 s: 1,634 cells, 193 um2
+19:24:00 c16_mac_pe: yosys done in 2 s: 1,253 cells, 159 um2
+19:24:01 c16_systolic_array: yosys (systolic_array {'ROWS': 16, 'COLS': 8, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 13, 'NCHK': 4})
+19:24:02 c16_systolic_array: yosys done in 1 s: 6 cells, 0 um2
+19:24:04 c16_mac_pe_chk: sta done in 2 s (exit 0; wns -166.3991173726919 ps, min period 1036.076172320189 ps)
+19:24:04 c16_mac_pe: sta done in 2 s (exit 0; wns -189.9657105882751 ps, min period 809.048397275125 ps)
+19:24:06 c16_systolic_array: sta done in 2 s (exit 0; wns -189.96569671048724 ps, min period 1101.1639302743 ps)
+19:24:06 done in 7 s: /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/synth_results.json
+19:24:06 GATES: all passed (every unit synthesized, no latch, no multiply-driven net, the hierarchy consistent, the PE counts, DV_HOOKS = 0 clean, every clock gate mapped onto the library's ICG cell as declared, every timing run complete)
