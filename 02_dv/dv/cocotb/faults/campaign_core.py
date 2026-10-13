@@ -10,7 +10,7 @@ done plus 6 cycles (the last row's verdict and the requant's three stages) or at
 at core level no watchdog exists -- the tile's ESM watchdog is the mechanism, measured by the tile campaign). The result is
 every drained INT32 and INT8 word in order, and the row count.
 
-Environment: as campaign_tile.py (FAULTS_LIST, FAULTS_OUT, FAULTS_BUDGET_S, FAULTS_GOLDEN)."""
+Environment: as campaign_tile.py (FAULTS_LIST, FAULTS_CSV, FAULTS_BUDGET_S, FAULTS_GOLDEN)."""
 import json
 import os
 import time
@@ -146,7 +146,7 @@ async def faults_core(dut):
         return
     with open(flist) as f:
         faults = json.load(f)
-    out = CsvOut(os.environ.get("FAULTS_OUT", "faults_core.csv"))
+    out = CsvOut(os.environ.get("FAULTS_CSV", "faults_core.csv"))
     budget = Budget()
     done = 0
     for fd in faults:

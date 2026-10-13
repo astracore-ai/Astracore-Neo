@@ -187,7 +187,7 @@ mesh8s_build:
 # faults/campaign_core.py the core build (C1 on neo_core 16x8, NCHK = 4), each in a build directory of its own; both inject
 # through the VPI that cocotb's --public-flat-rw opens. faults/run_faults.py runs the fault-free run once (the build), then
 # several runs of the same model at once, each with its own fault list and results file (FAULTS_WORKER), FAULTS_LIST /
-# FAULTS_OUT / FAULTS_BUDGET_S in the environment. `make faults` (07_ci/Makefile) is the job's entry.
+# FAULTS_CSV / FAULTS_BUDGET_S in the environment. `make faults` (07_ci/Makefile) is the job's entry.
 FAULTS_WORKER ?=
 faults_tile:
 	$(MAKE) TARGET=tile MODULE=faults.campaign_tile SIM_BUILD=sim_build_faults_tile COCOTB_RESULTS_FILE=results_faults_tile$(FAULTS_WORKER).xml

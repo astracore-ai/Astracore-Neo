@@ -14,7 +14,7 @@ when tile (0,0) reports prog_done with its drain idle, plus 40 cycles for the la
 (the watchdog window + 200 cycles: a hang). The result is every word of the four banks (a write anywhere is a result)
 and the four tiles' cause registers (u_esm.cause, the 18 flags and the watchdog).
 
-Environment: FAULTS_LIST (the worker's JSON list from run_faults.py), FAULTS_OUT (its CSV), FAULTS_BUDGET_S (stop when the
+Environment: FAULTS_LIST (the worker's JSON list from run_faults.py), FAULTS_CSV (its CSV), FAULTS_BUDGET_S (stop when the
 wall clock has run out), FAULTS_GOLDEN (a JSON file the fault-free run's facts are written to)."""
 import json
 import os
@@ -203,7 +203,7 @@ async def faults_tile(dut):
         return
     with open(flist) as f:
         faults = json.load(f)
-    out = CsvOut(os.environ.get("FAULTS_OUT", "faults_tile.csv"))
+    out = CsvOut(os.environ.get("FAULTS_CSV", "faults_tile.csv"))
     budget = Budget()
     done = 0
     for fd in faults:

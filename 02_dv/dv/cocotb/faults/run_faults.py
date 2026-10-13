@@ -26,6 +26,7 @@ import json
 import math
 import os
 import random
+import re
 import statistics
 import subprocess
 import sys
@@ -37,12 +38,13 @@ sys.path.insert(0, HERE)
 import flops as F                                   # noqa: E402
 
 OUTCOMES = ["detected", "masked", "dangerous", "hang_detected", "hang"]
-# the registers drop 0.43 put behind the comparators (item 2): flop-name fragments -> the label in the report
+# the registers drop 0.43 put behind the comparators (item 2): the flop name's last components -> the label in the report
+# (matched as `(^|\.)<frag>$`, as build_fmeda.py does: the core build's w_load_q is a top-level name, and first1 is not first1_n)
 ITEM2 = [("u_feeder.inb_q", "feeder inb_q"), ("u_feeder.inb_dq", "feeder inb_dq (copy)"), ("u_feeder.a0_q", "feeder a0_q"),
          ("u_feeder.a0_dq", "feeder a0_dq (copy)"), ("u_feeder.first_q", "feeder first_q"), ("u_feeder.first_oq", "feeder first_oq"),
          ("u_feeder.first_dq", "feeder first_dq (copy)"), ("u_feeder.first_doq", "feeder first_doq (copy)"),
          ("u_feeder.addr_dq", "feeder addr_dq (copy)"), ("u_feeder.u_mem.rb_addr_q", "activation buffer port-B latch"),
-         (".w_load_q", "core w_load_q"), (".d_w_load_q", "core d_w_load_q (copy)"), (".d_w_raddr_q", "core d_w_raddr_q (copy)"),
+         ("w_load_q", "core w_load_q"), ("d_w_load_q", "core d_w_load_q (copy)"), ("d_w_raddr_q", "core d_w_raddr_q (copy)"),
          ("u_wbuf.u_mem.rb_addr_q", "weight buffer port-B latch"), ("u_wbuf.ra0_q", "weight buffer ra0_q"),
          ("u_acc.v1", "acc v1"), ("u_acc.first1", "acc first1"), ("u_acc.idx1", "acc idx1"), ("u_acc.fwd1", "acc fwd1"),
          ("u_acc.v1_n", "acc v1_n (copy)"), ("u_acc.first1_n", "acc first1_n (copy)"), ("u_acc.idx1_n", "acc idx1_n (copy)"),
@@ -156,6 +158,15 @@ def make_cmd(config, extra):
     return ["make", "-C", COCOTB, f"faults_{config}"] + extra
 
 
+def sub_env(drop=(), **kv):
+    """the environment of a build's make: this one's, without what a parent make passes down (run_faults.py runs under
+    `make faults`: a variable on that command line -- FAULTS_OUT=<dir> -- would reach the cocotb make through MAKEFLAGS as
+    an override of the worker's own environment), plus kv"""
+    env = {k: v for k, v in os.environ.items() if k not in ("MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES", "MAKELEVEL") + tuple(drop)}
+    env.update(kv)
+    return env
+
+
 def golden(config, out, probe):
     """the fault-free run alone (the build happens here, once): its length and wall time, and which of the arrays in
     `probe` the injector cannot reach in this build"""
@@ -163,8 +174,7 @@ def golden(config, out, probe):
     pfile = os.path.join(out, f"probe_{config}.json")
     with open(pfile, "w") as f:
         json.dump(probe, f)
-    env = dict(os.environ, FAULTS_GOLDEN=gfile, FAULTS_PROBE=pfile)
-    env.pop("FAULTS_LIST", None)
+    env = sub_env(drop=("FAULTS_LIST",), FAULTS_GOLDEN=gfile, FAULTS_PROBE=pfile)
     log = os.path.join(out, f"build_{config}.log")
     t0 = time.time()
     with open(log, "w") as lf:
@@ -221,8 +231,8 @@ def run(config, n, seed, workers, budget_s, out, weights_path):
             os.remove(cpath)
         with open(lpath, "w") as f:
             json.dump(lst, f)
-        env = dict(os.environ, FAULTS_LIST=lpath, FAULTS_OUT=cpath, FAULTS_BUDGET_S=str(budget_s or 0))
-        env.pop("FAULTS_GOLDEN", None)
+        env = sub_env(drop=("FAULTS_GOLDEN", "FAULTS_PROBE"), FAULTS_LIST=lpath, FAULTS_CSV=cpath,
+                      FAULTS_BUDGET_S=str(budget_s or 0))
         lf = open(os.path.join(out, f"worker_{config}_w{w}.log"), "w")
         procs.append((subprocess.Popen(make_cmd(config, [f"FAULTS_WORKER=_w{w}"]), env=env, stdout=lf, stderr=subprocess.STDOUT), lf))
     for p, lf in procs:
@@ -400,8 +410,8 @@ def report(out):
     L.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
     any2 = False
     for frag, label in ITEM2:
-        rs = [r for r in allrows if frag in r["flop"] and r["outcome"] != "unresolved"
-              and not (frag == ".w_load_q" and ".d_w_load_q" in r["flop"])]
+        pat = re.compile(r"(^|\.)" + re.escape(frag) + r"$")
+        rs = [r for r in allrows if pat.search(r["flop"]) and r["outcome"] != "unresolved"]
         if not rs:
             continue
         any2 = True
