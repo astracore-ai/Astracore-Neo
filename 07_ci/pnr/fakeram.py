@@ -148,6 +148,8 @@ def build(rec, fakeram_dir):
                     rd.set_address_bus_name(pn)
                 elif pn in ("re", "rb_en"):
                     rd.add_related_pin(pn)
+                if pn == "rb_addr_q":                     # in no port group: the LEF exporter writes it as a misc bus
+                    self.add_misc_bus(dict(name=pn, lsb=0, msb=w - 1))
             self.add_rw_port_group(wr)
             self.add_rw_port_group(rd)
             LeafPortCreator(self).create_ports()
@@ -306,7 +308,8 @@ def leaf_record(name):
                  ("raddr", AW, "input"), ("rdata", W, "output")]
     else:
         ports = [("clk", 1, "input"), ("we", G, "input"), ("waddr", AW, "input"), ("wdata", W, "input"), ("ra_addr", AW, "input"),
-                 ("ra_data", W, "output"), ("rb_en", 1, "input"), ("rb_addr", AW, "input"), ("rb_data", W, "output")]
+                 ("ra_data", W, "output"), ("rb_en", 1, "input"), ("rb_addr", AW, "input"), ("rb_data", W, "output"),
+                 ("rb_addr_q", AW, "output")]                     # drop 0.43: the port-B address readback (RBQ = 1)
     ports += [("bd_we", G, "input"), ("bd_addr", AW, "input"), ("bd_wdata", W, "input"), ("bd_rdata", W, "output"),
               ("fi_en", 1, "input"), ("fi_or", 1, "input"), ("fi_addr", AW, "input"), ("fi_mask", W, "input")]
     return dict(name=name, base=base, W=W, D=D, G=G, RB=RB, AW=AW, bits=W * D, instances=None, pins=ports)
