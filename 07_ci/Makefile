@@ -390,8 +390,10 @@ synth_compare:
 # gate-level simulation (drop 0.43, stream D2; the synth job, after the ASAP7 run): synth/gls.py simulates each unit's
 # netlist (synth_out/<unit>/netlist.v, ASAP7 cells) beside its RTL at the same parameters, the same random inputs every
 # cycle, every output compared every cycle -- Icarus 14 of the OSS CAD Suite with the PDK's behavioural cell models
-# (synth/tools.sh puts them in $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7); gls_report.md into ci_logs/synth/gls/; the target
-# fails on a mismatch. neosim (sim/) gives the testbench the RTL ports.
+# (synth/tools.sh puts them in $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7); gls_report.md, the testbenches and the logs into
+# ci_logs/synth/gls/, the renamed netlists and the compiled simulations into $(SYNTH_OUT)/gls (not published: requant's
+# compiled image is over GitHub's 100 MB file limit); the target fails on a mismatch. neosim (sim/) gives the testbench
+# the RTL ports.
 NEO_SYNTH_TOOLS ?= /opt/neo-synth
 GLS_UNITS ?= mac_pe,mac_pe_chk,requant,crc16_beat,ecc39_enc,ecc39_dec,link_packer
 GLS_CELLS ?= $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7

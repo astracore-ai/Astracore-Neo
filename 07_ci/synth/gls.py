@@ -19,7 +19,10 @@ X where the RTL has a known value (X pessimism of the cell models, or an unreset
 cycle, not a failure once both settle).
 
   python3 synth/gls.py --synth synth_out --rtl rtl --cells <asap7 verilog dir> --out ci_logs/synth/gls [--units ...]
-Writes <out>/gls_report.md, <out>/<unit>.log, <out>/gls.json; exits 1 if a unit mismatches or does not run."""
+Writes <out>/gls_report.md, <out>/<unit>.log, <out>/tb_gls_<unit>.sv, <out>/gls.json; the renamed netlists and the
+compiled simulations go to --work (default <synth>/gls), outside the published logs: requant's compiled image is over
+GitHub's 100 MB file limit, which failed the synth job's push to ci-logs-synth. Exits 1 if a unit mismatches or does
+not run."""
 import argparse
 import json
 import os
@@ -36,7 +39,8 @@ WARMUP = 8
 
 
 def rtl_ports(rtl, module, params, files):
-    """[(name, dir, width, dims)] of the module at the parameters, from neosim's elaboration (dims: [size] or [])."""
+    """([(name, dir, width, dims)], {names of the signed ports}) of the module at the parameters, from neosim's
+    elaboration (dims: [size] or [])."""
     sim = os.path.normpath(os.path.join(rtl, "..", "sim"))
     for p in (sim, os.path.join(HERE, "..", "..", "02_dv", "sim")):
         if os.path.isfile(os.path.join(p, "neosim.py")) and p not in sys.path:
@@ -171,6 +175,7 @@ def main():
     ap.add_argument("--rtl", required=True)
     ap.add_argument("--cells", required=True, help="the directory of the ASAP7 behavioural models (asap7sc7p5t_*.v)")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--work", default=None, help="the renamed netlists and the compiled simulations (default <synth>/gls)")
     ap.add_argument("--units", default=",".join(DEFAULT_UNITS))
     ap.add_argument("--cycles", type=int, default=CYCLES)
     ap.add_argument("--iverilog", default=os.environ.get("NEO_IVERILOG", "iverilog"))
@@ -181,7 +186,9 @@ def main():
         results = json.load(f)["units"]
     units = {u["name"]: u for u in S.UNITS}
     cells = sorted(os.path.join(args.cells, f) for f in os.listdir(args.cells) if f.startswith("asap7sc7p5t_") and f.endswith(".v"))
+    work = args.work or os.path.join(args.synth, "gls")
     os.makedirs(args.out, exist_ok=True)
+    os.makedirs(work, exist_ok=True)
     vvp = os.path.join(os.path.dirname(args.iverilog), "vvp") if os.path.dirname(args.iverilog) else "vvp"
     rows, ok = [], True
     for unit in [u for u in args.units.split(",") if u]:
@@ -201,7 +208,7 @@ def main():
         with open(nl) as f:
             text = f.read()
         text = re.sub(rf"^module {re.escape(unit)}\(", f"module {unit}_gl(", text, flags=re.M)
-        glv = os.path.join(args.out, f"{unit}_gl.v")
+        glv = os.path.join(work, f"{unit}_gl.v")
         with open(glv, "w") as f:
             f.write(text)
         cons = {}
@@ -214,7 +221,7 @@ def main():
             f.write(tb)
         log = os.path.join(args.out, f"{unit}.log")
         t0 = time.time()
-        simv = os.path.join(args.out, f"{unit}.vvp")
+        simv = os.path.join(work, f"{unit}.vvp")
         with open(log, "w") as lf:
             rc = subprocess.call([args.iverilog, "-g2012", "-o", simv, "-s", f"tb_gls_{unit}", tbv, glv]
                                  + [os.path.join(args.rtl, f) for f in files] + cells, stdout=lf, stderr=subprocess.STDOUT)
