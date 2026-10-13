@@ -459,7 +459,7 @@ jobs:
         run: |
           [ -f ci_publisher.pid ] && kill $(cat ci_publisher.pid) 2>/dev/null || true
           echo "finished $(date -u)" >> ci_logs/faults/RUN.txt
-          rm -f ci_logs/faults/list_*.json                 # the sampled lists (large; the seed reproduces them)
+          rm -f ci_logs/faults/list_*.json ci_logs/faults/state_*.json   # the sampled lists, the flop lists (large; the seed reproduces them)
           flock -w 120 .ci_publish.lock -c '
             git add -f ci_logs
             git commit -q -m "faults logs run ${{ github.run_number }}" || true

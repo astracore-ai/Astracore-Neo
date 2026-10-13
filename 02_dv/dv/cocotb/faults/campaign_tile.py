@@ -6,8 +6,9 @@ The workload is M1 of test_tile_mesh.py, driven as the island's firmware drives 
 activation tiles and three weight tiles from bank (1,1), computes the 3 x 3 convolution of 40 channels into 7 (36 output
 rows, 27 runs), drains the INT32 rows to bank (1,0) and ends; the watchdog is enabled with a window of twice the
 fault-free run and kicked at the start (the island's FTTI-windowed schedule for one layer). Per run: the core arrays and
-the NIC's leaves are cleared and the four banks put back to the initial image through the model's VPI (the arrays are not
-reset; every run starts from the state the fault-free run started from), the tile is reset, programmed through the
+the NIC's leaves are cleared, the four banks put back to the initial image and every flop of the build to its value at the
+test's start through the model's VPI (common.StateKeeper: the arrays and the registers without a reset keep what the last
+run left; every run starts from the state the fault-free run started from), the tile is reset, programmed through the
 register bus and started; after every rising edge the fault (common.Fault) is applied and err_pin sampled; the run ends
 when tile (0,0) reports prog_done with its drain idle, plus 40 cycles for the last write-back to land, or at the bound
 (the watchdog window + 200 cycles: a hang). The result is every word of the four banks (a write anywhere is a result)
@@ -25,7 +26,7 @@ from cocotb.triggers import RisingEdge, ReadWrite
 
 import test_tile_mesh as tm
 from neo_golden import ecc_encode, ins, OP_FETCH_A, OP_DRAIN_WR, OP_GO, OP_WAIT_DONE, OP_END
-from faults.common import Injector, Fault, classify, CsvOut, Budget
+from faults.common import Injector, Fault, StateKeeper, classify, CsvOut, Budget, load_state_items
 
 NX, NY = tm.NX, tm.NY
 N = NX * NY
@@ -56,6 +57,8 @@ class TileRig:
         self.esm = [self.inj.handle(f"{tile_path(n)}.u_esm.cause") for n in range(N)]
         self.init_image = {}                         # (node, row) -> 624-bit row, the rows the workload loads
         self.golden = None
+        self.keeper = StateKeeper(self.inj, load_state_items())     # every flop back to the test's start (common.py)
+        self.keeper.snapshot()
 
     # ---- memories through the VPI ----
     def load_words(self, node, base, words):
@@ -70,7 +73,9 @@ class TileRig:
             self.init_image[(node, r)] = v
 
     def restore(self):
-        """the banks back to the initial image (only the rows that differ), the leaves cleared"""
+        """every flop back to the test's start, the banks back to the initial image (only the rows that differ), the
+        leaves cleared"""
+        self.keeper.restore()
         for n in range(N):
             b = self.banks[n]
             for r in range(BANK_ROWS):
@@ -167,7 +172,12 @@ def diff_words(a, b):
 @cocotb.test()
 async def faults_tile(dut):
     cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    t0 = time.time()
     rig = TileRig(dut)
+    t1 = time.time()
+    rig.keeper.restore()
+    dut._log.info(f"faults_tile: {len(rig.keeper.hs)} flops kept for the runs ({rig.keeper.missed} not indexable), "
+                  f"handles and snapshot {t1 - t0:.2f} s, a restore pass {time.time() - t1:.3f} s")
     x, wgt, ref, act, wts = tm.conv_data()
     rig.load_words(tm.N11, tm.A0, act)
     rig.load_words(tm.N11, tm.W0, wts)

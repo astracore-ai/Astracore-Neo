@@ -58,11 +58,14 @@ def load_weights(path):
     return w
 
 
-def population(config, weights):
-    """(flop population, memory arrays, left out {reason: {block: bits}})"""
+def population(config, weights, state=None):
+    """(flop population, memory arrays, left out {reason: {block: bits}}); `state` (a list) receives every flop element
+    of the build the VPI can index ([path, elem]: what the drivers put back before each run, common.StateKeeper)"""
     pop, mems = [], []
     out = {"2-D array (not reachable through cocotb on Verilator 5.020)": {}, "idle core (tiles other than the computing one)": {}}
     for f in F.enumerate_flops(config):
+        if state is not None and f.get("kind") != "sram" and len(f["elem"]) <= 1:
+            state.append([f["path"], f["elem"]])
         node = F.node_of(f["path"]) if config == "tile" else None
         if f.get("kind") == "sram":
             base = f["block"][:-len(".sram")]
@@ -177,7 +180,11 @@ def golden(config, out, probe):
 def run(config, n, seed, workers, budget_s, out, weights_path):
     os.makedirs(out, exist_ok=True)
     weights = load_weights(weights_path)
-    pop, mems, left_out = population(config, weights)
+    state = []
+    pop, mems, left_out = population(config, weights, state)
+    with open(os.path.join(out, f"state_{config}.json"), "w") as f:
+        json.dump(state, f)
+    os.environ["FAULTS_STATE"] = os.path.join(out, f"state_{config}.json")    # the golden run and the workers inherit it
     first = {}                                        # every array of the population with its first element's index
     for f in pop:
         if f["elem"] and f["path"] not in first:

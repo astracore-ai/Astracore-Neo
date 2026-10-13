@@ -4,8 +4,8 @@ at 16 x 8 (the cocotb `core` build: the 2:4 sparse-capable core, NCHK = 4, --pub
 The workload is C1 of test_neo_core.py: the 3 x 3 convolution of 40 channels (three channel tiles) into 7 on 6 x 6, 27
 runs, the buffers written through the DMA ports, the requantization tables loaded (multiplier 30000 + c, shift 26, zero
 point -3, so the INT8 outputs do not saturate), the 36 rows drained as INT32 (rd_data) and requantized INT8 (rq_q). Per
-run: the three arrays (activation, weight, accumulator leaves) are cleared through the model's VPI, the core is reset and
-loaded, go is pulsed, and after every rising edge the fault is applied and the eight sticky flags read; the run ends at
+run: every flop is put back to its value at the test's start and the three arrays (activation, weight, accumulator
+leaves) are cleared through the model's VPI (common.StateKeeper), the core is reset and loaded, go is pulsed, and after every rising edge the fault is applied and the eight sticky flags read; the run ends at
 done plus 6 cycles (the last row's verdict and the requant's three stages) or at three times the fault-free run (a hang:
 at core level no watchdog exists -- the tile's ESM watchdog is the mechanism, measured by the tile campaign). The result is
 every drained INT32 and INT8 word in order, and the row count.
@@ -22,7 +22,7 @@ from cocotb.triggers import RisingEdge, ReadWrite
 
 import test_neo_core as tc
 from neo_golden import direct_conv, bits, sbits
-from faults.common import Injector, Fault, classify, CsvOut, Budget
+from faults.common import Injector, Fault, StateKeeper, classify, CsvOut, Budget, load_state_items
 
 ROWS, COLS, WCW, CIN = tc.ROWS, tc.COLS, tc.WCW, tc.CIN
 FLAGS = ["array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "rq_tbl_perr", "wbuf_ce", "wbuf_ue"]
@@ -39,12 +39,15 @@ class CoreRig:
         self.cin_tiles = (x.shape[0] + ROWS - 1) // ROWS
         self.act = tc.packed_act(x, self.cin_tiles, 6, 6)
         self.wts = tc.packed_w(wgt, self.cin_tiles, 3, 0)
+        self.keeper = StateKeeper(self.inj, load_state_items())     # every flop back to the test's start (common.py)
+        self.keeper.snapshot()
 
     def causes(self):
         return [n for n, h in zip(FLAGS, self.flags) if int(h.value)]
 
     async def run(self, fault=None, bound=20000):
         dut = self.dut
+        self.keeper.restore()
         for h in self.leaves:
             for i in range(len(h)):
                 h[i].value = 0
@@ -114,7 +117,12 @@ async def faults_core(dut):
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
     wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
     ref = direct_conv(x, wgt, 1, 1)
+    t0 = time.time()
     rig = CoreRig(dut, x, wgt)
+    t1 = time.time()
+    rig.keeper.restore()
+    dut._log.info(f"faults_core: {len(rig.keeper.hs)} flops kept for the runs ({rig.keeper.missed} not indexable), "
+                  f"handles and snapshot {t1 - t0:.2f} s, a restore pass {time.time() - t1:.3f} s")
     t0 = time.time()
     g = await rig.run()
     gwall = time.time() - t0

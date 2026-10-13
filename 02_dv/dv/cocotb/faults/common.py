@@ -114,6 +114,47 @@ class Injector:
             h.value = nv
 
 
+class StateKeeper:
+    """Every flop of the build put back before each run to the value it had when the test started (FAULTS_STATE: the
+    build's flop elements from run_faults.py). Reset does not reach the registers without one -- requant's tables, the
+    data pipelines, the PEs' weights -- so a fault's corruption of them (a stuck-at above all, which is still forced at
+    the end of its run) would carry into the next run of the same worker and be counted against the next fault: on the
+    tile build, whose M1 does not rewrite the requant tables, one table fault made every later run of that worker raise
+    rq_err (the first campaign, run 187). Restoring the snapshot makes every run start from the fault-free run's state.
+    The two-dimensional arrays (unreachable) keep their contents; their valid bits are reset."""
+
+    def __init__(self, inj, items):
+        self.hs, self.missed = [], 0
+        for path, elem in items:
+            try:
+                self.hs.append(inj.handle(path, elem))
+            except Exception:
+                self.missed += 1
+        self.snap = None
+
+    def snapshot(self):
+        self.snap = [int(h.value) for h in self.hs]
+
+    def restore(self):
+        """put back what differs from the snapshot; returns how many flops that was"""
+        n = 0
+        for h, v in zip(self.hs, self.snap):
+            if int(h.value) != v:
+                h.value = v
+                n += 1
+        return n
+
+
+def load_state_items():
+    """the flop elements FAULTS_STATE names ([[path, elem], ...]), or none"""
+    p = os.environ.get("FAULTS_STATE")
+    if not p:
+        return []
+    import json
+    with open(p) as f:
+        return json.load(f)
+
+
 class Fault:
     """One fault of the list (a dict from run_faults.py): path, elem, bit, type, cycle and its labels."""
 
