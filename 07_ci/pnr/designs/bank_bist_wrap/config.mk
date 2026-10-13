@@ -9,3 +9,10 @@ include $(dir $(DESIGN_CONFIG))../neo_common.mk
 export CORE_UTILIZATION = 60
 export MACRO_PLACEMENT_TCL = $(dir $(DESIGN_CONFIG))macro_place.tcl
 export SKIP_LAST_GASP = 1
+# run 188: global placement diverged (GPL-0307: the overflow low and rising, the wire length doubled) at the iteration
+# where timing-driven placement inflated the 877 um2 of cells by 57 % -- 7 k cells spread over a 1.2 mm core of macros.
+# Wire-length-driven placement (timing is repaired after placement, in CTS and global routing as before) with the
+# step coefficient below ORFS's 1.05, as the error message advises
+export GPL_TIMING_DRIVEN = 0
+export GPL_ROUTABILITY_DRIVEN = 0
+export MAX_PLACE_STEP_COEF = 1.03
