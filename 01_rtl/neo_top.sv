@@ -36,6 +36,8 @@ module neo_top #(
   parameter int WPF = 32,                    // words per link flit: 32 = the 1024-bit links
   parameter int FETCH_TIMEOUT = 1048575,     // the tiles' fetch watchdog (tile_nic.sv)
   parameter int BIST_WORDS = BANK_DEPTH,
+  parameter int NCHK = 1,                    // the tiles' check columns: 4 = the 2:4 sparse-capable silicon core (drop 0.43:
+                                             // passed to neo_tile; the synthesis job's chip top sets 4, as its tile)
   parameter int AXI_DW = 512,                // the bridges' AXI4 data width: 128, 256 or 512
   parameter int AXI_IDW = 4,                 // the host bridges' AXI4 ID width
   parameter int N_MEM_BRIDGES = NY,          // memory bridges in rows 0 .. N_MEM_BRIDGES - 1
@@ -213,7 +215,7 @@ module neo_top #(
           logic [FWL-1:0] t_rt_flit4;
           neo_tile #(.XW(XW), .YW(YW), .NX(NC), .NY(NY), .WPF(WPF), .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS),
                      .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT),
-                     .BIST_WORDS(BIST_WORDS), .DV_HOOKS(0)) u_t (
+                     .BIST_WORDS(BIST_WORDS), .NCHK(NCHK), .DV_HOOKS(0)) u_t (
             .clk(clk), .rst_n(rst_n), .my_x(XW'(x)), .my_y(YW'(y)),
             .in_valid(t_in_valid), .in_flit(t_in_flit), .in_ready(t_in_ready),
             .out_valid(t_out_valid), .out_flit(t_out_flit), .out_ready(t_out_ready),

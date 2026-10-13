@@ -30,6 +30,10 @@
 //                                                   accumulator's second stage, drop 0.40's margin of 5 cycles kept
 //     reduce to drain   one cycle more (red_last)   the last partial-sum row is accepted at c and written at the end of
 //                                                   c+1: the drain starts at c+2 [c+1]; reduce_ready drops at c+1
+//   Drop 0.43 -- the first-run test without the subtraction: tile_ok compared tiles_ready with ct - cfg_ct0, a 16-bit
+//   subtraction and a 16-bit compare in front of f_start (an output to the feeder and the lockstep comparator: 1,110 ps,
+//   the unit's one endpoint over 1,250 ps); ct_rel = ct - cfg_ct0 is now a register kept beside ct (0 at go, +1 when the
+//   enumeration steps to the next channel tile), so f_start is the compare alone. Cycle for cycle the same sequencer.
 module core_seq #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
@@ -80,6 +84,8 @@ module core_seq #(
   logic signed [15:0]  ct, ky, kx;          // current run
   logic signed [15:0]  nct, nky, nkx;       // next run
   logic                has_next;
+  logic                nct_inc;             // the next run is in the next channel tile (nct = ct + 1)
+  logic signed [15:0]  ct_rel;              // drop 0.43: ct - cfg_ct0, the channel tile relative to the share's first
   logic                first_q;
   logic signed [15:0]  lcnt;                // shadow-load row counter
   logic                loading;
@@ -109,7 +115,7 @@ module core_seq #(
   // the first run of a channel tile waits for that tile to have landed: the DMA counts the tiles
   // this core fetched, so the comparison is relative to the core's first tile (K-split shares)
   logic tile_ok;
-  assign tile_ok   = !((ky == 0) && (kx == 0)) || (tiles_ready > ct - cfg_ct0);
+  assign tile_ok   = !((ky == 0) && (kx == 0)) || (tiles_ready > ct_rel);
   assign f_start   = (state == S_START) && tile_ok;
   assign rd_en     = (state == S_DRAIN);
   assign rd_idx    = dcnt;
@@ -120,13 +126,13 @@ module core_seq #(
 
   // next-run enumeration (kx fastest, then ky, then ct), bounded by this core's share
   always_comb begin
-    nct = ct; nky = ky; nkx = kx; has_next = (rcnt < cfg_rn);
+    nct = ct; nky = ky; nkx = kx; has_next = (rcnt < cfg_rn); nct_inc = 1'b0;
     if (kx != cfg_k - 1) begin
       nkx = kx + 1;
     end else if (ky != cfg_k - 1) begin
       nkx = '0; nky = ky + 1;
     end else if (ct != cfg_ct_n - 1) begin
-      nkx = '0; nky = '0; nct = ct + 1;
+      nkx = '0; nky = '0; nct = ct + 1; nct_inc = 1'b1;
     end else begin
       has_next = 1'b0;
     end
@@ -134,7 +140,7 @@ module core_seq #(
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      state <= S_IDLE; ct <= '0; ky <= '0; kx <= '0; first_q <= 1'b0;
+      state <= S_IDLE; ct <= '0; ky <= '0; kx <= '0; first_q <= 1'b0; ct_rel <= '0;
       lcnt <= '0; loading <= 1'b0; loaded <= 1'b0; tcnt <= '0; wcnt <= '0; dcnt <= '0; ltile <= '0;
       ct_free_q <= 1'b0; ct_free_idx_q <= '0; rcnt <= '0; ext_cnt <= '0; red_last <= 1'b0;
     end else begin
@@ -151,7 +157,7 @@ module core_seq #(
       case (state)
         S_IDLE: begin
           if (go) begin
-            ct <= cfg_ct0; ky <= cfg_ky0; kx <= cfg_kx0; first_q <= 1'b1;
+            ct <= cfg_ct0; ky <= cfg_ky0; kx <= cfg_kx0; first_q <= 1'b1; ct_rel <= '0;
             ltile <= '0; lcnt <= '0; loading <= 1'b1; loaded <= 1'b0;
             rcnt <= 16'd1; ext_cnt <= '0; red_last <= 1'b0;
             state <= S_LOAD0;
@@ -181,6 +187,7 @@ module core_seq #(
             end
             if (has_next) begin
               ct <= nct; ky <= nky; kx <= nkx; first_q <= 1'b0;
+              if (nct_inc) ct_rel <= ct_rel + 1;
               rcnt  <= rcnt + 1;
               state <= S_START;
             end else begin

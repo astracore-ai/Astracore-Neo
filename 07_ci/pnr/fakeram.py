@@ -35,6 +35,13 @@ Writes <dir>/<macro>.lef, <dir>/<macro>.lib, <dir>/wrappers.v and <dir>/macros.j
 model's area beside the LEF's) for every leaf type in the unit's subtree; none when the subtree has no memory leaf.
 --leaf takes synth.py's leaf names (neo_mem_rf_w1056_d512_g1_rb1, neo_mem_sp_w624_d32768_g16) without a synthesis run,
 the pins from neo_mem.sv's port list: the macro table of 09_synthesis/memories.md.
+
+Drop 0.43 (stream A3) -- the bank as lane macros. A neo_mem_sp leaf with G > 1 write groups and a deep column (D >=
+LANE_SPLIT_DEPTH: the bank's 32,768 rows) is made as G macros of D x W/G -- one per write group, i.e. per (39,32) SECDED
+lane: the group's write enable, the lane's write and read data, the shared addresses -- each folded by a column mux
+(FakeRAM2.0's column_mux_factor: D / cm rows of cm x W/G bit cells; the cm whose macro is the squarest). The one-macro
+32,768 x 624 leaf is a 131:1 strip, 80.9 x 10,617.6 um, that no floorplan places (drop 0.42's table); a memory compiler
+folds such a column or splits it, which is what the lane macros stand for. The wrapper keeps the leaf's name and ports.
 """
 import argparse
 import json
@@ -51,9 +58,12 @@ PROCESS = {"tech_nm": 7, "voltage": 0.7, "metal_prefix": "M", "metal_layer": "M4
 # a macro narrower than one M5 strap pitch of the platform's grid (5.4 um) plus a strap and the rails' inset can fall
 # between two straps of a net and leave its macro grid empty (PDN-0233); every leaf here is far wider, the floor is a guard
 MIN_WIDTH_UM = 5.4 + 0.12 + 2 * 0.048
-# the synthesis model's area factors (synth.py MACRO_AREA_FACTOR), for the comparison in macros.json
+# the synthesis model's area factors (synth.py MACRO_AREA_FACTOR), for the comparison in macros.json; the class is the
+# synthesis results' own (by the read ports an instance uses, drop 0.42: a port-B-only neo_mem_rf is neo_mem_rf_b, 1.0)
 SYNTH_AREA_PER_BIT = 0.0292 * 1.44
-SYNTH_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_rb": 2.0}
+SYNTH_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_b": 1.0, "neo_mem_rf_rb": 2.0}
+# drop 0.43: a single-port leaf this deep with several write groups becomes one macro per group (lane_plan)
+LANE_SPLIT_DEPTH = 8192
 HOOK_INPUTS = ("bd_we", "bd_addr", "bd_wdata", "fi_en", "fi_or", "fi_addr", "fi_mask")
 HOOK_OUTPUTS = ("bd_rdata",)
 
@@ -79,8 +89,38 @@ def macro_kind(rec):
     return name, fn, tied, dropped
 
 
+def lane_plan(rec):
+    """(lanes, lane width, column mux) for a leaf made as one macro per write group, or None (drop 0.43): neo_mem_sp,
+    G > 1 groups dividing W, D >= LANE_SPLIT_DEPTH. The column mux is the power of two (1..256, dividing D) whose folded
+    bit-cell array -- D / cm rows of cm x W / G cells, FakeRAM2.0's process formula -- is the squarest."""
+    W, D, G = rec["W"], rec["D"], rec.get("G", 1)
+    base = rec.get("base") or rec["name"].split("_w")[0]
+    if base != "neo_mem_sp" or G <= 1 or W % G or D < LANE_SPLIT_DEPTH:
+        return None
+    wl = W // G
+    cell_w = 2 * PROCESS["contacted_poly_pitch_nm"] / 1000.0
+    cell_h = 10 * PROCESS["fin_pitch_nm"] / 1000.0
+    best = None
+    for k in range(9):
+        cm = 1 << k
+        if D % cm:
+            break
+        w, h = wl * cm * cell_w, D // cm * cell_h
+        score = abs(math.log(h / w))
+        if best is None or score < best[0] - 1e-9:
+            best = (score, cm)
+    return G, wl, best[1]
+
+
+def lane_record(rec, plan):
+    """The lane macro's own leaf-like record: D x W/G, one write group, the leaf's address width."""
+    G, wl, cm = plan
+    return dict(rec, name=f"{rec['name']}_lane", W=wl, G=1, cm=cm)
+
+
 def build(rec, fakeram_dir):
-    """The FakeRAM2.0 memory object of one leaf type (sized, pins and rails created)."""
+    """The FakeRAM2.0 memory object of one leaf type (sized, pins and rails created); a lane record (lane_record) gets
+    its column mux in the process data."""
     utils = os.path.join(fakeram_dir, "utils")
     if utils not in sys.path:
         sys.path.insert(0, utils)
@@ -93,6 +133,9 @@ def build(rec, fakeram_dir):
     from rw_port_group import RWPortGroup
 
     name, fn, tied, dropped = macro_kind(rec)
+    cm = rec.get("cm", 1)
+    if cm > 1:                                                          # a lane macro: the folded column in its name
+        name = f"fakeram7_{rec['D']}x{rec['W']}_cm{cm}_1w1r"
     groups = [[p for p in fn if p[2] == "output"],                      # read data (dout first, as FakeRAM orders)
               [p for p in fn if p[0] == "wdata"],                       # write data
               [p for p in fn if p[0].endswith("addr")],                 # addresses
@@ -119,7 +162,8 @@ def build(rec, fakeram_dir):
             self.fn = fn
             # a G = 1 write enable is the leaf's scalar `we`; G > 1 the bus we[G-1:0]
             self.bus_names = {pn for pn, w, d in fn if w > 1}
-            Memory.__init__(self, MemoryConfig(name, rec["W"], rec["D"], 1, 0), Process(PROCESS), TimingData(TIMING))
+            Memory.__init__(self, MemoryConfig(name, rec["W"], rec["D"], 1, 0), Process(dict(PROCESS, column_mux_factor=cm)),
+                            TimingData(TIMING))
             if self.addr_width != rec["AW"]:
                 raise ValueError(f"{name}: FakeRAM's address width {self.addr_width} != the leaf's AW {rec['AW']}")
             phys = self.get_physical_data()
@@ -246,6 +290,31 @@ def lef_exporter(mem, fakeram_dir):
     return LefExporter(mem)
 
 
+def wrapper_verilog_lanes(rec, mname, plan, tied, dropped):
+    """A split leaf (drop 0.43): the leaf's name and ports around G lane macros -- lane g writes on we[g] and holds bits
+    [g*W/G +: W/G] of wdata / rdata, every lane at the same addresses."""
+    G, wl, cm = plan
+    pins = rec["pins"]
+    names = [p[0] for p in pins]
+    for need in ("clk", "we", "waddr", "wdata", "re", "raddr", "rdata"):
+        if need not in names:
+            raise ValueError(f"{rec['name']}: the netlist's instance has no {need} -- not the leaf this macro models")
+    decl = [f"  {d}{(' [%d:0]' % (w - 1)) if w > 1 else ''} {pn};" for pn, w, d in pins]
+    L = [f"// {rec['name']}: the leaf's ports (01_rtl/neo_mem.sv, DV_HOOKS = 0) around {G} FakeRAM2.0 lane macros {mname}",
+         f"// ({rec['D']} x {wl}, column mux {cm}), lane g on write group g and bits [{wl}*g +: {wl}] of the data;",
+         f"// tied off in silicon and unconnected here: {', '.join(p for p in tied if p in names)};",
+         f"// dropped outputs at 0: {', '.join(p for p in dropped if p in names)} (prep.py checks the parent reads none of them)",
+         f"module {rec['name']}({', '.join(names)});"] + decl
+    for g in range(G):
+        L.append(f"  {mname} u_lane{g} (.clk(clk), .we(we[{g}]), .waddr(waddr), .wdata(wdata[{wl * g + wl - 1}:{wl * g}]), "
+                 f".re(re), .raddr(raddr), .rdata(rdata[{wl * g + wl - 1}:{wl * g}]));")
+    for pn, w, d in pins:
+        if d == "output" and pn != "rdata":
+            L.append(f"  assign {pn} = {w}'b0;")
+    L.append("endmodule")
+    return "\n".join(L) + "\n"
+
+
 def wrapper_verilog(rec, mname, fn, tied, dropped):
     """The leaf's name and ports (synth.py's macro_pins: the ports as the netlist connects them) around the macro."""
     pins = rec["pins"]
@@ -327,28 +396,35 @@ def main():
     for rec in recs:
         if not rec.get("pins"):
             raise SystemExit(f"fakeram.py: no pin list for {rec['name']} in the synthesis results")
-        mem, mname, fn, tied, dropped = build(rec, args.fakeram)
+        plan = lane_plan(rec)
+        lanes, cm = (plan[0], plan[2]) if plan else (1, 1)
+        mem, mname, fn, tied, dropped = build(lane_record(rec, plan) if plan else rec, args.fakeram)
         lef = os.path.join(args.out, mname + ".lef")
         lib = os.path.join(args.out, mname + ".lib")
         lef_exporter(mem, args.fakeram).export_file(lef)
         liberty(mem, fn, args.fakeram).export_file(lib)
-        wrappers.append(wrapper_verilog(rec, mname, fn, tied, dropped))
+        if plan:
+            _, leaf_fn, tied, dropped = macro_kind(rec)          # the leaf's own functional pins, for prep.py's check
+            wrappers.append(wrapper_verilog_lanes(rec, mname, plan, tied, dropped))
+        else:
+            leaf_fn = fn
+            wrappers.append(wrapper_verilog(rec, mname, fn, tied, dropped))
         phys = mem.get_physical_data()
-        kind = rec["base"] if not (rec["base"] == "neo_mem_rf" and rec.get("RB", 0)) else "neo_mem_rf_rb"
+        kind = rec.get("kind") or (rec["base"] if not (rec["base"] == "neo_mem_rf" and rec.get("RB", 0)) else "neo_mem_rf_rb")
         bits = rec["W"] * rec["D"]
-        bitcell_h = rec["D"] * PROCESS["fin_pitch_nm"] * 10 * 1.2 / 1000.0
+        bitcell_h = rec["D"] / cm * PROCESS["fin_pitch_nm"] * 10 * 1.2 / 1000.0
         table.append(dict(leaf=rec["name"], macro=mname, W=rec["W"], D=rec["D"], G=rec.get("G", 1), RB=rec.get("RB", 0),
-                          AW=rec["AW"], bits=bits, instances=rec.get("instances"),
-                          pins=sum(w for _, w, _ in fn), functional_pins=[[p[0], p[1], p[2]] for p in fn],
+                          AW=rec["AW"], bits=bits, instances=rec.get("instances"), lanes=lanes, column_mux=cm,
+                          pins=sum(w for _, w, _ in fn), functional_pins=[[p[0], p[1], p[2]] for p in leaf_fn],
                           lef_width_um=round(phys.get_width(), 4), lef_height_um=round(phys.get_height(), 4),
-                          lef_area_um2=round(phys.get_area(True), 3), bitcell_area_um2=round(phys.get_area(False), 3),
+                          lef_area_um2=round(lanes * phys.get_area(True), 3), bitcell_area_um2=round(lanes * phys.get_area(False), 3),
                           pin_limited=bool(phys.get_height(False) > bitcell_h + 1e-6),
-                          um2_per_bit=round(phys.get_area(True) / bits, 5),
+                          um2_per_bit=round(lanes * phys.get_area(True) / bits, 5),
                           synth_model_um2=round(bits * SYNTH_AREA_PER_BIT * SYNTH_FACTOR[kind], 3),
                           synth_factor=SYNTH_FACTOR[kind], access_ps=TIMING["access_time_ns"] * 1000,
                           setup_hold_ps=TIMING["t_setup_ns"] * 1000, lef=os.path.basename(lef), lib=os.path.basename(lib),
                           lef_bytes=os.path.getsize(lef), lib_bytes=os.path.getsize(lib)))
-        print(f"{rec['name']:32s} -> {mname:28s} {phys.get_width():8.3f} x {phys.get_height():8.3f} um "
+        print(f"{rec['name']:32s} -> {(str(lanes) + ' x ') if lanes > 1 else ''}{mname:28s} {phys.get_width():8.3f} x {phys.get_height():8.3f} um "
               f"= {phys.get_area(True):10.1f} um2 ({table[-1]['um2_per_bit']:.4f} um2/bit; synthesis model "
               f"{table[-1]['synth_model_um2']:.1f} um2 at x{SYNTH_FACTOR[kind]}){' pin-limited' if table[-1]['pin_limited'] else ''}")
     with open(os.path.join(args.out, "wrappers.v"), "w") as f:

@@ -8,6 +8,11 @@
 # estimates for an earlier database): paths_max.txt (the ten worst endpoints, one path each) and endpoints.txt (every
 # setup-violating endpoint with its slack). Every step is announced in the log before it runs; run.py does not fail the
 # job on this script.
+# Drop 0.43 (stream A3): then power -- report_power at the flow's default activity (power_default.txt) and, when run.py
+# passes NEO_ACTIVITY_TCL (power.py's set_power_activity commands from the cocotb runs' recorded activity), again with
+# the recorded activity on the flops and inputs (power_activity.txt; activity_applied.txt: how many of the listed pins
+# the database resolved). A design of more than 500 k instances (neo_core) skips the per-instance scan of clock-net
+# drivers in physical.txt (a Tcl loop over every pin).
 source $::env(SCRIPTS_DIR)/load.tcl
 set odb [expr { [info exists ::env(NEO_REPORT_ODB)] ? $::env(NEO_REPORT_ODB) : "6_final.odb" }]
 set sdc [expr { [info exists ::env(NEO_REPORT_SDC)] ? $::env(NEO_REPORT_SDC) : "6_final.sdc" }]
@@ -28,7 +33,9 @@ set core [$block getCoreArea]
 set kinds [dict create stdcell {0 0.0} macro {0 0.0} tap {0 0.0} filler {0 0.0} tie {0 0.0}]
 set clk_cells 0
 set clk_masters [dict create]
-foreach inst [$block getInsts] {
+set insts [$block getInsts]
+set scan_clk [expr { [llength $insts] <= 500000 }]
+foreach inst $insts {
   set m [$inst getMaster]
   set name [$m getName]
   set a [expr { [$m getWidth] * [$m getHeight] / ($dbu * $dbu) }]
@@ -45,6 +52,9 @@ foreach inst [$block getInsts] {
   }
   lassign [dict get $kinds $k] n s
   dict set kinds $k [list [expr { $n + 1 }] [expr { $s + $a }]]
+  if { !$scan_clk } {
+    continue
+  }
   foreach it [$inst getITerms] {
     if { [$it isOutputSignal] } {
       set net [$it getNet]
@@ -97,4 +107,17 @@ foreach pin [sta::endpoints] {
   }
 }
 close $f
+
+step "power: the flow's default activity"
+report_power > $out/power_default.txt
+if { [info exists ::env(NEO_ACTIVITY_TCL)] && [file exists $::env(NEO_ACTIVITY_TCL)] } {
+  step "power: the recorded activity ($::env(NEO_ACTIVITY_TCL))"
+  source $::env(NEO_ACTIVITY_TCL)
+  set f [open $out/activity_applied.txt w]
+  puts $f "pins_listed $neo_act_pins"
+  puts $f "pins_found $neo_act_found"
+  puts $f "input_ports $neo_act_ports"
+  close $f
+  report_power > $out/power_activity.txt
+}
 step "done: $out"

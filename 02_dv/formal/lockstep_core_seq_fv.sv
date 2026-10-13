@@ -80,6 +80,7 @@ module lockstep_core_seq_fv #(
       // the inductive invariant: every register of the two copies equal
       assert (u_a.state == u_b.state);
       assert (u_a.ct == u_b.ct && u_a.ky == u_b.ky && u_a.kx == u_b.kx);
+      assert (u_a.ct_rel == u_b.ct_rel);                       // drop 0.43: ct - cfg_ct0 kept as a register
       assert (u_a.first_q == u_b.first_q);
       assert (u_a.lcnt == u_b.lcnt && u_a.loading == u_b.loading && u_a.loaded == u_b.loaded);
       assert (u_a.tcnt == u_b.tcnt && u_a.wcnt == u_b.wcnt && u_a.dcnt == u_b.dcnt);

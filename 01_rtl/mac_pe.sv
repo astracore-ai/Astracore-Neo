@@ -15,6 +15,15 @@
 //   2g + 1 both see channels 4g .. 4g + 3 of the 64-channel tile and each PE of the pair holds one of the group's two
 //   nonzero weights with its position in the group (systolic_array, skew_in). NB = 1 is the PE of drop 0.41 bit for bit
 //   (an XW-bit row bus, no index): the ABFT check columns are NB = 1 PEs with their byte wired by the array.
+//   Drop 0.43 -- the check PE's product as two half products (WW > XW: the ABFT check columns' WW = WCW-bit weight, 14 bits
+//   at 32 rows, 13 at 16): w = w_hi * 2^WL + w_lo with w_lo the low WL = floor(WW / 2) bits unsigned and w_hi the rest
+//   signed, the product stage registers x * w_lo and x * w_hi side by side (two 8 x 7 multipliers at 14 bits, the data
+//   PE's size), and the add stage sums p_in + x * w_lo + (x * w_hi << WL) as one carry-save row more in front of its
+//   adder. The sum is p_in + x * w modulo 2^PW, the single product's bit for bit (the ABFT verdict does not change); what
+//   changes is the product stage's depth: the 8 x 14 multiplier's path from x was 1,240 ps from the pin (its Booth rows
+//   one level deeper than the data PE's 8 x 8, the select lines fanned across 14-bit rows), the array's slowest path (the
+//   last data PE's x_out into the check PE: 1,421 ps on the 32 x 32 array in run 180) -- now 1,061 ps, under the data
+//   PE's own 1,095 (synth_report_drop043.md). The data PE (WW = XW) is the always block of drop 0.42 unchanged.
 // fault_inject: adds +1 to this cycle's product (a single-point MAC fault) -- for safety
 // verification of the ABFT checker only; tied to 0 on every PE except the one selected
 // by FAULT_ROW/FAULT_COL in systolic_array. Remove or fuse off before tape-out.
@@ -73,33 +82,92 @@ module mac_pe #(
     end
   endgenerate
 
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      w_q    <= '0;
-      w_sh   <= '0;
-      x_out  <= '0;
-      s_out  <= 1'b0;
-      prod_q <= '0;
-      p_in_q <= '0;
-      inj_q  <= 1'b0;
-      p_out  <= '0;
-      v_out  <= 1'b0;
-      v_q    <= 1'b0;
-    end else begin
-      if (w_load) w_sh <= w_in;
-      if (s_in)   w_q  <= w_sh[WW-1:0];
-      s_out  <= s_in;
-      v_out  <= v_in;
-      v_q    <= v_in;
-      if (v_in) begin                               // product stage: enabled by the incoming valid
-        x_out  <= x_in;
-        prod_q <= x_sel * w_q;                      // all operands signed -> sign-extended product
-        p_in_q <= p_in;
-        inj_q  <= fault_inject;
+  // the product and add stages: one product (the data PE, WW = XW: the always block of drop 0.42 as it was), or two half
+  // products (the check PE, WW > XW: drop 0.43)
+  localparam int WL = (WW > XW) ? WW / 2 : 0;           // the low half's width (0: one product)
+  generate
+    if (WL == 0) begin : g_one
+      always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+          w_q    <= '0;
+          w_sh   <= '0;
+          x_out  <= '0;
+          s_out  <= 1'b0;
+          prod_q <= '0;
+          p_in_q <= '0;
+          inj_q  <= 1'b0;
+          p_out  <= '0;
+          v_out  <= 1'b0;
+          v_q    <= 1'b0;
+        end else begin
+          if (w_load) w_sh <= w_in;
+          if (s_in)   w_q  <= w_sh[WW-1:0];
+          s_out  <= s_in;
+          v_out  <= v_in;
+          v_q    <= v_in;
+          if (v_in) begin                               // product stage: enabled by the incoming valid
+            x_out  <= x_in;
+            prod_q <= x_sel * w_q;                      // all operands signed -> sign-extended product
+            p_in_q <= p_in;
+            inj_q  <= fault_inject;
+          end
+          if (v_q) begin                                // add stage: enabled by the valid one cycle later
+            p_out  <= p_in_q + prod_q + inj;
+          end
+        end
       end
-      if (v_q) begin                                // add stage: enabled by the valid one cycle later
-        p_out  <= p_in_q + prod_q + inj;
+    end else begin : g_half
+      // w = w_hi * 2^WL + w_lo (w_lo the low WL bits unsigned, w_hi the upper WW - WL bits signed): the product stage forms
+      // x * w_lo (NL bits signed) and x * w_hi (NH bits signed) side by side and registers each with its sign bit inverted
+      // -- a signed N-bit v equals (v ^ 2^(N-1)) - 2^(N-1) with the first term zero-extended -- so the add stage sums p_in,
+      // the two products without sign extension (no sign bit fanned out across the upper columns of its carry-save row)
+      // less one constant KSN (the two 2^(N-1), folded); prod_q holds the low half, ph_q the high half
+      localparam int NL = XW + WL + 1;                  // x * w_lo: signed x unsigned -> 16 bits at WW = 14
+      localparam int NH = XW + WW - WL;                 // x * w_hi: signed x signed -> 15 bits at WW = 14
+      localparam int KSN = (1 << (NL - 1)) + (1 << (NH - 1 + WL));
+      logic signed [WL:0]      w_lo;                    // {0, the low WL bits}: unsigned, as a signed operand
+      logic signed [WW-WL-1:0] w_hi;                    // the upper bits, signed
+      logic signed [NL-1:0]    pl;
+      logic signed [NH-1:0]    ph;
+      logic [NL-1:0]           pl_i;                    // the two products, sign bits inverted
+      logic [NH-1:0]           ph_i, ph_q;
+      assign w_lo = {1'b0, w_q[WL-1:0]};                // the halves as signed variables, not $signed() of a
+      assign w_hi = w_q[WW-1:WL];                       // part-select: every simulator extends them the same way
+      assign pl   = x_sel * w_lo;
+      assign ph   = x_sel * w_hi;
+      assign pl_i = {~pl[NL-1], pl[NL-2:0]};
+      assign ph_i = {~ph[NH-1], ph[NH-2:0]};
+      always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+          w_q    <= '0;
+          w_sh   <= '0;
+          x_out  <= '0;
+          s_out  <= 1'b0;
+          prod_q <= '0;
+          ph_q   <= '0;
+          p_in_q <= '0;
+          inj_q  <= 1'b0;
+          p_out  <= '0;
+          v_out  <= 1'b0;
+          v_q    <= 1'b0;
+        end else begin
+          if (w_load) w_sh <= w_in;
+          if (s_in)   w_q  <= w_sh[WW-1:0];
+          s_out  <= s_in;
+          v_out  <= v_in;
+          v_q    <= v_in;
+          if (v_in) begin                               // product stage: the two half products, sign bits inverted
+            x_out  <= x_in;
+            prod_q <= PW'(pl_i);
+            ph_q   <= ph_i;
+            p_in_q <= p_in;
+            inj_q  <= fault_inject;
+          end
+          if (v_q) begin                                // add stage: p_in + x * w_lo + x * w_hi * 2^WL (+ the hook's 1)
+            p_out  <= p_in_q + prod_q + (PW'(ph_q) << WL) - PW'(KSN) + inj;
+          end
+        end
       end
     end
-  end
+  endgenerate
 endmodule

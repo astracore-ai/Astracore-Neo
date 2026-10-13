@@ -18,6 +18,8 @@ module neo_tile #(
   parameter int BIST_WORDS = BANK_DEPTH,
   parameter int PDEPTH = 32,
   parameter int PAW = $clog2(PDEPTH),
+  parameter int NCHK = 1,                    // drop 0.43: rtl/neo_tile.sv's NCHK / IW (C1, drop 0.42), passed by neo_top
+  parameter int IW = (NCHK > 1) ? 2 : 0,
   parameter int DV_HOOKS = 0
 )(
   input  logic          clk,
@@ -70,7 +72,7 @@ module neo_tile #(
   assign rq_err_sticky = 1'b0; assign ecc_ce = 1'b0; assign ecc_ue = 1'b0; assign wbuf_ce = 1'b0; assign wbuf_ue = 1'b0;
   assign rq_tbl_perr = 1'b0; assign lost_err = 1'b0; assign fetch_timeout = 1'b0; assign dv_bd_rdata = '0; assign dv_rt_valid = '0;
   assign dv_rt_flit4 = '0;
-  localparam int UNUSED_PARAMS = NX + NY + ROWS + COLS + PW + WCW + IDXW + AW + WAW + FETCH_TIMEOUT + BIST_WORDS + PAW + DV_HOOKS;
+  localparam int UNUSED_PARAMS = NX + NY + ROWS + COLS + PW + WCW + IDXW + AW + WAW + FETCH_TIMEOUT + BIST_WORDS + PAW + NCHK + IW + DV_HOOKS;
   logic unused_stub;
   assign unused_stub = ^{clk, rst_n, my_x, my_y, in_valid, in_flit, out_ready, h_we, h_re, h_addr, h_wdata, dv_bd_we, dv_bd_addr,
                          dv_bd_wdata, dv_fi_en, dv_fi_sel, dv_fi_idx, dv_fi_mask, 32'(UNUSED_PARAMS)};

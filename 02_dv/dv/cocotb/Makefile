@@ -100,6 +100,15 @@ export NEO_NCHK := $(NCHK)
 # coverage: COVERAGE=1 adds Verilator line/toggle coverage (coverage.dat -> verilator_coverage --annotate),
 # and the tests sample functional covergroups through cocotb-coverage (pip install cocotb-coverage)
 # VCOV=1: Verilator line/toggle coverage plus the functional covergroups (not COVERAGE, which cocotb reads as Python coverage)
+# TRACE_VCD=<file> (drop 0.43, stream A3: the switching activity of the power figures, 07_ci/pnr/activity.sh): the model
+# with Verilator's VCD tracing, every signal up to 4,096 bits wide (the default 256 would leave out the 288-bit and wider
+# rows), and the run dumped into <file> -- a named pipe that 07_ci/pnr/activity.py reads as the simulation writes it.
+# Give the build its own SIM_BUILD: the traced model is not the plain one
+TRACE_VCD ?=
+ifneq ($(TRACE_VCD),)
+  EXTRA_ARGS += --trace --trace-max-width 4096
+  SIM_ARGS += --trace --trace-file $(TRACE_VCD)
+endif
 ifeq ($(VCOV),1)
   EXTRA_ARGS += --coverage --coverage-line --coverage-toggle
   export NEO_FUNCOV=1

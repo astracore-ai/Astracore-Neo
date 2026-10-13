@@ -7,6 +7,9 @@ synthesized estimate on the very netlist ORFS placed), orfs/logs/ (every ORFS st
 elapsed time and peak memory -- and metrics JSON), orfs/reports/6_finish.rpt (ORFS's final report: OpenRCX
 parasitics, propagated clock), and orfs/reports/neo/ when neo_report.tcl ran (the ten worst endpoints). Writes
 pnr_<block>.md and metrics.json (every ORFS metric merged) beside them. Partial runs are reported as far as they got.
+Drop 0.43 (stream A3): a block whose design stops at global routing (designs/<block>/stages: neo_core) is reported from
+the global-route stage's metrics; and the power at the flow's default activity beside the power from the cocotb runs'
+recorded activity (neo_report.tcl's power_default.txt / power_activity.txt, power.py's in/activity.json).
 
 Usage: report.py --logs ci_logs/pnr/<block> --block <block> [--out <file.md>]
 """
@@ -167,6 +170,10 @@ def cts(logdir):
                 trees=list(zip(names, sinks)) if len(names) == len(sinks) else [])
 
 
+# the stages a metric can come from, newest first, with the words the report uses for them
+NEWEST = (("finish", "routing"), ("detailedroute", "detailed routing"), ("globalroute", "global routing"), ("cts", "CTS"),
+          ("detailedplace", "placement"), ("globalplace", "global placement"), ("floorplan", "the floorplan"))
+
 REPAIR_STAGES = (("2_1_floorplan.log", "floorplan (no wires, ideal clock: the synthesized estimate, then gate sizing)"),
                  ("4_1_cts.log", "CTS (placement parasitics, the propagated clock)"),
                  ("5_1_grt.log", "global route (its parasitics)"))
@@ -213,6 +220,16 @@ def power(text):
     return dict(internal=float(m.group(1)), switching=float(m.group(2)), leakage=float(m.group(3)), total=float(m.group(4)))
 
 
+def power_groups(text):
+    """report_power's group rows (Sequential, Combinational, Clock, Macro, Pad, Total): {group: (internal, switching,
+    leakage, total)} in W."""
+    out = {}
+    for g, a, b, c, d in re.findall(r"\n(Sequential|Combinational|Clock|Macro|Pad|Total)\s+([-0-9.eE+]+)\s+([-0-9.eE+]+)"
+                                    r"\s+([-0-9.eE+]+)\s+([-0-9.eE+]+)", text):
+        out[g] = (float(a), float(b), float(c), float(d))
+    return out
+
+
 def first_num(text, pat):
     m = re.search(pat, text or "")
     return float(m.group(1)) if m else None
@@ -246,6 +263,12 @@ def main():
 
     def m(*pats):
         return metric(metrics, *pats)
+    stages = (run.get("orfs_stages") or "").split(",")
+    grt_only = bool(stages) and stages[-1] == "grt"           # drop 0.43: placed and globally routed (neo_core)
+
+    def fm(name):
+        """A final-stage metric: finish__<name>, else the global route's (a block that stops there)."""
+        return m(rf"finish__{name}", rf"globalroute__{name}") if grt_only else m(rf"finish__{name}")
 
     # routed: ORFS's final report (OpenRCX, propagated clock) and metrics
     fin = orfs_sections(os.path.join(L, "orfs", "reports", "6_finish.rpt"))
@@ -255,19 +278,21 @@ def main():
     r_tns = first_num(fin.get("report_tns"), r"tns max\s+([-0-9.eE+]+)")
     if r_tns is None:
         r_tns = num(m(r"finish__timing__setup__tns"))
-    r_hws, r_htns = num(m(r"finish__timing__hold__ws")), num(m(r"finish__timing__hold__tns"))
-    r_sviol = m(r"finish__timing__drv__setup_violation_count")
-    r_hviol = m(r"finish__timing__drv__hold_violation_count")
+    if grt_only and r_wns is None:
+        r_wns, r_tns = num(m(r"globalroute__timing__setup__ws")), num(m(r"globalroute__timing__setup__tns"))
+    r_hws, r_htns = num(fm(r"timing__hold__ws")), num(fm(r"timing__hold__tns"))
+    r_sviol = fm(r"timing__drv__setup_violation_count")
+    r_hviol = fm(r"timing__drv__hold_violation_count")
     r_mpp, r_fmax = min_period(fin.get("report_clock_min_period", ""))
     r_path = worst_path(fin.get("report_checks -path_delay max", ""))
     r_r2r = worst_path(fin.get("report_checks -path_delay max reg to reg", ""))
     r_hold = worst_path(fin.get("report_checks -path_delay min", ""))
     r_mp = (period - r_r2r["slack"]) if (period and r_r2r and r_r2r.get("slack") is not None) else None
     pw = power(fin.get("report_power", ""))
-    if pw is None and m(r"finish__power__total") is not None:
-        pw = dict(internal=num(m(r"finish__power__internal__total")) or 0.0, switching=num(m(r"finish__power__switching__total")) or 0.0,
-                  leakage=num(m(r"finish__power__leakage__total")) or 0.0, total=num(m(r"finish__power__total")))
-    skew_s, skew_h = num(m(r"finish__clock__skew__setup")), num(m(r"finish__clock__skew__hold"))
+    if pw is None and fm(r"power__total") is not None:
+        pw = dict(internal=num(fm(r"power__internal__total")) or 0.0, switching=num(fm(r"power__switching__total")) or 0.0,
+                  leakage=num(fm(r"power__leakage__total")) or 0.0, total=num(fm(r"power__total")))
+    skew_s, skew_h = num(fm(r"clock__skew__setup")), num(fm(r"clock__skew__hold"))
     # synthesized: the same netlist flat in OpenSTA, ideal clock, no wires
     sdir = os.path.join(L, "in", "synth_sta")
     s_summ = kv(os.path.join(sdir, "summary.txt"))
@@ -286,20 +311,46 @@ def main():
     cong = congestion(ologs)
     times = step_times(ologs)
     die, core = fp.get("die"), fp.get("core")
-    util = num(m(r"finish__design__instance__utilization", r"detailedroute__design__instance__utilization",
-                 r"globalroute__design__instance__utilization", r"cts__design__instance__utilization"))
-    util = util * 100.0 if (util is not None and util <= 1.0) else util
-    cls = {k.split("class:")[1]: v for k, v in metrics.items() if k.startswith("finish__design__instance__count__class:")}
+    cls ={k.split("class:")[1]: v for k, v in metrics.items() if k.startswith("finish__design__instance__count__class:")}
     synth_cells = (prep.get("yosys_stat") or {}).get("design", {})
     neo_paths = read(os.path.join(L, "orfs", "reports", "neo", "paths_max.txt"))
 
-    md = [f"# pnr_{block} -- `{block}` placed and routed on ASAP7 through OpenROAD-flow-scripts",
+    # the database the report ran on (run.json's neo_report stage): the final one, or the newest a shorter run left
+    rep_db = next((st.get("db") for st in run.get("stages", []) if st.get("stage") == "neo_report"), None) or ""
+
+    def newest(name):
+        """A metric at the newest stage that has it, with the stage's name (a run the job's time stopped early)."""
+        for p, lab in NEWEST:
+            v = num(m(rf"{p}__{name}"))
+            if v is not None:
+                return v, lab
+        return None, None
+    what = "placed and globally routed (no detailed routing)" if grt_only else "placed and routed"
+    if status != "complete":                                     # the run stopped short of its targets
+        what = f"(stopped: {status})"
+    timing_src = ("Timing is the global-route stage's: its parasitic estimates, the propagated clock tree."
+                  if grt_only else "Timing is the final stage's: OpenRCX parasitics, the propagated clock tree.")
+    if status != "complete" and r_wns is None:
+        timing_src = (f"No timing: the run stopped before {'global routing' if grt_only else 'routing'}, and the figures "
+                      f"below are the newest stage's it reached (the report itself ran on `{rep_db or '?'}`, for power).")
+    u_val, u_at = newest("design__instance__utilization")
+    util = u_val * 100.0 if (u_val is not None and u_val <= 1.0) else u_val
+    pl_cells = num(m(r"detailedplace__design__instance__count__stdcell"))
+    pl_note = ""
+    if pl_cells is None and num(m(r"globalplace__design__instance__count__stdcell")) is not None:
+        pl_cells, pl_note = num(m(r"globalplace__design__instance__count__stdcell")), " (global placement)"
+    area_last, area_at = num(fm(r"design__instance__area__stdcell")), ("placed" if grt_only else "routed")
+    if area_last is None:
+        area_last, area_at = newest("design__instance__area__stdcell")
+        area_at = f"at {area_at}" if area_at else area_at
+    md = [f"# pnr_{block} -- `{block}` {what} on ASAP7 through OpenROAD-flow-scripts",
           "",
           f"Generated by `07_ci/pnr/report.py` from the `pnr` job's logs ({where}, started {run.get('start', '?')}; image "
-          f"`{run.get('image') or '?'}`; make arguments `{run.get('flow_args') or 'none'}`). Status: **{status}**. The netlist is `synth.py`'s for the unit's "
+          f"`{run.get('image') or '?'}`; make arguments `{run.get('flow_args') or 'none'}`; ORFS targets "
+          f"`{run.get('orfs_stages') or 'synth,floorplan,place,cts,route,do-finish'}`). Status: **{status}**. The netlist is `synth.py`'s for the unit's "
           f"subtree ({', '.join(prep.get('units', [])) or '?'}) at {fmt(period)} ps on ASAP7 {prep.get('corner', 'SS')} "
           f"(ORFS CORNER = WC, the same NLDM files), the memory leaves as FakeRAM2.0 macros; ORFS's defaults otherwise "
-          "(`07_ci/pnr/designs/neo_common.mk`). Timing is the final stage's: OpenRCX parasitics, the propagated clock tree. "
+          f"(`07_ci/pnr/designs/neo_common.mk`, the block's `config.mk`). {timing_src} "
           "ASAP7 is a predictive academic PDK: the picoseconds and square microns are the library's, the ratios and the paths "
           "the design's.",
           "",
@@ -309,14 +360,17 @@ def main():
           + (f"{core[0]:.2f} x {core[1]:.2f} um" if core else "n/a")
           + f" ({fmt(m(r'finish__design__die__area', r'floorplan__design__die__area'), 1)} / "
             f"{fmt(m(r'finish__design__core__area', r'floorplan__design__core__area'), 1)} um2) |",
-          f"| utilization (cells and macros over the core, after routing; the floorplan's target 55 %) | {fmt(util, 1)} % |",
-          f"| standard cells: synthesized (prep.py) / after placement / after routing | {fmt(synth_cells.get('stdcells', synth_cells.get('num_cells')))} / "
-          f"{fmt(m(r'detailedplace__design__instance__count__stdcell'))} / {fmt(m(r'finish__design__instance__count__stdcell'))} "
+          f"| utilization (cells and macros over the core, after {u_at or ('global routing' if grt_only else 'routing')}) | "
+          f"{fmt(util, 1)} % |",
+          f"| standard cells: synthesized (prep.py) / after placement / after {'global routing' if grt_only else 'routing'} | "
+          f"{fmt(synth_cells.get('stdcells', synth_cells.get('num_cells')))} / "
+          f"{fmt(pl_cells)}{pl_note} / {fmt(fm(r'design__instance__count__stdcell'))} "
           f"(of these {fmt(cls.get('timing_repair_buffer'))} timing-repair buffers, {fmt(cls.get('tie_cell'))} tie cells, "
           f"{fmt(cls.get('tap_cell'))} taps; {fmt(cls.get('fill_cell'))} fill cells beside them) |",
-          f"| macros | {fmt(m(r'finish__design__instance__count__macros'))} ({fmt(m(r'finish__design__instance__area__macros'), 1)} um2) |",
-          f"| cell area: synthesized / routed | {fmt(synth_cells.get('stdcell_area_um2'), 1)} / "
-          f"{fmt(m(r'finish__design__instance__area__stdcell'), 1)} um2 |",
+          f"| macros | {fmt(newest('design__instance__count__macros')[0])} "
+          f"({fmt(newest('design__instance__area__macros')[0], 1)} um2) |",
+          f"| cell area: synthesized / {area_at or ('placed' if grt_only else 'routed')} | "
+          f"{fmt(synth_cells.get('stdcell_area_um2'), 1)} / {fmt(area_last, 1)} um2 |",
           f"| routed wire length / vias | {fmt(m(r'detailedroute__route__wirelength'))} um / {fmt(m(r'detailedroute__route__vias'))} |",
           f"| DRC violations after detailed routing (first iteration) / antenna-violating nets / diodes | "
           f"{fmt(m(r'detailedroute__route__drc_errors'))} ({fmt(m(r'detailedroute__route__drc_errors__iter:0'))}) / "
@@ -338,9 +392,48 @@ def main():
           f"| max slew / cap / fanout violations | {fmt(m(r'finish__timing__drv__max_slew'))} / {fmt(m(r'finish__timing__drv__max_cap'))} / "
           f"{fmt(m(r'finish__timing__drv__max_fanout'))} |",
           "",
-          "Power: OpenSTA's default switching activity (the flow sets none); A3 replaces it with the activity the cocotb runs "
-          "record (VCD / SAIF).",
+          "Power in this table: OpenSTA's default switching activity (0.1 transitions per cycle on the inputs, propagated; "
+          "the flow sets none); the recorded activity's figure is in the section on power below when the block has one.",
           ""]
+    # drop 0.43: power at the default activity and from the recorded activity (neo_report.tcl; power.py)
+    ndir = os.path.join(L, "orfs", "reports", "neo")
+    p_def = power_groups(read(os.path.join(ndir, "power_default.txt")))
+    p_act = power_groups(read(os.path.join(ndir, "power_activity.txt")))
+    applied = kv(os.path.join(ndir, "activity_applied.txt"))
+    act = load_json(os.path.join(L, "in", "activity.json")) or {}
+    db_text = {"6_final.odb": "the final database (OpenRCX parasitics, the propagated clock)",
+               "5_route.odb": "the detailed-route database (placement parasitics, the propagated clock)",
+               "5_1_grt.odb": "the global-route database (parasitic estimates, the propagated clock)",
+               "4_cts.odb": "the CTS database (placement parasitics, the propagated clock)",
+               "3_place.odb": "the placed database (placement parasitics, no clock tree)",
+               "2_floorplan.odb": "the floorplan database -- the run ended in placement: no wires, no clock tree, so the "
+                                  "figure is the cells' alone"}.get(rep_db, f"`{rep_db}`" if rep_db else "the final database")
+    if p_def or p_act:
+        md += ["## Power: the default activity and the recorded activity", "",
+               f"OpenSTA's report_power on {db_text} at {fmt(period)} ps, "
+               "ASAP7 SS 0.63 V / 100 C (the WC corner's NLDM and power tables), in mW."]
+        if act:
+            fk, ik = act.get("flops_by_kind") or {}, act.get("inputs_by_kind") or {}
+            util_s = f"{100.0 * act['mac_util']:.1f} %" if act.get("mac_util") is not None else "n/a"
+            md += ["", f"The recorded activity: `{act.get('activity')}` -- {act.get('source')}, scope `{act.get('scope')}`, a window "
+                   f"of {fmt(act.get('window_cycles'))} cycles at {fmt(act.get('clock_ps'))} ps in simulation (the activity is per "
+                   f"cycle, applied at the period above); MAC utilization in the window {util_s}. Of the block's "
+                   f"{fmt(act.get('flops'))} flops {fmt(fk.get('exact'))} took a recorded bit by name, {fmt(fk.get('folded'))} by "
+                   f"the folded index (a wider unit than the one simulated: the bit of the same signal at the index modulo the "
+                   f"recorded range), {fmt(fk.get('default'))} kept the propagated default; input bits {fmt(ik.get('exact'))} / "
+                   f"{fmt(ik.get('folded'))} / {fmt(ik.get('default'))}. Pins annotated in the database: "
+                   f"{applied.get('pins_found', 'n/a')} of {applied.get('pins_listed', 'n/a')}, input ports {applied.get('input_ports', 'n/a')}."]
+        md += ["", "| activity | group | internal | switching | leakage | total |", "| --- | --- | --- | --- | --- | --- |"]
+        for lab, pg in (("default", p_def), ("recorded", p_act)):
+            for g in ("Sequential", "Combinational", "Clock", "Macro", "Total"):
+                if g in pg and (pg[g][3] > 0 or g == "Total"):
+                    v = pg[g]
+                    md.append(f"| {lab} | {g} | {v[0] * 1e3:.3f} | {v[1] * 1e3:.3f} | {v[2] * 1e3:.4f} | "
+                              f"{'**' if g == 'Total' else ''}{v[3] * 1e3:.3f}{'**' if g == 'Total' else ''} |")
+        if "Total" in p_def and "Total" in p_act and p_def["Total"][3]:
+            md += ["", f"Recorded / default: {p_act['Total'][3] / p_def['Total'][3]:.3f} (total), dynamic "
+                   f"{(p_act['Total'][0] + p_act['Total'][1]) / max(1e-30, p_def['Total'][0] + p_def['Total'][1]):.3f}."]
+        md.append("")
     if r_path:
         md += ["## The worst routed paths", "",
                f"Setup: `{r_path['start']}` -> `{r_path['end']}`, arrival {fmt(r_path['arrival'], 1)} ps (launch clock latency "
@@ -356,19 +449,23 @@ def main():
             md += ["", "The ten worst endpoints (`orfs/reports/neo/paths_max.txt`): "
                    + ", ".join(f"`{e}` {s}" for e, s in zip(ends, slk)) + "."]
         md.append("")
-    md += ["## Routed against synthesized", "",
-           "The synthesized estimate is the netlist ORFS placed (prep.py's) flat in OpenSTA with the same SDC, an ideal clock and "
-           "no wires (`in/synth_sta/`); the routed figure is ORFS's final STA. A minimum period here is the period minus the "
-           "worst slack of the paths named (the 8 % setup uncertainty and the setup time included on both sides). The routed "
-           "netlist is not the synthesized one: the flow resizes and buffers it (timing repair in floorplan, CTS and global "
-           "route), so the ratio carries both the wires and the repair.",
-           "",
-           "| | synthesized | routed | routed / synthesized |",
-           "| --- | --- | --- | --- |",
-           f"| setup WNS at {fmt(period)} ps | {fmt(s_wns, 1)} ps | {fmt(r_wns, 1)} ps | |",
-           f"| minimum period, register to register | {fmt(s_mp, 1)} ps | {fmt(r_mp, 1)} ps | {ratio(r_mp, s_mp)} |",
-           f"| minimum period with the I/O paths | {fmt(s_mpp, 1)} ps | {fmt(r_mpp, 1)} ps | {ratio(r_mpp, s_mpp)} |",
-           ""]
+    md += ["## Routed against synthesized", ""]
+    if any(v is not None for v in (s_wns, r_wns, s_mp, r_mp, s_mpp, r_mpp)):
+        md += ["The synthesized estimate is the netlist ORFS placed (prep.py's) flat in OpenSTA with the same SDC, an ideal "
+               "clock and no wires (`in/synth_sta/`); the routed figure is ORFS's final STA. A minimum period here is the period "
+               "minus the worst slack of the paths named (the 8 % setup uncertainty and the setup time included on both sides). "
+               "The routed netlist is not the synthesized one: the flow resizes and buffers it (timing repair in floorplan, CTS "
+               "and global route), so the ratio carries both the wires and the repair.",
+               "",
+               "| | synthesized | routed | routed / synthesized |",
+               "| --- | --- | --- | --- |",
+               f"| setup WNS at {fmt(period)} ps | {fmt(s_wns, 1)} ps | {fmt(r_wns, 1)} ps | |",
+               f"| minimum period, register to register | {fmt(s_mp, 1)} ps | {fmt(r_mp, 1)} ps | {ratio(r_mp, s_mp)} |",
+               f"| minimum period with the I/O paths | {fmt(s_mpp, 1)} ps | {fmt(r_mpp, 1)} ps | {ratio(r_mpp, s_mpp)} |",
+               ""]
+    else:
+        md += ["No timing on either side: the synthesized netlist's STA was not run for this block and its run stopped "
+               "before routing.", ""]
     rw = repair_wns(os.path.join(L, "orfs", "logs"))
     if rw:
         md += ["Setup WNS through the flow (repair_timing's own tables, before -> after its repair): "
@@ -428,6 +525,18 @@ def main():
                f"{s['stage']} {('exit ' + str(s.get('exit'))) if s.get('exit') is not None else 'not run'}"
                + (f" in {s['seconds'] / 60:.1f} min" if s.get("seconds") else "") + (f" ({s['note']})" if s.get("note") else "")
                for s in run.get("stages", [])) + ".", ""]
+    # a step the job's time cut off leaves its log as <step>.tmp.log, without a time line: how far it got
+    for tl in sorted(glob.glob(os.path.join(ologs, "*.tmp.log"))):
+        step = os.path.basename(tl)[:-len(".tmp.log")]
+        rows = re.findall(r"^\s*(\d+) \|\s*([-+][0-9.]+%) \|\s*(\d+) \|\s*(\d+) \|\s*(\d+) \|\s*(\d+)\s*$", read(tl), re.M)
+        if rows:                    # repair_design -verbose: iteration, area, resized, buffers, nets repaired, remaining
+            it, area, res, buf, rep, rem = rows[-1]
+            nets = int(it) + int(rem)
+            md += [f"Unfinished: `{step}`, stopped in repair_design (its last progress row): {int(it):,} of {nets:,} nets "
+                   f"visited ({100.0 * int(it) / max(1, nets):.1f} %), {int(rep):,} repaired with {int(buf):,} buffers and "
+                   f"{int(res):,} resized cells, area {area}.", ""]
+        else:
+            md += [f"Unfinished: `{step}` (`{os.path.basename(tl)}` has no progress table).", ""]
     out = args.out or os.path.join(L, f"pnr_{block}.md")
     with open(out, "w") as f:
         f.write("\n".join(md) + "\n")
