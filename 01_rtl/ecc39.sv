@@ -6,13 +6,22 @@
 //   position; position j holds data bit j - floor(log2 j) - 2.
 //   v3 (drop 0.17): every packed vector has exactly one driver (one always_comb), no loop-carried
 //   accumulation across processes, no per-bit continuous assignments.
+//   v4 (drop 0.43): the position masks are constants (localparam), no longer always_comb blocks that read no signal --
+//   CI's Icarus 12 warns "always_comb process has no sensitivities" on those and runs them only at time zero; the
+//   masks are the same bits: encoder mask i = the data positions j (3..38, not a power of two) with bit i of j set,
+//   decoder mask i = every position 1..38 with bit i set.
 module ecc39_enc (
   input  logic [31:0] d,
   output logic [5:0]  p,
   output logic        op
 );
+  localparam logic [38:0] EMASK0 = 39'h2aaaaaaaa8;  // positions contributing to check bit i (data positions only)
+  localparam logic [38:0] EMASK1 = 39'h4cccccccc8;
+  localparam logic [38:0] EMASK2 = 39'h70f0f0f0e0;
+  localparam logic [38:0] EMASK3 = 39'h00ff00fe00;
+  localparam logic [38:0] EMASK4 = 39'h00fffe0000;
+  localparam logic [38:0] EMASK5 = 39'h7e00000000;
   logic [38:0] cw;                                   // data-only codeword by position
-  logic [38:0] mask [6];                             // positions contributing to check bit i
   always_comb begin
     int k;
     cw = '0;
@@ -22,11 +31,12 @@ module ecc39_enc (
     end
   end
   always_comb begin
-    for (int i = 0; i < 6; i++)
-      for (int j = 0; j < 39; j++) mask[i][j] = (j >= 3) && ((j & (1 << i)) != 0) && ((j & (j - 1)) != 0);
-  end
-  always_comb begin
-    for (int i = 0; i < 6; i++) p[i] = ^(cw & mask[i]);
+    p[0] = ^(cw & EMASK0);
+    p[1] = ^(cw & EMASK1);
+    p[2] = ^(cw & EMASK2);
+    p[3] = ^(cw & EMASK3);
+    p[4] = ^(cw & EMASK4);
+    p[5] = ^(cw & EMASK5);
   end
   assign op = (^d) ^ (^p);
 endmodule
@@ -39,8 +49,13 @@ module ecc39_dec (
   output logic        ce,
   output logic        ue
 );
+  localparam logic [38:0] DMASK0 = 39'h2aaaaaaaaa;  // positions 1..38 with bit i set (check bit i included)
+  localparam logic [38:0] DMASK1 = 39'h4ccccccccc;
+  localparam logic [38:0] DMASK2 = 39'h70f0f0f0f0;
+  localparam logic [38:0] DMASK3 = 39'h00ff00ff00;
+  localparam logic [38:0] DMASK4 = 39'h00ffff0000;
+  localparam logic [38:0] DMASK5 = 39'h7f00000000;
   logic [38:0] cw;                                   // received codeword by position
-  logic [38:0] mask [6];
   logic [5:0]  s;                                    // syndrome = erroneous position (0 = none)
   logic        pe;
   always_comb begin
@@ -53,11 +68,12 @@ module ecc39_dec (
     end
   end
   always_comb begin
-    for (int i = 0; i < 6; i++)
-      for (int j = 0; j < 39; j++) mask[i][j] = (j >= 1) && ((j & (1 << i)) != 0);
-  end
-  always_comb begin
-    for (int i = 0; i < 6; i++) s[i] = ^(cw & mask[i]);
+    s[0] = ^(cw & DMASK0);
+    s[1] = ^(cw & DMASK1);
+    s[2] = ^(cw & DMASK2);
+    s[3] = ^(cw & DMASK3);
+    s[4] = ^(cw & DMASK4);
+    s[5] = ^(cw & DMASK5);
   end
   assign pe = ((^d) ^ (^p) ^ op) != 1'b0;
   assign ce = pe;                                    // any single error: data, check bit, or the overall parity bit

@@ -99,10 +99,13 @@ jobs:
           mkdir -p ci_logs/hdl-sim && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/hdl-sim/RUN.txt
       - name: lint
         run: set -o pipefail; make lint 2>&1 | tee ci_logs/hdl-sim/lint.txt
-      - name: iverilog streaming core
+      # the two Icarus steps gate since drop 0.43: Ubuntu's Icarus 12 runs both testbenches clean (the RTL's receivers of
+      # unpacked output ports are nets, ecc39's masks constants) and the targets fail unless the testbench prints ALL PASS
+      # (vvp exits 0 whatever it prints, which is how the standing X failures passed these steps before)
+      - name: iverilog streaming core (Icarus 12, gating)
         if: always()
         run: set -o pipefail; make iverilog 2>&1 | tee ci_logs/hdl-sim/iverilog.txt
-      - name: iverilog neo_core
+      - name: iverilog neo_core (Icarus 12, gating)
         if: always()
         run: set -o pipefail; make iverilog_core 2>&1 | tee ci_logs/hdl-sim/iverilog_core.txt
       - name: verilator streaming core, neo_core, tile mesh

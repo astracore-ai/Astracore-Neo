@@ -158,10 +158,16 @@ verilator_core: vectors_core
 	verilator --binary --timing -Wno-fatal +incdir+vectors_core --top-module tb_neo_core $(RTL) $(TBC) -o sim_core
 	./obj_dir/sim_core +VECDIR=vectors_core
 
+# drop 0.43: both Icarus targets gate on the testbench's verdict (vvp exits 0 whatever the testbench prints, so the hdl-sim
+# steps passed with the standing Icarus 12 failures until now): the run is kept in build/ and the target fails unless it
+# printed RESULT: ALL PASS. CI runs Ubuntu's Icarus 12; the RTL keeps to what Icarus 12 simulates (an unpacked array that
+# receives a child's unpacked output port is a wire -- Icarus 12 drives no variable from such a port -- and ecc39's masks are
+# constants, not always_comb blocks without inputs)
 iverilog_core: vectors_core
 	mkdir -p build
 	iverilog -g2012 -I vectors_core -o build/sim_core.vvp $(RTL) $(TBC)
-	vvp build/sim_core.vvp +VECDIR=vectors_core
+	vvp build/sim_core.vvp +VECDIR=vectors_core | tee build/tb_core_iverilog.txt
+	grep -q "^RESULT: ALL PASS" build/tb_core_iverilog.txt
 
 regress: vectors vectors_sp
 	python3 model/systolic_ref.py --rows 8 --cols 16 --m 20 --seed 7 --fault-row 2 --fault-col 9 --out build/v816
@@ -198,10 +204,11 @@ regress_ci: vectors vectors_sp
 iverilog: vectors
 	mkdir -p build
 	iverilog -g2012 -I $(VECDIR) -o build/sim.vvp $(RTL) $(TB)
-	vvp build/sim.vvp +VECDIR=$(VECDIR)
+	vvp build/sim.vvp +VECDIR=$(VECDIR) | tee build/tb_iverilog.txt
+	grep -q "^RESULT: ALL PASS" build/tb_iverilog.txt     # gating since drop 0.43 (see iverilog_core)
 
-# drop 0.42: the streaming core on the NCHK = 4 arrays under Icarus (14; CI's Icarus 12 shows its standing always_comb X
-# failures here too, so the target is not part of hdl-sim)
+# drop 0.42: the streaming core on the NCHK = 4 arrays under Icarus (drop 0.43: Icarus 12 runs it too, see iverilog_core;
+# not a step of hdl-sim)
 iverilog_sp: vectors_sp
 	mkdir -p build
 	iverilog -g2012 -I build/v32_4 -o build/sim_v32_4.vvp $(RTL) $(TB)

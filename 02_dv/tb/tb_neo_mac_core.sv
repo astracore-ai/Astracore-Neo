@@ -52,7 +52,7 @@ module tb_neo_mac_core;
   logic                  valid_in;
   logic                  swap_in;
   logic                  sparse;
-  logic signed [PW-1:0]  y     [COLS];
+  wire  signed [PW-1:0]  y     [COLS];         // a net: Icarus 12 does not drive a variable array from an unpacked output port (drop 0.43)
   logic signed [PW-1:0]  y_chk;
   logic                  valid_out;
   logic                  abft_clear;

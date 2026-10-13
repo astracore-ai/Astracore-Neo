@@ -69,7 +69,7 @@ module neo_mac_core_v02 #(
   // drain
   input  logic                  rd_en,
   input  logic [IDXW-1:0]       rd_idx,
-  output logic signed [PW-1:0]  rd_data [COLS],
+  output wire  signed [PW-1:0]  rd_data [COLS],     // a net (drop 0.43): Icarus 12 passes no unpacked output port on through a variable
   output logic signed [PW-1:0]  rd_chk,
   output logic                  rd_valid,
   // safety
@@ -104,7 +104,7 @@ module neo_mac_core_v02 #(
     .ctrl_clear(abft_clear), .ctrl_err(ctrl_err), .ctrl_err_sticky(ctrl_err_sticky),
     .ctrl_fault_inject(ctrl_fault_inject));
 
-  logic signed [PW-1:0] y     [COLS];
+  wire  signed [PW-1:0] y     [COLS];                // a net, as rd_data
   logic signed [PW-1:0] y_chk;
   logic                 valid_out;
 

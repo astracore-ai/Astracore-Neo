@@ -80,10 +80,10 @@ module neo_core #(
   output logic                  ext_ready,
   output logic                  reduce_ready,
   // drained results: INT32 (ABFT-checked) and, three cycles later, requantized INT8 (drop 0.41: requant in three stages)
-  output logic signed [PW-1:0]  rd_data [COLS],
+  output wire  signed [PW-1:0]  rd_data [COLS],      // nets (drop 0.43): Icarus 12 passes no unpacked output port on through a variable
   output logic signed [PW-1:0]  rd_chk,
   output logic                  rd_valid,
-  output logic signed [7:0]     rq_q [COLS],
+  output wire  signed [7:0]     rq_q [COLS],
   output logic                  rq_valid,
   // requantization tables (per output channel) and mode
   input  logic                  rq_tbl_we,
@@ -120,7 +120,7 @@ module neo_core #(
   logic                  w_load;
   logic                  w_load_q;                  // drop 0.41: w_load one cycle later, beside the weight buffer's registered read
   logic [WAW-1:0]        w_raddr;
-  logic [WW+IW-1:0]      w_in [COLS];
+  wire  [WW+IW-1:0]      w_in [COLS];               // nets (drop 0.43), as rd_data and rq_q
   logic [NCHK*WCW-1:0]   wc_in;
   logic                  rd_en;
   logic [IDXW-1:0]       rd_idx_p;
@@ -204,7 +204,7 @@ module neo_core #(
 
   // requantization, duplicated with a comparator (R10); the fault hook corrupts the primary's input only
   logic signed [PW-1:0] rq_in_p [COLS];
-  logic signed [7:0]    rq_q_d [COLS];
+  wire  signed [7:0]    rq_q_d [COLS];
   logic                 rq_valid_d;
   logic                 rq_err;
   generate

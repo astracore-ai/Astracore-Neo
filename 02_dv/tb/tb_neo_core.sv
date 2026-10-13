@@ -36,7 +36,7 @@ module tb_neo_core;
   logic signed [PW-1:0]  ext_y [COLS];
   logic signed [PW-1:0]  ext_chk;
   logic signed [15:0]    ct_free_idx;
-  logic signed [7:0]     rq_q [COLS];
+  wire  signed [7:0]     rq_q [COLS];            // nets: Icarus 12 drives no variable array from an unpacked output port (drop 0.43)
   logic                  rq_valid, rq_tbl_we, rq_relu;
   logic [$clog2(COLS)-1:0] rq_tbl_addr;
   logic [15:0]           rq_tbl_mult;
@@ -45,7 +45,7 @@ module tb_neo_core;
   logic [IDXW-1:0]       cfg_m;
   logic                  go, done, busy;
   logic [2:0]            state_dbg;
-  logic signed [PW-1:0]  rd_data [COLS];
+  wire  signed [PW-1:0]  rd_data [COLS];
   logic signed [PW-1:0]  rd_chk;
   logic                  rd_valid;
   logic                  err_clear, array_abft_sticky, acc_abft_err, acc_abft_err_valid, acc_abft_sticky, ctrl_err_sticky;
