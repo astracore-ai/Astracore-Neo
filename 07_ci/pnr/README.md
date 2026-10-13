@@ -90,11 +90,15 @@ LEF / LIB / wrappers, prep.py's netlist statistics and checks, the SDC), `synth.
 
 ## The 32×32 core and the activity (drop 0.43)
 
-**`neo_core`, placed and globally routed.** Detailed routing of the 16×8 core's 0.28 M cells already peaked at 15.2 GB
-with the swap file behind it (run 168): TritonRoute keeps every finished worker of a batch until the batch ends, and the
-32×32 core is 6.7 times the cells. `designs/neo_core/stages` stops the flow after global routing (`grt`, 5_1_grt.odb);
-the report reads the global-route stage's metrics (placement-legal cells and area, congestion, the timing on its
-parasitic estimates). What detailed routing would need is in `09_synthesis/pnr_drop043.md`.
+**`neo_core`: the flow stops after global routing.** Detailed routing of the 16×8 core's 0.28 M cells already peaked at
+15.2 GB with the swap file behind it (run 168): TritonRoute keeps every finished worker of a batch until the batch ends,
+and the 32×32 core is 6.7 times the cells. `designs/neo_core/stages` stops the flow after global routing (`grt`,
+5_1_grt.odb); the report reads the global-route stage's metrics (placement-legal cells and area, congestion, the timing
+on its parasitic estimates). Drop 0.43's run (182) did not get that far: the placement's `repair_design` was still
+buffering the 1.9 M cells' nets when the flow's budget ran out. For a run that stops early the report gives the newest
+stage's figures there are (here global placement), the database its power ran on (here the floorplan's: cells only) and
+how far the cut-off step got (its `<step>.tmp.log`). What placing and routing the 32×32 core would need is in
+`09_synthesis/pnr_drop043.md`.
 
 **Power from recorded activity.** `bash pnr/activity.sh` from the flat layout (Verilator 5.020 and cocotb on the path)
 builds the two traced models and writes `activity/*.json.gz`; the files are committed, so the `pnr` job applies them
