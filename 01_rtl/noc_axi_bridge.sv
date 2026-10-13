@@ -27,8 +27,9 @@
 //     latency hidden behind the other bursts in flight (B1 paid it per burst).
 //   - WRHDR + WRDATA + CRC (a tile's drain to the bridge): per source, as the NIC keeps it -- the write pointer, the CRC and
 //     the word count of each source in its own registers, so drains from several tiles interleave beat by beat. Drop 0.43:
-//     the writes are posted and combined -- each WRDATA beat leaves the input for a beat register (with its source's write
-//     pointer) and is placed one AXI beat per cycle into the open burst: the continuation of the burst's last beat (a
+//     the writes are posted and combined -- each WRDATA beat leaves the input for a register (with its source's write
+//     pointer), a second register takes it with its AXI address formed, and from there it is placed one AXI beat per cycle
+//     into the open burst (registers compared, a beat per AXI beat flowing): the continuation of the burst's last beat (a
 //     drain going on inside a beat) merges into it, the next beat in the same 4 KB page from the same source appends, any
 //     other closes the burst and opens a new one; a burst also closes at its source's CRC flit, when an RDREQ is taken and
 //     after 15 idle cycles. Closed bursts queue for AW (QD of them), their beats in a 4 KB write buffer (a neo_mem_rf of
@@ -66,11 +67,13 @@
 //   Timing structure: rx_ready is decided by the beat's type, its source's coordinates against the host read's tile and
 //   registers -- never by a per-source value or by an AXI ready; the source is decoded one-hot from its coordinates and its
 //   state read through AND-OR selects; the receive CRC is computed in two halves (the words' through crc16_beat, the
-//   source state's as A^n c) and XORed; the read request's address and burst sizes (IS_ADDR, IS_ARP), the R beat's lane
-//   and word count are registers, the write path works from its beat register into registers and the buffer, so AR, AW
-//   and W come from registers or the buffer's read port; the host's W beats are registered with their decode and shifted
-//   on the way in. Paths left from an input to an output: R data to the flit toward the mesh (the memory role forwards R
-//   as it arrives), the mesh FIFO's ready to RREADY / WREADY.
+//   source state's as A^n c) and XORed; the read request's fields (taken from the queue at IS_IDLE), its address and
+//   burst sizes (IS_ADDR, IS_ARP), the R beat's lane and word count are registers, the write path works from its second
+//   beat register (its address formed between the two) into registers and the buffer, so AR, AW and W come from
+//   registers or the buffer's read port; a queue's full test compares its pointers (no subtractor before rx_ready); the
+//   host's W beats are registered with their decode and shifted on the way in. Paths left from an input to an output:
+//   R data to the flit toward the mesh (the memory role forwards R as it arrives), the mesh FIFO's ready to RREADY /
+//   WREADY.
 module noc_axi_bridge #(
   parameter int XW = 4, YW = 3,              // mesh coordinate widths (XW = $clog2(NX + 1): the bridge column is x = NX)
   parameter int NX = 8, NY = 8,              // tile columns and rows
@@ -370,14 +373,15 @@ module noc_axi_bridge #(
     if (MEM != 0) begin : g_mem
       // ======== read: the request queue, AR issued ahead, R beats forwarded in order ========
       // An RDREQ is taken off the input into the queue (QD entries) whenever the queue has room and no WRDATA beat is in
-      // the write path's beat register (so that every write that arrived before it is in a burst it can be ordered after),
-      // never blocking the input behind an AXI read. Three pointers walk the queue: q_wp (taken), q_ip (the entry the AR
-      // engine works on) and q_rp (the entry whose response is being sent; it leaves at its CRC flit). The AR engine forms
-      // an entry's address (win_addr, IS_ADDR), then issues its bursts (4 KB pages, sized a cycle before AR in IS_ARP) while
-      // fewer than QD bursts are outstanding -- so up to QD bursts of up to QD requests are in flight; one AXI ID, so the
-      // slave returns them in order and the responses leave in queue order. An entry's AR waits until every write burst
-      // that held data received before it has its B (its tag against w_done): a read never overtakes a write to the window
-      // that arrived first -- the order B1's blocking input gave for free.
+      // the write path's two beat registers (so that every write that arrived before it is in a burst it can be ordered
+      // after), never blocking the input behind an AXI read. Three pointers walk the queue: q_wp (taken), q_ip (the entry
+      // the AR engine works on) and q_rp (the entry whose response is being sent; it leaves at its CRC flit). The AR
+      // engine takes the entry's request into registers (IS_IDLE), forms its address (win_addr, IS_ADDR), then issues its
+      // bursts (4 KB pages, sized a cycle before AR in IS_ARP) while fewer than QD bursts are outstanding -- so up to QD
+      // bursts of up to QD requests are in flight; one AXI ID, so the slave returns them in order and the responses leave
+      // in queue order. An entry's AR waits until every write burst that held data received before it has its B (its tag
+      // against w_done): a read never overtakes a write to the window that arrived first -- the order B1's blocking input
+      // gave for free.
       localparam int QD  = 4;                // the request queue per direction
       localparam int QPW = 2;                // $clog2(QD)
       localparam int PGW = 12 - LBB;         // an AXI beat's index in its 4 KB page
@@ -396,9 +400,10 @@ module noc_axi_bridge #(
       assign qi_i = q_ip[QPW-1:0];
       assign qi_r = q_rp[QPW-1:0];
       logic [SQW-1:0] w_closed, w_done;      // write bursts closed (queued for AW) / completed (B)
-      logic           ob_open, wb_valid;     // the write path's open burst; its beat register (below)
+      logic           ob_open, wa_valid, wb_valid;   // the write path's open burst; its two beat registers (below)
       logic           rq_take;
-      assign rdreq_ok = ((q_wp - q_rp) != (QPW + 1)'(QD)) && !wb_valid;
+      // (a queue is full when its pointers differ in the bit above the index alone: no subtractor in front of rx_ready)
+      assign rdreq_ok = !((q_wp[QPW-1:0] == q_rp[QPW-1:0]) && (q_wp[QPW] != q_rp[QPW])) && !wa_valid && !wb_valid;
       assign rq_take  = rx_fire && (rx_type == T_RDREQ);
       always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -424,15 +429,18 @@ module noc_axi_bridge #(
       logic [12:0]    is_beats;              // AXI beats of the entry still to request
       logic [PGW:0]   is_nb;                 // beats of the next burst (1 .. PB)
       logic [PGW:0]   is_pleft;              // beats to the end of the page
+      logic [19:0]    ie_addr;               // the entry's request, taken from the queue at IS_IDLE (registers: the queue's
+      logic [12:0]    ie_words;              // read mux and the address add in different cycles)
+      logic [SQW-1:0] ie_tag;
       logic [39:0]    is_a;                  // the entry's byte address
       logic [12:0]    is_rqb;                // ... and the AXI beats it covers
       logic [QPW:0]   ar_out;                // bursts whose AR was taken and whose last R beat was not (<= QD)
       logic           ar_fire, r_fire;
-      assign is_a      = win_addr(win_base, q_addr[qi_i]);
-      assign is_rqb    = (13'(q_addr[qi_i][LWP-1:0]) + q_words[qi_i] + 13'(WPB - 1)) >> LWP;   // win_base is 64-byte aligned
+      assign is_a      = win_addr(win_base, ie_addr);
+      assign is_rqb    = (13'(ie_addr[LWP-1:0]) + ie_words + 13'(WPB - 1)) >> LWP;   // win_base is 64-byte aligned
       assign is_pleft  = (PGW + 1)'(PB) - (PGW + 1)'(is_boff);
       logic [SQW-1:0] raw_d;                 // w_done - tag: below half the range when the writes before it are done
-      assign raw_d     = w_done - q_tag[qi_i];
+      assign raw_d     = w_done - ie_tag;
       assign ar_fire   = m_arvalid && m_arready;
       assign m_arvalid = (is_state == IS_AR);
       assign m_araddr  = {is_page, is_boff, LBB'(0)};
@@ -442,14 +450,18 @@ module noc_axi_bridge #(
       always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
           is_state <= IS_IDLE; is_page <= '0; is_boff <= '0; is_beats <= '0; is_nb <= '0; q_ip <= '0;
+          ie_addr <= '0; ie_words <= '0; ie_tag <= '0;
         end else begin
           case (is_state)
-            IS_IDLE: if (q_ip != q_wp) is_state <= IS_ADDR;
+            IS_IDLE: if (q_ip != q_wp) begin
+              is_state <= IS_ADDR;
+              ie_addr <= q_addr[qi_i]; ie_words <= q_words[qi_i]; ie_tag <= q_tag[qi_i];
+            end
             IS_ADDR: if (!raw_d[SQW-1]) begin         // the writes it follows are done
               is_page  <= is_a[39:12];
               is_boff  <= is_a[11:LBB];
               is_beats <= is_rqb;
-              if (q_words[qi_i] == 13'd0) begin q_ip <= q_ip + (QPW + 1)'(1); is_state <= IS_IDLE; end   // the CRC flit alone
+              if (ie_words == 13'd0) begin q_ip <= q_ip + (QPW + 1)'(1); is_state <= IS_IDLE; end   // the CRC flit alone
               else is_state <= IS_ARP;
             end
             IS_ARP: if (ar_out != (QPW + 1)'(QD)) begin
@@ -520,55 +532,61 @@ module noc_axi_bridge #(
       assign ev_rd_wait = (ar_out != '0) && !r_fire;
 
       // ======== write: posted, combined into bursts of up to 4 KB ========
-      // A WRDATA beat is taken off the input into the beat register (wb_*) with its source's write pointer; from there its
-      // AXI beats (1 .. 5 by alignment) are placed one per cycle: a beat at the address of the open burst's last beat (the
-      // same source: a drain continuing inside a beat) merges into the staging beat; the next address in the same 4 KB page
-      // (the same source) appends -- the staging beat goes to the write buffer and the new one takes its place; anything
-      // else closes the open burst (the staging beat to the buffer, {address, length} to the AW queue) and opens a new one.
-      // A burst also closes when its source's CRC flit arrives (the message's end), when an RDREQ is taken (so the read can
-      // be ordered after it), and after 15 idle cycles. The AW engine takes the queue's head: AW from registers, its W beats
-      // from the buffer (a neo_mem_rf of PB beats: 4 KB of data with word strobes), at most QD bursts awaiting B; B is
-      // counted (w_done) and checked (ev_axi), nothing waits for it at the input. A drain is in memory some cycles after its
-      // CRC flit was taken, not when (B1 held each beat at the input until its B): wr_busy tells top_ctrl while anything is
+      // A WRDATA beat is taken off the input into register A (wa_*) with its source's write pointer; A hands it to register
+      // B (wb_*) with its first AXI beat's address formed on the way (win_addr from A's pointer, registered); from B its AXI
+      // beats (1 .. 5 by alignment) are placed one per cycle, B's address counting up: a beat at the address of the open
+      // burst's last beat (the same source: a drain continuing inside a beat) merges into the staging beat; the next
+      // address in the same 4 KB page (the same source) appends -- the staging beat goes to the write buffer and the new
+      // one takes its place; anything else closes the open burst (the staging beat to the buffer, {address, length} to the
+      // AW queue) and opens a new one. A moves into B as B places its last beat, so a beat per AXI beat flows. The
+      // decisions compare registers only (B's address against the burst's last and next addresses). A burst also closes
+      // when its source's CRC flit arrives (the message's end), when an RDREQ is taken (so the read can be ordered after
+      // it), and after 15 idle cycles. The AW engine takes the queue's head: AW from registers, its W beats from the
+      // buffer (a neo_mem_rf of PB beats: 4 KB of data with word strobes), at most QD bursts awaiting B; B is counted
+      // (w_done) and checked (ev_axi), nothing waits for it at the input. A drain is in memory some cycles after its CRC
+      // flit was taken, not when (B1 held each beat at the input until its B): wr_busy tells top_ctrl while anything is
       // buffered or outstanding.
       localparam int IDLE_CLOSE = 15;
+      // register A
+      logic [VW-1:0]      wa_words;
+      logic [CW-1:0]      wa_nw;
+      logic [19:0]        wa_ptr;
+      logic [XW+YW-1:0]   wa_src;
+      logic               wb_take, wa_move;
+      logic [39:0]        wa_addr;           // A's first word's byte address (formed between A and B)
+      logic [2*BW-1:0]    wa_therm;          // A's word count as a mask from word 0
+      assign wa_addr = win_addr(win_base, wa_ptr);
+      always_comb for (int i = 0; i < 2 * BW; i++) wa_therm[i] = (6'(i) < 6'(wa_nw));
+      // register B
       logic [VW-1:0]      wb_words;
-      logic [CW-1:0]      wb_nw;
-      logic [19:0]        wb_ptr;
+      logic [LWP-1:0]     wb_off;            // its first word's lane
+      logic [2*BW-1:0]    wb_sm;             // its word strobes at their lanes
+      logic [2:0]         wb_k;              // its AXI beats
+      logic [2:0]         wb_j;              // the next one
+      logic [MAW-1:0]     wb_a;              // ... and its address
       logic [XW+YW-1:0]   wb_src;
-      logic [2:0]         wb_j;              // the next AXI beat of the beat register
-      logic               wb_take, wb_step, wb_last;
-      // the beat register's AXI beats
-      logic [39:0]        wa;                // its first word's byte address
-      logic [2:0]         w_k;               // its AXI beats
-      logic [MAW-1:0]     a_j;               // the AXI beat wb_j's address
-      logic [2*VW-1:0]    w_vec;             // its words at their lanes
-      logic [2*BW-1:0]    w_sm;              // its word strobes at their lanes
-      logic [2*BW-1:0]    w_therm;
+      logic               wb_step, wb_last;
+      logic [2*VW-1:0]    w_vec;             // B's words at their lanes
       logic [AXI_DW-1:0]  d_j, d_jm;         // AXI beat wb_j's data, masked to its strobes
       logic [WPB-1:0]     s_j;               // ... and its word strobes
-      assign wa      = win_addr(win_base, wb_ptr);
-      assign w_k     = 3'((7'(wb_ptr[LWP-1:0]) + 7'(wb_nw) + 7'(WPB - 1)) >> LWP);
-      assign a_j     = wa[39:LBB] + MAW'(wb_j);
-      always_comb for (int i = 0; i < 2 * BW; i++) w_therm[i] = (6'(i) < 6'(wb_nw));
-      assign w_vec   = {VW'(0), wb_words} << (32 * wb_ptr[LWP-1:0]);
-      assign w_sm    = w_therm << wb_ptr[LWP-1:0];
+      assign w_vec   = {VW'(0), wb_words} << (32 * wb_off);
       assign d_j     = w_vec[AXI_DW * wb_j +: AXI_DW];
-      assign s_j     = w_sm[WPB * wb_j +: WPB];
+      assign s_j     = wb_sm[WPB * wb_j +: WPB];
       for (genvar b = 0; b < WPB; b++) begin : g_dm
         assign d_jm[32 * b +: 32] = s_j[b] ? d_j[32 * b +: 32] : 32'd0;
       end
       // the open burst and its staging beat
-      logic [MAW-1:0]     ob_start, ob_tail; // its first and its last AXI beat
+      logic [MAW-1:0]     ob_start, ob_tail, ob_next;   // its first and its last AXI beat, the one after the last
       logic [8:0]         ob_len;            // its beats (1 .. PB)
       logic [XW+YW-1:0]   ob_src;
       logic [AXI_DW-1:0]  st_data;           // the staging beat (the burst's last, still open to a merge)
       logic [WPB-1:0]     st_strb;
       logic               close_pend;        // a close asked for (CRC flit, RDREQ, idle)
       logic [3:0]         ob_idle;
-      logic               j_merge, j_append, room, do_close;
-      assign j_merge  = ob_open && (ob_src == wb_src) && (a_j == ob_tail);
-      assign j_append = ob_open && (ob_src == wb_src) && (a_j == ob_tail + MAW'(1)) && (a_j[PGW-1:0] != '0);
+      logic               j_same, j_merge, j_append, room, do_close;
+      assign j_same   = ob_open && (ob_src == wb_src);
+      assign j_merge  = j_same && (wb_a == ob_tail);
+      assign j_append = j_same && (wb_a == ob_next) && (wb_a[PGW-1:0] != '0);
       // the write buffer and the AW queue
       logic [PBW:0]       f_wp, f_rp;        // the buffer's pointers (one bit above the address)
       logic [MAW-1:0]     aq_addr [QD];
@@ -576,12 +594,14 @@ module noc_axi_bridge #(
       logic [QPW:0]       aq_wp, aq_rp;
       logic               f_we;
       logic [AXI_DW+WPB-1:0] f_wdata, f_rdata;
-      assign room     = ((f_wp - f_rp) != (PBW + 1)'(PB)) && ((aq_wp - aq_rp) != (QPW + 1)'(QD));
-      assign wb_step  = wb_valid && room;           // a beat in the register goes first; a pending close waits for it
-      assign wb_last  = (wb_j == w_k - 3'd1);
-      assign do_close = close_pend && !wb_valid && room;
+      assign room     = !((f_wp[PBW-1:0] == f_rp[PBW-1:0]) && (f_wp[PBW] != f_rp[PBW])) &&       // the buffer, the AW
+                        !((aq_wp[QPW-1:0] == aq_rp[QPW-1:0]) && (aq_wp[QPW] != aq_rp[QPW]));     // queue: not full
+      assign wb_step  = wb_valid && room;           // a beat in B goes first; a pending close waits for both registers
+      assign wb_last  = (wb_j == wb_k - 3'd1);
+      assign wa_move  = wa_valid && (!wb_valid || (wb_step && wb_last));
+      assign do_close = close_pend && !wa_valid && !wb_valid && room;
       assign wb_take  = rx_fire && (rx_type == T_WRDATA);
-      assign wrdata_ok = !wb_valid || (wb_step && wb_last);
+      assign wrdata_ok = !wa_valid || wa_move;
       // the buffer takes the staging beat on an append, on a close and when a new burst replaces an open one
       assign f_we     = (wb_step && !j_merge && ob_open) || do_close;
       assign f_wdata  = {st_strb, st_data};
@@ -594,16 +614,25 @@ module noc_axi_bridge #(
       assign aq_push  = (wb_step && !j_merge && !j_append && ob_open) || do_close;
       always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-          wb_valid <= 1'b0; wb_words <= '0; wb_nw <= '0; wb_ptr <= '0; wb_src <= '0; wb_j <= '0;
-          ob_open <= 1'b0; ob_start <= '0; ob_tail <= '0; ob_len <= '0; ob_src <= '0; st_data <= '0; st_strb <= '0;
-          close_pend <= 1'b0; ob_idle <= '0; f_wp <= '0; aq_wp <= '0; w_closed <= '0;
+          wa_valid <= 1'b0; wa_words <= '0; wa_nw <= '0; wa_ptr <= '0; wa_src <= '0;
+          wb_valid <= 1'b0; wb_words <= '0; wb_off <= '0; wb_sm <= '0; wb_k <= '0; wb_j <= '0; wb_a <= '0; wb_src <= '0;
+          ob_open <= 1'b0; ob_start <= '0; ob_tail <= '0; ob_next <= '0; ob_len <= '0; ob_src <= '0; st_data <= '0;
+          st_strb <= '0; close_pend <= 1'b0; ob_idle <= '0; f_wp <= '0; aq_wp <= '0; w_closed <= '0;
           for (int e = 0; e < QD; e++) begin aq_addr[e] <= '0; aq_len[e] <= '0; end
         end else begin
-          // the beat register: emptied by its last AXI beat, refilled from the input in the same cycle
-          if (wb_step) wb_j <= wb_last ? 3'd0 : wb_j + 3'd1;
-          if (wb_step && wb_last) wb_valid <= 1'b0;
+          // register A: from the input; it empties into B
           if (wb_take) begin
-            wb_valid <= 1'b1; wb_words <= rx_words; wb_nw <= rx_nw; wb_ptr <= ptr_sel; wb_src <= {rx_src_y, rx_src_x}; wb_j <= 3'd0;
+            wa_valid <= 1'b1; wa_words <= rx_words; wa_nw <= rx_nw; wa_ptr <= ptr_sel; wa_src <= {rx_src_y, rx_src_x};
+          end else if (wa_move) begin
+            wa_valid <= 1'b0;
+          end
+          // register B: a beat placed per step; refilled from A as its last beat goes
+          if (wb_step) begin wb_j <= wb_j + 3'd1; wb_a <= wb_a + MAW'(1); end
+          if (wb_step && wb_last) wb_valid <= 1'b0;
+          if (wa_move) begin
+            wb_valid <= 1'b1; wb_words <= wa_words; wb_off <= wa_ptr[LWP-1:0]; wb_sm <= wa_therm << wa_ptr[LWP-1:0];
+            wb_k <= 3'((7'(wa_ptr[LWP-1:0]) + 7'(wa_nw) + 7'(WPB - 1)) >> LWP);      // win_base is 64-byte aligned
+            wb_j <= 3'd0; wb_a <= wa_addr[39:LBB]; wb_src <= wa_src;
           end
           // an AXI beat placed: merged, appended, or the start of a new burst
           if (wb_step) begin
@@ -611,11 +640,12 @@ module noc_axi_bridge #(
             if (j_merge) begin
               st_data <= st_data | d_jm; st_strb <= st_strb | s_j;
             end else if (j_append) begin
-              st_data <= d_jm; st_strb <= s_j; ob_tail <= a_j; ob_len <= ob_len + 9'd1;
+              st_data <= d_jm; st_strb <= s_j; ob_tail <= wb_a; ob_next <= wb_a + MAW'(1); ob_len <= ob_len + 9'd1;
             end else begin
-              st_data <= d_jm; st_strb <= s_j; ob_open <= 1'b1; ob_start <= a_j; ob_tail <= a_j; ob_len <= 9'd1; ob_src <= wb_src;
+              st_data <= d_jm; st_strb <= s_j; ob_open <= 1'b1; ob_start <= wb_a; ob_tail <= wb_a; ob_next <= wb_a + MAW'(1);
+              ob_len <= 9'd1; ob_src <= wb_src;
             end
-          end else if (ob_open && !wb_valid && !close_pend) begin
+          end else if (ob_open && !wa_valid && !wb_valid && !close_pend) begin
             ob_idle <= ob_idle + 4'd1;
           end
           if (f_we) f_wp <= f_wp + (PBW + 1)'(1);
@@ -666,9 +696,9 @@ module noc_axi_bridge #(
       end
       assign m_ev_axi   = (r_fire && (m_rresp != R_OKAY)) || (b_fire && (m_bresp != R_OKAY));
       assign ev_wr_wait = (b_out != '0) && !w_fire;
-      assign wr_busy    = wb_valid || ob_open || aq_ne || (b_out != '0);
+      assign wr_busy    = wa_valid || wb_valid || ob_open || aq_ne || (b_out != '0);
       logic unused_mem_bits;                 // the byte addresses below a beat: the lanes come from the word addresses
-      assign unused_mem_bits = ^{is_a[LBB-1:0], wa[LBB-1:0], unused_wbuf_rb, unused_wbuf_bd};
+      assign unused_mem_bits = ^{is_a[LBB-1:0], wa_addr[LBB-1:0], unused_wbuf_rb, unused_wbuf_bd};
     end else begin : g_nomem
       assign rdreq_ok = 1'b1;                // no memory role: an RDREQ is consumed and dropped (the requester times out)
       assign wrdata_ok = 1'b1;

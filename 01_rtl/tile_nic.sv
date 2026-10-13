@@ -257,6 +257,7 @@ module tile_nic #(
   // the stage's input (drop 0.43): the loopback register's beat when it holds one, else the link's; a request from the
   // link waits outside the stage while a self serve is in progress or pending (rq_hold, the header's second point)
   logic            lb_valid;                              // the loopback register holds a flit of this tile to itself
+  logic            lb_csel;                               // = lb_valid, a second register: the stage's control (below)
   logic [FW-1:0]   lb_flit;
   logic            st_free;                               // the stage takes a beat this cycle (empty, or its beat consumed)
   logic            rq_hold;                               // the link's beat is a request that must wait outside the stage
@@ -264,17 +265,20 @@ module tile_nic #(
   logic [FW-1:0]   i_flit;                                // the input's beat: the loopback's or the link's
   logic            serve_self;                            // the server serves this tile's own fetch (its beats loop back)
   logic            sq_v;                                  // this tile's fetch from its own bank waits for the server
+  // lb_valid selects the beat for the stage's register -- every bit of the flit, a deep buffer tree -- and lb_csel, the
+  // same value in a register of its own (its next state reads itself, so the synthesis keeps the two apart), selects
+  // everything decoded from the header, so the decode does not wait for the beat's fanout
   assign i_flit   = lb_valid ? lb_flit : rx_flit;
   assign rq_hold  = (rx_flit[DW-1 -: 3] == T_RDREQ) && (serve_self || sq_v);
-  assign i_take   = lb_valid || (rx_valid && !rq_hold);
-  assign in_type  = i_flit[DW-1 -: 3];
-  assign in_hdr   = i_flit[VW +: 14];
+  assign i_take   = lb_csel || (rx_valid && !rq_hold);
+  assign in_type  = lb_csel ? lb_flit[DW-1 -: 3] : rx_flit[DW-1 -: 3];
+  assign in_hdr   = lb_csel ? lb_flit[VW +: 14] : rx_flit[VW +: 14];
   assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
   assign in_nw    = in_data ? CW'(in_hdr[13:8]) + CW'(1) : CW'(1);
   localparam int PMW = COLS + 1;                           // the columns and the check value
   assign in_pmask = PMW'(in_nwt) << in_hdr[7:0];          // column j: words > j - col0 (j >= col0)
   assign st_free  = !q_valid || q_ready;
-  assign rx_ready = st_free && !lb_valid && !rq_hold;     // the link's beat: when the loopback has none and it may enter
+  assign rx_ready = st_free && !lb_csel && !rq_hold;      // the link's beat: when the loopback has none and it may enter
   always_comb begin
     for (int j = 0; j < BW; j++) in_cnto[j] = in_data && (in_hdr[13:8] == 6'(j));
     for (int m = 0; m < BW; m++) begin                    // count field >= m, by its one-hot (the type applied after)
@@ -306,7 +310,7 @@ module tile_nic #(
           q_c0[k] <= in_hdr[LW-1:0] == LW'(k);
         q_tt    <= in_tt;
         q_nwt   <= in_nwt;
-        q_foreign <= i_flit[SEQ_LO +: 4] != partition;
+        q_foreign <= (lb_csel ? lb_flit[SEQ_LO +: 4] : rx_flit[SEQ_LO +: 4]) != partition;
       end
     end
   end
@@ -695,7 +699,10 @@ module tile_nic #(
 
   // the registered beat's source state (drop 0.42): u_* = st_* after this cycle's beat, as the g_src registers were updated
   // before; lk_* = the state of the port's beat's source, from wb3_* when it is the source going back this cycle
-  assign in_src  = SRCW'(32'(i_flit[SRCY_LO +: YW]) * NX + 32'(i_flit[SRCX_LO +: XW]));
+  logic [SRCW-1:0] ln_src, lb_src;                        // the link's beat's source, the loopback's (each before the select)
+  assign ln_src  = SRCW'(32'(rx_flit[SRCY_LO +: YW]) * NX + 32'(rx_flit[SRCX_LO +: XW]));
+  assign lb_src  = SRCW'(32'(lb_flit[SRCY_LO +: YW]) * NX + 32'(lb_flit[SRCX_LO +: XW]));
+  assign in_src  = lb_csel ? lb_src : ln_src;
   assign st_load = i_take && st_free && (!st_v || (in_src != st_src));
   always_comb begin
     u_ptr = st_ptr; u_crc = st_crc; u_cnt = st_cnt;
@@ -1092,17 +1099,20 @@ module tile_nic #(
   logic tr;                                               // the way it goes takes it
   logic lb_take;
   assign tx_self  = serve_self && ((tx_state == X_SERVE_SEND) || (tx_state == X_SERVE_CRC));
-  assign lb_take  = lb_valid && st_free;
-  assign tr       = tx_self ? (!lb_valid || lb_take) : tx_ready;
+  assign lb_take  = lb_csel && st_free;
+  assign tr       = tx_self ? (!lb_csel || lb_take) : tx_ready;
   assign tx_valid = tv && !tx_self;
   assign tx_fire  = tv && tr;
   always_ff @(posedge clk_rx or negedge rst_n) begin
     if (!rst_n) begin
-      lb_valid <= 1'b0; lb_flit <= '0;
-    end else if (tv && tx_self && tr) begin
-      lb_valid <= 1'b1; lb_flit <= tx_flit;
-    end else if (lb_take) begin
-      lb_valid <= 1'b0;
+      lb_valid <= 1'b0; lb_csel <= 1'b0; lb_flit <= '0;
+    end else begin
+      if (tv && tx_self && tr) begin
+        lb_valid <= 1'b1; lb_csel <= 1'b1; lb_flit <= tx_flit;
+      end else begin                                      // taken: each register's clear reads its own value
+        if (lb_valid && st_free) lb_valid <= 1'b0;
+        if (lb_take)             lb_csel  <= 1'b0;
+      end
     end
   end
   assign serve_done = (tx_state == X_SERVE_CRC) && tx_fire;
@@ -1247,7 +1257,7 @@ module tile_nic #(
   // follow their inputs every cycle hold instead while off only where nothing reads them then (fx_lt: read only while a
   // beat stays; fetch_timer: zeroed at the next fetch command, whose cycle is on).
   logic en_rx, en_tx;
-  assign en_rx = rx_valid || q_valid || lb_valid || (tv && tx_self) || wb3_v || fetch_busy || cmd_valid || (ext_valid && ext_ready) ||
+  assign en_rx = rx_valid || q_valid || lb_csel || (tv && tx_self) || wb3_v || fetch_busy || cmd_valid || (ext_valid && ext_ready) ||
                  serve_done || sq_start || err_clear || rdy_clear || !rst_n;
   assign en_tx = (tx_state != X_IDLE) || req_pending || ntf_pending || serve_busy || (drain_armed && (dfifo_vis != '0)) || cmd_valid ||
                  drain_push || dfifo_push_q || srv_go || b_rvalid || txc_v || !rst_n;

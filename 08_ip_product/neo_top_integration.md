@@ -141,10 +141,10 @@ endpoint the same instruction addresses differently, and it could not serve a fe
 
 ### 4.4 Command queue (drop 0.43)
 
-Commands live in a ring in the command memory (`CQ_RING`: word address [9:0], log2 entries [19:16], ≤ 256; a ring of 2^n
-slots holds 2^n − 1), four words each: tile mask lo, tile mask hi, image {entries [31:16], no-wait [15], word address [9:0]},
-tag. The host writes commands, then the doorbell `CQ_TAIL` (the index past the last); with `CQ_CTRL` bit 0 set the control
-plane plays them in order while the completion ring has room. Playing a command: its image's entries, two words each —
+Commands live in a ring in the command memory (`CQ_RING`: word address [9:0], 4-word aligned, log2 entries [19:16],
+≤ 256; a ring of 2^n slots holds 2^n − 1), four words each: tile mask lo, tile mask hi, image {entries [31:16], no-wait
+[15], word address [9:0]}, tag. The host writes commands, then the doorbell `CQ_TAIL` (the index past the last); with
+`CQ_CTRL` bit 0 set the control plane plays them in order while the completion ring has room. Playing a command: its image's entries, two words each —
 {single [14], tile [13:8], register [7:0]} and the value — are written into that `host_if` register of every tile of the
 mask (of the named tile alone when single), through the same register handshake the host's window accesses use (a host
 access waiting is served first; the two never overlap). The image normally ends with the CTRL start (broadcast). Then the
@@ -186,7 +186,8 @@ over the data words[15:0]}, the receiver keeping CRC and count per source.
   aclk cycle within a burst, the AR-to-first-R latency hidden behind the other bursts in flight (B1 paid it per burst).
 - *WRHDR + WRDATA + CRC (a tile's drain into the window).* Per source, as the NIC: each source's write pointer, CRC and word
   count in its own registers, so drains from several tiles may interleave beat by beat. **Since drop 0.43 the writes are
-  posted and combined:** each WRDATA beat leaves the input for a beat register and is placed one AXI beat per cycle into the
+  posted and combined:** each WRDATA beat leaves the input for a register, a second one takes it with its AXI address
+  formed (registers compared, no adder in the decision), and from there it is placed one AXI beat per cycle into the
   open burst — the continuation of the burst's last beat merges into it, the next beat of the same 4 KB page from the same
   source appends, anything else closes the burst and opens a new one; a burst also closes at its source's CRC flit, when an
   RDREQ is taken, and after 15 idle cycles. Closed bursts queue for AW (four), their beats in a 4 KB write buffer (64 AXI
@@ -223,8 +224,8 @@ the input) — so the head-of-line blocking B1 inherited from the tile's server 
 
 **Throughput, measured** (`top` T3b against a DRAM-like memory: 32 aclk from AR to a burst's first R beat, the model
 pipelining reads as a controller does; 16 aclk from the last W beat to B): four tiles' 4,092-word fetches at once 2,082 ns
-(B1 2,750 ns): 50.3 bytes per aclk cycle of 64 (B1 38.1); a tile's layer with its drain in memory 2,472 ns after its start
-(B1 3,210 ns, 25 bursts → 2), two tiles' at once 2,742 ns (B1 4,163 ns, 48 bursts → 2).
+(B1 2,750 ns): 50.3 bytes per aclk cycle of 64 (B1 38.1); a tile's layer with its drain in memory 2,478 ns after its start
+(B1 3,210 ns, 25 bursts → 2), two tiles' at once 2,744 ns (B1 4,163 ns, 48 bursts → 2).
 
 **Priority (drop 0.43).** Every router — the tiles' and the bridge column's — arbitrates each output between two classes:
 a request whose flit's partition (seq[3:0]) has its bit set in the router's priority map wins over the others, round-robin

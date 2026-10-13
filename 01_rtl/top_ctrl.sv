@@ -26,11 +26,11 @@
 //       0 ON, 1 ISO, 2 CLKOFF, 3 RST, 4 OFF, 5 PWRON, 6 RSTREL, 7 CLKON (mesh_ctrl.sv; crossed gray-coded)
 //       0x0A0 CQ_CTRL (r/w, drop 0.43): bit 0 enable; a write with bit 1 resets the queue (CQ_HEAD, CC_TAIL and the
 //       sticky error to 0, a command in progress dropped)  0x0A4 CQ_RING (r/w): [9:0] the command ring's word address in the
-//       command memory, [19:16] log2 of its entries (0 .. 8)  0x0A8 CQ_TAIL (r/w): the doorbell, the index past the last
-//       command written  0x0AC CQ_HEAD (r): the index of the next command to play  0x0B0 CC_RING (r/w): the completion
-//       ring, as CQ_RING  0x0B4 CC_HEAD (r/w): the index past the last record the host has taken  0x0B8 CC_TAIL (r): the
-//       index past the last record written  0x0BC CQ_STATUS (r): bit 0 a command in progress, [7:4] the player's state,
-//       bit 8 a command since the queue's reset saw a refused write or a tile's err_pin
+//       command memory (4-word aligned: bits 1:0 read 0), [19:16] log2 of its entries (0 .. 8)  0x0A8 CQ_TAIL (r/w): the
+//       doorbell, the index past the last command written  0x0AC CQ_HEAD (r): the index of the next command to play
+//       0x0B0 CC_RING (r/w): the completion ring, as CQ_RING  0x0B4 CC_HEAD (r/w): the index past the last record the
+//       host has taken  0x0B8 CC_TAIL (r): the index past the last record written  0x0BC CQ_STATUS (r): bit 0 a command in
+//       progress, [7:4] the player's state, bit 8 a command since the queue's reset saw a refused write or a tile's err_pin
 //       0x0C0 TEL_CTRL (w, drop 0.43): bit 0 snapshot, bit 1 clear -- the bridges' wait counters and the window's aclk
 //       cycle count (as a tile's TEL_CTRL)  0x0C4 TEL_CYCLES (r): the snapshot's cycles
 //       0x100 + 0x20 * b     bridge b: +0x0 WIN_LO (bits 31:6 of the window base; 5:0 read 0) +0x4 WIN_HI (bits 39:32 in 7:0)
@@ -316,40 +316,51 @@ module top_ctrl #(
   logic        cq_rst;
   logic [7:0]  cq_msk, cc_msk, cq_head_nx, cc_tail_nx;
   logic [1:0]  p_k;                                  // the word of the command being read / of the record being written
+  logic [7:0]  p_cb, p_rb;                           // the command's / the record's first word / 4 (formed at the start)
+  logic [9:0]  p_ra;                                 // the word the player reads this cycle (a register, set a cycle ahead)
   logic [63:0] p_mask;                               // the command's tiles
   logic [9:0]  p_img;                                // its image's next word
   logic [15:0] p_left, p_nent;                       // entries left / played
   logic [31:0] p_tag, p_val;
   logic [7:0]  p_reg;
   logic        p_single, p_err, p_nowait;
-  logic [6:0]  p_from;                               // the mask scan's start (64: past the last tile)
+  logic [63:0] p_rem;                                // the entry's tiles not yet written (the mask scan's state)
   logic [5:0]  p_tile;                               // the write's tile
   logic [1:0]  p_guard;
   logic [63:0] p_tmr;
-  assign cq_msk     = 8'((9'd1 << cq_lg) - 9'd1);
-  assign cc_msk     = 8'((9'd1 << cc_lg) - 9'd1);
+  logic [3:0]  wr_lg;                                // a ring's log2 entries as written (at most 8) and its index mask:
+  logic [7:0]  wr_msk;                               // the masks are registers, formed when CQ_RING / CC_RING is written
+  assign wr_lg      = (a_wd[19:16] > 4'd8) ? 4'd8 : a_wd[19:16];
+  assign wr_msk     = 8'((9'd1 << wr_lg) - 9'd1);
   assign cq_head_nx = (cq_head + 8'd1) & cq_msk;
   assign cc_tail_nx = (cc_tail + 8'd1) & cc_msk;
   assign cq_rst     = g_do && a_we && !g_is_br && (d_g == 10'h028) && a_wd[1];
-  // the command memory: the host's access in A_DEC first, the player's otherwise
+  // the command memory: the host's access in A_DEC first, the player's otherwise. The host's side has its own select and
+  // address registers (cm_hsel = A_DEC of a transaction for the memory, cm_ha = its word), loaded with the transaction:
+  // a_addr fans out to the whole decode, and the memory's read is the long path behind it
   logic        axi_cm, p_mem;
+  logic        cm_hsel;
+  logic [9:0]  cm_ha;
   logic [9:0]  cm_raddr, cm_waddr, p_raddr, p_waddr;
   logic        cm_we, p_we;
   logic [31:0] cm_wdata, cm_rdata, p_wdata;
-  assign axi_cm   = (a_state == A_DEC) && d_cmem_ok;
-  assign p_mem    = !axi_cm;
-  assign cm_raddr = axi_cm ? a_addr[11:2] : p_raddr;
+  assign axi_cm   = cm_hsel;
+  assign p_mem    = !((a_state == A_DEC) && d_cmem_ok);   // = !cm_hsel, from the decode: cm_hsel drives the memory's muxes only
+  assign cm_raddr = axi_cm ? cm_ha : p_raddr;
   assign cm_we    = (axi_cm && a_we) || (p_we && p_mem);
-  assign cm_waddr = axi_cm ? a_addr[11:2] : p_waddr;
+  assign cm_waddr = axi_cm ? cm_ha : p_waddr;
   assign cm_wdata = axi_cm ? a_wd : p_wdata;
+  function automatic logic is_cmem(input logic [CTRL_AW-1:12] a);  // d_cmem_ok of an address (its bits from 12)
+    return (a[CTRL_AW-1:16] == RGW'(2)) && (a[15:12] == 4'd1);
+  endfunction
   logic [31:0] unused_cm_rb, unused_cm_bd;           // the leaf's unused read ports (RB = 0, no hooks)
   neo_mem_rf #(.W(32), .D(1024), .RB(0), .DV_HOOKS(0)) u_cmem (
     .clk(clk), .we(cm_we), .waddr(cm_waddr), .wdata(cm_wdata), .ra_addr(cm_raddr), .ra_data(cm_rdata),
     .rb_en(1'b0), .rb_addr('0), .rb_data(unused_cm_rb),
     .bd_we(1'b0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_cm_bd), .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
   // the player's addresses: command word p_k at the head, image word p_img, record word p_k at the tail
-  assign p_raddr  = (p_state == P_CMD) ? cq_base + {cq_head, p_k} : p_img;
-  assign p_waddr  = cc_base + {cc_tail, p_k};
+  assign p_raddr  = p_ra;                            // no decode or adder in front of the memory's read port
+  assign p_waddr  = {p_rb, p_k};
   assign p_we     = (p_state == P_REC);
   always_comb begin
     case (p_k)
@@ -359,14 +370,23 @@ module top_ctrl #(
       default: p_wdata = p_tmr[63:32];
     endcase
   end
-  // the mask scan: the lowest tile of the mask at or after p_from
-  logic [63:0] scan;
+  // the mask scan: the lowest tile not yet written, as a one-hot (a prefix OR in six levels, no shifter or adder) and its
+  // number (an OR per bit of the one-hot)
+  logic [63:0] scan_p1, scan_p2, scan_p3, scan_p4, scan_p5, scan_p6;   // bit t: a tile of p_rem in (t - 2^l, t]
+  logic [63:0] scan_low;                             // the lowest, one-hot
   logic        scan_hit;
   logic [5:0]  scan_tile;
-  assign scan = p_mask & ~((64'd1 << p_from) - 64'd1) & {64{p_from < 7'd64}};
+  assign scan_p1  = p_rem   | (p_rem   << 1);
+  assign scan_p2  = scan_p1 | (scan_p1 << 2);
+  assign scan_p3  = scan_p2 | (scan_p2 << 4);
+  assign scan_p4  = scan_p3 | (scan_p3 << 8);
+  assign scan_p5  = scan_p4 | (scan_p4 << 16);
+  assign scan_p6  = scan_p5 | (scan_p5 << 32);       // a tile at or below t
+  assign scan_low = p_rem & ~(scan_p6 << 1);
+  assign scan_hit = scan_p6[63];
   always_comb begin
-    scan_hit = 1'b0; scan_tile = '0;
-    for (int t = 63; t >= 0; t--) if (scan[t]) begin scan_hit = 1'b1; scan_tile = 6'(t); end
+    scan_tile = '0;
+    for (int t = 0; t < 64; t++) if (scan_low[t]) scan_tile = scan_tile | 6'(t);
   end
   logic [63:0] done64m, err64m;                    // the levels at the mask's width (a tile not on, or past NT: done)
   assign done64m = 64'(st_done) | ~64'(st_en);
@@ -379,9 +399,10 @@ module top_ctrl #(
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       p_state <= P_IDLE; cq_en <= 1'b0; cq_err <= 1'b0; cq_base <= '0; cc_base <= '0; cq_lg <= '0; cc_lg <= '0;
+      cq_msk <= '0; cc_msk <= '0;
       cq_tail <= '0; cq_head <= '0; cc_head <= '0; cc_tail <= '0; p_k <= '0; p_mask <= '0; p_img <= '0; p_left <= '0;
-      p_nent <= '0; p_tag <= '0; p_val <= '0; p_reg <= '0; p_single <= 1'b0; p_err <= 1'b0; p_nowait <= 1'b0; p_from <= '0;
-      p_tile <= '0;
+      p_nent <= '0; p_tag <= '0; p_val <= '0; p_reg <= '0; p_single <= 1'b0; p_err <= 1'b0; p_nowait <= 1'b0; p_rem <= '0;
+      p_tile <= '0; p_cb <= '0; p_rb <= '0; p_ra <= '0;
       p_guard <= '0; p_tmr <= '0; cq_irq <= 1'b0;
     end else begin
       cq_irq <= 1'b0;
@@ -389,9 +410,9 @@ module top_ctrl #(
       if (g_do && a_we && !g_is_br) begin
         case (d_g)
           10'h028: cq_en <= a_wd[0];
-          10'h029: begin cq_base <= a_wd[9:0]; cq_lg <= (a_wd[19:16] > 4'd8) ? 4'd8 : a_wd[19:16]; end
+          10'h029: begin cq_base <= {a_wd[9:2], 2'b00}; cq_lg <= wr_lg; cq_msk <= wr_msk; end
           10'h02A: cq_tail <= a_wd[7:0];
-          10'h02C: begin cc_base <= a_wd[9:0]; cc_lg <= (a_wd[19:16] > 4'd8) ? 4'd8 : a_wd[19:16]; end
+          10'h02C: begin cc_base <= {a_wd[9:2], 2'b00}; cc_lg <= wr_lg; cc_msk <= wr_msk; end
           10'h02D: cc_head <= a_wd[7:0];
           default: ;
         endcase
@@ -402,6 +423,8 @@ module top_ctrl #(
         case (p_state)
           P_IDLE: if (cq_en && (cq_head != (cq_tail & cq_msk)) && (cc_tail_nx != (cc_head & cc_msk))) begin
             p_state <= P_CMD; p_k <= 2'd0;
+            p_cb <= cq_base[9:2] + cq_head; p_rb <= cc_base[9:2] + cc_tail;
+            p_ra <= {cq_base[9:2] + cq_head, 2'd0};        // the command's word 0
           end
           P_CMD: if (p_mem) begin                     // the command's four words
             case (p_k)
@@ -411,6 +434,7 @@ module top_ctrl #(
               default: p_tag <= cm_rdata;
             endcase
             p_k <= p_k + 2'd1;
+            p_ra <= (p_k == 2'd3) ? p_img : {p_cb, p_k + 2'd1};   // the next word, then the image (p_img from word 2)
             if (p_k == 2'd3) begin
               p_nent <= '0; p_err <= 1'b0;
               p_state <= (p_left == 16'd0) ? P_GUARD : P_ENT;
@@ -418,14 +442,16 @@ module top_ctrl #(
           end
           P_ENT: if (p_mem) begin                     // an entry's first word: its register and target
             p_reg <= cm_rdata[7:0]; p_tile <= cm_rdata[13:8]; p_single <= cm_rdata[14]; p_img <= p_img + 10'd1;
+            p_ra <= p_img + 10'd1;                         // its value
             p_state <= P_VAL;
           end
           P_VAL: if (p_mem) begin                     // its value
-            p_val <= cm_rdata; p_img <= p_img + 10'd1; p_from <= 7'd0;
+            p_val <= cm_rdata; p_img <= p_img + 10'd1; p_rem <= p_mask;
+            p_ra <= p_img + 10'd1;                         // the next entry
             p_state <= p_single ? P_REQ : P_TGT;
           end
           P_TGT: begin                                // the next tile of the mask, or the entry is done
-            if (scan_hit) begin p_tile <= scan_tile; p_state <= P_REQ; end
+            if (scan_hit) begin p_tile <= scan_tile; p_rem <= p_rem & ~scan_low; p_state <= P_REQ; end
             else begin
               p_left <= p_left - 16'd1; p_nent <= p_nent + 16'd1;
               p_state <= (p_left == 16'd1) ? P_GUARD : P_ENT;
@@ -438,7 +464,7 @@ module top_ctrl #(
               p_left <= p_left - 16'd1; p_nent <= p_nent + 16'd1;
               p_state <= (p_left == 16'd1) ? P_GUARD : P_ENT;
             end else begin
-              p_from <= 7'(p_tile) + 7'd1; p_state <= P_TGT;
+              p_state <= P_TGT;
             end
           end
           P_GUARD: begin                              // the done levels behind the last write's answer (synchronizer skew)
@@ -472,7 +498,7 @@ module top_ctrl #(
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      a_state <= A_IDLE; a_we <= 1'b0; a_addr <= '0; a_wd <= '0; a_resp <= R_OKAY; a_rdata <= '0;
+      a_state <= A_IDLE; a_we <= 1'b0; a_addr <= '0; a_wd <= '0; a_resp <= R_OKAY; a_rdata <= '0; cm_hsel <= 1'b0; cm_ha <= '0;
       scratch <= '0; timer <= '0; timer_hi <= '0; en_q <= '1; irq_status <= '0; irq_mask <= 5'b11111; prio_q <= '0;
       done_q <= '0; errp_q <= '0; par_q <= '0; irq <= 1'b0; err <= 1'b0; ls_q1 <= '0;
       for (int k = 0; k < NLS; k++) ls_q[k] <= '0;
@@ -500,14 +526,17 @@ module top_ctrl #(
       irq <= |(irq_status & ~irq_mask);
       err <= (|st_err) || (|br_any_bits) || (|st_parity) || (|st_ls);
       // the transaction
+      cm_hsel <= 1'b0;
       case (a_state)
         A_IDLE: begin
           if (s_awready) begin
             a_state <= A_DEC; a_we <= 1'b1; a_addr <= s_awaddr;
             a_wd <= {s_wstrb[3] ? s_wdata[31:24] : 8'd0, s_wstrb[2] ? s_wdata[23:16] : 8'd0,
                      s_wstrb[1] ? s_wdata[15:8] : 8'd0, s_wstrb[0] ? s_wdata[7:0] : 8'd0};
+            if (is_cmem(s_awaddr[CTRL_AW-1:12])) begin cm_hsel <= 1'b1; cm_ha <= s_awaddr[11:2]; end
           end else if (s_arvalid) begin
             a_state <= A_DEC; a_we <= 1'b0; a_addr <= s_araddr;
+            if (is_cmem(s_araddr[CTRL_AW-1:12])) begin cm_hsel <= 1'b1; cm_ha <= s_araddr[11:2]; end
           end
         end
         A_DEC: begin

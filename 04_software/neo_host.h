@@ -87,7 +87,7 @@ enum { NEO_TEL_CYCLES,            /* the window's cycles */
 #define NEO_TOP_PWR_STATE(j)         (NEO_TOP_GLOBAL + 0x080u + 4u * (uint32_t)(j))   /* r: tile 8j + i in bits [4i +: 3] */
 enum { NEO_PWR_ON, NEO_PWR_ISO, NEO_PWR_CLKOFF, NEO_PWR_RST, NEO_PWR_OFF, NEO_PWR_PWRON, NEO_PWR_RSTREL, NEO_PWR_CLKON };
 #define NEO_TOP_CQ_CTRL              (NEO_TOP_GLOBAL + 0x0A0u)   /* r/w: bit 0 enable; write bit 1: reset the queue */
-#define NEO_TOP_CQ_RING              (NEO_TOP_GLOBAL + 0x0A4u)   /* r/w: [9:0] word address in the command memory, [19:16] log2 entries */
+#define NEO_TOP_CQ_RING              (NEO_TOP_GLOBAL + 0x0A4u)   /* r/w: [9:0] word address in the command memory (4-word aligned), [19:16] log2 entries */
 #define NEO_TOP_CQ_TAIL              (NEO_TOP_GLOBAL + 0x0A8u)   /* r/w: the doorbell */
 #define NEO_TOP_CQ_HEAD              (NEO_TOP_GLOBAL + 0x0ACu)   /* r: the next command played */
 #define NEO_TOP_CC_RING              (NEO_TOP_GLOBAL + 0x0B0u)   /* r/w: the completion ring, as CQ_RING */

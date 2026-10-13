@@ -31,6 +31,8 @@
 //     5 PRIO_N + 4 fires of its output go to other inputs, a high-class head at most 5 + floor(4 / PRIO_N) (44 and 5 at
 //     PRIO_N = 8; the formal harness proves both for every prio). With prio = 0 every head is of the low class: the
 //     grant is drop 0.41's on ptr_lo, cycle for cycle (wcnt stays 0), which run_noc.py N3 checks against the 0.40 router.
+//     Both classes' picks are formed side by side (g_hi, g_lo: drop 0.41's first-set each) and the class chosen last, so
+//     the choice (use_hi) runs beside the pick instead of in front of it.
 //   - each output stage (out_valid, out_flit, its pointers and wcnt / wsat) runs on its own gated clock (neo_icg), enabled
 //     when the stage loads a flit or hands one on (fire[o], out_valid && out_ready) -- exactly the cycles in which one of
 //     its registers changes, so the gating is invisible (the formal harness asserts it); the input FIFOs stay on clk.
@@ -122,12 +124,15 @@ module noc_router #(
   logic           unused_wcnt;  // (lint: wcnt is read through the stages' own copies; the array is for the harness)
   assign unused_wcnt = ^{wcnt[0], wcnt[1], wcnt[2], wcnt[3], wcnt[4]};
   logic [4:0]     rq     [5];   // output o: the inputs whose head may go to o
+  logic [4:0]     rq_hi  [5];   // ... of the high class
   logic [4:0]     rq_lo  [5];   // ... of the low class
   logic           use_hi [5];   // output o serves the high class this cycle
-  logic [4:0]     rs     [5];   // output o: the requests of the class it serves
-  logic [4:0]     pt     [5];   // ... and that class's pointer
-  logic [4:0]     ge     [5];   // output o: the inputs at and above pt (thermometer)
-  logic [4:0]     masked [5];   // output o: rs at and above pt
+  logic [4:0]     ge_hi  [5];   // output o: the inputs at and above ptr_hi (thermometer)
+  logic [4:0]     ge_lo  [5];   // ... at and above ptr_lo
+  logic [4:0]     m_hi   [5];   // output o: rq_hi at and above ptr_hi
+  logic [4:0]     m_lo   [5];   // ... rq_lo at and above ptr_lo
+  logic [4:0]     g_hi   [5];   // output o: the high class's round-robin pick, one-hot (0 = no request of the class)
+  logic [4:0]     g_lo   [5];   // ... the low class's
   logic [4:0]     gnt    [5];   // output o: the granted input, one-hot (0 = none)
   logic           fire   [5];   // transfer into output register o this cycle
   logic           pop    [5];   // input i is popped this cycle
@@ -136,16 +141,21 @@ module noc_router #(
   always_comb begin
     for (int o = 0; o < 5; o++) begin
       for (int i = 0; i < 5; i++) rq[o][i] = head_valid[i] && !head_bad[i] && req_oh[i][o];
+      rq_hi[o]  = rq[o] & hcls;
       rq_lo[o]  = rq[o] & ~hcls;
-      use_hi[o] = ((rq[o] & hcls) != 5'd0) && !(wsat[o] && (rq_lo[o] != 5'd0));   // a waiting low promoted after PRIO_N
-      rs[o]     = use_hi[o] ? (rq[o] & hcls) : rq_lo[o];
-      pt[o]     = use_hi[o] ? ptr_hi[o] : ptr_lo[o];
-      ge[o]     = {|pt[o], |pt[o][3:0], |pt[o][2:0], |pt[o][1:0], pt[o][0]};
-      masked[o] = rs[o] & ge[o];
-      for (int i = 0; i < 5; i++) begin               // the first set bit of masked, else of rs
-        gnt[o][i] = (masked[o] != 5'd0) ? (masked[o][i] && ((masked[o] & ((5'd1 << i) - 5'd1)) == 5'd0))
-                                        : (rs[o][i] && ((rs[o] & ((5'd1 << i) - 5'd1)) == 5'd0));
+      use_hi[o] = (rq_hi[o] != 5'd0) && !(wsat[o] && (rq_lo[o] != 5'd0));   // a waiting low promoted after PRIO_N
+      // both classes' picks side by side, the class chosen last (the choice off the pick's path)
+      ge_hi[o]  = {|ptr_hi[o], |ptr_hi[o][3:0], |ptr_hi[o][2:0], |ptr_hi[o][1:0], ptr_hi[o][0]};
+      ge_lo[o]  = {|ptr_lo[o], |ptr_lo[o][3:0], |ptr_lo[o][2:0], |ptr_lo[o][1:0], ptr_lo[o][0]};
+      m_hi[o]   = rq_hi[o] & ge_hi[o];
+      m_lo[o]   = rq_lo[o] & ge_lo[o];
+      for (int i = 0; i < 5; i++) begin               // the first set bit at and above the pointer, else the first
+        g_hi[o][i] = (m_hi[o] != 5'd0) ? (m_hi[o][i] && ((m_hi[o] & ((5'd1 << i) - 5'd1)) == 5'd0))
+                                       : (rq_hi[o][i] && ((rq_hi[o] & ((5'd1 << i) - 5'd1)) == 5'd0));
+        g_lo[o][i] = (m_lo[o] != 5'd0) ? (m_lo[o][i] && ((m_lo[o] & ((5'd1 << i) - 5'd1)) == 5'd0))
+                                       : (rq_lo[o][i] && ((rq_lo[o] & ((5'd1 << i) - 5'd1)) == 5'd0));
       end
+      gnt[o]  = use_hi[o] ? g_hi[o] : g_lo[o];
       fire[o] = (rq[o] != 5'd0) && (!out_valid[o] || out_ready[o]);   // a grant exists exactly when a request does
     end
     for (int i = 0; i < 5; i++) begin
