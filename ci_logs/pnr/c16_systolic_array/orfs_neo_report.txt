@@ -1,0 +1,15 @@
+$ docker run --rm --init --name neo-pnr-c16_systolic_array-run-3283 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/c16_systolic_array/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/in RUN_SCRIPT=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/neo_report.tcl RUN_LOG_NAME_STEM=7_neo_report NEO_REPORT_ODB=6_final.odb NEO_REPORT_SDC=6_final.sdc NEO_ACTIVITY_TCL=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/in/activity.tcl run
+/usr/bin/python3 /OpenROAD-flow-scripts/flow/scripts/run_command.py --log /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/logs/asap7/c16_systolic_array/base/7_neo_report.log --tee -- /OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad -exit -no_init -threads 4  -no_splash  /home/runner/work/Astracore-Neo/Astracore-Neo/pnr/neo_report.tcl
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_final.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_final.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+neo_report: physical (database)
+neo_report: timing: the propagated clock
+neo_report: timing: read_spef /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/6_final.spef
+neo_report: timing: the ten worst endpoints
