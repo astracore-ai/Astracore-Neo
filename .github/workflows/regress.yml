@@ -33,20 +33,39 @@ on:
         description: "pnr: the ORFS docker image (empty: the tag 07_ci/pnr/tools.sh pins)"
         type: string
         default: ""
+      faults_only:
+        description: "run only the fault campaign (the faults job), none of the others (drop 0.43)"
+        type: boolean
+        default: false
+      faults_n:
+        description: "faults: faults sampled per build (tile and core); the budget stops the workers first if it is short"
+        type: string
+        default: "600"
+      faults_budget_min:
+        description: "faults: minutes for the whole campaign (both builds; every finished fault is kept)"
+        type: string
+        default: "50"
+      faults_seed:
+        description: "faults: the sampling seed (the nightly run uses its run number)"
+        type: string
+        default: "1"
   schedule:
     - cron: "0 2 * * 0"                           # Sunday 02:00 UTC: the pnr job alone (drop 0.42)
+    - cron: "30 2 * * *"                          # every night 02:30 UTC: the faults job alone (drop 0.43)
 permissions:
   contents: write
 # One run per branch at a time: a new push (every folder of a web upload is one) cancels the queued and running runs
 # of the earlier commits, so only the last commit's run -- the one with every file -- is executed (drop 0.22). The weekly
 # pnr run and a pnr-only dispatch have a group of their own (drop 0.42): they neither cancel nor are cancelled by a push,
 # and a pnr-only dispatch's group carries its block list -- one for other blocks does not cancel a 6 h run in flight.
+# Drop 0.43: each schedule has a group of its own (the weekly pnr run and the nightly faults run on a Sunday must not cancel
+# each other), and so does a faults-only dispatch.
 concurrency:
-  group: regress-${{ github.ref }}${{ (github.event_name == 'schedule' || inputs.pnr_only) && format('-pnr-{0}', inputs.pnr_blocks) || '' }}
+  group: regress-${{ github.ref }}${{ github.event_name == 'schedule' && format('-sched-{0}', github.event.schedule) || (inputs.pnr_only && format('-pnr-{0}', inputs.pnr_blocks)) || (inputs.faults_only && '-faults') || '' }}
   cancel-in-progress: true
 jobs:
   python-regress:
-    if: github.event_name != 'schedule' && !inputs.pnr_only
+    if: github.event_name != 'schedule' && !inputs.pnr_only && !inputs.faults_only
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -80,7 +99,7 @@ jobs:
           git commit -m "python-regress logs run ${{ github.run_number }}" || true
           git push origin ci-logs-python-regress --force
   hdl-sim:
-    if: github.event_name != 'schedule' && !inputs.pnr_only
+    if: github.event_name != 'schedule' && !inputs.pnr_only && !inputs.faults_only
     runs-on: ubuntu-latest
     timeout-minutes: 150                           # drop 0.42: 120 -> 150 for the chip top's suite after the ~95 minutes before it
     steps:
@@ -127,7 +146,7 @@ jobs:
           git commit -m "hdl-sim logs run ${{ github.run_number }}" || true
           git push origin ci-logs-hdl-sim --force
   hdl-mesh8:
-    if: github.event_name != 'schedule' && !inputs.pnr_only
+    if: github.event_name != 'schedule' && !inputs.pnr_only && !inputs.faults_only
     runs-on: ubuntu-latest
     timeout-minutes: 300
     # the build knobs, the one place to set them (drop 0.34). Drop 0.35: the mesh builds verilate hierarchically -- neo_tile
@@ -258,7 +277,7 @@ jobs:
   # ASAP7 into synth_out_nangate45, its report in ci_logs/synth/nangate45 (no timing models: they double the push), the two
   # side by side in ci_logs/synth/synth_report_libraries.md. Own concurrency group.
   synth:
-    if: github.event_name != 'schedule' && !inputs.pnr_only
+    if: github.event_name != 'schedule' && !inputs.pnr_only && !inputs.faults_only
     runs-on: ubuntu-latest
     timeout-minutes: 300
     concurrency:
@@ -272,7 +291,7 @@ jobs:
         with: { python-version: "3.12" }
       - name: flat layout
         run: |
-          cp -r 01_rtl rtl && cp -r 07_ci/synth synth && cp 07_ci/Makefile Makefile
+          cp -r 01_rtl rtl && cp -r 07_ci/synth synth && cp 07_ci/Makefile Makefile && cp -r 02_dv/sim sim   # sim: neosim for gls.py (drop 0.43)
           mkdir -p ci_logs/synth && echo "run ${{ github.run_number }} $(date -u)" > ci_logs/synth/RUN.txt
           { echo "cores $(nproc)"; free -m | sed -n 2,3p; df -h / | tail -1; } | tee -a ci_logs/synth/RUN.txt
       - name: OpenSTA binary cache
@@ -301,6 +320,16 @@ jobs:
           J=1; [ "$(free -m | awk '/Mem:/{print $2}')" -ge 14000 ] && J=2
           echo "SYNTH_JOBS=$J" | tee -a ci_logs/synth/RUN.txt
           make synth SYNTH_JOBS=$J 2>&1 | tee ci_logs/synth/synth.txt
+      # drop 0.43 (D2): the netlists of mac_pe (data and check), requant, crc16_beat, the two ecc39 halves and link_packer
+      # simulated beside their RTL on the same random inputs (synth/gls.py, Icarus 14 with the ASAP7 cell models); fails on a
+      # mismatch, gls_report.md in ci_logs/synth/gls/
+      - name: gate-level simulation of synthesized units against the RTL (ASAP7 netlists)
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          echo "gls starts $(date -u)" | tee -a ci_logs/synth/RUN.txt
+          make gls 2>&1 | tee ci_logs/synth/gls.txt
+          echo "gls done $(date -u)" | tee -a ci_logs/synth/RUN.txt
       - name: synthesis and timing, the second library (Nangate45 TT; every unit; the period sweep)
         if: ${{ !cancelled() }}
         run: |
@@ -329,7 +358,7 @@ jobs:
   # writes formal_report.md and fails the job unless every task is PASS; the report, every task's sby log and every
   # counterexample trace go to ci-logs-formal either way.
   formal:
-    if: github.event_name != 'schedule' && !inputs.pnr_only
+    if: github.event_name != 'schedule' && !inputs.pnr_only && !inputs.faults_only
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -364,8 +393,71 @@ jobs:
           git add -f ci_logs
           git commit -m "formal logs run ${{ github.run_number }}" || true
           git push origin ci-logs-formal --force
+  # the fault campaign (drop 0.43, stream D2): 02_dv/dv/cocotb/faults/ -- faults injected through the VPI of the cocotb
+  # Verilator builds (C1 on neo_core 16x8, M1 on the 2x2 mesh of 16x8 tiles), each run classified against the fault-free
+  # run (detected / masked / dangerous / hang), per-block diagnostic coverage in faults_report.md, the undetected faults'
+  # flops in undetected.md, faults.csv and faults_summary.json (05_safety/build_fmeda.py --v2) on ci-logs-faults. Nightly
+  # (02:30 UTC; the seed is the run number, the sample as large as 300 minutes take with 4 workers) and on demand (the
+  # faults_* inputs; faults_only skips every other job); never on a push or a pull request. The campaign's own budget ends
+  # it inside the job's limit with every finished fault in the CSV; the logs are pushed every 10 minutes and at the end.
+  faults:
+    if: (github.event_name == 'schedule' && github.event.schedule == '30 2 * * *') || (github.event_name == 'workflow_dispatch' && !inputs.pnr_only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency:
+      group: faults-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      FAULTS_N: ${{ github.event_name == 'schedule' && '20000' || inputs.faults_n }}
+      FAULTS_BUDGET_MIN: ${{ github.event_name == 'schedule' && '300' || inputs.faults_budget_min }}
+      FAULTS_SEED: ${{ github.event_name == 'schedule' && github.run_number || inputs.faults_seed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install numpy
+      - name: install the simulator
+        run: sudo apt-get update && sudo apt-get install -y verilator && verilator --version
+      - name: flat layout
+        run: |
+          cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
+          for v in 02_dv/vectors*; do cp -r "$v" "$(basename "$v")"; done
+          cp -r 03_models/model model && cp -r 03_models/compiler compiler && cp -r 04_software sw && cp -r 05_safety safety
+          cp 07_ci/Makefile Makefile
+          mkdir -p ci_logs/faults
+          { echo "run ${{ github.run_number }} (${{ github.event_name }} on ${{ github.ref_name }} at ${{ github.sha }}) $(date -u)"
+            echo "faults per build $FAULTS_N, budget $FAULTS_BUDGET_MIN min, seed $FAULTS_SEED"
+            echo "cores $(nproc)"; free -m | sed -n 2,3p; } | tee ci_logs/faults/RUN.txt
+      - name: start the publisher (ci_logs/faults into ci-logs-faults every 10 minutes)
+        run: |
+          git config user.name "neo-ci" && git config user.email "ci@users.noreply.github.com"
+          git checkout --orphan ci-logs-faults && git rm -rfq --cached . 2>/dev/null || true
+          git add -f ci_logs && git commit -q -m "faults run ${{ github.run_number }}: started" && git push -q origin ci-logs-faults --force
+          cat > ci_publisher.sh <<'EOF'
+          #!/bin/bash
+          while true; do
+            sleep 600
+            flock -w 60 .ci_publish.lock -c "git add -f ci_logs && git commit -q -m 'faults progress run $1' && git push -q -f origin ci-logs-faults" >/dev/null 2>&1 || true
+          done
+          EOF
+          nohup bash ci_publisher.sh ${{ github.run_number }} >/dev/null 2>&1 &
+          echo $! > ci_publisher.pid
+      - name: the campaign (C1 on the core, M1 on the tile mesh; 4 workers per build)
+        run: |
+          set -o pipefail
+          make faults FAULTS_N=$FAULTS_N FAULTS_SEED=$FAULTS_SEED FAULTS_WORKERS=4 FAULTS_BUDGET_MIN=$FAULTS_BUDGET_MIN 2>&1 | tee ci_logs/faults/faults.txt
+      - name: publish logs
+        if: always()
+        run: |
+          [ -f ci_publisher.pid ] && kill $(cat ci_publisher.pid) 2>/dev/null || true
+          echo "finished $(date -u)" >> ci_logs/faults/RUN.txt
+          rm -f ci_logs/faults/list_*.json                 # the sampled lists (large; the seed reproduces them)
+          flock -w 120 .ci_publish.lock -c '
+            git add -f ci_logs
+            git commit -q -m "faults logs run ${{ github.run_number }}" || true
+            git push origin ci-logs-faults --force'
   tiles:
-    if: github.event_name == 'workflow_dispatch' && !inputs.pnr_only
+    if: github.event_name == 'workflow_dispatch' && !inputs.pnr_only && !inputs.faults_only
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
@@ -417,10 +509,14 @@ jobs:
           EVENT: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
           BLOCKS: ${{ inputs.pnr_blocks }}
+          SCHED: ${{ github.event.schedule }}
+          FAULTS_ONLY: ${{ inputs.faults_only }}
         run: |
           run=0
+          # drop 0.43: the weekly schedule only (the nightly one is the faults job's), a dispatch unless faults-only
           case "$EVENT" in
-            workflow_dispatch|schedule) run=1 ;;
+            workflow_dispatch) [ "$FAULTS_ONLY" = "true" ] || run=1 ;;
+            schedule) [ "$SCHED" = "0 2 * * 0" ] && run=1 ;;
             push)
               if git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then base="$BEFORE"; else base="$GITHUB_SHA~1"; fi
               changed=$(git diff --name-only "$base" "$GITHUB_SHA" -- 07_ci/pnr | head -n 5)

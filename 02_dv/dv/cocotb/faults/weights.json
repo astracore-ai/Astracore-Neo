@@ -1,0 +1,13 @@
+{
+  "_doc": "Sampling of the fault campaign (run_faults.py): every block gets min_per_block faults, the rest of the sample is spread over the population's bits in proportion to bits x block_weight (default 1); fault types by probability; on the tile build the core's blocks are sampled on the computing tile only (core_nodes: the M1 workload computes on tile (0,0), the other three cores are idle and their flops would only add masked faults), the tile's other blocks on every node.",
+  "min_per_block": 25,
+  "types": {"flip": 0.5, "sa0": 0.25, "sa1": 0.25},
+  "_doc_mem": "The memory arrays (the SRAM leaves' cells, sampled apart from the flops and in addition to the N flop faults): max(mem_quota, N x mem_frac / the number of memory blocks) faults per memory block, a cell uniformly over the block's bits, the types of mem_types (an SRAM cell's dominant fault is the soft error, a flip).",
+  "mem_quota": 40,
+  "mem_frac": 0.25,
+  "mem_types": {"flip": 0.8, "sa0": 0.1, "sa1": 0.1},
+  "block_weight": {},
+  "core_nodes": [0],
+  "core_blocks": ["act_feeder", "neo_mac_core", "acc_bank", "core_seq", "wbuf_mem", "requant", "neo_mac_core_v02", "neo_core",
+                  "neo_mac_core.abft_checker", "acc_bank.abft_checker", "act_feeder.macro", "wbuf_mem.macro", "acc_bank.macro"]
+}

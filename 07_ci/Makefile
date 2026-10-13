@@ -402,6 +402,23 @@ gls:
 	python3 synth/gls.py --synth $(SYNTH_OUT) --rtl rtl --cells $(GLS_CELLS) --out $(SYNTH_LOGS)/gls --units $(GLS_UNITS) \
 	  --iverilog $(GLS_IVERILOG) --cycles $(GLS_CYCLES)
 
+# the fault campaign (drop 0.43, stream D2; CI's `faults` job, nightly and on demand): dv/cocotb/faults/run_faults.py --
+# FAULTS_N faults on each of the two cocotb builds (C1 on neo_core 16x8, M1 on the 2x2 mesh of 16x8 tiles), seeded, sampled
+# per block (dv/cocotb/faults/weights.json), FAULTS_WORKERS simulator processes per build, the whole campaign within
+# FAULTS_BUDGET_MIN minutes (0: no limit; each worker stops when its share has run out, every finished fault kept);
+# faults.csv, faults_report.md (per-block diagnostic coverage), undetected.md and faults_summary.json into ci_logs/faults/.
+# FMEDA v2 reads them: python3 safety/build_fmeda.py --v2 --faults ci_logs/faults --formal <formal_report.md>.
+FAULTS_N ?= 300
+FAULTS_SEED ?= 1
+FAULTS_WORKERS ?= 2
+FAULTS_BUDGET_MIN ?= 0
+FAULTS_OUT ?= ci_logs/faults
+.PHONY: faults
+faults:
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	python3 dv/cocotb/faults/run_faults.py all --n-tile $(FAULTS_N) --n-core $(FAULTS_N) --seed $(FAULTS_SEED) \
+	  --workers $(FAULTS_WORKERS) --budget-min $(FAULTS_BUDGET_MIN) --out $(FAULTS_OUT)
+
 # the formal job (drop 0.41): formal/run.py runs every task of every formal/*.sby with SymbiYosys (sby -f -d formal_out/<task>),
 # FORMAL_JOBS at a time, each under FORMAL_TIMEOUT seconds (the task's whole session -- sby and its solvers -- is killed at the
 # limit: TIMEOUT), writes formal_out/formal_report.md (result, mode, depth, engine, reached induction length or bmc steps, time
