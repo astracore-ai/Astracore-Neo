@@ -47,6 +47,8 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
       residual buffer, the later key tiles skipped), a SiLU MLP of hidden 64 and INT4 weights with per-output-channel
       scales (FETCH_W arg 1: the NIC expands the nibbles, the entry's check weight the compiler's; the scales in the
       requantizer's and the unit's per-column tables)
+  M25 (drop 0.43, stream B2) the telemetry counters against the testbench's own counts on M2's K-split and single-tile
+      convolutions of M18's class, the measured MAC utilization beside the perf model's (m25_telemetry)
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
      make -C dv/cocotb tile_sp (drop 0.42: the same mesh of 16x8 sparse-capable cores, NCHK = 4: M20, and M1 / M6 dense on
                               the five-word weight entries of that core)
@@ -62,6 +64,8 @@ DMA instruction (the length field is 12 bits: one 32x32 tile is 2,592 words).
 Timing notes (Verilator): after `await RisingEdge(clk)` every signal already shows its post-edge value, and a
 value written then is applied in the same time step, i.e. it is seen by the falling edge that follows and by the
 next rising edge. The fault port relies on that: detect at a rising edge, raise fi_en, the fault lands at the
+  M25 (drop 0.43, stream B2) the telemetry counters against the testbench's own counts on M2's K-split and single-tile
+      convolutions (see m25_telemetry)
 falling edge, the design samples it at the next rising edge.
 """
 import os
@@ -1356,8 +1360,8 @@ async def tel_snapshot(mesh, node):
 
 
 @cocotb.test(skip=(NX * NY > 4))
-async def m23_telemetry(dut):
-    """M23 (drop 0.43, stream B2): the telemetry counters (tile_telem behind host_if 0x40 .. 0x4C) against the testbench's
+async def m25_telemetry(dut):
+    """M25 (drop 0.43, stream B2): the telemetry counters (tile_telem behind host_if 0x40 .. 0x4C) against the testbench's
     own counts. (a) M2's K-split -- three tiles computing, the fourth serving their fetches and taking the owner's drain,
     partial sums and RDY over the mesh -- with the observation words of all four tiles counted every cycle (ObsCounter);
     once the mesh is quiet every tile's snapshot is read and each of the eleven event counters must equal the count of
@@ -1400,8 +1404,8 @@ async def m23_telemetry(dut):
     win = (await tel_snapshot(mesh, N10))["cycles"]
     if win != 1000:
         bad.append(f"cycle count {win} over a clear and a snapshot 1,000 cycles apart")
-    assert not bad, "M23 (a): " + "; ".join(bad)
-    dut._log.info("M23 (a): eleven event counters on four tiles equal to the testbench's counts, array valid = runs x M, the window's "
+    assert not bad, "M25 (a): " + "; ".join(bad)
+    dut._log.info("M25 (a): eleven event counters on four tiles equal to the testbench's counts, array valid = runs x M, the window's "
                   "cycles exact; " + " | ".join(lines))
     # (b) utilization, measured against the model
     rng = np.random.default_rng(31)
@@ -1429,16 +1433,16 @@ async def m23_telemetry(dut):
         await mesh.wait_prog(0)
         tel = await tel_snapshot(mesh, 0)
         got = to_image(await mesh.read_rows(N10, r0, M), rr, M, wo=wo)
-        await check_result(mesh, got, rr, f"M23 k{k} s{s} ct{ct_n}")
+        await check_result(mesh, got, rr, f"M25 k{k} s{s} ct{ct_n}")
         meas = tel["array_valid"] / tel["cycles"]
         model = tile_layer(6, 6, cin, 7, k, s, p, rows=ROWS, cols=COLS, nchk=NCHK)          # v3's link (64 B / cycle), passes of M
         build = tile_layer(6, 6, cin, 7, k, s, p, rows=ROWS, cols=COLS, nchk=NCHK, rx_bytes=4 * WPF, tx_bytes=4 * WPF,
                            run_spacing=True)                                                   # this build's link, the pass spacing
         table.append((k, s, ct_n, M, tel["array_valid"], tel["cycles"], meas, model["utilization"], model["cycles"],
                       build["utilization"], build["cycles"]))
-        assert tel["array_valid"] == ct_n * k * k * M, f"M23 k{k}: array valid {tel['array_valid']} != {ct_n * k * k * M}"
+        assert tel["array_valid"] == ct_n * k * k * M, f"M25 k{k}: array valid {tel['array_valid']} != {ct_n * k * k * M}"
     await expect_clean(mesh)
-    dut._log.info("M23 (b): MAC utilization of single-tile layers (6x6 inputs, 7 output channels), measured by the counters vs the "
+    dut._log.info("M25 (b): MAC utilization of single-tile layers (6x6 inputs, 7 output channels), measured by the counters vs the "
                   "model (neo_perf_v3.tile_layer as v3 has it / with this build's link and the pass spacing) -- " +
                   "; ".join(f"k{k} s{s} {c} ch.tiles M {M}: {av} valid / {cy} cycles = {100 * u:.1f} % measured, {100 * mu:.1f} % "
                             f"({mc:.0f} cycles) / {100 * bu:.1f} % ({bc:.0f} cycles) predicted"

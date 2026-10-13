@@ -303,28 +303,11 @@ UNITS = tile_units(TILE) + core_units(CORE16, "c16_", "16x8")
 # NCHK (drop 0.43, an integration fix of the 0.42 merge): neo_top's tiles are the silicon tile, NCHK = 4 as TILE -- neo_top
 # passes it to neo_tile (default 1, the cocotb top suite's dense tiles); before, the top's tile unit took TILE's NCHK = 4
 # while neo_top instantiated neo_tile at the default 1, and the hierarchy and PE-count gates failed (run 180)
+# The chip top's tile uses the silicon tile's own core unit (neo_core at NCHK = 4): the top's own units are those whose
+# parameters differ (the 4-bit coordinates), not the core.
 TOP = dict(NX=8, NY=8, ROWS=32, COLS=32, NCHK=4, ACC_ROWS=512, ABUF_DEPTH=2048, WBUF_DEPTH=1024, BANK_DEPTH=524288, WPF=32,
            FETCH_TIMEOUT=1048575, AXI_DW=512, AXI_IDW=4, N_MEM_BRIDGES=8, N_HOST_BRIDGES=1, CTRL_AW=18, CDC_DEPTH=8)
 RTL_FILES += ["cdc_bits.sv", "cdc_fifo.sv", "cdc_sync.sv", "noc_axi_bridge.sv", "top_ctrl.sv", "mesh_ctrl.sv", "neo_top.sv"]
-
-
-def top_core_units(TT):
-    """The chip top's core (drop 0.43, D2; the 0.42 merge left the top's units at the silicon tile's NCHK = 4 while neo_top
-    instantiates neo_tile with NCHK at its default 1 -- run 180's synth gates failed on top_neo_tile's PE count and on
-    neo_top's tile): the units whose parameters follow NCHK again at NCHK = 1 with the prefix top_ (the data PE with one
-    byte, the array, the streaming core, the feeder, the datapath, the weight buffer, the core); the check PE, the
-    accumulator, requant and the sequencer are the tile's units (their parameters do not depend on NCHK) -- and the vector
-    unit (C2: its parameters do not either)."""
-    shared = {"mac_pe_chk", "acc_bank", "requant", "core_seq", "vec_unit"}
-    out = []
-    for u in core_units(dict(TT, NCHK=1), "top_", "32x32 dense, the chip top's tile"):
-        base = u["name"][len("top_"):]
-        if base in shared:
-            continue
-        u["children"] = {ty: [n if n[len("top_"):] not in shared else n[len("top_"):] for n in names]
-                         for ty, names in u["children"].items()}
-        out.append(u)
-    return out
 
 
 def top_units(P):
@@ -337,7 +320,7 @@ def top_units(P):
     IDXW, AW, WAW, BAW = clog2(TT["ACC_ROWS"]), clog2(TT["ABUF_DEPTH"]), clog2(TT["WBUF_DEPTH"]), clog2(TT["BANK_DEPTH"])
     DWL, BW, NSRC = 32 + 32 * TT["WPF"], 16, (NX + 1) * NY
     br = dict(XW=XW, YW=YW, NX=NX, NY=NY, BAW=BAW, AXI_DW=P["AXI_DW"], AXI_IDW=P["AXI_IDW"], HOST_TIMEOUT=P["FETCH_TIMEOUT"])
-    return top_core_units(TT) + [
+    return [
         U("top_link_packer", "link_packer", dict(XW=XW, YW=YW, BW=BW, WPF=TT["WPF"]), "beats to 32-word link flits at the chip top's 4-bit x"),
         U("top_link_unpacker", "link_unpacker", dict(XW=XW, YW=YW, BW=BW, WPF=TT["WPF"]), "32-word link flits to beats at the chip top's 4-bit x"),
         U("top_tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX + 1, NSRC=NSRC, BW=BW, ROWS=R, COLS=C, WCW=WCW, IDXW=IDXW, AW=AW, WAW=WAW,
@@ -347,7 +330,7 @@ def top_units(P):
         U("top_noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router at the chip top's widths (the tiles' and the bridge column's)", icg=5),
         U("top_tile_dma", "tile_dma", dict(XW=XW, YW=YW, PDEPTH=32, DV_HOOKS=0), "DMA program engine at the chip top's coordinate width", icg=1),
         U("top_neo_tile", "neo_tile", dict(TT), "the chip top's tile: XW 4, the source index over 9 columns; 32x32 core, 2 MB bank, 1024-bit links",
-          children={"neo_core": ["top_neo_core"], "tile_nic": ["top_tile_nic"], "noc_router": ["top_noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
+          children={"neo_core": ["neo_core"], "tile_nic": ["top_tile_nic"], "noc_router": ["top_noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
                     "tile_dma": ["top_tile_dma"], "prog_mem": ["prog_mem"], "host_if": ["host_if"], "esm": ["esm"],
                     "link_packer": ["top_link_packer"], "link_unpacker": ["top_link_unpacker"], "tile_telem": ["tile_telem"]},
           pe=R * (C + TT["NCHK"]), icg=1),
