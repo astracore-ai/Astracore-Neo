@@ -33,7 +33,7 @@ import neo_backend as nb  # noqa: E402
 
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv", "neo_mem.sv",
        "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "wbuf_mem.sv", "requant.sv",
-       "neo_core.sv", "noc_router.sv", "ecc39.sv", "sram_bank.sv", "crc16_word.sv", "tile_nic.sv", "tile_dma.sv",
+       "vec_unit.sv", "neo_core.sv", "noc_router.sv", "ecc39.sv", "sram_bank.sv", "crc16_word.sv", "tile_nic.sv", "tile_dma.sv",
        "mbist.sv", "bank_bist_wrap.sv", "crc16_beat.sv", "prog_mem.sv", "host_if.sv", "esm.sv", "link_pack.sv", "neo_tile.sv", "tile_mesh.sv"]
 WPF = int(os.environ.get("NEO_WPF", "1"))   # words per link flit (drop 0.25): 1 as before, 32 = the 1024-bit links
 TYPE_SHIFT = 32 + 32 * WPF - 3                # the flit type sits at the top of the link payload (bit 61 with one word per flit)

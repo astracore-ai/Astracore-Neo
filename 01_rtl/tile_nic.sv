@@ -64,6 +64,26 @@
 //     registers, and the flit's parity formed from word parities -- the bank row's under the beat's lane mask for a
 //     served beat, the beat's parity stored with the drain FIFO's row at the push for a drained one -- instead of one
 //     XOR tree over the 560 bits behind the words' select.
+//   Drop 0.43 (stream C2, transformer readiness):
+//   - INT4 weights: FETCH_W with arg 1 fetches INT4 entries -- COLS nibbles in WP4 = COLS / 8 words, nibble j at bits
+//     [4j +: 4] of the entry's words -- through the same entry assembly (the entry size WP4 beside WPA / WPW), and each
+//     entry is expanded on its way to the weight buffer: every nibble sign-extended to the ordinary 8-bit weight, index 0,
+//     the check weight of column 0 their sum (an adder per entry), the other check weights 0. wbuf_mem receives the
+//     ordinary entry; the bank holds half (16x8: a third) of the words. The layer's per-output-channel scale is the
+//     requantizer's (the compiler folds it into mult / shift); per-group scales along K are not supported.
+//   - FETCH_A with arg 1 fetches activation-format entries (ROWS bytes, WPA words) into the vector unit's residual buffer
+//     (rbuf_* -- the data on abuf_wdata / abuf_wdata2, the pair rule of the activation buffer).
+//   - DRAIN_WR's base field, unused before, is the drain's format for INT8 rows (arg 1): [14] entry -- each row followed
+//     by its check weight (the sum of its bytes, WCW bits, in the next word) and zero words up to WPW: a weight entry of
+//     the next layer (the drained tensor fetched as weights: K or V of an attention head); [13] pad -- each row padded with
+//     zero words to WPA, an activation entry whose upper ROWS - COLS channels are zero (the 16x8 core's COLS = 8 outputs
+//     as a channel tile of 16); [15] transpose -- every block of COLS rows is drained as its transpose (a COLS x COLS byte
+//     buffer written by rows and read by columns, the orientation alternating per block so a block is read out while the
+//     next is written; COLS rows a block, the drain's length a multiple of COLS): the transpose by the DMA that turns
+//     tokens x channels into the channels x tokens of K^T; [12:0] the group stride -- when nonzero, every group of COLS
+//     rows starts at the address of the group before plus the stride (a WRHDR before each group), so a block's entries
+//     land in the weight region of the output tile they belong to. The message stays one message (one CRC, the count of
+//     its data words); the receiver takes a WRHDR in the middle of a message as it takes the first.
 //   Commands from the host or sequencer: FETCH_A / FETCH_W pull `len` words from a remote bank into the activation /
 //   weight buffer at entry `base`; DRAIN_WR / DRAIN_PSUM route the core's drained rows to a remote bank address / to the
 //   owner core's reduce port. crc_err_sticky is the end-to-end protection the FMEDA counts on (row 12): it covers
@@ -125,6 +145,9 @@ module tile_nic #(
   output logic signed [7:0]     abuf_wdata [ROWS],
   output logic                  abuf_we2,                 // the entry at abuf_waddr + 1 (abuf_waddr even), drop 0.32
   output logic signed [7:0]     abuf_wdata2 [ROWS],
+  output logic                  rbuf_we,                  // drop 0.43: FETCH_A with arg 1 -- the entry (abuf_wdata) goes to the
+  output logic                  rbuf_we2,                 // vector unit's residual buffer at rbuf_waddr (and abuf_wdata2 to
+  output logic [IDXW-1:0]       rbuf_waddr,               // rbuf_waddr + 1)
   output logic                  wbuf_we,
   output logic [WAW-1:0]        wbuf_waddr,
   output logic [8+IW-1:0]       wbuf_wdata [COLS],        // {index, weight} per column (drop 0.42: the entry of wbuf_mem)
@@ -147,12 +170,14 @@ module tile_nic #(
   // command port
   input  logic                  cmd_valid,
   input  logic [2:0]            cmd_op,       // 1 FETCH_A, 2 FETCH_W, 3 DRAIN_WR, 4 DRAIN_PSUM, 5 NOTIFY (send RDY to x,y)
-  input  logic                  cmd_int8,     // with DRAIN_WR: drain the requantized INT8 rows instead of INT32
+  input  logic                  cmd_int8,     // with DRAIN_WR: drain the requantized INT8 rows instead of INT32; with FETCH_W
+                                              // (drop 0.43): INT4 weight entries; with FETCH_A: into the vector unit's RBUF
   input  logic [XW-1:0]         cmd_x,
   input  logic [YW-1:0]         cmd_y,
   input  logic [19:0]           cmd_addr,
   input  logic [11:0]           cmd_len,      // words to fetch, or rows to drain
-  input  logic [15:0]           cmd_base,     // local entry index for fetches
+  input  logic [15:0]           cmd_base,     // local entry index for fetches; DRAIN_WR's INT8 format (drop 0.43): [15]
+                                              // transpose, [14] entry, [13] pad, [12:0] group stride in words
   output logic                  cmd_busy,     // a fetch is outstanding
   output logic                  drain_busy,   // drain rows still to be sent
   output logic                  crc_err_sticky,
@@ -191,6 +216,7 @@ module tile_nic #(
   // one-hot (the select of the lane rotation below), and for the fetch, t of the beat's first cycle (q_tt: the staged
   // words of the cycle the beat is taken plus its words, a thermometer code; the fetch receive below)
   localparam int EW  = (WPA > WPW) ? WPA : WPW;           // words of the largest entry (4 at 16x8, 9 at 32x32; drop 0.21)
+  localparam int WP4 = (COLS * 4 + 31) / 32;              // words of an INT4 weight entry (drop 0.43): 1 at 16x8, 4 at 32x32
   localparam int TW  = BW + EW;                           // the fetch's t <= BW + EW - 1: thermometer bits t > 0 .. t > BW + EW - 1
   logic [CW-1:0]   q_nw;
   logic [CW-1:0]   q_nwc_n;                               // ~q_nw, the CRC's copy
@@ -308,6 +334,8 @@ module tile_nic #(
   // outstanding fetch
   logic                 fetch_busy;
   logic                 fetch_is_w;
+  logic                 fetch_is_w4;                      // drop 0.43: INT4 weight entries (FETCH_W, arg 1; fetch_is_w too)
+  logic                 fetch_is_r;                       // drop 0.43: activation entries into the vector unit's RBUF (FETCH_A, arg 1)
   logic [SRCW-1:0]      fetch_src;                        // node serving our fetch
   logic [15:0]          fetch_entry;                      // the entry the next entry goes to (drop 0.42: a register, was
                                                           // fetch_base + fetch_ent)
@@ -429,14 +457,18 @@ module tile_nic #(
   assign fx_tt  = fx_held ? fx_lt : q_tt;
   assign fx_tx  = TXW'(fx_tt);
   always_comb begin                                       // the compares, the shifts and the turns by the entry size
-    if (fetch_is_w) begin
+    if (fetch_is_w4) begin                                // drop 0.43: the INT4 entry
+      fx_ge1 = fx_tx[WP4 - 1]; fx_ge2 = fx_tx[2 * WP4 - 1]; fx_ge3 = fx_tx[3 * WP4 - 1];
+    end else if (fetch_is_w) begin
       fx_ge1 = fx_tx[WPW - 1]; fx_ge2 = fx_tx[2 * WPW - 1]; fx_ge3 = fx_tx[3 * WPW - 1];
     end else begin
       fx_ge1 = fx_tx[WPA - 1]; fx_ge2 = fx_tx[2 * WPA - 1]; fx_ge3 = fx_tx[3 * WPA - 1];
     end
     for (int k = 0; k < BW; k++) begin
-      fx_bo1[k] = fetch_is_w ? fx_bo[(k - WPW % BW + BW) % BW] : fx_bo[(k - WPA % BW + BW) % BW];
-      fx_bo2[k] = fetch_is_w ? fx_bo[(k - (2 * WPW) % BW + BW) % BW] : fx_bo[(k - (2 * WPA) % BW + BW) % BW];
+      fx_bo1[k] = fetch_is_w4 ? fx_bo[(k - WP4 % BW + BW) % BW] :
+                  fetch_is_w  ? fx_bo[(k - WPW % BW + BW) % BW] : fx_bo[(k - WPA % BW + BW) % BW];
+      fx_bo2[k] = fetch_is_w4 ? fx_bo[(k - (2 * WP4) % BW + BW) % BW] :
+                  fetch_is_w  ? fx_bo[(k - (2 * WPW) % BW + BW) % BW] : fx_bo[(k - (2 * WPA) % BW + BW) % BW];
     end
   end
   assign fx_entry = fx_act && fetch_busy && fx_ge1;
@@ -445,8 +477,8 @@ module tile_nic #(
   assign fx_stash = fx_act && fetch_busy && !fx_more;
   assign fx_done  = !fetch_busy || !fx_more;
   always_comb begin
-    if (fx_two)        fx_tc = fetch_is_w ? fx_tt >> (2 * WPW) : fx_tt >> (2 * WPA);
-    else if (fx_entry) fx_tc = fetch_is_w ? fx_tt >> WPW : fx_tt >> WPA;
+    if (fx_two)        fx_tc = fetch_is_w4 ? fx_tt >> (2 * WP4) : fetch_is_w ? fx_tt >> (2 * WPW) : fx_tt >> (2 * WPA);
+    else if (fx_entry) fx_tc = fetch_is_w4 ? fx_tt >> WP4 : fetch_is_w ? fx_tt >> WPW : fx_tt >> WPA;
     else               fx_tc = fx_tt;
     for (int w = 0; w < EW; w++) begin
       fx_r0[w] = '0; fx_r1[w] = '0; fx_r2[w] = '0;
@@ -553,24 +585,50 @@ module tile_nic #(
       assign wev[32*w +: 32]  = ent[w];
       assign wev2[32*w +: 32] = ent2[w];
     end
+    // drop 0.43: an INT4 entry's nibbles, sign-extended (w4s), are the 8-bit weights of the entry written (index 0)
+    logic [32*WP4-1:0]    w4v, w4v2;
+    logic signed [7:0]    w4s [COLS];
+    logic signed [7:0]    w4s2 [COLS];
+    for (genvar w = 0; w < WP4; w++) begin : g_w4v
+      assign w4v[32*w +: 32]  = ent[w];
+      assign w4v2[32*w +: 32] = ent2[w];
+    end
     for (genvar j = 0; j < COLS; j++) begin : g_w
+      assign w4s[j]  = {{4{w4v[4*j+3]}}, w4v[4*j +: 4]};
+      assign w4s2[j] = {{4{w4v2[4*j+3]}}, w4v2[4*j +: 4]};
       if (IW > 0) begin : g_wi
-        assign wbuf_wdata[j]  = {wev[COLS * 8 + NCHK * WCW + IW * j +: IW], wev[8 * j +: 8]};
-        assign wbuf_wdata2[j] = {wev2[COLS * 8 + NCHK * WCW + IW * j +: IW], wev2[8 * j +: 8]};
+        assign wbuf_wdata[j]  = fetch_is_w4 ? {{IW{1'b0}}, w4s[j]} : {wev[COLS * 8 + NCHK * WCW + IW * j +: IW], wev[8 * j +: 8]};
+        assign wbuf_wdata2[j] = fetch_is_w4 ? {{IW{1'b0}}, w4s2[j]} : {wev2[COLS * 8 + NCHK * WCW + IW * j +: IW], wev2[8 * j +: 8]};
       end else begin : g_wn
-        assign wbuf_wdata[j]  = wev[8 * j +: 8];
-        assign wbuf_wdata2[j] = wev2[8 * j +: 8];
+        assign wbuf_wdata[j]  = fetch_is_w4 ? w4s[j] : wev[8 * j +: 8];
+        assign wbuf_wdata2[j] = fetch_is_w4 ? w4s2[j] : wev2[8 * j +: 8];
       end
+    end
+    if (32 * WP4 > 4 * COLS) begin : g_w4pad
+      logic unused_w4pad;
+      assign unused_w4pad = ^{w4v[32*WP4-1:4*COLS], w4v2[32*WP4-1:4*COLS]};
     end
     if (32 * WPW > COLS * (8 + IW) + NCHK * WCW) begin : g_wpad   // the entry's last word above its fields
       logic unused_wpad;
       assign unused_wpad = ^{wev[32*WPW-1:COLS*(8+IW)+NCHK*WCW], wev2[32*WPW-1:COLS*(8+IW)+NCHK*WCW]};
     end
   endgenerate
-  assign wcbuf_wdata  = wev[COLS * 8 +: NCHK * WCW];
-  assign wcbuf_wdata2 = wev2[COLS * 8 +: NCHK * WCW];
-  assign abuf_we    = fx_entry && !fetch_is_w;
-  assign abuf_we2   = fx_two && !fetch_is_w;
+  // the INT4 entry's check weight (drop 0.43): the sum of its sign-extended nibbles, column 0's check weight
+  logic signed [WCW-1:0] w4c, w4c2;
+  always_comb begin
+    w4c = '0; w4c2 = '0;
+    for (int j = 0; j < COLS; j++) begin
+      w4c  = w4c + WCW'(w4s[j]);
+      w4c2 = w4c2 + WCW'(w4s2[j]);
+    end
+  end
+  assign wcbuf_wdata  = fetch_is_w4 ? (NCHK*WCW)'($unsigned(w4c)) : wev[COLS * 8 +: NCHK * WCW];
+  assign wcbuf_wdata2 = fetch_is_w4 ? (NCHK*WCW)'($unsigned(w4c2)) : wev2[COLS * 8 +: NCHK * WCW];
+  assign abuf_we    = fx_entry && !fetch_is_w && !fetch_is_r;
+  assign abuf_we2   = fx_two && !fetch_is_w && !fetch_is_r;
+  assign rbuf_we    = fx_entry && fetch_is_r;
+  assign rbuf_we2   = fx_two && fetch_is_r;
+  assign rbuf_waddr = fetch_entry[IDXW-1:0];
   assign wbuf_we    = fx_entry && fetch_is_w;
   assign wbuf_we2   = fx_two && fetch_is_w;
   assign abuf_waddr = fetch_entry[AW-1:0];
@@ -697,7 +755,7 @@ module tile_nic #(
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       lost_err_sticky <= 1'b0; fetch_timeout_sticky <= 1'b0; fetch_timer <= '0; iso_err_sticky <= 1'b0;
-      fetch_busy <= 1'b0; fetch_is_w <= 1'b0; fetch_src <= '0;
+      fetch_busy <= 1'b0; fetch_is_w <= 1'b0; fetch_is_w4 <= 1'b0; fetch_is_r <= 1'b0; fetch_src <= '0;
       for (int w = 0; w < EW; w++) stage[w] <= '0;
       efifo_valid[0] <= 1'b0; efifo_valid[1] <= 1'b0; efifo_wr <= 1'b0; efifo_rd <= 1'b0;
       efifo_idx[0] <= '0; efifo_idx[1] <= '0; efifo_chk[0] <= '0; efifo_chk[1] <= '0;
@@ -719,6 +777,7 @@ module tile_nic #(
       // fetch command
       if (fetch_cmd) begin                                 // (the staged count, the entry index: the block above)
         fetch_busy <= 1'b1; fetch_is_w <= (cmd_op == 3'd2);
+        fetch_is_w4 <= (cmd_op == 3'd2) && cmd_int8; fetch_is_r <= (cmd_op == 3'd1) && cmd_int8;   // drop 0.43
         fetch_src  <= SRCW'(32'(cmd_y) * NX + 32'(cmd_x));
       end
       // ext FIFO pop
@@ -800,7 +859,13 @@ module tile_nic #(
   logic                 drain_mode_psum;
   logic [XW-1:0]        drain_x;
   logic [YW-1:0]        drain_y;
-  logic [19:0]          drain_addr;
+  logic [19:0]          drain_gaddr;                      // the address of the row group being sent (drop 0.43: of the drain,
+                                                          // drain_addr, before groups)
+  logic                 drain_tr, drain_ent, drain_pad;   // drop 0.43: DRAIN_WR's INT8 format, base[15:13]
+  logic [12:0]          drain_stride;                     // base[12:0]: a group of COLS rows starts every stride words (0: none)
+  localparam int CB = (COLS > 1) ? $clog2(COLS) : 1;
+  logic [CB-1:0]        drain_grow;                       // the row's place in its group
+  logic                 drain_hdr_pend;                   // the next row starts a group: its WRHDR first
   logic [11:0]          drain_rows;                       // rows expected in this drain message
   logic [11:0]          drain_sent;                       // rows fully sent
   logic                 drain_armed;
@@ -852,7 +917,44 @@ module tile_nic #(
   logic [31:0]    dfifo_head_w [NDB * BW];                // the head row's words (INT8 rows packed at the push), zero above COLS
   logic        drain_int8;
   logic        drain_push;
-  assign drain_push = drain_int8 ? rq_valid : rd_valid;
+  // the INT8 row pushed (drop 0.43): the requantized row, or with the transpose format the row the block buffer reads out
+  logic signed [7:0] drow [COLS];
+  logic signed [7:0] tr_row [COLS];
+  logic              tr_out_v;                            // a block is being read out (one row per cycle)
+  assign drain_push = drain_int8 ? (drain_tr ? tr_out_v : rq_valid) : rd_valid;
+  generate
+    for (genvar j = 0; j < COLS; j++) begin : g_drow
+      assign drow[j] = drain_tr ? tr_row[j] : rq_q[j];
+    end
+  endgenerate
+  // the transpose (drop 0.43): block k of COLS INT8 rows is written into tb by rows (k even) or by columns (k odd) and read
+  // out in the other orientation, row c of the output = column c of the block, from the cycle after its last row, one row
+  // per cycle -- the slot output row c reads is the one row c of block k + 1 writes, which arrives no earlier than that
+  // cycle (rows come one per cycle at most), so one buffer serves a stream of blocks
+  logic signed [7:0] tb [COLS][COLS];
+  logic [CB-1:0]     tr_in, tr_out;                       // the row written next, the row read out
+  logic              tr_or, tr_out_or;                    // the orientation of the block written, of the block read
+  always_comb begin
+    for (int i = 0; i < COLS; i++) tr_row[i] = tr_out_or ? tb[tr_out][i] : tb[i][tr_out];
+  end
+  always_ff @(posedge clk) begin                          // the block buffer (data, no reset)
+    if (drain_int8 && drain_tr && rq_valid) begin
+      for (int i = 0; i < COLS; i++) begin
+        if (tr_or) tb[i][tr_in] <= rq_q[i];
+        else       tb[tr_in][i] <= rq_q[i];
+      end
+    end
+  end
+  // the entry format's check weight: the sum of the row's bytes (WCW bits), and the words of an INT8 row by format
+  logic signed [WCW-1:0] dchk;
+  always_comb begin
+    dchk = '0;
+    for (int j = 0; j < COLS; j++) dchk = dchk + WCW'(drow[j]);
+  end
+  localparam int NI8  = COLS / 4;                         // words of an INT8 row
+  localparam int NI8P = (WPA > NI8) ? WPA : NI8;          // padded to an activation entry
+  logic [CW-1:0]  ni8;                                    // this drain's words per INT8 row
+  assign ni8 = drain_ent ? CW'(WPW) : drain_pad ? CW'(NI8P) : CW'(NI8);
   // the drain beat (drop 0.31): words dword .. dword + d_n - 1 of the row at the FIFO's read pointer. Drop 0.42: a row goes
   // out in beats of BW words from its word 0, so beat word i is row word BW * dbeat + i, a select among NDB words by dbeat
   // (both modes: the INT8 rows are packed at the push), zero at and above d_n. The beat's count, whether it completes
@@ -868,10 +970,10 @@ module tile_nic #(
     for (int b = 0; b < NDB; b++)
       if (dbeat == DBW'(b)) begin                         // words left from beat b: COLS / 4 - b BW (INT8), COLS + 1 - b BW
         dword = DWW'(b * BW);
-        if (drain_int8) begin
-          d_n        = (COLS / 4 - b * BW <= 0) ? '0 : (COLS / 4 - b * BW < BW) ? CW'(COLS / 4 - b * BW) : CW'(BW);
-          d_row_done = (COLS / 4 - b * BW <= BW);
-          for (int i = 0; i < BW; i++) d_msk[i] = (i < COLS / 4 - b * BW);
+        if (drain_int8) begin                             // one beat (ni8 <= BW words; drop 0.43: by the format)
+          d_n        = (b == 0) ? ni8 : '0;
+          d_row_done = 1'b1;
+          for (int i = 0; i < BW; i++) d_msk[i] = (b == 0) && (CW'(i) < ni8);
         end else begin
           d_n        = (COLS + 1 - b * BW <= 0) ? '0 : (COLS + 1 - b * BW < BW) ? CW'(COLS + 1 - b * BW) : CW'(BW);
           d_row_done = (COLS + 1 - b * BW <= BW);
@@ -894,11 +996,12 @@ module tile_nic #(
     dfifo_wrow = '0;
     for (int j = 0; j < COLS; j++) dfifo_wrow[j * PW +: PW] = rd_data[j];
     dfifo_wrow[COLS * PW +: PW] = rd_chk;
-    if (drain_int8) begin
+    if (drain_int8) begin                                 // (drop 0.43: drow -- rq_q, or the transposed row; the entry's check weight)
       for (int k = 0; k < COLS / 4; k++)
-        dfifo_wrow[k * PW +: PW] = PW'({rq_q[4 * k + 3], rq_q[4 * k + 2], rq_q[4 * k + 1], rq_q[4 * k]});
+        dfifo_wrow[k * PW +: PW] = PW'({drow[4 * k + 3], drow[4 * k + 2], drow[4 * k + 1], drow[4 * k]});
       for (int k = COLS / 4; k <= COLS; k++)
         dfifo_wrow[k * PW +: PW] = '0;
+      if (drain_ent) dfifo_wrow[(COLS / 4) * PW +: PW] = PW'($unsigned(dchk));
     end
     dfifo_wrow[(COLS + 1) * PW +: IDXW] = IDXW'(drain_sent) + IDXW'(dfifo_np - dfifo_nq);   // rows sent + rows in the FIFO: rows arrive in order 0..M-1 (the index wraps)
     for (int w = 0; w <= COLS; w++)
@@ -962,7 +1065,7 @@ module tile_nic #(
         tx_type = T_CRC; tx_dx = serve_x; tx_dy = serve_y; tx_words = VW'({tx_cnt, tx_crc}); tx_valid = !txc_v;
       end
       X_DRAIN_HDR: begin
-        tx_type = T_WRHDR; tx_dx = drain_x; tx_dy = drain_y; tx_words = VW'({12'd0, drain_addr}); tx_valid = 1'b1;
+        tx_type = T_WRHDR; tx_dx = drain_x; tx_dy = drain_y; tx_words = VW'({12'd0, drain_gaddr}); tx_valid = 1'b1;
       end
       X_DRAIN_WORD: begin
         tx_dx = drain_x; tx_dy = drain_y; tx_words = drain_beat; tx_n = d_n; tx_valid = 1'b1;
@@ -997,7 +1100,7 @@ module tile_nic #(
       X_REQ:        tw_par = ^{req_len, req_addr};
       X_SERVE_SEND: tw_par = ^(sc_wp & s_msk);
       X_SERVE_CRC, X_DRAIN_CRC: tw_par = ^{tx_cnt, tx_crc};
-      X_DRAIN_HDR:  tw_par = ^drain_addr;
+      X_DRAIN_HDR:  tw_par = ^drain_gaddr;
       X_DRAIN_WORD: begin
         for (int b = 0; b < NDB; b++) if (dbeat == DBW'(b)) tw_par = dfifo_head_bpar[b];
       end
@@ -1033,16 +1136,34 @@ module tile_nic #(
       req_pending <= 1'b0; req_x <= '0; req_y <= '0; req_addr <= '0; req_len <= '0;
       ntf_pending <= 1'b0; ntf_x <= '0; ntf_y <= '0;
       dfifo_wr <= '0; dfifo_rd <= '0; dfifo_np <= '0; dfifo_nq <= '0; dfifo_npq <= '0; dfifo_push_q <= 1'b0;
-      drain_mode_psum <= 1'b0; drain_x <= '0; drain_y <= '0; drain_addr <= '0; drain_int8 <= 1'b0;
+      drain_mode_psum <= 1'b0; drain_x <= '0; drain_y <= '0; drain_gaddr <= '0; drain_int8 <= 1'b0;
       drain_rows <= '0; drain_sent <= '0; drain_armed <= 1'b0;
+      drain_tr <= 1'b0; drain_ent <= 1'b0; drain_pad <= 1'b0; drain_stride <= '0; drain_grow <= '0; drain_hdr_pend <= 1'b0;
+      tr_in <= '0; tr_out <= '0; tr_or <= 1'b0; tr_out_or <= 1'b0; tr_out_v <= 1'b0;
     end else begin
       // commands
       if (cmd_valid && (cmd_op == 3'd1 || cmd_op == 3'd2) && !fetch_busy) begin
         req_pending <= 1'b1; req_x <= cmd_x; req_y <= cmd_y; req_addr <= cmd_addr; req_len <= cmd_len;
       end
       if (cmd_valid && (cmd_op == 3'd3 || cmd_op == 3'd4)) begin
-        drain_mode_psum <= (cmd_op == 3'd4); drain_x <= cmd_x; drain_y <= cmd_y; drain_addr <= cmd_addr;
+        drain_mode_psum <= (cmd_op == 3'd4); drain_x <= cmd_x; drain_y <= cmd_y; drain_gaddr <= cmd_addr;
         drain_rows <= cmd_len; drain_sent <= '0; drain_armed <= 1'b1; drain_int8 <= (cmd_op == 3'd3) && cmd_int8;
+        // drop 0.43: the INT8 format (an INT32 or PSUM drain has none), the groups, the transpose's blocks from the start
+        drain_tr  <= (cmd_op == 3'd3) && cmd_int8 && cmd_base[15];
+        drain_ent <= (cmd_op == 3'd3) && cmd_int8 && cmd_base[14];
+        drain_pad <= (cmd_op == 3'd3) && cmd_int8 && cmd_base[13];
+        drain_stride <= ((cmd_op == 3'd3) && cmd_int8) ? cmd_base[12:0] : '0;
+        drain_grow <= '0; drain_hdr_pend <= 1'b0;
+        tr_in <= '0; tr_or <= 1'b0;
+      end
+      // the transpose's counters (drop 0.43): a row written, a block complete -> its read-out, COLS rows
+      if (drain_int8 && drain_tr && rq_valid) begin
+        tr_in <= (tr_in == CB'(COLS - 1)) ? '0 : tr_in + CB'(1);
+        if (tr_in == CB'(COLS - 1)) begin tr_out_v <= 1'b1; tr_out <= '0; tr_out_or <= tr_or; tr_or <= !tr_or; end
+      end
+      if (tr_out_v && !(drain_int8 && drain_tr && rq_valid && (tr_in == CB'(COLS - 1)))) begin
+        tr_out <= tr_out + CB'(1);
+        if (tr_out == CB'(COLS - 1)) tr_out_v <= 1'b0;
       end
       if (cmd_valid && cmd_op == 3'd5) begin
         ntf_pending <= 1'b1; ntf_x <= cmd_x; ntf_y <= cmd_y;
@@ -1074,8 +1195,8 @@ module tile_nic #(
 
       case (tx_state)
         X_IDLE: begin
-          if (drain_open) begin
-            if (dfifo_vis != 0) tx_state <= X_DRAIN_WORD;   // continue the open drain message only
+          if (drain_open) begin                              // continue the open drain message only (a group's WRHDR first)
+            if (dfifo_vis != 0) tx_state <= drain_hdr_pend ? X_DRAIN_HDR : X_DRAIN_WORD;
           end else if (req_pending) begin
             tx_state <= X_REQ;
           end else if (ntf_pending) begin
@@ -1112,7 +1233,7 @@ module tile_nic #(
           if (tx_fire) tx_state <= X_IDLE;
         end
         X_DRAIN_HDR: begin
-          if (tx_fire) tx_state <= X_DRAIN_WORD;
+          if (tx_fire) begin drain_hdr_pend <= 1'b0; tx_state <= X_DRAIN_WORD; end
         end
         X_DRAIN_WORD: begin
           if (tx_fire) begin                                 // (the beat's CRC: txc_* above; the read pointer: dfifo_rd_nxt)
@@ -1121,7 +1242,17 @@ module tile_nic #(
               dbeat <= '0;
               drain_sent <= drain_sent + 1;
               if (drain_sent + 1 == drain_rows) tx_state <= X_DRAIN_CRC;
-              else if (!(dfifo_vis > 1 || dfifo_push_q)) tx_state <= X_IDLE;   // no next row readable next cycle: wait
+              else begin
+                // drop 0.43: with a group stride, the row after a group's last starts the next group at its address
+                if ((drain_stride != '0) && (drain_grow == CB'(COLS - 1))) begin
+                  drain_grow <= '0; drain_gaddr <= drain_gaddr + 20'(drain_stride); drain_hdr_pend <= 1'b1;
+                  if (dfifo_vis > 1 || dfifo_push_q) tx_state <= X_DRAIN_HDR;
+                  else tx_state <= X_IDLE;
+                end else begin
+                  drain_grow <= drain_grow + CB'(1);
+                  if (!(dfifo_vis > 1 || dfifo_push_q)) tx_state <= X_IDLE;   // no next row readable next cycle: wait
+                end
+              end
             end else begin                                   // (the message stays open)
               dbeat <= dbeat + DBW'(1);
             end

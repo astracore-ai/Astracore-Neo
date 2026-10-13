@@ -9,6 +9,16 @@
 //   bit 0 on the tile) selects the sparse mode of the feeder and the row buses. The sequencer is unchanged: cfg_ct_n,
 //   cfg_ct0 and the run count are in the mode's channel tiles (64 channels in sparse mode at 32 rows), and a sparse
 //   run's weight tile is ROWS entries as a dense one is. NCHK = 1 is the core of drop 0.41.
+//   Drop 0.43 (stream C2): the vector unit (vec_unit.sv) between the accumulator drain and the requantizer pair. With its
+//   program empty (slot 0 END, the reset state) the requantizers take rd_data / rd_valid as before -- the bypass, every
+//   dense layer's rows and cycles unchanged. A descriptor started with a program loaded (vec_on, latched at go) runs the
+//   sequencer's drain as before but nothing leaves on rd_valid (the INT32 / PSUM drains are for layers without a program:
+//   a statistics round of a softmax or a norm emits nothing, and nothing then reaches the NIC's drain FIFO); the unit then
+//   reads the accumulator rows again through the drain port (the sequencer is idle by then), runs the program per row and
+//   feeds the requantizers with the rows it emits; `done` is then the unit's (the DMA's WAIT_DONE waits for it).
+//   Its tables are written through vec_we / vec_addr / vec_wdata (host_if's VEC_ADDR / VEC_DATA), its residual
+//   buffer through rbuf_* (the NIC's FETCH_A with arg 1); vec_err_sticky (its duplicated control's comparator) and
+//   vec_perr_sticky (its table parity) are new flags.
 module neo_core #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
@@ -79,7 +89,8 @@ module neo_core #(
   input  logic signed [PW-1:0]  ext_chk,
   output logic                  ext_ready,
   output logic                  reduce_ready,
-  // drained results: INT32 (ABFT-checked) and, three cycles later, requantized INT8 (drop 0.41: requant in three stages)
+  // drained results: INT32 (ABFT-checked) and, three cycles later, requantized INT8 (drop 0.41: requant in three stages);
+  // with a vector program (drop 0.43) the INT8 rows are the unit's and rd_valid stays low
   output logic signed [PW-1:0]  rd_data [COLS],
   output logic signed [PW-1:0]  rd_chk,
   output logic                  rd_valid,
@@ -92,6 +103,15 @@ module neo_core #(
   input  logic [4:0]            rq_tbl_shift,
   input  logic signed [7:0]     rq_tbl_zp,
   input  logic                  rq_relu,
+  // the vector unit (drop 0.43): its tables and program, its residual buffer (pairs of entries at even rbuf_waddr)
+  input  logic                  vec_we,
+  input  logic [11:0]           vec_addr,
+  input  logic [31:0]           vec_wdata,
+  input  logic                  rbuf_we,
+  input  logic                  rbuf_we2,
+  input  logic [IDXW-1:0]       rbuf_waddr,
+  input  logic signed [XW-1:0]  rbuf_wdata [ROWS],
+  input  logic signed [XW-1:0]  rbuf_wdata2 [ROWS],
   // safety
   input  logic                  err_clear,
   output logic                  array_abft_sticky,
@@ -104,12 +124,16 @@ module neo_core #(
   output logic                  wbuf_ce_sticky,       // weight buffer ECC: corrected / uncorrectable
   output logic                  wbuf_ue_sticky,
   output logic                  rq_tbl_perr_sticky,   // requantization table parity
+  output logic                  vec_err_sticky,       // drop 0.43: the vector unit's duplicated control disagrees (R7)
+  output logic                  vec_perr_sticky,      // drop 0.43: a vector-unit table entry failed its parity on use (R10)
   // DV only
   input  logic                  fault_inject,
   input  logic                  ctrl_fault_inject,
   input  logic                  seq_fault_inject,     // flips bit 0 of the primary sequencer's drain index
   input  logic                  rq_fault_inject,      // flips bit 12 of column 0 into the primary requant
   input  logic                  rq_tbl_fault_inject,  // flips bit 0 of column 0's requant multiplier (table parity)
+  input  logic                  vec_ctrl_fault_inject, // drop 0.43: flips bit 0 of the vector unit's primary row index
+  input  logic                  vec_tbl_fault_inject,  // drop 0.43: flips a reserved bit of the unit's slot-0 op word as used
   input  logic                  dv_wbuf_flip,         // drop 0.37 (DV_HOOKS = 1): a stored weight codeword's lane XOR a mask at the falling edge
   input  logic [WAW-1:0]        dv_wbuf_addr,
   input  logic [3:0]            dv_wbuf_lane,
@@ -146,12 +170,13 @@ module neo_core #(
     .err_clear(err_clear), .ecc_ce_sticky(wbuf_ce_sticky), .ecc_ue_sticky(wbuf_ue_sticky),
     .dv_fi_flip(dv_wbuf_flip), .dv_fi_addr(dv_wbuf_addr), .dv_fi_lane(dv_wbuf_lane), .dv_fi_mask(dv_wbuf_mask));
 
+  logic                  seq_done, seq_busy;       // the sequencer's (done / busy are the core's: the unit's too, drop 0.43)
   core_seq #(.ROWS(ROWS), .COLS(COLS), .IDXW(IDXW), .WBUF_DEPTH(WBUF_DEPTH), .WAW(WAW),
              .PE_LAT(PE_LAT)) u_seq (
     .clk(clk), .rst_n(rst_n),
     .cfg_k(cfg_k), .cfg_ct_n(cfg_ct_n), .cfg_ct0(cfg_ct0), .cfg_ky0(cfg_ky0), .cfg_kx0(cfg_kx0),
     .cfg_rn(cfg_rn), .cfg_contrib_n(cfg_contrib_n), .cfg_m(cfg_m), .tiles_ready(tiles_ready),
-    .go(go), .done(done), .busy(busy), .state_dbg(state_dbg), .ct_free(ct_free), .ct_free_idx(ct_free_idx),
+    .go(go), .done(seq_done), .busy(seq_busy), .state_dbg(state_dbg), .ct_free(ct_free), .ct_free_idx(ct_free_idx),
     .reduce_ready(reduce_ready), .ext_fire(ext_gated && acc_ext_ready),
     .f_ct(f_ct), .f_ky(f_ky), .f_kx(f_kx), .f_first(f_first), .f_start(f_start), .f_busy(f_busy),
     .w_load(w_load), .w_raddr(w_raddr),
@@ -171,7 +196,7 @@ module neo_core #(
     .rd_en(d_rd_en), .rd_idx(d_rd_idx));
   assign seq_err = (f_start != d_start) || (f_first != d_first) || (f_ct != d_ct) || (f_ky != d_ky) || (f_kx != d_kx) ||
                    (w_load != d_w_load) || (w_raddr != d_w_raddr) || (rd_en != d_rd_en) || (rd_idx != d_rd_idx) ||
-                   (done != d_done) || (reduce_ready != d_reduce_ready) || (state_dbg != d_state);
+                   (seq_done != d_done) || (reduce_ready != d_reduce_ready) || (state_dbg != d_state);
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)         seq_err_sticky <= 1'b0;
     else if (err_clear) seq_err_sticky <= 1'b0;
@@ -186,6 +211,34 @@ module neo_core #(
     else        w_load_q <= w_load;
   end
 
+  // the vector unit (drop 0.43): the accumulator's drain port is the sequencer's during its drain and the unit's after it
+  // (the two never overlap: the unit starts on the sequencer's done); vec_on, latched at go, says this descriptor runs the
+  // unit's program -- the requantizers then take the unit's rows and `done` is the unit's
+  logic                  dp_rd_en, dp_rd_valid;
+  logic [IDXW-1:0]       dp_rd_idx;
+  logic                  vu_rd_en, vu_rd_q, vu_active, vu_busy, vu_done, vu_out_valid;
+  logic [IDXW-1:0]       vu_rd_idx;
+  logic signed [PW-1:0]  vu_out [COLS];
+  logic                  vec_on;
+  assign dp_rd_en  = rd_en || vu_rd_en;
+  assign dp_rd_idx = vu_rd_en ? vu_rd_idx : rd_idx;
+  assign rd_valid  = dp_rd_valid && !vec_on;             // the raw drain of a layer without a program only
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n)  vec_on <= 1'b0;
+    else if (go) vec_on <= vu_active;
+  end
+  assign done = vec_on ? vu_done : seq_done;
+  assign busy = seq_busy || vu_busy;
+  vec_unit #(.COLS(COLS), .ROWS(ROWS), .PW(PW), .ACC_ROWS(ACC_ROWS), .IDXW(IDXW)) u_vec (
+    .clk(clk), .rst_n(rst_n),
+    .vh_we(vec_we), .vh_addr(vec_addr), .vh_wdata(vec_wdata),
+    .go(go), .seq_done(seq_done), .cfg_m(cfg_m),
+    .acc_rd_en(vu_rd_en), .acc_rd_idx(vu_rd_idx), .acc_rd_data(rd_data),
+    .rbuf_we(rbuf_we), .rbuf_we2(rbuf_we2), .rbuf_waddr(rbuf_waddr), .rbuf_wdata(rbuf_wdata), .rbuf_wdata2(rbuf_wdata2),
+    .active(vu_active), .busy(vu_busy), .done(vu_done), .rd_q(vu_rd_q), .out_valid(vu_out_valid), .out_row(vu_out),
+    .err_clear(err_clear), .ctrl_err_sticky(vec_err_sticky), .perr_sticky(vec_perr_sticky),
+    .ctrl_fault_inject(vec_ctrl_fault_inject), .tbl_fault_inject(vec_tbl_fault_inject));
+
   neo_mac_core_v02 #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .WCW(WCW), .ACC_ROWS(ACC_ROWS),
                      .ABUF_DEPTH(ABUF_DEPTH), .IDXW(IDXW), .AW(AW), .PE_LAT(PE_LAT), .NCHK(NCHK),
                      .FAULT_ROW(FAULT_ROW), .FAULT_COL(FAULT_COL)) u_dp (
@@ -196,23 +249,28 @@ module neo_core #(
     .cfg_sparse(cfg_sparse), .start(f_start), .busy(f_busy),
     .w_load(w_load_q), .w_in(w_in), .wc_in(wc_in),
     .ext_valid(ext_gated), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(acc_ext_ready),
-    .rd_en(rd_en), .rd_idx(rd_idx), .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid),
+    .rd_en(dp_rd_en), .rd_idx(dp_rd_idx), .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(dp_rd_valid),
     .abft_clear(err_clear), .array_abft_err(array_abft_err), .array_abft_err_valid(array_abft_err_valid), .array_abft_sticky(array_abft_sticky),
     .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid), .acc_abft_sticky(acc_abft_sticky),
     .ctrl_err(ctrl_err), .ctrl_err_sticky(ctrl_err_sticky),
     .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject));
 
-  // requantization, duplicated with a comparator (R10); the fault hook corrupts the primary's input only
+  // requantization, duplicated with a comparator (R10); the fault hook corrupts the primary's input only. Drop 0.43: the
+  // input is the accumulator's drain (rd_data / its valid) or, for a descriptor with a vector program, the unit's rows
+  logic signed [PW-1:0] rq_in   [COLS];
   logic signed [PW-1:0] rq_in_p [COLS];
+  logic                 rq_in_valid;
   logic signed [7:0]    rq_q_d [COLS];
   logic                 rq_valid_d;
   logic                 rq_err;
+  assign rq_in_valid = vec_on ? vu_out_valid : dp_rd_valid;
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_rqin
+      assign rq_in[j] = vec_on ? vu_out[j] : rd_data[j];
       if (j == 0) begin : g_f
-        assign rq_in_p[j] = rd_data[j] ^ {{(PW-13){1'b0}}, rq_fault_inject, 12'd0};
+        assign rq_in_p[j] = rq_in[j] ^ {{(PW-13){1'b0}}, rq_fault_inject, 12'd0};
       end else begin : g_n
-        assign rq_in_p[j] = rd_data[j];
+        assign rq_in_p[j] = rq_in[j];
       end
     end
   endgenerate
@@ -220,14 +278,14 @@ module neo_core #(
     .clk(clk), .rst_n(rst_n),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
-    .in_valid(rd_valid), .in_acc(rq_in_p), .out_valid(rq_valid), .out_q(rq_q),
+    .in_valid(rq_in_valid), .in_acc(rq_in_p), .out_valid(rq_valid), .out_q(rq_q),
     .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_sticky), .tbl_fault_inject(rq_tbl_fault_inject));
   logic rq_tbl_perr_d;
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq_dup (
     .clk(clk), .rst_n(rst_n),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
-    .in_valid(rd_valid), .in_acc(rd_data), .out_valid(rq_valid_d), .out_q(rq_q_d),
+    .in_valid(rq_in_valid), .in_acc(rq_in), .out_valid(rq_valid_d), .out_q(rq_q_d),
     .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_d), .tbl_fault_inject(1'b0));
   always_comb begin
     rq_err = (rq_valid != rq_valid_d);
@@ -242,5 +300,5 @@ module neo_core #(
   // ct_free_idx (its compared outputs are in seq_err), the duplicate requant's parity flag, the unlatched ABFT and
   // control errors (their sticky versions are the outputs)
   logic unused_core_bits;
-  assign unused_core_bits = ^{d_busy, d_ct_free, d_ct_free_idx, array_abft_err, array_abft_err_valid, ctrl_err, rq_tbl_perr_d};
+  assign unused_core_bits = ^{d_busy, d_ct_free, d_ct_free_idx, array_abft_err, array_abft_err_valid, ctrl_err, rq_tbl_perr_d, vu_rd_q};
 endmodule

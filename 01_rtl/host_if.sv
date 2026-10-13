@@ -13,6 +13,10 @@
 //                       duplicated and compared with the rest of the descriptor
 //     0x30 RQ_TBL    w: {zp[7:0], shift[4:0], 3'b0, mult[15:0]} -> table row at RQ_ADDR (0x31)
 //     0x32 RQ_RELU   w: bit0
+//     0x38 VEC_ADDR  w/r: [11:0] the vector unit's table address ([11:8] table: 0 program, 1 LUTV, 2 LUTS, 3 SC, 4 BI,
+//                       5 K; [7:0] the entry) -- drop 0.43, stream C2: the drain path's block after RQ_*, clear of the
+//                       telemetry window stream B2 adds
+//     0x39 VEC_DATA  w: the 32-bit entry at VEC_ADDR, then VEC_ADDR + 1 (a table loads with one write per entry)
 //     0x05 ERR_MASK  w: bit i masks cause i from err_pin (bit 16 = watchdog)
 //     0x06 ERR_CAUSE r: latched causes (bit 16 = watchdog)
 //     0x07 WD_CTRL   w: bit0 enable, [31:8] window in cycles
@@ -54,6 +58,9 @@ module host_if #(
   output logic [4:0]  rq_tbl_shift,
   output logic signed [7:0] rq_tbl_zp,
   output logic        rq_relu,
+  output logic        vec_we,              // drop 0.43: the vector unit's table / program write (vec_unit.sv)
+  output logic [11:0] vec_addr,
+  output logic [31:0] vec_wdata,
   // error signaling and self-test
   output logic [18:0] err_mask,
   input  logic [18:0] err_cause,
@@ -90,10 +97,12 @@ module host_if #(
       prog_lo <= '0; done_latched <= 1'b0; cfg_m <= '0; rq_tbl_we <= 1'b0; rq_tbl_addr <= '0;
       rq_tbl_mult <= '0; rq_tbl_shift <= '0; rq_tbl_zp <= '0; rq_relu <= 1'b0; h_rdata <= '0;
       err_mask <= '0; wd_enable <= 1'b0; wd_window <= '0; wd_kick <= 1'b0; selftest_inject <= 1'b0; bist_start <= 1'b0;
-      partition <= '0; cfg_m_dup <= '0;
+      partition <= '0; cfg_m_dup <= '0; vec_we <= 1'b0; vec_addr <= '0; vec_wdata <= '0;
       for (int i = 0; i < 20; i++) begin cfg[i] <= '0; cfg_dup[i] <= '0; end
     end else begin
       prog_we <= 1'b0; prog_start <= 1'b0; err_clear <= 1'b0; rq_tbl_we <= 1'b0; wd_kick <= 1'b0; bist_start <= 1'b0;
+      if (vec_we) vec_addr <= vec_addr + 12'd1;            // the write of the last cycle went to vec_addr: the next entry
+      vec_we <= 1'b0;
       if (core_done) done_latched <= 1'b1;
       if (h_we) begin
         case (h_addr)
@@ -110,6 +119,8 @@ module host_if #(
           8'h30: begin rq_tbl_mult <= h_wdata[15:0]; rq_tbl_shift <= h_wdata[20:16]; rq_tbl_zp <= h_wdata[31:24]; rq_tbl_we <= 1'b1; end
           8'h31: rq_tbl_addr <= h_wdata[4:0];
           8'h32: rq_relu <= h_wdata[0];
+          8'h38: vec_addr <= h_wdata[11:0];
+          8'h39: begin vec_wdata <= h_wdata; vec_we <= 1'b1; end
           default: begin
             if (h_addr >= 8'h10 && h_addr < 8'h24) begin cfg[5'(h_addr - 8'h10)] <= h_wdata[15:0]; cfg_dup[5'(h_addr - 8'h10)] <= h_wdata[15:0]; end
             if (h_addr == 8'h24) begin cfg_m <= h_wdata[IDXW-1:0]; cfg_m_dup <= h_wdata[IDXW-1:0]; end
@@ -126,6 +137,7 @@ module host_if #(
           8'h0A: h_rdata <= {bist_fail_addr, 8'd0, bist_fail_ce, bist_fail, bist_done, bist_active};
           8'h03: h_rdata <= prog_lo;
           8'h24: h_rdata <= {{(32-IDXW){1'b0}}, cfg_m};
+          8'h38: h_rdata <= {20'd0, vec_addr};
           default: h_rdata <= (h_addr >= 8'h10 && h_addr < 8'h24) ? {16'd0, cfg[5'(h_addr - 8'h10)]} : 32'd0;
         endcase
       end

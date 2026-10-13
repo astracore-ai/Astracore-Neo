@@ -1,6 +1,12 @@
 // neo_tile.sv -- one mesh node (drop 0.7): router + tile interface + local bank + neo_core.
 //   Since drop 0.29 the tile interface moves beats of BW = 16 words (one row of the 512-bit bank) on its link side and
 //   drives the bank's row port directly; link_packer / link_unpacker re-block between the beats and the WPF-word link flits.
+//   Drop 0.43 (stream C2): the core's vector unit -- its tables written through host_if's VEC_ADDR / VEC_DATA, its residual
+//   buffer filled by the NIC (FETCH_A with arg 1); its two flags join the existing causes: the duplicated control's
+//   comparator the lockstep cause (seq: the sequencer pair and the vector unit's control pair), the table parity the
+//   table-parity cause (tbl_perr: the requant tables and the vector unit's), so the cause register keeps its layout.
+//   The DMA engines see the NIC's drain_busy: a DRAIN_WR waits for the previous drain message to complete, so one program
+//   can run several GO / WAIT_DONE pairs (an attention round's key tiles) each with its own drain.
 module neo_tile #(
   parameter int XW = 2, YW = 2, NX = 2, NY = 2,
   parameter int WPF = 1,                     // words per link flit (drop 0.25): 1 as simulated before, 32 = the 1024-bit links
@@ -82,6 +88,12 @@ module neo_tile #(
   logic [IDXW-1:0]       cfg_m;
   logic [4:0]            rq_tbl_addr, rq_tbl_shift;
   logic [15:0]           rq_tbl_mult;
+  logic                  vec_we;                       // drop 0.43: the vector unit's table writes, its residual buffer's fill
+  logic [11:0]           vec_addr;
+  logic [31:0]           vec_wdata;
+  logic                  rbuf_we, rbuf_we2;
+  logic [IDXW-1:0]       rbuf_waddr;
+  logic                  vec_err_sticky, vec_perr_sticky, seq_err_core, rq_tbl_perr_core;
   logic signed [7:0]     rq_tbl_zp;
   logic [18:0]           err_mask, err_cause;
   logic [3:0]            partition;
@@ -214,7 +226,7 @@ module neo_tile #(
     .cmd_valid(cmd_valid), .cmd_op(cmd_op), .cmd_x(cmd_x), .cmd_y(cmd_y), .cmd_addr(cmd_addr), .cmd_len(cmd_len),
     .cmd_base(cmd_base), .cmd_int8(cmd_int8), .cmd_busy(cmd_busy),
     .go(go), .done(done), .ct_free(ct_free), .reduce_ready(reduce_ready), .rdy_seen(rdy_seen), .rdy_clear(rdy_clear),
-    .ntf_busy(ntf_busy), .tiles_ready(tiles_ready),
+    .ntf_busy(ntf_busy), .drain_busy(drain_busy), .tiles_ready(tiles_ready),
     .dv_pc_flip(dv_pc_flip), .dv_pc_mask(PAW'(dv_fi_mask[3:0])));
   // the duplicate engine: same inputs, outputs compared every cycle
   logic        d_cmd_valid, d_go, d_prog_done, d_prog_busy, d_rdy_clear, d_cmd_int8;
@@ -228,7 +240,7 @@ module neo_tile #(
     .cmd_valid(d_cmd_valid), .cmd_op(d_cmd_op), .cmd_x(d_cmd_x), .cmd_y(d_cmd_y), .cmd_addr(d_cmd_addr), .cmd_len(d_cmd_len),
     .cmd_base(d_cmd_base), .cmd_int8(d_cmd_int8), .cmd_busy(cmd_busy),
     .go(d_go), .done(done), .ct_free(ct_free), .reduce_ready(reduce_ready), .rdy_seen(rdy_seen), .rdy_clear(d_rdy_clear),
-    .ntf_busy(ntf_busy), .tiles_ready(d_tiles_ready),
+    .ntf_busy(ntf_busy), .drain_busy(drain_busy), .tiles_ready(d_tiles_ready),
     .dv_pc_flip(1'b0), .dv_pc_mask('0));                 // the fault hits the primary engine only
   assign dma_err = (cmd_valid != d_cmd_valid) || (cmd_op != d_cmd_op) || (cmd_x != d_cmd_x) || (cmd_y != d_cmd_y) ||
                    (cmd_addr != d_cmd_addr) || (cmd_len != d_cmd_len) || (cmd_base != d_cmd_base) || (cmd_int8 != d_cmd_int8) ||
@@ -251,6 +263,7 @@ module neo_tile #(
     .tx_valid(nic_tx_valid), .tx_flit(nic_tx_flit), .tx_ready(nic_tx_ready),
     .b_we(b_we), .b_wrow(b_wrow), .b_wmask(b_wmask), .b_wdata(b_wdata), .b_re(b_re), .b_rrow(b_rrow), .b_rdata(b_rdata), .b_rvalid(b_rvalid),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(abuf_we2), .abuf_wdata2(abuf_wdata2),
+    .rbuf_we(rbuf_we), .rbuf_we2(rbuf_we2), .rbuf_waddr(rbuf_waddr),
     .wbuf_we(wbuf_we), .wbuf_waddr(wbuf_waddr), .wbuf_wdata(wbuf_wdata), .wcbuf_wdata(wcbuf_wdata),
     .wbuf_we2(wbuf_we2), .wbuf_wdata2(wbuf_wdata2), .wcbuf_wdata2(wcbuf_wdata2),
     .ext_valid(ext_valid), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(ext_ready),
@@ -266,7 +279,7 @@ module neo_tile #(
     .prog_we(prog_we), .prog_waddr(prog_waddr), .prog_wdata(prog_wdata), .prog_start(prog_start), .err_clear(err_clear),
     .cfg(cfg), .cfg_m(cfg_m),
     .rq_tbl_we(rq_tbl_we), .rq_tbl_addr(rq_tbl_addr), .rq_tbl_mult(rq_tbl_mult), .rq_tbl_shift(rq_tbl_shift), .rq_tbl_zp(rq_tbl_zp),
-    .rq_relu(rq_relu),
+    .rq_relu(rq_relu), .vec_we(vec_we), .vec_addr(vec_addr), .vec_wdata(vec_wdata),
     .err_mask(err_mask), .err_cause(err_cause), .wd_enable(wd_enable), .wd_window(wd_window), .wd_kick(wd_kick),
     .selftest_inject(selftest_inject), .partition(partition), .cfg_err(cfg_err),
     .bist_start(bist_start), .bist_active(bist_active), .bist_done(bist_done), .bist_fail(bist_fail), .bist_fail_ce(bist_fail_ce),
@@ -286,6 +299,10 @@ module neo_tile #(
   logic unused_tile_bits;
   assign unused_tile_bits = ^{busy, state_dbg, ct_free_idx, acc_abft_err, acc_abft_err_valid, prog_busy, d_prog_busy, d_rdy_clear,
                               rq_tbl_addr, dv_fi_idx};
+
+  // the vector unit's flags (drop 0.43) in the causes of their kind: the lockstep cause and the table-parity cause
+  assign seq_err_sticky = seq_err_core | vec_err_sticky;
+  assign rq_tbl_perr    = rq_tbl_perr_core | vec_perr_sticky;
 
   // the layer descriptor's flags (drop 0.42): cfg[18] (host register 0x22, reserved before) -- bit 0 the 2:4 sparse mode.
   // A descriptor register, so it is kept twice and compared with the others (host_if's cfg_err): a flipped mode bit
@@ -308,10 +325,14 @@ module neo_tile #(
     .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid), .rq_q(rq_q), .rq_valid(rq_valid),
     .rq_tbl_we(rq_tbl_we), .rq_tbl_addr(rq_tbl_addr[$clog2(COLS)-1:0]), .rq_tbl_mult(rq_tbl_mult), .rq_tbl_shift(rq_tbl_shift),
     .rq_tbl_zp(rq_tbl_zp), .rq_relu(rq_relu),
+    .vec_we(vec_we), .vec_addr(vec_addr), .vec_wdata(vec_wdata),
+    .rbuf_we(rbuf_we), .rbuf_we2(rbuf_we2), .rbuf_waddr(rbuf_waddr), .rbuf_wdata(abuf_wdata), .rbuf_wdata2(abuf_wdata2),
     .err_clear(err_clear), .array_abft_sticky(array_abft_sticky), .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid),
     .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
-    .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky),
-    .wbuf_ce_sticky(wbuf_ce), .wbuf_ue_sticky(wbuf_ue), .rq_tbl_perr_sticky(rq_tbl_perr),
+    .seq_err_sticky(seq_err_core), .rq_err_sticky(rq_err_sticky),
+    .wbuf_ce_sticky(wbuf_ce), .wbuf_ue_sticky(wbuf_ue), .rq_tbl_perr_sticky(rq_tbl_perr_core),
+    .vec_err_sticky(vec_err_sticky), .vec_perr_sticky(vec_perr_sticky),
     .fault_inject(selftest_inject), .ctrl_fault_inject(1'b0), .seq_fault_inject(1'b0), .rq_fault_inject(1'b0), .rq_tbl_fault_inject(1'b0),
+    .vec_ctrl_fault_inject(1'b0), .vec_tbl_fault_inject(1'b0),
     .dv_wbuf_flip(1'b0), .dv_wbuf_addr('0), .dv_wbuf_lane('0), .dv_wbuf_mask('0));   // the core's hooks are reached from the core-level test
 endmodule

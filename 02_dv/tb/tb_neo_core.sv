@@ -30,7 +30,7 @@ module tb_neo_core;
   logic signed [15:0]    cfg_h, cfg_w, cfg_ho, cfg_wo, cfg_s, cfg_p, cfg_k, cfg_ct_n, cfg_tile_pixels;
   logic signed [15:0]    cfg_ct0, cfg_ky0, cfg_kx0, cfg_rn, cfg_contrib_n, cfg_regions_m1, tiles_ready, cfg_oy0, cfg_oy_n, cfg_iy0;
   logic                  seq_err_sticky, rq_err_sticky, seq_fault_inject, rq_fault_inject, rq_tbl_fault_inject;
-  logic                  wbuf_ce_sticky, wbuf_ue_sticky, rq_tbl_perr_sticky;
+  logic                  wbuf_ce_sticky, wbuf_ue_sticky, rq_tbl_perr_sticky, vec_err_sticky, vec_perr_sticky;
   logic                  ext_valid, ext_ready, reduce_ready, ct_free;
   logic [IDXW-1:0]       ext_idx;
   logic signed [PW-1:0]  ext_y [COLS];
@@ -68,6 +68,9 @@ module tb_neo_core;
     .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid), .rq_q(rq_q), .rq_valid(rq_valid),
     .rq_tbl_we(rq_tbl_we), .rq_tbl_addr(rq_tbl_addr), .rq_tbl_mult(rq_tbl_mult), .rq_tbl_shift(rq_tbl_shift),
     .rq_tbl_zp(rq_tbl_zp), .rq_relu(rq_relu),
+    .vec_we(1'b0), .vec_addr('0), .vec_wdata('0),                                         // the vector unit (drop 0.43): no program --
+    .rbuf_we(1'b0), .rbuf_we2(1'b0), .rbuf_waddr('0), .rbuf_wdata(abuf_wdata), .rbuf_wdata2(abuf_wdata),   // the bypass
+    .vec_err_sticky(vec_err_sticky), .vec_perr_sticky(vec_perr_sticky), .vec_ctrl_fault_inject(1'b0), .vec_tbl_fault_inject(1'b0),
     .err_clear(err_clear), .array_abft_sticky(array_abft_sticky), .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid),
     .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky),
@@ -219,7 +222,7 @@ module tb_neo_core;
     repeat (5) @(negedge clk);       // the last row's ABFT verdict (+2) and its sticky, the requant's three stages (drop 0.41)
 
     if (out_row == M && acc_verdicts == M && mismatches == 0 && acc_flags == 0 && !array_abft_sticky && !acc_abft_sticky
-        && !ctrl_err_sticky && !seq_err_sticky && !rq_err_sticky)
+        && !ctrl_err_sticky && !seq_err_sticky && !rq_err_sticky && !vec_err_sticky && !vec_perr_sticky)
       $display("RESULT: ALL PASS (%0d rows drained, %0d ABFT verdicts, no mismatches, no error flags)", out_row, acc_verdicts);
     else
       $display("RESULT: FAIL (rows=%0d/%0d verdicts=%0d mismatches=%0d acc_flags=%0d sticky array/acc/ctrl=%0b/%0b/%0b)",

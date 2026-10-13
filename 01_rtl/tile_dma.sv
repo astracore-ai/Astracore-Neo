@@ -3,13 +3,19 @@
 //   port and the core's go, so a layer executes without the host in the loop:
 //     word[63:60] op, [59:56] x, [55:52] y, [51:32] addr, [31:20] len, [19:4] base, [3:0] arg
 //     op 1 FETCH_A   pull `len` words from bank (x,y) at addr into activation entries from `base`;
-//                    waits for completion, then tiles_ready++ (one channel tile landed)
-//     op 2 FETCH_W   same into weight entries; waits for completion
-//     op 3 DRAIN_WR  route the core's drain to bank (x,y) at addr, `len` rows; arg bit 0 = INT8 rows
+//                    waits for completion, then tiles_ready++ (one channel tile landed); arg bit 0 (drop 0.43):
+//                    into the vector unit's residual buffer instead (entries from `base`; tiles_ready unchanged)
+//     op 2 FETCH_W   same into weight entries; waits for completion; arg bit 0 (drop 0.43): the words hold INT4
+//                    weights, expanded to INT8 entries by the NIC
+//     op 3 DRAIN_WR  route the core's drain to bank (x,y) at addr, `len` rows; arg bit 0 = INT8 rows (drop 0.43: base =
+//                    the INT8 rows' format, tile_nic; issued once the NIC's previous drain message is complete -- held
+//                    while drain_busy, so a program's next run never re-routes a drain still being sent)
 //     op 4 DRAIN_PSUM route the core's drain to the owner core at (x,y), `len` rows
 //     op 5 GO        pulse the core's go (the program continues, so refills overlap the run)
 //     op 6 WAIT_FREE wait until the core has released `arg`+1 channel-tile regions (ct_free pulses)
-//     op 7 WAIT_DONE wait for the core's done pulse
+//     op 7 WAIT_DONE wait for the core's done pulse (drop 0.43: the done of the last GO -- GO clears the done seen, so a
+//                    program may run several descriptors' worth of GO / WAIT_DONE pairs, e.g. one per weight tile of an
+//                    attention round, with the activations fetched once)
 //     op 8 END       stop; prog_done
 //     op 9 NOTIFY    send an RDY flit to tile (x,y): "my reduce port is open" (owner, after WAIT_REDUCE)
 //     op 10 WAIT_RDY  wait for an RDY flit (contributor, before DRAIN_PSUM), so partial sums never
@@ -52,6 +58,7 @@ module tile_dma #(
   input  logic          rdy_seen,
   output logic          rdy_clear,
   input  logic          ntf_busy,
+  input  logic          drain_busy,     // drop 0.43: the NIC's drain message still open (DRAIN_WR waits)
   output logic signed [15:0] tiles_ready,
   // testbench hook (drop 0.35; DV_HOOKS = 1): pc XOR dv_pc_mask at the falling edge while dv_pc_flip
   input  logic          dv_pc_flip,
@@ -79,7 +86,7 @@ module tile_dma #(
   assign cmd_base = ins[19:4];
   assign cmd_int8 = ins[0];
   assign cmd_op   = (op == 4'd9) ? 3'd5 : op[2:0];
-  assign cmd_valid = (state == S_ISSUE) && (((op >= 4'd1) && (op <= 4'd4)) || (op == 4'd9));
+  assign cmd_valid = (state == S_ISSUE) && ((((op >= 4'd1) && (op <= 4'd4)) && !((op == 4'd3) && drain_busy)) || (op == 4'd9));
   assign rdy_clear = (state == S_IDLE) && prog_start;
   assign go        = (state == S_ISSUE) && (op == 4'd5);
   assign prog_done = (state == S_END);
@@ -113,9 +120,11 @@ module tile_dma #(
           state <= S_ISSUE;
         end
         S_ISSUE: begin
+          if (op == 4'd5) done_seen <= 1'b0;                 // drop 0.43: WAIT_DONE waits for this GO's done
           case (op)
             4'd1, 4'd2: state <= S_WAITCMD;                 // fetch: wait for the response
-            4'd3, 4'd4, 4'd5: state <= S_FETCH;              // drain routing and go: fire and continue
+            4'd3: if (!drain_busy) state <= S_FETCH;         // drain routing: fire (once the last drain is out) and continue
+            4'd4, 4'd5: state <= S_FETCH;                    // partial-sum routing and go: fire and continue
             4'd9: state <= S_WAITNTF;                        // notify: wait until the flit has left
             4'd6: state <= S_WAITFREE;
             4'd7: state <= S_WAITDONE;
@@ -126,7 +135,7 @@ module tile_dma #(
         end
         S_WAITCMD: begin
           if (!cmd_busy) begin
-            if (op == 4'd1) ready_q <= ready_q + 1;
+            if ((op == 4'd1) && !ins[0]) ready_q <= ready_q + 1;   // a residual-buffer fill is no channel tile
             state <= S_FETCH;
           end
         end
