@@ -1,0 +1,34 @@
+SBY 19:22:06 [formal_out/link_pack_parity] Removing directory '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/link_pack_parity'.
+SBY 19:22:06 [formal_out/link_pack_parity] Copy '/home/runner/work/Astracore-Neo/Astracore-Neo/rtl/link_pack.sv' to '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/link_pack_parity/src/link_pack.sv'.
+SBY 19:22:06 [formal_out/link_pack_parity] Copy '/home/runner/work/Astracore-Neo/Astracore-Neo/formal/link_pack_fv.sv' to '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/link_pack_parity/src/link_pack_fv.sv'.
+SBY 19:22:06 [formal_out/link_pack_parity] engine_0: smtbmc bitwuzla
+SBY 19:22:06 [formal_out/link_pack_parity] base: starting process "cd formal_out/link_pack_parity/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 19:22:07 [formal_out/link_pack_parity] base: finished (returncode=0)
+SBY 19:22:07 [formal_out/link_pack_parity] prep: starting process "cd formal_out/link_pack_parity/model; yosys -ql design_prep.log design_prep.ys"
+SBY 19:22:07 [formal_out/link_pack_parity] prep: finished (returncode=0)
+SBY 19:22:07 [formal_out/link_pack_parity] smt2: starting process "cd formal_out/link_pack_parity/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 19:22:07 [formal_out/link_pack_parity] smt2: finished (returncode=0)
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.basecase: starting process "cd formal_out/link_pack_parity; yosys-smtbmc -s bitwuzla --presat --unroll --noprogress -t 2  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.induction: starting process "cd formal_out/link_pack_parity; yosys-smtbmc -s bitwuzla --presat --unroll -i --noprogress -t 2  --append 0 --dump-vcd engine_0/trace_induct.vcd --dump-yw engine_0/trace_induct.yw --dump-vlogtb engine_0/trace_induct_tb.v --dump-smtc engine_0/trace_induct.smtc model/design_smt2.smt2"
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.basecase: ##   0:00:00  Solver: bitwuzla
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.induction: ##   0:00:00  Solver: bitwuzla
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.induction: ##   0:00:00  Trying induction in step 2..
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.basecase: ##   0:00:00  Checking assumptions in step 0..
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.basecase: ##   0:00:00  Checking assertions in step 0..
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.induction: ##   0:00:00  Trying induction in step 1..
+SBY 19:22:07 [formal_out/link_pack_parity] engine_0.basecase: ##   0:00:00  Checking assumptions in step 1..
+SBY 19:22:08 [formal_out/link_pack_parity] engine_0.basecase: ##   0:00:00  Checking assertions in step 1..
+SBY 19:22:08 [formal_out/link_pack_parity] engine_0.basecase: ##   0:00:00  Status: passed
+SBY 19:22:08 [formal_out/link_pack_parity] engine_0.basecase: finished (returncode=0)
+SBY 19:22:08 [formal_out/link_pack_parity] engine_0.basecase: Status returned by engine for basecase: pass
+SBY 19:22:15 [formal_out/link_pack_parity] engine_0.induction: ##   0:00:07  Temporal induction successful.
+SBY 19:22:15 [formal_out/link_pack_parity] engine_0.induction: ##   0:00:07  Status: passed
+SBY 19:22:15 [formal_out/link_pack_parity] engine_0.induction: finished (returncode=0)
+SBY 19:22:15 [formal_out/link_pack_parity] engine_0.induction: Status returned by engine for induction: pass
+SBY 19:22:15 [formal_out/link_pack_parity] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:08 (8)
+SBY 19:22:15 [formal_out/link_pack_parity] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:09 (9)
+SBY 19:22:15 [formal_out/link_pack_parity] summary: engine_0 (smtbmc bitwuzla) returned pass for basecase
+SBY 19:22:15 [formal_out/link_pack_parity] summary: engine_0 (smtbmc bitwuzla) returned pass for induction
+SBY 19:22:15 [formal_out/link_pack_parity] summary: engine_0 did not produce any traces
+SBY 19:22:15 [formal_out/link_pack_parity] summary: successful proof by k-induction.
+SBY 19:22:15 [formal_out/link_pack_parity] DONE (PASS, rc=0)

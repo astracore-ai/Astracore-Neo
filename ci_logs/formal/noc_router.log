@@ -1,0 +1,36 @@
+SBY 19:22:25 [formal_out/noc_router] Removing directory '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/noc_router'.
+SBY 19:22:25 [formal_out/noc_router] Copy '/home/runner/work/Astracore-Neo/Astracore-Neo/formal/neo_icg_formal.sv' to '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/noc_router/src/neo_icg_formal.sv'.
+SBY 19:22:25 [formal_out/noc_router] Copy '/home/runner/work/Astracore-Neo/Astracore-Neo/rtl/noc_router.sv' to '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/noc_router/src/noc_router.sv'.
+SBY 19:22:25 [formal_out/noc_router] Copy '/home/runner/work/Astracore-Neo/Astracore-Neo/formal/noc_router_fv.sv' to '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/noc_router/src/noc_router_fv.sv'.
+SBY 19:22:25 [formal_out/noc_router] engine_0: smtbmc yices
+SBY 19:22:25 [formal_out/noc_router] base: starting process "cd formal_out/noc_router/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 19:22:25 [formal_out/noc_router] base: finished (returncode=0)
+SBY 19:22:25 [formal_out/noc_router] prep: starting process "cd formal_out/noc_router/model; yosys -ql design_prep.log design_prep.ys"
+SBY 19:22:26 [formal_out/noc_router] prep: finished (returncode=0)
+SBY 19:22:26 [formal_out/noc_router] smt2: starting process "cd formal_out/noc_router/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 19:22:26 [formal_out/noc_router] smt2: finished (returncode=0)
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: starting process "cd formal_out/noc_router; yosys-smtbmc -s yices --presat --unroll --noprogress -t 2  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 19:22:26 [formal_out/noc_router] engine_0.induction: starting process "cd formal_out/noc_router; yosys-smtbmc -s yices --presat --unroll -i --noprogress -t 2  --append 0 --dump-vcd engine_0/trace_induct.vcd --dump-yw engine_0/trace_induct.yw --dump-vlogtb engine_0/trace_induct_tb.v --dump-smtc engine_0/trace_induct.smtc model/design_smt2.smt2"
+SBY 19:22:26 [formal_out/noc_router] engine_0.induction: ##   0:00:00  Solver: yices
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: ##   0:00:00  Solver: yices
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: ##   0:00:00  Checking assumptions in step 0..
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: ##   0:00:00  Checking assertions in step 0..
+SBY 19:22:26 [formal_out/noc_router] engine_0.induction: ##   0:00:00  Trying induction in step 2..
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: ##   0:00:00  Checking assumptions in step 1..
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: ##   0:00:00  Checking assertions in step 1..
+SBY 19:22:26 [formal_out/noc_router] engine_0.induction: ##   0:00:00  Trying induction in step 1..
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: ##   0:00:00  Status: passed
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: finished (returncode=0)
+SBY 19:22:26 [formal_out/noc_router] engine_0.basecase: Status returned by engine for basecase: pass
+SBY 19:23:26 [formal_out/noc_router] engine_0.induction: ##   0:01:00  waiting for solver (1 minute)
+SBY 19:23:47 [formal_out/noc_router] engine_0.induction: ##   0:01:21  Temporal induction successful.
+SBY 19:23:47 [formal_out/noc_router] engine_0.induction: ##   0:01:21  Status: passed
+SBY 19:23:47 [formal_out/noc_router] engine_0.induction: finished (returncode=0)
+SBY 19:23:47 [formal_out/noc_router] engine_0.induction: Status returned by engine for induction: pass
+SBY 19:23:47 [formal_out/noc_router] summary: Elapsed clock time [H:MM:SS (secs)]: 0:01:22 (82)
+SBY 19:23:47 [formal_out/noc_router] summary: Elapsed process time [H:MM:SS (secs)]: 0:01:23 (83)
+SBY 19:23:47 [formal_out/noc_router] summary: engine_0 (smtbmc yices) returned pass for basecase
+SBY 19:23:47 [formal_out/noc_router] summary: engine_0 (smtbmc yices) returned pass for induction
+SBY 19:23:47 [formal_out/noc_router] summary: engine_0 did not produce any traces
+SBY 19:23:47 [formal_out/noc_router] summary: successful proof by k-induction.
+SBY 19:23:47 [formal_out/noc_router] DONE (PASS, rc=0)

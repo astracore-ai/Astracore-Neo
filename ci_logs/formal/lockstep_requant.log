@@ -1,0 +1,43 @@
+SBY 19:22:16 [formal_out/lockstep_requant] Removing directory '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/lockstep_requant'.
+SBY 19:22:16 [formal_out/lockstep_requant] Copy '/home/runner/work/Astracore-Neo/Astracore-Neo/formal/neo_icg_formal.sv' to '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/lockstep_requant/src/neo_icg_formal.sv'.
+SBY 19:22:16 [formal_out/lockstep_requant] Copy '/home/runner/work/Astracore-Neo/Astracore-Neo/rtl/requant.sv' to '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/lockstep_requant/src/requant.sv'.
+SBY 19:22:16 [formal_out/lockstep_requant] Copy '/home/runner/work/Astracore-Neo/Astracore-Neo/formal/lockstep_requant_fv.sv' to '/home/runner/work/Astracore-Neo/Astracore-Neo/formal_out/lockstep_requant/src/lockstep_requant_fv.sv'.
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0: smtbmc yices
+SBY 19:22:16 [formal_out/lockstep_requant] base: starting process "cd formal_out/lockstep_requant/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 19:22:16 [formal_out/lockstep_requant] base: requant.sv:148: Warning: asynchronous load value missing for variable '\u_a.$68.$2.v8'
+SBY 19:22:16 [formal_out/lockstep_requant] base: requant.sv:148: Warning: asynchronous load value missing for variable '\u_a.$68.$2.ss'
+SBY 19:22:16 [formal_out/lockstep_requant] base: requant.sv:148: Warning: asynchronous load value missing for variable '\u_a.$68.$2.neg'
+SBY 19:22:16 [formal_out/lockstep_requant] base: requant.sv:148: Warning: asynchronous load value missing for variable '\u_a.$68.$2.fits'
+SBY 19:22:16 [formal_out/lockstep_requant] base: requant.sv:148: Warning: asynchronous load value missing for variable '\u_b.$68.$2.v8'
+SBY 19:22:16 [formal_out/lockstep_requant] base: requant.sv:148: Warning: asynchronous load value missing for variable '\u_b.$68.$2.ss'
+SBY 19:22:16 [formal_out/lockstep_requant] base: requant.sv:148: Warning: asynchronous load value missing for variable '\u_b.$68.$2.neg'
+SBY 19:22:16 [formal_out/lockstep_requant] base: requant.sv:148: Warning: asynchronous load value missing for variable '\u_b.$68.$2.fits'
+SBY 19:22:16 [formal_out/lockstep_requant] base: finished (returncode=0)
+SBY 19:22:16 [formal_out/lockstep_requant] prep: starting process "cd formal_out/lockstep_requant/model; yosys -ql design_prep.log design_prep.ys"
+SBY 19:22:16 [formal_out/lockstep_requant] prep: finished (returncode=0)
+SBY 19:22:16 [formal_out/lockstep_requant] smt2: starting process "cd formal_out/lockstep_requant/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 19:22:16 [formal_out/lockstep_requant] smt2: finished (returncode=0)
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: starting process "cd formal_out/lockstep_requant; yosys-smtbmc -s yices --presat --unroll --noprogress -t 2  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.induction: starting process "cd formal_out/lockstep_requant; yosys-smtbmc -s yices --presat --unroll -i --noprogress -t 2  --append 0 --dump-vcd engine_0/trace_induct.vcd --dump-yw engine_0/trace_induct.yw --dump-vlogtb engine_0/trace_induct_tb.v --dump-smtc engine_0/trace_induct.smtc model/design_smt2.smt2"
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.induction: ##   0:00:00  Solver: yices
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: ##   0:00:00  Solver: yices
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.induction: ##   0:00:00  Trying induction in step 2..
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.induction: ##   0:00:00  Trying induction in step 1..
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: ##   0:00:00  Checking assumptions in step 0..
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: ##   0:00:00  Checking assertions in step 0..
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: ##   0:00:00  Checking assumptions in step 1..
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: ##   0:00:00  Checking assertions in step 1..
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: ##   0:00:00  Status: passed
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: finished (returncode=0)
+SBY 19:22:16 [formal_out/lockstep_requant] engine_0.basecase: Status returned by engine for basecase: pass
+SBY 19:22:25 [formal_out/lockstep_requant] engine_0.induction: ##   0:00:08  Temporal induction successful.
+SBY 19:22:25 [formal_out/lockstep_requant] engine_0.induction: ##   0:00:08  Status: passed
+SBY 19:22:25 [formal_out/lockstep_requant] engine_0.induction: finished (returncode=0)
+SBY 19:22:25 [formal_out/lockstep_requant] engine_0.induction: Status returned by engine for induction: pass
+SBY 19:22:25 [formal_out/lockstep_requant] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:08 (8)
+SBY 19:22:25 [formal_out/lockstep_requant] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:09 (9)
+SBY 19:22:25 [formal_out/lockstep_requant] summary: engine_0 (smtbmc yices) returned pass for basecase
+SBY 19:22:25 [formal_out/lockstep_requant] summary: engine_0 (smtbmc yices) returned pass for induction
+SBY 19:22:25 [formal_out/lockstep_requant] summary: engine_0 did not produce any traces
+SBY 19:22:25 [formal_out/lockstep_requant] summary: successful proof by k-induction.
+SBY 19:22:25 [formal_out/lockstep_requant] DONE (PASS, rc=0)

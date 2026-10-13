@@ -1,0 +1,13 @@
+python3 formal/run.py --dir formal --out formal_out --logs ci_logs/formal --jobs 2 --timeout 600
+run.py: 10 tasks from 8 files, 2 at a time, 600 s each
+  PASS     abft_checker                     0.6 s  prove k = 2
+  PASS     crc16_beat_bw4                   1.2 s  prove proved (pdr)
+  PASS     ecc39                            0.3 s  prove proved (pdr)
+  PASS     crc16_beat_bw16                 19.9 s  prove proved (pdr)
+  PASS     link_pack_parity                 8.7 s  prove k = 1
+  PASS     lockstep_core_seq                0.7 s  prove k = 1
+  PASS     lockstep_requant                 9.0 s  prove k = 1
+  PASS     noc_router                      82.4 s  prove k = 1
+  PASS     requant_parity                   1.0 s  prove k = 1
+  PASS     link_pack_stream               147.4 s  prove k = 1
+run.py: 10/10 PASS in 149 s; report formal_out/formal_report.md
