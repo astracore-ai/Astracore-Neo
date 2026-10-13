@@ -26,6 +26,14 @@ overlapped shadow loads, swap tokens, drain) is the sequencer RTL.
       dense reference convolution on the pruned weights, every flag clean; the same layer dense on the NCHK = 4 core gives
       the same result with twice the runs. `--nchk 4` runs C2-C10 on NCHK = 4 cores (the dense entry: index 0, the check
       weight in column 0): the same results and the same cycle counts as at NCHK = 1. `--c11` runs C11 alone.
+  C12 (drop 0.43) a convolution + residual + SiLU on neo_core through the compiler: the conv of C1 (40x6x6 -> 7x6x6, k3) with
+      its epilogue from compiler/neo_vec.py's act_epilogue -- the vector program (MUL_SCALE to the residual's scale, ADD_ROW
+      of the INT8 residual rows the test writes into the unit's RBUF as the DMA's FETCH_A with arg 1 would, BMUL to the
+      SiLU table's input, LUT, EMIT), the table, the constants and the requantizer's tables -- loaded through the unit's
+      host port; the INT8 rows equal the golden chain (the convolution, model/vec_ref.py's unit, the requantizer's model)
+      bit for bit, no INT32 row leaves on rd_valid (a layer with a program drains through the unit alone), no flag rises,
+      and the unit's cycles after the sequencer's done are the model's; the error against the float SiLU(conv * s_acc + r * s_res) is reported. `--c12`
+      runs C12 alone.
 """
 import math
 import os
@@ -40,11 +48,14 @@ sys.path.insert(0, os.path.join(HERE, "..", "compiler"))
 from neosim import Design, load  # noqa: E402
 from neo_compile import direct_conv  # noqa: E402
 import neo_backend as nb  # noqa: E402
+import neo_vec as nv  # noqa: E402
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "model")))
+import vec_ref as vr  # noqa: E402
 NCHK_DEFAULT = 4 if "--nchk" in sys.argv and sys.argv[sys.argv.index("--nchk") + 1] == "4" else 1
 
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv",
        "abft_checker.sv", "neo_mem.sv", "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv",
-       "core_seq.sv", "ecc39.sv", "wbuf_mem.sv", "requant.sv", "neo_core.sv"]
+       "core_seq.sv", "ecc39.sv", "wbuf_mem.sv", "requant.sv", "vec_unit.sv", "neo_core.sv"]
 S_WAIT = 4
 
 
@@ -77,7 +88,9 @@ class NeoCore:
             "fault_inject", "ctrl_fault_inject", "rq_valid", "rq_tbl_we", "rq_tbl_addr", "rq_tbl_mult",
             "rq_tbl_shift", "rq_tbl_zp", "rq_relu", "seq_fault_inject", "rq_fault_inject", "seq_err_sticky", "rq_err_sticky",
             "cfg_regions_m1", "tiles_ready", "cfg_oy0", "cfg_oy_n", "cfg_iy0",
-            "wbuf_ce_sticky", "wbuf_ue_sticky", "rq_tbl_perr_sticky", "rq_tbl_fault_inject")}
+            "wbuf_ce_sticky", "wbuf_ue_sticky", "rq_tbl_perr_sticky", "rq_tbl_fault_inject",
+            "vec_we", "vec_addr", "vec_wdata", "rbuf_we", "rbuf_waddr", "vec_err_sticky", "vec_perr_sticky")}
+        self.rbuf_wdata = d.array_of("rbuf_wdata")
         self.abuf_wdata = d.array_of("abuf_wdata")
         self.wbuf_wdata = d.array_of("wbuf_wdata")
         self.rd_data = d.array_of("rd_data")
@@ -85,7 +98,7 @@ class NeoCore:
         self.ext_y = d.array_of("ext_y")
         for n in ("abuf_we", "wbuf_we", "go", "err_clear", "fault_inject", "ctrl_fault_inject", "rq_tbl_we", "rq_relu",
                   "ext_valid", "cfg_ct0", "cfg_ky0", "cfg_kx0", "cfg_contrib_n", "seq_fault_inject", "rq_fault_inject",
-                  "rq_tbl_fault_inject", "cfg_sparse"):
+                  "rq_tbl_fault_inject", "cfg_sparse", "vec_we", "rbuf_we"):
             self.p[n].v = 0
         self.p["cfg_regions_m1"].v = 0xFFFF        # all channel tiles resident: region = ct
         self.p["tiles_ready"].v = 0x7FFF
@@ -121,6 +134,24 @@ class NeoCore:
         self.p["rq_tbl_we"].v = 0
         self.p["rq_relu"].v = relu
         self.rq_tables = (np.array(mult), np.array(shift), np.array(zp), relu)
+
+    def write_vec(self, writes):
+        """The vector unit's tables and program (drop 0.43): (address, data) pairs on its host port, one per cycle."""
+        for a, dd in writes:
+            self.p["vec_we"].v = 1
+            self.p["vec_addr"].v = a
+            self.p["vec_wdata"].v = dd & 0xFFFFFFFF
+            self.tick()
+        self.p["vec_we"].v = 0
+
+    def write_rbuf(self, idx, entry):
+        """One residual-buffer entry (ROWS INT8 bytes), as the NIC's FETCH_A with arg 1 writes it."""
+        self.p["rbuf_we"].v = 1
+        self.p["rbuf_waddr"].v = idx
+        for c in range(self.R):
+            self.rbuf_wdata[c].v = bits(entry[c] if c < len(entry) else 0, 8)
+        self.tick()
+        self.p["rbuf_we"].v = 0
 
     def write_wtile(self, tile_index, Wt):
         """A dense weight tile: index 0, the row sum as the check weight of column 0 (columns 1..3 zero at NCHK = 4)."""
@@ -180,6 +211,7 @@ class NeoCore:
         self.p["go"].v = 0
         out, errs, poked, cycles = [], [], False, 0
         self.rq_out = []
+        self.seq_done_at = None                     # drop 0.43: the cycle the sequencer's drain ended (the unit runs after it)
         f_valid = self.d.cells["top.u_dp.u_feeder.valid"]
         valid_seen = 0
         while True:
@@ -196,6 +228,8 @@ class NeoCore:
                 self.d.cells[f"top.u_dp.u_acc.u_mem.mem[{poke[0]}]"].v ^= 1 << (5 + 32 * poke[1])   # row word, column slice (drop 0.40)
                 poked = True
             self.tick()
+            if self.seq_done_at is None and self.d.cells["top.seq_done"].v:
+                self.seq_done_at = cycles
             if self.p["rd_valid"].v:
                 out.append([sbits(c.v, 32) for c in self.rd_data])
             if self.p["acc_abft_err_valid"].v:      # drop 0.41: the verdict of the row drained two cycles before
@@ -389,6 +423,60 @@ def c11_sparse(rng):
     return (not ok) + (not ok_d)
 
 
+def c12_residual_silu(rng):
+    """C12 (drop 0.43): conv + residual + SiLU on the 16x8 core, the epilogue from the compiler."""
+    t0 = time.time()
+    R, C = 16, 8
+    cin, cout, h, w, k, s, p = 40, 7, 6, 6, 3, 1, 1
+    x = rng.integers(-128, 128, size=(cin, h, w), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(cout, cin, k, k), dtype=np.int64)
+    ref = direct_conv(x, wgt, s, p)
+    ho, wo = ref.shape[1], ref.shape[2]
+    M = ho * wo
+    acc = [[int(ref[c, m // wo, m % wo]) if c < cout else 0 for c in range(C)] for m in range(M)]
+    res = [[int(v) if c < cout else 0 for c, v in enumerate(rng.integers(-128, 128, size=C))] for _ in range(M)]
+    s_acc = 2.5 / float(np.std(ref))                          # the conv's real values ~ N(0, 2.5^2): SiLU's interesting range
+    s_res, s_out = 1.0 / 32, 1.0 / 16                         # the residual in [-4, 4); the output up to 8
+    ep = nv.act_epilogue("silu", s_acc, s_out, C, s_res=s_res, res_sh=10)
+    lp = nb.compile_layer("c12", h, w, cin, cout, k, s, p, R, C, 2, 2, (1, 1), 0, (1, 1), 0, owner=(0, 0), shares=1)
+    desc = lp.tiles[0].descriptor
+    act, wts = nb.pack_words(x, wgt, desc["cfg_ct_n"], k, cout, R, C)
+    core = NeoCore(R, C, acc_rows=64, abuf_depth=256, wbuf_depth=512)
+    core.write_abuf_words(act)
+    core.write_wbuf_words(wts)
+    core.write_rq_tables(ep.rq_mult, ep.rq_shift, ep.rq_zp, relu=0)
+    core.write_vec(ep.vec.table_writes())
+    for m in range(M):
+        core.write_rbuf(m, res[m])
+    out, errs, cycles = core.execute(h, w, ho, wo, s, p, k, 0, 0, M, desc=desc)
+    rq = core.rq_out
+    exp, vrows, vu = nv.golden_epilogue(ep, acc, res, cols=C)
+    vcyc = vr.VecUnit(C, C, 64)
+    ep.vec.apply(vcyc)
+    _, ecyc = vcyc.run(acc)
+    got_cyc = cycles - core.seq_done_at
+    flags = {n: core.p[n + "_sticky"].v for n in ("array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "wbuf_ce", "wbuf_ue",
+                                                 "rq_tbl_perr", "vec_err", "vec_perr")}
+    raw_ok = len(out) == 0                                    # rd_valid stays low with a program loaded
+    ok = rq == exp and raw_ok and sum(errs) == 0 and not any(flags.values()) and got_cyc == ecyc
+    fl = [nv.silu(acc[m][c] * s_acc + res[m][c] * s_res) / s_out for m in range(M) for c in range(cout)]
+    gq = [rq[m][c] for m in range(M) for c in range(cout)] if len(rq) == M else [0] * len(fl)
+    err = max(abs(a - b) for a, b in zip(fl, gq))
+    print(f"  C12: conv {cin}x{h}x{w} -> {cout}x{ho}x{wo} k{k} + residual + SiLU on the {R}x{C} core, the epilogue "
+          f"{len(ep.vec.prog)} ops ({' '.join(vr.OP_NAMES[w0 & 15] for w0 in ep.vec.prog)}) from the compiler: {len(rq)} INT8 rows "
+          f"{'bit-exact' if rq == exp else 'MISMATCH'} vs conv -> vec_ref -> requant model, "
+          f"{'no INT32 row on rd_valid' if raw_ok else f'{len(out)} INT32 rows on rd_valid (expected none)'}, the unit "
+          f"{got_cyc} cycles after the sequencer's done (model {ecyc}), "
+          f"{cycles} cycles in all, flags {'clean' if not any(flags.values()) else flags}; max |error| against the float "
+          f"SiLU {err:.2f} LSB of the output, {time.time() - t0:.0f} s -> {'PASS' if ok else 'FAIL'}")
+    if rq != exp:
+        for m, (a, b) in enumerate(zip(rq, exp)):
+            if a != b:
+                print(f"     first differing row {m}: got {a}, expected {b}")
+                break
+    return 0 if ok else 1
+
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--dump":
         dump_vectors(sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, "..", "vectors_core"))
@@ -397,12 +485,17 @@ def main():
     fails = 0
     late_only = "--late" in sys.argv
     c6_only = "--c6" in sys.argv
+    if "--c12" in sys.argv:
+        print("C12: a convolution + residual + SiLU on neo_core through the compiler (drop 0.43) under neosim:")
+        fails = c12_residual_silu(np.random.default_rng(41))
+        print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
+        return 1 if fails else 0
     if "--c11" in sys.argv:
         print("C11: a 2:4 sparse convolution on neo_core (NCHK = 4) under neosim:")
         fails = c11_sparse(np.random.default_rng(23))
         print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
         return 1 if fails else 0
-    print("Convolutions executed on neo_core RTL (hardware sequencer) under neosim:" + (" (C9-C10)" if late_only else " (C1-C8, C11)")
+    print("Convolutions executed on neo_core RTL (hardware sequencer) under neosim:" + (" (C9-C10)" if late_only else " (C1-C8, C11, C12)")
           + (f" on NCHK = {NCHK_DEFAULT} cores" if NCHK_DEFAULT > 1 else ""))
     mult = rng.integers(20000, 60000, size=8)
     shift = rng.integers(16, 22, size=8)
@@ -461,6 +554,9 @@ def main():
     # C11 (drop 0.42): the 2:4 sparse convolution on the sparse-capable core
     if not c6_only:
         fails += c11_sparse(np.random.default_rng(23))
+    # C12 (drop 0.43): conv + residual + SiLU through the vector unit
+    if not c6_only:
+        fails += c12_residual_silu(np.random.default_rng(41))
 
     print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
     return 1 if fails else 0

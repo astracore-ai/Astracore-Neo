@@ -3,7 +3,10 @@ Uses cocotb-coverage; absent that package the samplers are no-ops so the tests s
 Covergroups: descriptor space (kernel, stride, channel tiles, output-row range), K-split roles, drain modes,
 DMA ops executed, and every safety flag observed at least once in the fault-injection tests. Drop 0.42: the layer's
 mode (dense / 2:4 sparse, the descriptor's cfg_flags bit 0) and the index values a sparse layer's PEs hold (0..3: the
-position of each kept weight in its group of four channels, every value -- every check column -- exercised)."""
+position of each kept weight in its group of four channels, every value -- every check column -- exercised).
+Drop 0.43: the vector unit's sixteen micro-ops (each executed by a test's program at least once), the NIC's fetch
+formats (INT8 / INT4 weights, activations, the unit's residual buffer), the drain layouts (rows, transposed blocks,
+weight entries, padded activation entries) and the unit's two flags (its control comparator, its table parity)."""
 import os
 try:
     from cocotb_coverage.coverage import CoverPoint, CoverCross, coverage_db
@@ -32,8 +35,19 @@ if ENABLED:
     def sample_drain(m): pass
 
     @CoverPoint("neo.flag", xf=lambda f: f, bins=["parity", "crc", "array_abft", "acc_abft", "ctrl", "seq", "rq", "ecc_ue", "ecc_ce", "wbuf_ce",
-                                                     "wbuf_ue", "tbl_perr", "lost", "timeout", "bist_fail", "prog_ce", "ctrl_path", "iso", "watchdog"])
+                                                     "wbuf_ue", "tbl_perr", "lost", "timeout", "bist_fail", "prog_ce", "ctrl_path", "iso", "watchdog",
+                                                     "vec_err", "vec_perr"])
     def sample_flag(f): pass
+
+    @CoverPoint("neo.vec.op", xf=lambda o: o, bins=["END", "EMIT", "ADD_ROW", "MUL_SCALE", "CLAMP", "LUT", "RED", "BSUB", "BMUL", "SQR",
+                                                     "SLD", "RSST", "SALU", "SMUL", "SLUT", "RELOAD"])
+    def sample_vec_op(o): pass
+
+    @CoverPoint("neo.fetch.format", xf=lambda f: f, bins=["w_int8", "w_int4", "act", "rbuf"])
+    def sample_fetch(f): pass
+
+    @CoverPoint("neo.drain.layout", xf=lambda f: f, bins=["rows", "transpose", "entry", "pad", "grouped"])
+    def sample_drain_layout(f): pass
 
     def report(path):
         coverage_db.export_to_yaml(filename=path)
@@ -43,4 +57,7 @@ else:
     def sample_dma_op(op): pass
     def sample_drain(m): pass
     def sample_flag(f): pass
+    def sample_vec_op(o): pass
+    def sample_fetch(f): pass
+    def sample_drain_layout(f): pass
     def report(path): pass

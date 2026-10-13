@@ -173,7 +173,7 @@ def derive_macro(pdk, libdir):
 ICG_MODULE = "neo_icg"                                # drop 0.43: the clock gate, black-boxed and mapped in every unit
 RTL_FILES = ["neo_icg.sv", "neo_iso.sv", "tile_telem.sv", "delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv", "abft_checker.sv", "neo_mem.sv",
              "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv", "core_seq.sv", "ecc39.sv", "wbuf_mem.sv",
-             "requant.sv", "neo_core.sv", "host_if.sv", "noc_router.sv", "sram_bank.sv", "mbist.sv", "bank_bist_wrap.sv",
+             "requant.sv", "vec_unit.sv", "neo_core.sv", "host_if.sv", "noc_router.sv", "sram_bank.sv", "mbist.sv", "bank_bist_wrap.sv",
              "crc16_word.sv", "crc16_beat.sv", "tile_nic.sv", "tile_dma.sv", "prog_mem.sv", "esm.sv", "link_pack.sv", "neo_tile.sv"]
 
 
@@ -230,9 +230,16 @@ def core_units(c, p, desc):
         U(p + "requant", "requant", dict(COLS=C, PW=PW, MW=16), f"requantizer ({desc}): {C} columns of 32x17 multiply, shift, round, saturate; table parity; its own clock gate",
           icg=1),
         U(p + "core_seq", "core_seq", dict(ROWS=R, COLS=C, IDXW=IDXW, WBUF_DEPTH=c["WBUF_DEPTH"], WAW=WAW, PE_LAT=2), f"sequencer ({desc}; a lockstep pair in the core)"),
+        # drop 0.43 (stream C2): the vector unit between the accumulator drain and the requantizers -- its leaves (the row
+        # statistics, the residual buffer, a LUT per lane and the scalar LUT) priced by the macro model like the core's buffers
+        U(p + "vec_unit", "vec_unit", dict(COLS=C, ROWS=R, PW=PW, ACC_ROWS=c["ACC_ROWS"], IDXW=IDXW),
+          f"vector unit ({desc}): {C} INT32 lanes (shift, round, saturate; the 32x16 scale multiply, the LUT interpolation), the "
+          f"reduction tree, the scalar side, the duplicated control; leaves: the row statistics {c['ACC_ROWS']} x 64, the residual "
+          f"buffer {c['ACC_ROWS'] // 2} x {2 * R * 8}, {C + 1} LUTs 256 x 33 (macros)", macros=["neo_mem_rf"]),
         U(p + "neo_core", "neo_core", dict(ROWS=R, COLS=C, PW=PW, ACC_ROWS=c["ACC_ROWS"], ABUF_DEPTH=c["ABUF_DEPTH"], WBUF_DEPTH=c["WBUF_DEPTH"], **nk, DV_HOOKS=0),
-          f"the {R}x{C} core: datapath, weight buffer, two sequencers, two requantizers, the comparators and flags; the datapath's clock gate",
-          children={"neo_mac_core_v02": [p + "neo_mac_core_v02"], "wbuf_mem": [p + "wbuf_mem"], "requant": [p + "requant"], "core_seq": [p + "core_seq"]},
+          f"the {R}x{C} core: datapath, weight buffer, two sequencers, the vector unit, two requantizers, the comparators and flags; the datapath's clock gate",
+          children={"neo_mac_core_v02": [p + "neo_mac_core_v02"], "wbuf_mem": [p + "wbuf_mem"], "requant": [p + "requant"], "core_seq": [p + "core_seq"],
+                    "vec_unit": [p + "vec_unit"]},
           pe=R * (C + NCHK), icg=1),
     ]
 
@@ -306,8 +313,9 @@ def top_core_units(TT):
     instantiates neo_tile with NCHK at its default 1 -- run 180's synth gates failed on top_neo_tile's PE count and on
     neo_top's tile): the units whose parameters follow NCHK again at NCHK = 1 with the prefix top_ (the data PE with one
     byte, the array, the streaming core, the feeder, the datapath, the weight buffer, the core); the check PE, the
-    accumulator, requant and the sequencer are the tile's units (their parameters do not depend on NCHK)."""
-    shared = {"mac_pe_chk", "acc_bank", "requant", "core_seq"}
+    accumulator, requant and the sequencer are the tile's units (their parameters do not depend on NCHK) -- and the vector
+    unit (C2: its parameters do not either)."""
+    shared = {"mac_pe_chk", "acc_bank", "requant", "core_seq", "vec_unit"}
     out = []
     for u in core_units(dict(TT, NCHK=1), "top_", "32x32 dense, the chip top's tile"):
         base = u["name"][len("top_"):]

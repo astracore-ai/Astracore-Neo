@@ -11,7 +11,13 @@ Drop 0.42: both builds are the 2:4 sparse-capable core (NEO_NCHK = 4): C1-C4 wri
 weight in column 0) and run as before; C5 is a 2:4 sparse convolution through the compiler (neo_backend's validator,
 compressor, layouts and descriptor), bit-exact against the dense convolution on the pruned weights.
 Drop 0.43: C6, the storage behind the R7 / R10 comparators -- a single-cycle upset of each register drop 0.41's synchronous
-reads added, injected through the model's VPI, raises its comparator's flag."""
+reads added, injected through the model's VPI, raises its comparator's flag.
+Drop 0.43: C12, a convolution + residual + SiLU through the core's vector unit with the compiler's epilogue (the program,
+the SiLU table, the constants and the requantizer's tables from compiler/neo_vec.py; the residual rows written into the
+unit's buffer as the DMA's FETCH_A with arg 1 does), bit-exact against the convolution -> the unit's model -> the
+requantizer's model; C13, the unit's two flags through its fault hooks (the duplicated control, the table parity); C14,
+a layer norm over the row's own lanes (the output tile's COLS channels: both passes on the held row -- RELOAD) clipped
+by CLAMP, the compiler's in-row norm epilogue, bit-exact against the unit's and the requantizer's models."""
 import os
 import cocotb
 from cocotb.clock import Clock
@@ -136,7 +142,8 @@ def handle(dut, path):
 
 
 async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False, rq_fault=False, tbl_fault=False, wbuf_flips=(),
-                   desc=None, psums=(), words=None, vpi_flip=None):
+                   desc=None, psums=(), words=None, vpi_flip=None, vec=None, rbuf=None, rq_tables=None, collect=None,
+                   vec_fault=None):
     """C1's run as a helper: reset, load the buffers, descriptor, go, collect the drained rows until done. The fault
     hooks (drop 0.36) mirror sim/run_conv_core.py: the feeder-control fault held for the first 40 cycles of the run
     (it hits valid rows), the sequencer fault while the drain runs, the requant-input fault while rows drain, the
@@ -148,7 +155,11 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     vpi_flip = (path, bit, cond): bit `bit` of the register at `path` is flipped once, through the model's VPI (cocotb's
     Verilator builds are --public-flat-rw), right after the first rising edge of the run at which the 1-bit signal
     `cond` (a path, or None for the first cycle) reads 1 -- a single-cycle upset in a cycle the register is used (drop
-    0.43, C6; the fault campaign's injection, 02_dv/dv/cocotb/faults/). Returns (rows, cycles, M, wo)."""
+    0.43, C6; the fault campaign's injection, 02_dv/dv/cocotb/faults/).
+    Drop 0.43 (C12-C14): vec = the vector unit's (address, data) writes, rbuf = its residual rows (INT8, written as entries
+    0..), rq_tables = (mult, shift, zp) per column instead of the default tables; collect (a dict) receives the requantized
+    rows ('rq') and the cycle of the sequencer's done ('seq_done'); vec_fault = 'ctrl' | 'tbl': the unit's hooks held over
+    the run. Returns (rows, cycles, M, wo)."""
     cin = x.shape[0]
     cin_tiles = (cin + ROWS - 1) // ROWS
     h, w = x.shape[1], x.shape[2]
@@ -157,7 +168,7 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     M = ho * wo
     for name in ("abuf_we", "wbuf_we", "go", "err_clear", "fault_inject", "ctrl_fault_inject", "rq_tbl_we", "rq_relu", "ext_valid",
                  "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "dv_wbuf_flip", "dv_wbuf_addr", "dv_wbuf_lane", "dv_wbuf_mask",
-                 "cfg_sparse"):
+                 "cfg_sparse", "vec_we", "rbuf_we", "rbuf_we2", "vec_ctrl_fault_inject", "vec_tbl_fault_inject"):
         getattr(dut, name).value = 0
     dut.rst_n.value = 0
     for _ in range(3): await RisingEdge(dut.clk)
@@ -171,11 +182,24 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     for c in range(COLS):
         dut.rq_tbl_we.value = 1
         dut.rq_tbl_addr.value = c
-        dut.rq_tbl_mult.value = 30000 + c
-        dut.rq_tbl_shift.value = 26
-        dut.rq_tbl_zp.value = bits(-3, 8)
+        dut.rq_tbl_mult.value = 30000 + c if rq_tables is None else int(rq_tables[0][c])
+        dut.rq_tbl_shift.value = 26 if rq_tables is None else int(rq_tables[1][c])
+        dut.rq_tbl_zp.value = bits(-3 if rq_tables is None else int(rq_tables[2][c]), 8)
         await RisingEdge(dut.clk)
     dut.rq_tbl_we.value = 0
+    for a, d in (vec or ()):                                         # the vector unit's tables and program (drop 0.43)
+        dut.vec_we.value = 1
+        dut.vec_addr.value = a
+        dut.vec_wdata.value = d & 0xFFFFFFFF
+        await RisingEdge(dut.clk)
+    dut.vec_we.value = 0
+    for m, row in enumerate(rbuf or ()):                             # its residual rows, entry m = row m
+        dut.rbuf_we.value = 1
+        dut.rbuf_waddr.value = m
+        for c in range(ROWS):
+            dut.rbuf_wdata[c].value = bits(row[c] if c < len(row) else 0, 8)
+        await RisingEdge(dut.clk)
+    dut.rbuf_we.value = 0
     if words is None:
         await write_abuf(dut, packed_act(x, cin_tiles, h, w))
         await write_wbuf(dut, packed_w(wgt, cin_tiles, k, 0))
@@ -194,6 +218,8 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     dut.cfg_sparse.value = int((desc or {}).get("cfg_flags", 0)) & 1
     dut.cfg_m.value = (desc or {}).get("cfg_m", M)
     dut.rq_tbl_fault_inject.value = 1 if tbl_fault else 0
+    dut.vec_ctrl_fault_inject.value = 1 if vec_fault == "ctrl" else 0
+    dut.vec_tbl_fault_inject.value = 1 if vec_fault == "tbl" else 0
     dut.go.value = 1
     await RisingEdge(dut.clk)
     dut.go.value = 0
@@ -201,6 +227,7 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     queue = list(psums)
     flip_h = handle(dut, vpi_flip[0]) if vpi_flip else None
     flip_c = handle(dut, vpi_flip[2]) if (vpi_flip and vpi_flip[2]) else None
+    rq_rows, seq_done_at = [], None
     for cycles in range(1, 20000):
         await RisingEdge(dut.clk)
         if flip_h is not None:
@@ -231,21 +258,33 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
         rd_valid = int(dut.rd_valid.value)
         if rd_valid:
             rows.append([sbits(int(dut.rd_data[c].value), 32) for c in range(COLS)])
+        if int(dut.rq_valid.value):
+            rq_rows.append([sbits(int(dut.rq_q[c].value), 8) for c in range(COLS)])
+        if seq_done_at is None and int(dut.u_seq.done.value):
+            seq_done_at = cycles
         if int(dut.done.value):
             break
     await RisingEdge(dut.clk)
-    for name in ("ctrl_fault_inject", "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "ext_valid"):
+    for name in ("ctrl_fault_inject", "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "ext_valid",
+                 "vec_ctrl_fault_inject", "vec_tbl_fault_inject"):
         getattr(dut, name).value = 0
     assert not queue, f"{len(queue)} partial-sum rows not accepted"
     assert flip_h is None, f"vpi_flip {vpi_flip}: its condition never held, nothing was injected"
     for _ in range(4):                                               # the requant pipeline and the sticky flags settle
+        await ReadOnly()
+        if int(dut.rq_valid.value):
+            rq_rows.append([sbits(int(dut.rq_q[c].value), 8) for c in range(COLS)])
         await RisingEdge(dut.clk)
+    if collect is not None:
+        collect["rq"] = rq_rows
+        collect["seq_done"] = seq_done_at
+        collect["cycles"] = cycles
     return rows, cycles, M, wo
 
 
 def flags(dut):
     return {n: int(getattr(dut, n + "_sticky").value) for n in ("array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "rq_tbl_perr",
-                                                                "wbuf_ce", "wbuf_ue")}
+                                                                "wbuf_ce", "wbuf_ue", "vec_err", "vec_perr")}
 
 
 @cocotb.test()
@@ -464,3 +503,127 @@ async def c6_comparator_storage(dut):
                      ", ".join(n for n, v in f.items() if v)))
     dut._log.info("C6: every register behind the comparators flagged when upset in use -- "
                   + "; ".join(f"{p}: {r}, flags {fl}" for p, r, fl in seen))
+
+
+def c12_setup(seed=41):
+    """C12's layer: C1's convolution shape, a residual tensor and the compiler's SiLU epilogue (neosim's C12, the same
+    scales: the conv's real values ~ N(0, 2.5^2), the residual at 1/32, the output at 1/16)."""
+    import neo_vec as nv
+    rng = np.random.default_rng(seed)
+    x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
+    ref = direct_conv(x, wgt, 1, 1)
+    M = 36
+    acc = [[int(ref[c, m // 6, m % 6]) if c < 7 else 0 for c in range(COLS)] for m in range(M)]
+    res = [[int(v) if c < 7 else 0 for c, v in enumerate(rng.integers(-128, 128, size=COLS))] for _ in range(M)]
+    s_acc, s_res, s_out = 2.5 / float(np.std(ref)), 1.0 / 32, 1.0 / 16
+    ep = nv.act_epilogue("silu", s_acc, s_out, COLS, s_res=s_res, res_sh=10)
+    return x, wgt, acc, res, ep, (s_acc, s_res, s_out)
+
+
+@cocotb.test()
+async def c12_residual_silu(dut):
+    """C12 (drop 0.43): a convolution + residual + SiLU on neo_core through the compiler's epilogue: the vector unit's
+    program (MUL_SCALE to the residual's scale, ADD_ROW, BMUL to the SiLU table's input, LUT, EMIT), its table and
+    constants and the requantizer's tables from compiler/neo_vec.py's act_epilogue, written through the unit's host port;
+    the residual rows written into its buffer. The INT8 rows equal the golden chain bit for bit (direct_conv -> the unit's
+    model -> the requantizer's model), no INT32 row leaves on rd_valid (a layer with a program drains through the unit
+    alone), the unit's cycles after the sequencer's done are the model's, every flag clean; the error against the float
+    SiLU is reported."""
+    import neo_vec as nv
+    import vec_ref as vr
+    start_clock(dut, "C12")
+    x, wgt, acc, res, ep, (s_acc, s_res, s_out) = c12_setup()
+    col = {}
+    rows, cycles, M, wo = await run_conv(dut, x, wgt, vec=ep.vec.table_writes(), rbuf=res,
+                                         rq_tables=(ep.rq_mult, ep.rq_shift, ep.rq_zp), collect=col)
+    exp, _, _ = nv.golden_epilogue(ep, acc, res, cols=COLS)
+    vu = vr.VecUnit(COLS, COLS, 64)
+    ep.vec.apply(vu)
+    _, ecyc = vu.run(acc)
+    got = col["rq"]
+    assert not rows, f"C12: {len(rows)} INT32 rows on rd_valid with a vector program loaded (expected none)"
+    bad = [m for m in range(M) if m >= len(got) or got[m] != exp[m]]
+    assert len(got) == M and not bad, f"C12: {len(got)} INT8 rows, rows {bad[:6]} differ from the golden chain"
+    vcyc = col["cycles"] - col["seq_done"]
+    assert vcyc == ecyc, f"C12: the unit took {vcyc} cycles after the sequencer's done, the model {ecyc}"
+    f = flags(dut)
+    assert not any(f.values()), f"C12 flags {f}"
+    err = max(abs(nv.silu(acc[m][c] * s_acc + res[m][c] * s_res) / s_out - got[m][c]) for m in range(M) for c in range(7))
+    for w0 in ep.vec.prog:
+        fc.sample_vec_op(vr.OP_NAMES[w0 & 15])
+    dut._log.info(f"C12: conv + residual + SiLU on neo_core {ROWS}x{COLS}: {M} INT8 rows bit-exact (program "
+                  f"{' '.join(vr.OP_NAMES[w0 & 15] for w0 in ep.vec.prog)}), the unit {vcyc} cycles after the sequencer's done "
+                  f"(model {ecyc}), {cycles} cycles in all, flags clean; max |error| against the float SiLU {err:.2f} LSB")
+    fc.report("funcov_neo_core.yml")
+
+
+@cocotb.test()
+async def c14_row_norm(dut):
+    """C14 (drop 0.43): a convolution with COLS output channels (inputs and weights in [-8, 8): accumulators within INT16,
+    SQR's operand) followed by compiler/neo_vec.py's in-row layer norm -- the row's mean and variance over its COLS lanes,
+    the rsqrt table, RELOAD for the second pass, the clip by CLAMP at 3 sigma -- bit-exact against the unit's and the
+    requantizer's models; the error against the float layer norm (clipped) reported."""
+    import neo_vec as nv
+    import vec_ref as vr
+    start_clock(dut, "C14")
+    rng = np.random.default_rng(14)
+    x = rng.integers(-8, 8, size=(CIN, 6, 6), dtype=np.int64)
+    wgt = rng.integers(-8, 8, size=(COLS, CIN, 3, 3), dtype=np.int64)
+    ref = direct_conv(x, wgt, 1, 1)
+    M = 36
+    acc = [[int(ref[c, m // 6, m % 6]) for c in range(COLS)] for m in range(M)]
+    V = sorted(sum((v - sum(r) / COLS) ** 2 for v in r) for r in acc)
+    ep = nv.norm_row_epilogue(COLS, V[M // 2], 4.0 / 127, 3.0)
+    col = {}
+    rows, cycles, M, wo = await run_conv(dut, x, wgt, vec=ep.vec.table_writes(), rq_tables=(ep.rq_mult, ep.rq_shift, ep.rq_zp),
+                                         collect=col)
+    exp, _, _ = nv.golden_epilogue(ep, acc, cols=COLS)
+    vu = vr.VecUnit(COLS, COLS, 64)
+    ep.vec.apply(vu)
+    _, ecyc = vu.run(acc)
+    got = col["rq"]
+    bad = [m for m in range(M) if m >= len(got) or got[m] != exp[m]]
+    assert len(got) == M and not bad, f"C14: {len(got)} INT8 rows, rows {bad[:6]} differ from the golden chain"
+    assert col["cycles"] - col["seq_done"] == ecyc, f"C14: the unit took {col['cycles'] - col['seq_done']} cycles, the model {ecyc}"
+    f = flags(dut)
+    assert not any(f.values()), f"C14 flags {f}"
+    err = 0.0
+    for m in range(M):
+        mu = sum(acc[m]) / COLS
+        sd = (sum((v - mu) ** 2 for v in acc[m]) / COLS) ** 0.5
+        for c in range(COLS):
+            err = max(err, abs(max(-3.0, min(3.0, (acc[m][c] - mu) / sd)) - got[m][c] * 4.0 / 127) / (4.0 / 127))
+    for w0 in ep.vec.prog:
+        fc.sample_vec_op(vr.OP_NAMES[w0 & 15])
+    dut._log.info(f"C14: conv + in-row layer norm over {COLS} channels, clip 3 sigma ({len(ep.vec.prog)} ops, "
+                  f"{nv.cycles_per_row(ep.vec.prog, COLS)} cycles a row): {M} INT8 rows bit-exact, the unit {ecyc} cycles, flags clean; "
+                  f"max |error| against the float norm {err:.2f} LSB")
+    fc.report("funcov_neo_core.yml")
+
+
+@cocotb.test()
+async def c13_vec_fault_hooks(dut):
+    """C13 (drop 0.43): the vector unit's own fault hooks on C12's layer, one run each: vec_ctrl_fault_inject (the primary
+    control's row index flipped -- the duplicated control's comparator raises vec_err) and vec_tbl_fault_inject (a
+    reserved bit of the slot-0 op word flipped as used -- the program's parity raises vec_perr, the rows unchanged). Each
+    flag alone, every run complete."""
+    import neo_vec as nv
+    start_clock(dut, "C13")
+    x, wgt, acc, res, ep, _ = c12_setup()
+    exp, _, _ = nv.golden_epilogue(ep, acc, res, cols=COLS)
+    seen = {}
+    for hook, flag in (("ctrl", "vec_err"), ("tbl", "vec_perr")):
+        col = {}
+        rows, cycles, M, wo = await run_conv(dut, x, wgt, vec=ep.vec.table_writes(), rbuf=res,
+                                             rq_tables=(ep.rq_mult, ep.rq_shift, ep.rq_zp), collect=col, vec_fault=hook)
+        f = flags(dut)
+        others = {n: v for n, v in f.items() if n != flag and v}
+        assert f[flag] == 1 and not others, f"C13 {hook}: {flag} {f[flag]}, others {others}"
+        if hook == "tbl":
+            assert col["rq"] == exp, "C13: the parity fault (a reserved bit) changed the rows"
+        seen[hook] = (cycles, len(col["rq"]))
+        fc.sample_flag(flag)
+    dut._log.info("C13: the vector unit's control fault -> vec_err alone, its table fault -> vec_perr alone (rows unchanged): "
+                  + "; ".join(f"{h}: {c} cycles, {n} rows" for h, (c, n) in seen.items()))
+    fc.report("funcov_neo_core.yml")

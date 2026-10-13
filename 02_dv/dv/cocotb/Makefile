@@ -23,7 +23,7 @@ SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
 CORE_SRCS := $(addprefix $(RTL)/, neo_icg.sv delay_line.sv mac_pe.sv skew_in.sv deskew_out.sv systolic_array.sv abft_checker.sv neo_mem.sv neo_mac_core.sv \
-  act_feeder.sv acc_bank.sv neo_mac_core_v02.sv core_seq.sv ecc39.sv wbuf_mem.sv requant.sv neo_core.sv)
+  act_feeder.sv acc_bank.sv neo_mac_core_v02.sv core_seq.sv ecc39.sv wbuf_mem.sv requant.sv vec_unit.sv neo_core.sv)
 TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, tile_telem.sv neo_iso.sv noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv crc16_beat.sv tile_nic.sv tile_dma.sv \
   prog_mem.sv host_if.sv esm.sv link_pack.sv neo_tile.sv tile_mesh.sv)
 TOP_SRCS := $(TILE_SRCS) $(addprefix $(RTL)/, cdc_bits.sv cdc_fifo.sv cdc_sync.sv noc_axi_bridge.sv top_ctrl.sv mesh_ctrl.sv neo_top.sv)
@@ -225,6 +225,8 @@ tile32_cov:
 	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 TESTCASE=$(TILE32_COV_TESTS) VCOV=1 SIM_BUILD=sim_build_cov_tile32 COCOTB_RESULTS_FILE=results_cov_tile32.xml NEO_FUNCOV_FILE=funcov_tile_mesh32.yml
 	$(call keep_cov,sim_build_cov_tile32,coverage_tile32.dat)
 coverage: core_cov tile_cov tile8_cov tile32_cov
+	$(MAKE) coverage_report
+coverage_report:                   # the report of the coverage builds run (drop 0.43: CI runs them one by one)
 	python3 coverage_report.py --dat "coverage_*.dat" --funcov "funcov_*.yml" --out coverage_report.md
 	-verilator_coverage --annotate coverage_annotated --annotate-min 1 coverage_*.dat > /dev/null 2>&1
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"

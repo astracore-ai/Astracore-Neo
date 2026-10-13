@@ -46,7 +46,11 @@ class Group:
 INHERIT_CHUNKS = False   # consistent partitioning: a layer inherits its producer's M-chunk when the grid matches
 BAND = False             # spatial banding: tile t owns output-row band t of every layer; groups align by construction
 WFACTOR = 1.0            # drop 0.42: weight bytes per weight, 1.25 on the NCHK = 4 core (an 8-bit weight and its 2-bit index in
-                         # every entry, dense layers included: one entry format) -- set by --sparse, which needs that core
+                         # every entry, dense layers included: one entry format) -- set by --sparse, which needs that core;
+                         # drop 0.43: x 0.5 with --int4 (the bank holds 4-bit weights, the NIC expands them at the fetch)
+VEC_ROW = 0              # drop 0.43: the vector unit's cycles per output row after the sequencer's drain (an owner's or a solo
+                         # group's epilogue; 0 = the bypass) -- --vec-silu: every layer's SiLU exact on the unit (neo_vec's
+                         # prog_activation: 10 cycles a row on the pipelined unit) instead of the requantizer's ReLU
 
 
 def build_groups(layers, ksplit):
@@ -76,7 +80,7 @@ def build_groups(layers, ksplit):
                 m1 = min(L.M, m0 + csize)
                 chunk = m1 - m0
                 act_bytes = int(math.ceil(L.act_in_bytes * chunk / L.M))
-                base.append((plan.k_tiles * chunk + nc.LAT, act_bytes, int(plan.k_tiles * wpt),
+                base.append((plan.k_tiles * chunk + nc.LAT + VEC_ROW * chunk, act_bytes, int(plan.k_tiles * wpt),
                              chunk * nc.COLS, m0, m1, chunk))
         s = nc.choose_split(len(base), plan.k_tiles, csize) if ksplit else 1
         groups = []
@@ -93,7 +97,8 @@ def build_groups(layers, ksplit):
                     if kt_here <= 0:
                         break
                     role = ("owner" if part == 0 else "contrib", None, s, chunk)
-                    g = Group(len(all_groups), li, kt_here * chunk + nc.LAT, int(math.ceil(act_bytes / s)),
+                    g = Group(len(all_groups), li, kt_here * chunk + nc.LAT + (VEC_ROW * chunk if part == 0 else 0),
+                              int(math.ceil(act_bytes / s)),
                               int(kt_here * wpt), out_bytes if part == 0 else (nc.COLS + 1) * 4 * chunk, role, m0, m1)
                     if part == 0:
                         owner = g
@@ -304,11 +309,18 @@ def main():
     ap.add_argument("--psum", type=int, default=v2.PSUM_BYTES, help="partial-sum receive rate, bytes per cycle (RTL since drop 0.31: 64; 4 before)")
     ap.add_argument("--sparse", action="store_true", help="drop 0.42: every layer but the first 2:4 sparse (half the K-passes) on the "
                     "NCHK = 4 core (every layer's weight entries 10 bits per weight: 1.25x the weight bytes)")
+    ap.add_argument("--int4", action="store_true", help="drop 0.43: INT4 weights in the banks (half the weight bytes fetched; "
+                    "the NIC expands them to INT8 entries)")
+    ap.add_argument("--vec-silu", action="store_true", help="drop 0.43: SiLU exact on the vector unit after every layer's drain "
+                    "(compiler/neo_vec.py's activation program: its cycles per row added to the owner's run)")
     a = ap.parse_args()
-    global INHERIT_CHUNKS, BAND, WFACTOR
+    global INHERIT_CHUNKS, BAND, WFACTOR, VEC_ROW
     INHERIT_CHUNKS = a.inherit
     BAND = a.band
-    WFACTOR = 1.25 if a.sparse else 1.0
+    WFACTOR = (1.25 if a.sparse else 1.0) * (0.5 if a.int4 else 1.0)
+    if a.vec_silu:
+        import neo_vec as nv
+        VEC_ROW = nv.cycles_per_row(nv.prog_activation(12))
     nc.set_v02(ksplit=a.ksplit)
     layers = nc.yolov8m(a.h, a.w)
     if a.sparse:
@@ -318,7 +330,8 @@ def main():
     print(f"YOLOv8-m class at {a.h}x{a.w}, 64 tiles, one bank per tile, {a.link} B/cycle links, "
           f"K-split={'on' if a.ksplit else 'off'}, affinity={'off' if a.no_affinity else 'on'}, "
           f"{'layer barriers' if a.barrier else 'dataflow'}, chunks={'bands' if a.band else ('inherited' if a.inherit else 'per layer')}, "
-          f"endpoint rates rx {a.rx} / tx {a.tx} / psum {a.psum} B/cycle (bank {v2.BANK_BYTES})")
+          f"endpoint rates rx {a.rx} / tx {a.tx} / psum {a.psum} B/cycle (bank {v2.BANK_BYTES})"
+          + (", INT4 weights" if a.int4 else "") + (f", SiLU on the vector unit ({VEC_ROW} cycles a row)" if VEC_ROW else ""))
     print(f"  compute-only schedule:  {compute_only:9d} cycles = {compute_only / (nc.F_GHZ * 1e6):.2f} ms")
     print(f"  event model v3:         {total:9d} cycles = {total / (nc.F_GHZ * 1e6):.2f} ms ({100 * (total / compute_only - 1):+.0f} %)")
     print(f"  MAC utilization {100 * util:.1f} %, busiest link {100 * bl:.1f} %, busiest bank {100 * bb:.1f} %, "

@@ -9,7 +9,8 @@
 # make sim        : run the RTL under neosim (built-in subset simulator; no install needed)
 # make compile    : compiler v1 lowering verification + YOLOv8-m performance report
 # make conv       : whole convolutions on the v0.2 core RTL under neosim (feeder + accumulator + ABFT)
-# make core       : neo_core C1-C8 (sequencer, faults, requant) -- run `python3 sim/run_conv_core.py --late` for C9-C10
+# make core       : neo_core C1-C8, C11, C12 (sequencer, faults, requant, 2:4 sparse, the vector unit's conv + residual + SiLU)
+#                   -- run `python3 sim/run_conv_core.py --late` for C9-C10
 # make noc        : 3x3 NoC mesh: random traffic, ordering, integrity, parity fault
 # make requant    : requantization block vs fixed-point model and float
 # make ksplit     : R8 K-split over three lockstepped neo_core instances (owner + 2 contributors)
@@ -27,8 +28,14 @@
 # make xrun_tiles : Xcelium: M1 through the register bus on tile_mesh (vectors from sim/gen_tile_vectors.py)
 # make verilator  : Verilator: the beat CRC's equivalence (make crc16, first), streaming core T1-T3, neo_core C1, tile_mesh M1 (SV testbench), then cocotb: M1-M13 and M10 at 16x8/8x8, M1-M13 and C1 on the 32x32 silicon configuration (drop 0.21);
 #                   drop 0.42: the streaming core again on the 2:4 sparse-capable arrays (NCHK = 4, make vectors_sp: 32x32 and 16x8) -- T1-T3
-#                   dense, T6 sparse dataflow, T7 a PE fault per index value and a check weight per check column; these two runs gate the target
+#                   dense, T6 sparse dataflow, T7 a PE fault per index value and a check weight per check column; these two runs gate the target;
+#                   drop 0.43: V1, the vector unit's seven programs (tb_vec_unit.sv on make vectors_vec), gates the target too
 # make vectors_sp : drop 0.42: the vectors of the NCHK = 4 arrays (build/v32_4, build/v168s); make iverilog_sp runs them under Icarus
+# make vectors_vec: drop 0.43: V1's vectors for tb_vec_unit.sv (sim/run_vec_unit.py --dump build/vvec: the vector unit's seven
+#                   programs on random rows at 16x8, the model's rows and cycle counts); `make verilator` replays them under
+#                   Verilator (gated), make iverilog_vec under Icarus (12 and 14: the testbench's out_row is a net)
+# make vec        : drop 0.43: V1 + V2 under neosim (sim/run_vec_unit.py: the unit bit-exact against model/vec_ref.py, the LUT
+#                   accuracy bounds); in regress and regress_ci
 # make crc16      : the matrix-form crc16_beat (drop 0.41): the RTL is gen_crc16_beat.py's output, lint-clean at BW 16 / 4 / 1, and equal to the
 #                   serial chain it replaced (tb_crc16_beat.sv: 69,792 vectors, random and the exhaustive basis sweep) under Verilator and Icarus
 # make cocotb_mesh8 : cocotb on Verilator: the mesh-level tests on the silicon mesh, 8x8 tiles of 32x32 cores with 2 MB banks (drop 0.24; its own CI job;
@@ -59,7 +66,7 @@ SEED   ?= 1
 RTL := rtl/neo_icg.sv rtl/delay_line.sv rtl/mac_pe.sv rtl/skew_in.sv rtl/deskew_out.sv \
        rtl/systolic_array.sv rtl/abft_checker.sv rtl/neo_mem.sv rtl/neo_mac_core.sv \
        rtl/act_feeder.sv rtl/acc_bank.sv rtl/neo_mac_core_v02.sv \
-       rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/neo_core.sv rtl/host_if.sv
+       rtl/core_seq.sv rtl/ecc39.sv rtl/wbuf_mem.sv rtl/requant.sv rtl/vec_unit.sv rtl/neo_core.sv rtl/host_if.sv
 NOC := rtl/neo_icg.sv rtl/noc_router.sv rtl/noc_mesh.sv
 TILE := $(RTL) rtl/tile_telem.sv rtl/neo_iso.sv rtl/noc_router.sv rtl/sram_bank.sv rtl/mbist.sv rtl/bank_bist_wrap.sv rtl/crc16_word.sv rtl/crc16_beat.sv rtl/tile_nic.sv rtl/tile_dma.sv rtl/prog_mem.sv rtl/esm.sv rtl/link_pack.sv rtl/neo_tile.sv rtl/tile_mesh.sv
 # the chip top (drop 0.42): the bridges, the control plane, the crossings
@@ -67,7 +74,7 @@ TOPR := rtl/cdc_bits.sv rtl/cdc_fifo.sv rtl/cdc_sync.sv rtl/noc_axi_bridge.sv rt
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage synth crc16 cocotb_top vectors_sp iverilog_sp
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage cocotb_coverage_report synth crc16 cocotb_top vectors_sp iverilog_sp vectors_vec iverilog_vec vec
 
 all: regress model
 
@@ -87,6 +94,21 @@ vectors_sp:
 
 sim: vectors
 	python3 sim/run_mac_core.py --vectors $(VECDIR)
+
+# drop 0.43: the vector unit -- V1 / V2 under neosim, and V1's vectors for tb_vec_unit.sv (16x8: COLS 8, RBUF entries of
+# 16 bytes, 64 accumulator rows)
+vec:
+	python3 sim/run_vec_unit.py
+
+vectors_vec:
+	python3 sim/run_vec_unit.py --dump build/vvec
+
+# tb_vec_unit under Icarus: CI's Icarus 12 passes it since the testbench's out_row is a net (D2's rule, see iverilog_core;
+# a variable array left it X before); not a step of hdl-sim -- `make verilator` gates V1 under Verilator
+iverilog_vec: vectors_vec
+	iverilog -g2012 -I build/vvec -o build/sim_vec.vvp rtl/neo_mem.sv rtl/vec_unit.sv tb/tb_vec_unit.sv
+	vvp build/sim_vec.vvp +VECDIR=build/vvec | tee build/tb_vec_iverilog.txt
+	grep -q "^RESULT: ALL PASS" build/tb_vec_iverilog.txt
 
 compile:
 	python3 compiler/neo_compile.py --verify
@@ -185,6 +207,8 @@ regress: vectors vectors_sp
 	python3 sim/run_ksplit.py
 	python3 sim/run_mbist.py
 	python3 sim/run_nic.py
+	python3 sim/run_vec_unit.py
+	python3 compiler/neo_xfmr.py
 	$(MAKE) cdriver
 
 regress_ci: vectors vectors_sp
@@ -199,6 +223,8 @@ regress_ci: vectors vectors_sp
 	python3 sim/run_requant.py
 	python3 sim/run_mbist.py
 	python3 sim/run_nic.py
+	python3 sim/run_vec_unit.py
+	python3 compiler/neo_xfmr.py
 	$(MAKE) cdriver
 
 iverilog: vectors
@@ -222,7 +248,7 @@ xrun: vectors
 	xrun -64bit -sv -timescale 1ns/1ps +incdir+$(VECDIR) -top tb_neo_mac_core -access +rwc \
 	     $(RTL) $(TB) +VECDIR=$(VECDIR)
 
-verilator: vectors vectors_sp vectors_core
+verilator: vectors vectors_sp vectors_core vectors_vec
 	$(MAKE) crc16
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD +incdir+$(VECDIR) --top-module tb_neo_mac_core \
 	          $(RTL) $(TB) -o sim
@@ -239,6 +265,10 @@ verilator: vectors vectors_sp vectors_core
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_core +incdir+vectors_core --top-module tb_neo_core \
 	          $(RTL) $(TBC) -o sim_core
 	./obj_core/sim_core +VECDIR=vectors_core
+	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_vec +incdir+build/vvec --top-module tb_vec_unit \
+	          rtl/neo_mem.sv rtl/vec_unit.sv tb/tb_vec_unit.sv -o sim_vec
+	./obj_vec/sim_vec +VECDIR=build/vvec | tee build/tb_vec_verilator.txt
+	grep -q "^RESULT: ALL PASS" build/tb_vec_verilator.txt
 	python3 sim/gen_tile_vectors.py
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD -Wno-WIDTHTRUNC --Mdir obj_tiles --top-module tb_tile_mesh \
 	          $(TILE) tb/tb_tile_mesh.sv -o sim_tiles
@@ -284,7 +314,13 @@ cocotb_tiles:
 	-$(call timed,tile32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32
 	-$(call timed,core32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core32
 	-$(call timed,tile_sp) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_sp
-	-$(call timed,coverage) $(MAKE) -j$(MESH8_BUILD_JOBS) cocotb_coverage
+# drop 0.43: the coverage builds one after another (run 196's step ran the four at once and peaked at 15.6 GB in one
+# process of the runner's 16 GB; runs 201 / 205 lost the runner there): each still compiles with the jobs above
+	-$(call timed,core_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core_cov
+	-$(call timed,tile_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_cov
+	-$(call timed,tile8_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile8_cov
+	-$(call timed,tile32_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32_cov
+	-$(MAKE) cocotb_coverage_report
 	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml dv/cocotb/results_tile_sp.xml
 
 # the chip top (drop 0.42): neo_top's suite, one build run twice -- clk 1.0 ns / aclk 1.6 ns, then aclk == clk -- in its own build
@@ -299,6 +335,10 @@ cocotb_top:
 # functional covergroups on; the report and the raw data land in ci_logs/hdl-sim/, which the CI job publishes
 cocotb_coverage:
 	-$(MAKE) -C dv/cocotb coverage
+	$(MAKE) cocotb_coverage_report
+# the report of coverage builds already run (cocotb_tiles runs them one by one, drop 0.43)
+cocotb_coverage_report:
+	-$(MAKE) -C dv/cocotb coverage_report
 	mkdir -p ci_logs/hdl-sim
 	-cp dv/cocotb/coverage_report.md dv/cocotb/coverage_*.dat dv/cocotb/funcov_*.yml ci_logs/hdl-sim/ 2>/dev/null
 
@@ -437,4 +477,4 @@ formal:
 	python3 $(FORMAL_RUN) --dir formal --out formal_out --logs ci_logs/formal --jobs $(FORMAL_JOBS) --timeout $(FORMAL_TIMEOUT)
 
 clean:
-	rm -rf build obj_dir obj_v32_4 obj_v168s xcelium.d xrun.history xrun.log *.vcd synth_out synth_out_nangate45 formal_out
+	rm -rf build obj_dir obj_v32_4 obj_v168s obj_vec xcelium.d xrun.history xrun.log *.vcd synth_out synth_out_nangate45 formal_out
