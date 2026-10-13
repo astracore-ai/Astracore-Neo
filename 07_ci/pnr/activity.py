@@ -109,7 +109,9 @@ def main():
                 timescale_ps = int(m.group(1)) * {"s": 1e12, "ms": 1e9, "us": 1e6, "ns": 1e3, "ps": 1.0, "fs": 1e-3}[m.group(2)]
             i = j + 1
         elif t == "$scope":
-            scope.append(toks[i + 2])
+            # Verilator under cocotb writes the top scope with an empty name (`$scope module  $end`): it is TOP here,
+            # the name Verilator gives it elsewhere (the scopes activity.sh passes start with it)
+            scope.append("TOP" if toks[i + 2] == "$end" else toks[i + 2])
             i = toks.index("$end", i) + 1
         elif t == "$upscope":
             scope.pop()
@@ -156,7 +158,6 @@ def main():
     e_acc, e_t = 0, 0              # window time accumulated up to e_t (the last enable change)
     now = 0
     clk_rises = 0
-    clk_first = clk_last = None
     util_t = 0
     util_rise = None
     first_window = last_window = None
@@ -167,7 +168,7 @@ def main():
         return e_acc + (t - e_t if enabled else 0)
 
     def apply(vid, newv):
-        nonlocal enabled, e_acc, e_t, clk_rises, clk_first, clk_last, util_t, util_rise, first_window, last_window
+        nonlocal enabled, e_acc, e_t, clk_rises, util_t, util_rise, first_window, last_window
         v = vget(vid)
         if v is None:
             return
@@ -198,8 +199,6 @@ def main():
         w = window_time(now)
         if role == "clock" and enabled and (newv & 1) and not (old & 1):
             clk_rises += 1
-            clk_first = now if clk_first is None else clk_first
-            clk_last = now
         if role == "util":
             if newv & 1:
                 util_rise = w
@@ -254,7 +253,9 @@ def main():
             x ^= b
     if end_w <= 0 or clk_rises == 0:
         sys.exit(f"activity.py: empty window (window time {end_w}, {clk_rises} clock rises)")
-    period_ps = ((clk_last - clk_first) / max(1, clk_rises - 1)) * timescale_ps if clk_rises > 1 else None
+    # the window's time over its clock rises (the window can be several intervals: the first to the last rise would
+    # count the gaps between them)
+    period_ps = end_w * timescale_ps / clk_rises
     meta = dict(source=args.source, vcd=os.path.basename(args.vcd), enable=args.enable, clock=args.clock,
                 window_cycles=clk_rises, window_ps=end_w * timescale_ps, clock_ps=period_ps,
                 window_first_ps=(first_window or 0) * timescale_ps, window_last_ps=(last_window or now) * timescale_ps,
