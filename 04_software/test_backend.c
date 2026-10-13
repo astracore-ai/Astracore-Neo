@@ -8,6 +8,7 @@ int main(void) {
     neo_tile_t owner = {0, 0};
     neo_tile_t free[3] = {{1, 0}, {0, 1}, {1, 1}};
     neo_tile_prog_t out[4];
+    neo_group_t g0 = g;                  /* the first case, kept for the command queue's image below */
     int n = neo_compile_group(&g, owner, free, 3, 3, out);
     printf("tiles %d\n", n);
     for (int i = 0; i < n; i++) {
@@ -26,6 +27,17 @@ int main(void) {
         for (int j = 0; j < NEO_NDESC; j++) printf(" %u", out[i].cfg[j]);
         printf("\nprog");
         for (int j = 0; j < out[i].nprog; j++) printf(" %016llx", (unsigned long long)out[i].prog[j]);
+        printf("\n");
+    }
+    /* the command queue's image of the first case (drop 0.43): its three tile programs, one extra entry, the start */
+    {
+        neo_tile_prog_t c1[4];
+        int n1 = neo_compile_group(&g0, owner, free, 3, 3, c1);
+        static uint32_t img[2 * 256];
+        uint32_t extra[2] = { NEO_CQ_ENT(1, 0, NEO_REG_RQ_RELU), 1u };
+        int ne = neo_cq_image(c1, n1, 2, extra, 1, img, 256);
+        printf("cqimage %d", ne);
+        for (int j = 0; j < 2 * ne; j++) printf(" %08x", img[j]);
         printf("\n");
     }
     /* third case (drop 0.42): a 2:4 sparse layer on the sparse-capable core (64 input channels = two 32-channel tiles at

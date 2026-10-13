@@ -2,7 +2,7 @@
 """check_c_backend.py -- the C host driver must emit exactly the descriptors and programs of the Python backend."""
 import os, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.join(HERE, "..", "compiler"))
-from neo_backend import compile_layer
+from neo_backend import compile_layer, cq_image
 ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_ct0",
          "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1", "cfg_flags"]   # cfg_flags: drop 0.42
 out = subprocess.run([os.path.join(HERE, "..", "build", "test_backend")], capture_output=True, text=True).stdout.splitlines()
@@ -10,7 +10,14 @@ cases = [compile_layer("c1", 6, 6, 40, 7, 3, 1, 1, 16, 8, 2, 2, (1, 1), 0, (1, 1
          compile_layer("rows3_5", 6, 6, 40, 7, 3, 1, 1, 16, 8, 2, 2, (1, 1), 0, (1, 1), 512, owner=(1, 0), shares=1, oy0=3, oy_n=3),
          compile_layer("sparse", 6, 6, 64, 7, 3, 1, 1, 16, 8, 2, 2, (1, 1), 0, (1, 1), 512, owner=(0, 0), shares=2, nchk=4, sparse=True)]
 i, fails, checked = 0, 0, 0
-for lp in cases:
+for ci, lp in enumerate(cases):
+    if ci == 2:                      # drop 0.43: the command queue's image of the first case, after the second case
+        assert out[i].startswith("cqimage "); f = out[i].split(); i += 1
+        words = [int(v, 16) for v in f[2:]]
+        exp = [w for e in cq_image(cases[0].tiles, 2, extra=[((1 << 14) | 0x32, 1)]) for w in e]
+        checked += 1; ok = int(f[1]) == len(exp) // 2 and words == exp; fails += not ok
+        if not ok:
+            print("MISMATCH cq_image", int(f[1]), len(exp) // 2)
     assert out[i].startswith("tiles "); n = int(out[i].split()[1]); i += 1
     fails += n != len(lp.tiles)
     for tp in lp.tiles:
@@ -21,5 +28,5 @@ for lp in cases:
         checked += 1; fails += not ok
         if not ok:
             print("MISMATCH", tp.tile, tp.role, cfg == exp_cfg, prog == tp.program, cfg_m == tp.descriptor["cfg_m"])
-print(f"C host driver vs Python backend: {checked} tile programs compared (descriptors, cfg_m, every program word) -> {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
+print(f"C host driver vs Python backend: {checked} tile programs and command-queue images compared (descriptors, cfg_m, every program word, every image word) -> {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
 raise SystemExit(1 if fails else 0)

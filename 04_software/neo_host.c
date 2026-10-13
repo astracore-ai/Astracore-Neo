@@ -134,6 +134,37 @@ void neo_load_and_start(const neo_tile_prog_t *tp, neo_wr_fn wr, void *ctx) {
     wr(ctx, tp->tile, NEO_REG_CTRL, 1u);
 }
 
+int neo_telem_read(neo_tile_t tile, neo_wr_fn wr, neo_rd_fn rd, void *ctx, int clear, neo_telem_t *t) {
+    if (((rd(ctx, tile, NEO_REG_TEL_CTRL) >> 8) & 0xFFu) != NEO_TEL_NCNT) return -1;
+    wr(ctx, tile, NEO_REG_TEL_CTRL, clear ? 3u : 1u);
+    for (int k = 0; k < NEO_TEL_NCNT; k++) t->c[k] = rd(ctx, tile, (uint32_t)NEO_REG_TEL(k));
+    return NEO_TEL_NCNT;
+}
+
+uint32_t neo_telem_util_permille(const neo_telem_t *t) {
+    if (t->c[NEO_TEL_CYCLES] == 0u) return 0u;
+    return (uint32_t)(((uint64_t)t->c[NEO_TEL_ARRAY_VALID] * 1000u) / t->c[NEO_TEL_CYCLES]);
+}
+
+int neo_cq_image(const neo_tile_prog_t *tp, int ntp, int nx, const uint32_t *extra, int nextra, uint32_t *img, int max_entries) {
+    int n = 0;
+#define NEO_PUT(e0, v) do { if (n >= max_entries) return -1; img[2 * n] = (e0); img[2 * n + 1] = (v); n++; } while (0)
+    for (int i = 0; i < ntp; i++) {
+        uint32_t t = (uint32_t)(tp[i].tile.y * nx + tp[i].tile.x);
+        for (int j = 0; j < NEO_NDESC; j++) NEO_PUT(NEO_CQ_ENT(1, t, NEO_REG_CFG_BASE + j), tp[i].cfg[j]);
+        NEO_PUT(NEO_CQ_ENT(1, t, NEO_REG_CFG_M), tp[i].cfg_m);
+        for (int j = 0; j < tp[i].nprog; j++) {
+            NEO_PUT(NEO_CQ_ENT(1, t, NEO_REG_PROG_ADDR), (uint32_t)j);
+            NEO_PUT(NEO_CQ_ENT(1, t, NEO_REG_PROG_LO), (uint32_t)(tp[i].prog[j] & 0xFFFFFFFFu));
+            NEO_PUT(NEO_CQ_ENT(1, t, NEO_REG_PROG_HI), (uint32_t)(tp[i].prog[j] >> 32));
+        }
+    }
+    for (int i = 0; i < nextra; i++) NEO_PUT(extra[2 * i], extra[2 * i + 1]);
+    NEO_PUT(NEO_CQ_ENT(0, 0, NEO_REG_CTRL), 1u);
+#undef NEO_PUT
+    return n;
+}
+
 uint32_t neo_wait_done(neo_tile_t tile, neo_rd_fn rd, void *ctx, int max_polls) {
     uint32_t st = 0;
     for (int i = 0; i < max_polls; i++) {
