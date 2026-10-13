@@ -1,0 +1,572 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/3_place.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/3_place.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+[INFO CTS-0050] Root buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0051] Sink buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0052] The following clock buffers will be used for CTS:
+                    BUFx24_ASAP7_75t_R
+[INFO CTS-0049] Characterization buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0007] Net "clk" found for clock "clk".
+[INFO CTS-0011]  Clock net "clk" for macros has 16 sinks.
+[INFO CTS-0011]  Clock net "clk_regs" for registers has 6901 sinks.
+[WARNING CTS-0041] Net "clonenet_1_u_rq\/gclk" has 1 sinks. Skipping...
+[INFO CTS-0010]  Clock net "u_rq_dup/gclk" has 1675 sinks.
+[INFO CTS-0010]  Clock net "u_rq/gclk" has 1691 sinks.
+[INFO CTS-0011]  Clock net "clk_dp" for macros has 2 sinks.
+[INFO CTS-0011]  Clock net "clk_dp_regs" for registers has 32408 sinks.
+[INFO CTS-0008] TritonCTS found 6 clock nets.
+[INFO CTS-0097] Characterization used 1 buffer(s) types.
+[INFO CTS-0201] 9 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk.
+[INFO CTS-0028]  Total number of sinks: 16.
+[INFO CTS-0029]  Macro  sinks will be clustered in groups of up to 4 and with maximum cluster diameter of 168.0 um.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 4 and clustering diameter of 168.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 7.
+[INFO CTS-0024]  Normalized sink region: [(29.4454, 12.2933), (243.153, 248.506)].
+[INFO CTS-0025]     Width:  213.7072.
+[INFO CTS-0026]     Height: 236.2126.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 4
+    Sub-region size: 213.7072 X 118.1063
+[INFO CTS-0034]     Segment length (rounded): 60.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 2
+    Sub-region size: 106.8536 X 118.1063
+[INFO CTS-0034]     Segment length (rounded): 54.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 1
+    Sub-region size: 106.8536 X 59.0531
+[INFO CTS-0034]     Segment length (rounded): 30.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 7.
+[INFO CTS-0201] 9 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_regs.
+[INFO CTS-0028]  Total number of sinks: 6901.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 89.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 419.
+[INFO CTS-0024]  Normalized sink region: [(23.6904, 1.83895), (243.153, 247.914)].
+[INFO CTS-0025]     Width:  219.4622.
+[INFO CTS-0026]     Height: 246.0753.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 210
+    Sub-region size: 219.4622 X 123.0377
+[INFO CTS-0034]     Segment length (rounded): 62.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 105
+    Sub-region size: 109.7311 X 123.0377
+[INFO CTS-0034]     Segment length (rounded): 54.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 53
+    Sub-region size: 109.7311 X 61.5188
+[INFO CTS-0034]     Segment length (rounded): 30.
+ Level 4
+    Direction: Horizontal
+    Sinks per sub-region: 27
+    Sub-region size: 54.8656 X 61.5188
+[INFO CTS-0034]     Segment length (rounded): 28.
+ Level 5
+    Direction: Vertical
+    Sinks per sub-region: 14
+    Sub-region size: 54.8656 X 30.7594
+[INFO CTS-0034]     Segment length (rounded): 16.
+ Level 6
+    Direction: Horizontal
+    Sinks per sub-region: 7
+    Sub-region size: 27.4328 X 30.7594
+[INFO CTS-0034]     Segment length (rounded): 14.
+ Level 7
+    Direction: Vertical
+    Sinks per sub-region: 4
+    Sub-region size: 27.4328 X 15.3797
+[INFO CTS-0034]     Segment length (rounded): 8.
+ Level 8
+    Direction: Horizontal
+    Sinks per sub-region: 2
+    Sub-region size: 13.7164 X 15.3797
+[INFO CTS-0034]     Segment length (rounded): 6.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 419.
+[INFO CTS-0201] 9 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net u_rq_dup\/gclk.
+[INFO CTS-0028]  Total number of sinks: 1675.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 41.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 101.
+[INFO CTS-0024]  Normalized sink region: [(135.027, 1.79511), (248.532, 87.6501)].
+[INFO CTS-0025]     Width:  113.5047.
+[INFO CTS-0026]     Height: 85.8550.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 51
+    Sub-region size: 56.7523 X 85.8550
+[INFO CTS-0034]     Segment length (rounded): 28.
+ Level 2
+    Direction: Vertical
+    Sinks per sub-region: 26
+    Sub-region size: 56.7523 X 42.9275
+[INFO CTS-0034]     Segment length (rounded): 22.
+ Level 3
+    Direction: Horizontal
+    Sinks per sub-region: 13
+    Sub-region size: 28.3762 X 42.9275
+[INFO CTS-0034]     Segment length (rounded): 14.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 101.
+[INFO CTS-0201] 9 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net u_rq\/gclk.
+[INFO CTS-0028]  Total number of sinks: 1691.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 42.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 109.
+[INFO CTS-0024]  Normalized sink region: [(120.815, 2.36878), (249.618, 162.86)].
+[INFO CTS-0025]     Width:  128.8036.
+[INFO CTS-0026]     Height: 160.4908.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 55
+    Sub-region size: 128.8036 X 80.2454
+[INFO CTS-0034]     Segment length (rounded): 40.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 28
+    Sub-region size: 64.4018 X 80.2454
+[INFO CTS-0034]     Segment length (rounded): 32.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 14
+    Sub-region size: 64.4018 X 40.1227
+[INFO CTS-0034]     Segment length (rounded): 20.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 109.
+[INFO CTS-0201] 9 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_dp.
+[INFO CTS-0028]  Total number of sinks: 2.
+[INFO CTS-0029]  Macro  sinks will be clustered in groups of up to 4 and with maximum cluster diameter of 168.0 um.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0023]  Original sink region: [(270972, 263340), (289276, 296268)].
+[INFO CTS-0024]  Normalized sink region: [(200.72, 195.067), (214.279, 219.458)].
+[INFO CTS-0025]     Width:  13.5585.
+[INFO CTS-0026]     Height: 24.3911.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 1
+    Sub-region size: 13.5585 X 12.1956
+[INFO CTS-0034]     Segment length (rounded): 6.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 2.
+[INFO CTS-0201] 9 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_dp_regs.
+[INFO CTS-0028]  Total number of sinks: 32408.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 83.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 1784.
+[INFO CTS-0024]  Normalized sink region: [(1.65489, 12.6932), (247.331, 249.919)].
+[INFO CTS-0025]     Width:  245.6765.
+[INFO CTS-0026]     Height: 237.2255.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 892
+    Sub-region size: 122.8383 X 237.2255
+[INFO CTS-0034]     Segment length (rounded): 62.
+ Level 2
+    Direction: Vertical
+    Sinks per sub-region: 446
+    Sub-region size: 122.8383 X 118.6127
+[INFO CTS-0034]     Segment length (rounded): 60.
+ Level 3
+    Direction: Horizontal
+    Sinks per sub-region: 223
+    Sub-region size: 61.4191 X 118.6127
+[INFO CTS-0034]     Segment length (rounded): 30.
+ Level 4
+    Direction: Vertical
+    Sinks per sub-region: 112
+    Sub-region size: 61.4191 X 59.3064
+[INFO CTS-0034]     Segment length (rounded): 30.
+ Level 5
+    Direction: Horizontal
+    Sinks per sub-region: 56
+    Sub-region size: 30.7096 X 59.3064
+[INFO CTS-0034]     Segment length (rounded): 16.
+ Level 6
+    Direction: Vertical
+    Sinks per sub-region: 28
+    Sub-region size: 30.7096 X 29.6532
+[INFO CTS-0034]     Segment length (rounded): 14.
+ Level 7
+    Direction: Horizontal
+    Sinks per sub-region: 14
+    Sub-region size: 15.3548 X 29.6532
+[INFO CTS-0034]     Segment length (rounded): 8.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 1784.
+[INFO CTS-0018]     Created 23 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 6.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 6.
+[INFO CTS-0015]     Created 23 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:8, 2:4, 3:1, 4:1..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0018]     Created 858 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 10.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 10.
+[INFO CTS-0015]     Created 858 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:108, 2:114, 3:21, 4:9, 5:7, 6:3, 7:4, 8:5, 9:3, 10:3, 11:14, 12:19, 13:25, 14:29, 15:35, 16:26, 17:49, 18:48, 19:34, 20:46, 21:27, 22:19, 23:8, 24:5, 25:3, 26:1..
+[INFO CTS-0017]     Max level of the clock tree: 8.
+[INFO CTS-0018]     Created 112 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 4.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 4.
+[INFO CTS-0015]     Created 112 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 3:1, 6:1, 7:2, 8:1, 9:4, 10:3, 11:6, 12:3, 13:8, 14:9, 15:5, 16:6, 17:11, 18:10, 19:7, 20:17, 21:7, 22:3, 23:1, 24:1, 25:2, 26:1..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0018]     Created 124 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 5.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 5.
+[INFO CTS-0015]     Created 124 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 6:3, 7:2, 8:3, 9:3, 10:3, 11:7, 12:6, 13:12, 14:11, 15:13, 16:7, 17:9, 18:11, 19:4, 20:6, 21:10, 22:2, 23:2, 24:1, 25:2..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0018]     Created 3 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 2.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 2.
+[INFO CTS-0015]     Created 3 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:2..
+[INFO CTS-0017]     Max level of the clock tree: 1.
+[INFO CTS-0018]     Created 2013 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 10.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 10.
+[INFO CTS-0015]     Created 2013 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 4:1, 5:1, 6:9, 7:10, 8:13, 9:15, 10:25, 11:37, 12:65, 13:68, 14:82, 15:110, 16:125, 17:205, 18:221, 19:225, 20:221, 21:210, 22:135, 23:81, 24:32, 25:16, 26:4, 28:1..
+[INFO CTS-0017]     Max level of the clock tree: 7.
+[INFO CTS-0098] Clock net "clk"
+[INFO CTS-0099]  Sinks 16
+[INFO CTS-0100]  Leaf buffers 7
+[INFO CTS-0101]  Average sink wire length 668.51 um
+[INFO CTS-0102]  Path depth 6 - 6
+[INFO CTS-0207]  Dummy loads inserted 1
+[INFO CTS-0098] Clock net "clk_regs"
+[INFO CTS-0099]  Sinks 7119
+[INFO CTS-0100]  Leaf buffers 419
+[INFO CTS-0101]  Average sink wire length 285.31 um
+[INFO CTS-0102]  Path depth 8 - 10
+[INFO CTS-0207]  Dummy loads inserted 218
+[INFO CTS-0098] Clock net "u_rq_dup\/gclk"
+[INFO CTS-0099]  Sinks 1774
+[INFO CTS-0100]  Leaf buffers 101
+[INFO CTS-0101]  Average sink wire length 99.72 um
+[INFO CTS-0102]  Path depth 3 - 4
+[INFO CTS-0207]  Dummy loads inserted 99
+[INFO CTS-0098] Clock net "u_rq\/gclk"
+[INFO CTS-0099]  Sinks 1795
+[INFO CTS-0100]  Leaf buffers 109
+[INFO CTS-0101]  Average sink wire length 151.30 um
+[INFO CTS-0102]  Path depth 4 - 5
+[INFO CTS-0207]  Dummy loads inserted 104
+[INFO CTS-0098] Clock net "clk_dp"
+[INFO CTS-0099]  Sinks 2
+[INFO CTS-0100]  Leaf buffers 0
+[INFO CTS-0101]  Average sink wire length 241.04 um
+[INFO CTS-0102]  Path depth 2 - 2
+[INFO CTS-0207]  Dummy loads inserted 0
+[INFO CTS-0098] Clock net "clk_dp_regs"
+[INFO CTS-0099]  Sinks 34066
+[INFO CTS-0100]  Leaf buffers 1784
+[INFO CTS-0101]  Average sink wire length 299.16 um
+[INFO CTS-0102]  Path depth 9 - 10
+[INFO CTS-0207]  Dummy loads inserted 1658
+[INFO RSZ-0047] Found 4 long wires.
+[INFO RSZ-0048] Inserted 10 buffers in 4 nets.
+[INFO CTS-0033] Balancing latency for clock clk
+[INFO CTS-0036]  inserted 65 delay buffers
+[INFO CTS-0037] Total number of delay buffers: 65
+[INFO CTS-0500] Runtime: 36.28s
+Took 36 seconds: clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+estimate_parasitics -placement
+Took 10 seconds: estimate_parasitics -placement
+detailed_placement
+[INFO DPL-0006] Core area: 113633.02 um^2
+[INFO DPL-0007] Movable instances area: 57007.13 um^2
+[INFO DPL-0008] Fixed instances area within core: 12567.06 um^2
+[INFO DPL-0009] Utilization: 61.2%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (6 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 497742 cells
+[INFO DPL-0393]   height 78 row(s): 1 cells
+[INFO DPL-0393]   height 99 row(s): 1 cells
+[INFO DPL-0393]   height 109 row(s): 1 cells
+[INFO DPL-0393]   height 156 row(s): 1 cells
+[INFO DPL-0393]   height 312 row(s): 10 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |      45356 |      6766 |     38581
+        1 |      11531 |      1331 |     10191
+        2 |       3812 |       302 |      3510
+        3 |       1596 |       134 |      1462
+        4 |        770 |        62 |       708
+        5 |        430 |        43 |       387
+        6 |        308 |        24 |       284
+        7 |        295 |        23 |       272
+        8 |         76 |         6 |        70
+        9 |          6 |         2 |         4
+       10 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 10.
+[INFO DPL-0500] Runtime: 11.79s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves              224248
+total displacement      69378.6 u
+average displacement        0.1 u
+max displacement            7.7 u
+original HPWL         1846758.7 u
+legalized HPWL        1886351.9 u
+delta HPWL                    2 %
+
+Took 12 seconds: detailed_placement
+estimate_parasitics -placement
+Took 9 seconds: estimate_parasitics -placement
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove BufferMove CloneMove SplitLoadMove 
+[INFO RSZ-0094] Found 5616 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 5616 out of 5616 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -1276.620 |  -981972.9 |   5616 | cg_en[1]
+      10* |       1 |       5 |        4 |      0 |     2 |    +0.0% | -1004.837 |  -980869.0 |   5616 | cg_en[0]
+      20* |       1 |      12 |        7 |      0 |     3 |    +0.0% | -933.266 |  -980718.1 |   5616 | cg_en[0]
+      30* |       1 |      16 |       10 |      0 |     6 |    +0.0% | -909.854 |  -980643.9 |   5616 | cg_en[0]
+      30* |       1 |      16 |       10 |      0 |     6 |    +0.0% | -909.854 |  -980643.9 |   5616 | cg_en[0]
+      31* |       1 |      16 |       10 |      0 |     6 |    +0.0% | -909.854 |  -980643.9 |   5616 | cg_en[0]
+      40* |       3 |      20 |       12 |      0 |     7 |    +0.0% | -909.854 |  -980310.4 |   5616 | cg_en[0]
+      50* |       3 |      29 |       12 |      0 |     8 |    +0.0% | -910.711 |  -971301.9 |   5616 | cg_en[0]
+      60* |       3 |      36 |       13 |      0 |    10 |    +0.0% | -910.858 |  -964050.4 |   5616 | cg_en[0]
+      70* |       4 |      40 |       18 |      0 |    10 |    +0.0% | -910.858 |  -957882.3 |   5616 | cg_en[0]
+      72* |       3 |      23 |       12 |      0 |     7 |    +0.0% | -909.854 |  -971302.8 |   5616 | cg_en[0]
+      80* |       6 |      24 |       14 |      0 |     9 |    +0.0% | -909.854 |  -971414.2 |   5616 | cg_en[0]
+      90* |      13 |      24 |       20 |      0 |     9 |    +0.0% | -916.536 |  -972058.8 |   5616 | done
+     100* |      19 |      24 |       28 |      0 |     9 |    +0.0% | -909.854 |  -971357.8 |   5616 | cg_en[0]
+     110* |      26 |      24 |       34 |      0 |     9 |    +0.0% | -909.854 |  -971414.2 |   5616 | cg_en[0]
+     120* |      33 |      24 |       40 |      0 |     9 |    +0.0% | -916.536 |  -972058.8 |   5616 | done
+     126* |       4 |      24 |       12 |      0 |     8 |    +0.0% | -909.854 |  -971337.1 |   5616 | cg_en[0]
+     130* |       4 |      27 |       12 |      0 |     8 |    +0.0% | -910.054 |  -971314.0 |   5616 | cg_en[0]
+     134* |       4 |      26 |       12 |      0 |     8 |    +0.0% | -909.854 |  -971321.9 |   5616 | cg_en[0]
+     140* |       4 |      31 |       12 |      0 |     8 |    +0.0% | -909.854 |  -971271.1 |   5616 | cg_en[0]
+     150* |       7 |      33 |       17 |      0 |     8 |    +0.0% | -909.854 |  -971328.2 |   5616 | cg_en[0]
+     160* |      12 |      33 |       22 |      0 |     8 |    +0.0% | -909.854 |  -971328.2 |   5616 | cg_en[0]
+     170* |      17 |      33 |       27 |      0 |     8 |    +0.0% | -909.854 |  -971328.2 |   5616 | cg_en[0]
+     180* |      22 |      33 |       32 |      0 |     8 |    +0.0% | -909.854 |  -971328.2 |   5616 | cg_en[0]
+     190* |      27 |      33 |       37 |      0 |     8 |    +0.0% | -909.854 |  -971328.2 |   5616 | cg_en[0]
+     195* |       5 |      33 |       14 |      0 |     8 |    +0.0% | -909.854 |  -971135.6 |   5616 | cg_en[0]
+     200* |       5 |      36 |       15 |      0 |     8 |    +0.0% | -909.854 |  -971065.2 |   5616 | cg_en[0]
+     207* |       6 |      39 |       18 |      0 |     8 |    +0.0% | -909.854 |  -971155.6 |   5616 | cg_en[0]
+     210* |       6 |      41 |       18 |      0 |     8 |    +0.0% | -909.854 |  -971157.9 |   5616 | cg_en[0]
+     219* |       7 |      45 |       20 |      0 |     8 |    +0.0% | -909.854 |  -971473.9 |   5616 | cg_en[0]
+     220* |       7 |      45 |       20 |      0 |     8 |    +0.0% | -909.854 |  -971473.9 |   5616 | cg_en[0]
+     229* |       9 |      50 |       22 |      0 |     8 |    +0.0% | -909.854 |  -971418.3 |   5616 | cg_en[0]
+     230* |       9 |      50 |       22 |      0 |     8 |    +0.0% | -909.854 |  -971418.3 |   5616 | cg_en[0]
+     240* |      10 |      59 |       22 |      0 |     8 |    +0.0% | -909.854 |  -971283.8 |   5616 | cg_en[0]
+     245* |      10 |      60 |       27 |      0 |     8 |    +0.0% | -909.854 |  -971265.8 |   5616 | cg_en[0]
+     250* |      11 |      62 |       28 |      0 |     8 |    +0.0% | -909.854 |  -971221.0 |   5616 | cg_en[0]
+     257* |      11 |      65 |       28 |      0 |     8 |    +0.0% | -909.854 |  -971213.9 |   5616 | cg_en[0]
+     260* |      11 |      67 |       28 |      0 |     8 |    +0.0% | -909.854 |  -971183.2 |   5616 | cg_en[0]
+     270* |      11 |      75 |       30 |      0 |     8 |    +0.0% | -909.854 |  -971537.4 |   5616 | cg_en[0]
+     280* |      16 |      75 |       35 |      0 |     8 |    +0.0% | -909.854 |  -971537.4 |   5616 | cg_en[0]
+     290* |      21 |      75 |       40 |      0 |     8 |    +0.0% | -909.854 |  -971537.4 |   5616 | cg_en[0]
+     300* |      26 |      75 |       45 |      0 |     8 |    +0.0% | -909.854 |  -971537.4 |   5616 | cg_en[0]
+     310* |      31 |      75 |       50 |      0 |     8 |    +0.0% | -909.854 |  -971537.4 |   5616 | cg_en[0]
+     320* |      36 |      75 |       55 |      0 |     8 |    +0.0% | -909.854 |  -971537.4 |   5616 | cg_en[0]
+     320* |      11 |      75 |       30 |      0 |     8 |    +0.0% | -909.854 |  -971537.4 |   5616 | cg_en[0]
+     330* |      12 |      81 |       32 |      0 |     8 |    +0.0% | -909.854 |  -971485.1 |   5616 | cg_en[0]
+     332* |      12 |      82 |       33 |      0 |     8 |    +0.0% | -909.854 |  -971475.6 |   5616 | cg_en[0]
+     340* |      13 |      87 |       34 |      0 |     8 |    +0.0% | -909.854 |  -971257.6 |   5616 | cg_en[0]
+     350* |      18 |      87 |       39 |      0 |     8 |    +0.0% | -909.854 |  -971257.6 |   5616 | cg_en[0]
+     360* |      23 |      87 |       44 |      0 |     8 |    +0.0% | -909.854 |  -971257.6 |   5616 | cg_en[0]
+     370* |      28 |      87 |       49 |      0 |     8 |    +0.0% | -909.854 |  -971257.6 |   5616 | cg_en[0]
+     380* |      33 |      87 |       54 |      0 |     8 |    +0.0% | -909.854 |  -971257.6 |   5616 | cg_en[0]
+     390* |      38 |      87 |       59 |      0 |     8 |    +0.0% | -909.854 |  -971257.6 |   5616 | cg_en[0]
+     390* |      13 |      87 |       34 |      0 |     8 |    +0.0% | -909.854 |  -971257.6 |   5616 | cg_en[0]
+     400* |      15 |      92 |       36 |      0 |     8 |    +0.0% | -909.854 |  -971204.5 |   5616 | cg_en[0]
+     410* |      20 |      92 |       41 |      0 |     8 |    +0.0% | -909.854 |  -971204.5 |   5616 | cg_en[0]
+     420* |      25 |      92 |       46 |      0 |     8 |    +0.0% | -909.854 |  -971204.5 |   5616 | cg_en[0]
+     430* |      30 |      92 |       51 |      0 |     8 |    +0.0% | -909.854 |  -971204.5 |   5616 | cg_en[0]
+     440* |      35 |      92 |       56 |      0 |     8 |    +0.0% | -909.854 |  -971204.5 |   5616 | cg_en[0]
+     448* |      14 |      92 |       35 |      0 |     8 |    +0.0% | -909.854 |  -971204.5 |   5616 | cg_en[0]
+     450* |      14 |      93 |       35 |      0 |     8 |    +0.0% | -909.854 |  -971255.1 |   5616 | cg_en[0]
+     460* |      15 |      99 |       38 |      0 |     8 |    +0.0% | -909.854 |  -972652.3 |   5616 | cg_en[0]
+     463* |      15 |      99 |       37 |      0 |     8 |    +0.0% | -909.854 |  -971575.4 |   5616 | cg_en[0]
+     470* |      16 |     103 |       38 |      0 |     8 |    +0.0% | -909.854 |  -971516.6 |   5616 | cg_en[0]
+     479* |      16 |     103 |       38 |      0 |     8 |    +0.0% | -909.854 |  -971516.6 |   5616 | cg_en[0]
+     480* |      16 |     103 |       38 |      0 |     8 |    +0.0% | -909.854 |  -971516.6 |   5616 | cg_en[0]
+     490* |      17 |     110 |       40 |      0 |     8 |    +0.0% | -909.854 |  -971475.1 |   5616 | cg_en[0]
+     494* |      17 |     111 |       40 |      0 |     8 |    +0.0% | -909.854 |  -971473.2 |   5616 | cg_en[0]
+     500* |      18 |     114 |       41 |      0 |     8 |    +0.0% | -909.854 |  -971520.6 |   5616 | cg_en[0]
+     510* |      22 |     116 |       45 |      0 |     8 |    +0.0% | -909.854 |  -971471.8 |   5616 | cg_en[0]
+     520* |      27 |     116 |       50 |      0 |     8 |    +0.0% | -909.854 |  -971471.8 |   5616 | cg_en[0]
+     530* |      32 |     116 |       55 |      0 |     8 |    +0.0% | -909.854 |  -971471.8 |   5616 | cg_en[0]
+     540* |      37 |     116 |       60 |      0 |     8 |    +0.0% | -909.854 |  -971471.8 |   5616 | cg_en[0]
+     550* |      42 |     116 |       65 |      0 |     8 |    +0.0% | -909.854 |  -971471.8 |   5616 | cg_en[0]
+     553* |      18 |     116 |       42 |      0 |     8 |    +0.0% | -909.854 |  -971433.2 |   5616 | cg_en[0]
+     560* |      19 |     120 |       43 |      0 |     8 |    +0.0% | -909.854 |  -971389.4 |   5616 | cg_en[0]
+     570* |      24 |     120 |       49 |      0 |     8 |    +0.0% | -909.854 |  -971553.9 |   5616 | cg_en[0]
+     580* |      29 |     120 |       54 |      0 |     8 |    +0.0% | -909.854 |  -971553.9 |   5616 | cg_en[0]
+     590* |      34 |     120 |       59 |      0 |     8 |    +0.0% | -909.854 |  -971553.9 |   5616 | cg_en[0]
+     600* |      39 |     120 |       64 |      0 |     8 |    +0.0% | -909.854 |  -971553.9 |   5616 | cg_en[0]
+     610* |      44 |     120 |       69 |      0 |     8 |    +0.0% | -909.854 |  -971553.9 |   5616 | cg_en[0]
+     612* |      20 |     120 |       45 |      0 |     8 |    +0.0% | -909.854 |  -971553.9 |   5616 | cg_en[0]
+     620* |      21 |     124 |       47 |      0 |     8 |    +0.0% | -909.854 |  -971531.3 |   5616 | cg_en[0]
+     630* |      26 |     124 |       52 |      0 |     8 |    +0.0% | -909.854 |  -971531.3 |   5616 | cg_en[0]
+     640* |      31 |     124 |       57 |      0 |     8 |    +0.0% | -909.854 |  -971531.3 |   5616 | cg_en[0]
+     650* |      36 |     124 |       62 |      0 |     8 |    +0.0% | -909.854 |  -971531.3 |   5616 | cg_en[0]
+     660* |      41 |     124 |       67 |      0 |     8 |    +0.0% | -909.854 |  -971531.3 |   5616 | cg_en[0]
+     669* |      21 |     124 |       46 |      0 |     8 |    +0.0% | -909.854 |  -971517.0 |   5616 | cg_en[0]
+     670* |      21 |     124 |       46 |      0 |     8 |    +0.0% | -909.854 |  -971517.0 |   5616 | cg_en[0]
+     680* |      23 |     129 |       49 |      0 |     8 |    +0.0% | -909.854 |  -971475.8 |   5616 | cg_en[0]
+     690* |      28 |     129 |       54 |      0 |     8 |    +0.0% | -909.854 |  -971475.8 |   5616 | cg_en[0]
+     700* |      33 |     129 |       59 |      0 |     8 |    +0.0% | -909.854 |  -971475.8 |   5616 | cg_en[0]
+     710* |      38 |     129 |       64 |      0 |     8 |    +0.0% | -909.854 |  -971475.8 |   5616 | cg_en[0]
+     720* |      43 |     129 |       69 |      0 |     8 |    +0.0% | -909.854 |  -971475.8 |   5616 | cg_en[0]
+     728* |      22 |     129 |       48 |      0 |     8 |    +0.0% | -909.854 |  -971475.8 |   5616 | cg_en[0]
+     730* |      22 |     130 |       48 |      0 |     8 |    +0.0% | -909.854 |  -971477.0 |   5616 | cg_en[0]
+     740* |      24 |     135 |       52 |      0 |     8 |    +0.0% | -909.854 |  -971563.5 |   5616 | cg_en[0]
+     750* |      29 |     135 |       57 |      0 |     8 |    +0.0% | -909.854 |  -971563.5 |   5616 | cg_en[0]
+     760* |      34 |     135 |       62 |      0 |     8 |    +0.0% | -909.854 |  -971563.5 |   5616 | cg_en[0]
+     770* |      39 |     135 |       67 |      0 |     8 |    +0.0% | -909.854 |  -971563.5 |   5616 | cg_en[0]
+     780* |      44 |     135 |       72 |      0 |     8 |    +0.0% | -909.854 |  -971563.5 |   5616 | cg_en[0]
+     788* |      23 |     135 |       51 |      0 |     8 |    +0.0% | -909.854 |  -971563.5 |   5616 | cg_en[0]
+     790* |      23 |     136 |       51 |      0 |     8 |    +0.0% | -909.854 |  -971547.6 |   5616 | cg_en[0]
+     800* |      26 |     139 |       55 |      0 |     8 |    +0.0% | -909.854 |  -971527.2 |   5616 | cg_en[0]
+     810* |      31 |     139 |       60 |      0 |     8 |    +0.0% | -909.854 |  -971527.2 |   5616 | cg_en[0]
+     820* |      36 |     139 |       65 |      0 |     8 |    +0.0% | -909.854 |  -971527.2 |   5616 | cg_en[0]
+     830* |      41 |     139 |       70 |      0 |     8 |    +0.0% | -909.854 |  -971527.2 |   5616 | cg_en[0]
+     840* |      46 |     139 |       75 |      0 |     8 |    +0.0% | -909.854 |  -971527.2 |   5616 | cg_en[0]
+     845* |      24 |     139 |       52 |      0 |     8 |    +0.0% | -909.854 |  -971522.9 |   5616 | cg_en[0]
+     850* |      25 |     141 |       53 |      0 |     8 |    +0.0% | -909.854 |  -971604.1 |   5616 | cg_en[0]
+     860* |      29 |     143 |       57 |      0 |     8 |    +0.0% | -909.854 |  -971535.8 |   5616 | cg_en[0]
+     870* |      34 |     143 |       62 |      0 |     8 |    +0.0% | -909.854 |  -971535.8 |   5616 | cg_en[0]
+     880* |      39 |     143 |       67 |      0 |     8 |    +0.0% | -909.854 |  -971535.8 |   5616 | cg_en[0]
+     890* |      44 |     143 |       72 |      0 |     8 |    +0.0% | -909.854 |  -971535.8 |   5616 | cg_en[0]
+     900* |      49 |     143 |       77 |      0 |     8 |    +0.0% | -909.854 |  -971535.8 |   5616 | cg_en[0]
+     903* |      25 |     143 |       54 |      0 |     8 |    +0.0% | -909.854 |  -971498.2 |   5616 | cg_en[0]
+     910* |      26 |     147 |       55 |      0 |     8 |    +0.0% | -909.854 |  -971442.8 |   5616 | cg_en[0]
+     914* |      26 |     149 |       55 |      0 |     8 |    +0.0% | -909.854 |  -971440.8 |   5616 | cg_en[0]
+     920* |      27 |     152 |       56 |      0 |     8 |    +0.0% | -909.854 |  -971446.6 |   5616 | cg_en[0]
+     930* |      31 |     154 |       61 |      0 |     8 |    +0.0% | -909.854 |  -971632.3 |   5616 | cg_en[0]
+     940* |      36 |     154 |       66 |      0 |     8 |    +0.0% | -909.854 |  -971632.3 |   5616 | cg_en[0]
+     950* |      41 |     154 |       71 |      0 |     8 |    +0.0% | -909.854 |  -971632.3 |   5616 | cg_en[0]
+     960* |      46 |     154 |       76 |      0 |     8 |    +0.0% | -909.854 |  -971632.3 |   5616 | cg_en[0]
+     970* |      51 |     154 |       81 |      0 |     8 |    +0.0% | -909.854 |  -971632.3 |   5616 | cg_en[0]
+     973* |      27 |     154 |       58 |      0 |     8 |    +0.0% | -909.854 |  -971582.2 |   5616 | cg_en[0]
+     980* |      28 |     158 |       59 |      0 |     8 |    +0.0% | -909.854 |  -971540.4 |   5616 | cg_en[0]
+     990* |      33 |     158 |       65 |      0 |     8 |    +0.0% | -909.854 |  -971548.1 |   5616 | cg_en[0]
+    1000* |      38 |     158 |       70 |      0 |     8 |    +0.0% | -909.854 |  -971548.1 |   5616 | cg_en[0]
+    1010* |      43 |     158 |       75 |      0 |     8 |    +0.0% | -909.854 |  -971548.1 |   5616 | cg_en[0]
+    1020* |      48 |     158 |       80 |      0 |     8 |    +0.0% | -909.854 |  -971548.1 |   5616 | cg_en[0]
+    1030* |      53 |     158 |       85 |      0 |     8 |    +0.0% | -909.854 |  -971548.1 |   5616 | cg_en[0]
+    1032* |      29 |     158 |       61 |      0 |     8 |    +0.0% | -909.854 |  -971548.1 |   5616 | cg_en[0]
+    1040* |      31 |     163 |       61 |      0 |     8 |    +0.0% | -909.854 |  -972563.2 |   5616 | cg_en[0]
+    1050* |      37 |     164 |       68 |      0 |     8 |    +0.0% | -909.854 |  -973082.0 |   5616 | cg_en[0]
+    1060* |      43 |     164 |       76 |      0 |     8 |    +0.0% | -909.854 |  -972760.6 |   5616 | cg_en[0]
+    1070* |      50 |     164 |       82 |      0 |     8 |    +0.0% | -909.854 |  -973578.1 |   5616 | cg_en[0]
+    1080* |      57 |     164 |       88 |      0 |     8 |    +0.0% | -909.854 |  -973082.0 |   5616 | cg_en[0]
+    1090* |      63 |     164 |       96 |      0 |     8 |    +0.0% | -909.854 |  -972760.6 |   5616 | cg_en[0]
+    1092* |      31 |     164 |       64 |      0 |     8 |    +0.0% | -909.854 |  -972760.6 |   5616 | cg_en[0]
+    1100* |      32 |     168 |       66 |      0 |     8 |    +0.0% | -909.854 |  -972722.1 |   5616 | cg_en[0]
+    1100* |      32 |     168 |       65 |      0 |     8 |    +0.0% | -909.854 |  -972721.2 |   5616 | cg_en[0]
+    1110* |      34 |     172 |       68 |      0 |     8 |    +0.0% | -909.854 |  -972703.1 |   5616 | cg_en[0]
+    1120* |      39 |     172 |       73 |      0 |     8 |    +0.0% | -909.854 |  -972703.1 |   5616 | cg_en[0]
+    1130* |      44 |     172 |       78 |      0 |     8 |    +0.0% | -909.854 |  -972703.1 |   5616 | cg_en[0]
+    1140* |      49 |     172 |       83 |      0 |     8 |    +0.0% | -909.854 |  -972703.1 |   5616 | cg_en[0]
+    1150* |      54 |     172 |       88 |      0 |     8 |    +0.0% | -909.854 |  -972703.1 |   5616 | cg_en[0]
+    1156* |      33 |     171 |       66 |      0 |     8 |    +0.0% | -909.854 |  -972708.9 |   5616 | cg_en[0]
+    1160* |      34 |     173 |       66 |      0 |     8 |    +0.0% | -909.854 |  -972686.5 |   5616 | cg_en[0]
+    1170* |      37 |     175 |       71 |      0 |     8 |    +0.0% | -909.854 |  -972671.4 |   5616 | cg_en[0]
+    1180* |      42 |     175 |       76 |      0 |     8 |    +0.0% | -909.854 |  -972671.4 |   5616 | cg_en[0]
+    1190* |      47 |     175 |       81 |      0 |     8 |    +0.0% | -909.854 |  -972671.4 |   5616 | cg_en[0]
+    1200* |      52 |     175 |       86 |      0 |     8 |    +0.0% | -909.854 |  -972671.4 |   5616 | cg_en[0]
+    1200* |      34 |     175 |       67 |      0 |     8 |    +0.0% | -909.854 |  -972667.1 |   5616 | cg_en[0]
+    1200* |      34 |     175 |       67 |      0 |     8 |    +0.0% | -909.854 |  -972667.1 |   5616 | cg_en[0]
+    final |      34 |     175 |       67 |      0 |     8 |    +0.0% | -909.854 |  -972667.1 |   5615 | cg_en[0]
+------------------------------------------------------------------------------------------------------------------------------
+[INFO RSZ-0059] Removed 34 buffers.
+[INFO RSZ-0040] Inserted 67 buffers.
+[INFO RSZ-0051] Resized 175 instances: 175 up, 0 up match, 0 down, 0 VT
+[INFO RSZ-0043] Swapped pins on 8 instances.
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 69.16s
+[INFO RSZ-0046] Found 24 endpoints with hold violations.
+Iteration | Resized | Buffers | Cloned Gates |   Area   |   WNS   |   TNS   | Endpoint
+--------------------------------------------------------------------------------------
+        0 |       0 |       0 |            0 |    +0.0% |  -5.860 | -61.656 | u_vec/u_rs/u_macro/wdata[19]
+       10 |       0 |       5 |            0 |    +0.0% |  -3.059 | -18.050 | u_vec/u_rs/u_macro/wdata[14]
+       20 |       0 |      11 |            0 |    +0.0% |  -0.075 |  -0.116 | u_vec/u_rs/u_macro/wdata[31]
+    final |       0 |      17 |            0 |    +0.0% |   0.409 |   0.000 | u_vec/u_rs/u_macro/wdata[4]
+--------------------------------------------------------------------------------------
+[INFO RSZ-0032] Inserted 17 hold buffers.
+[INFO RSZ-0506] Runtime: 3.01s
+Took 72 seconds: repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+Elapsed time: 0:37.45[h:]min:sec. CPU time: user 40.99 sys 0.94 (111%). Peak memory: 1759580KB.
+child process exited abnormally
+    while executing
+"exec {*}$run_cmd --log $::env(LOG_DIR)/${step}_${kind}.log --  {*}$::env(KEPLER_FORMAL_EXE) --config $::env(OBJECTS_DIR)/${step}_${kind}_test.yml  2>@..."
+    (procedure "run_kepler_formal" line 9)
+    invoked from within
+"run_kepler_formal $step lec"
+    (procedure "run_lec_test" line 4)
+    invoked from within
+"run_lec_test 4_rsz 4_before_rsz_lec.v 4_after_rsz_lec.v"
+    invoked from within
+"if { !$::env(SKIP_CTS_REPAIR_TIMING) } {
+  set lec_enabled [lec_check_enabled]
+  if { $lec_enabled } {
+    write_lec_verilog 4_before_rsz_lec.v
+  }
+
+ ..."
+    (file "/OpenROAD-flow-scripts/flow/scripts/cts.tcl" line 61)
+Elapsed time: 3:07.07[h:]min:sec. CPU time: user 322.19 sys 11.97 (178%). Peak memory: 3889280KB.

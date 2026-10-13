@@ -1,0 +1,43 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_3_floorplan_tapcell.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+[WARNING PDN-1051] No instances found for grid (CORE_macro_grid_2).
+[INFO PDN-0001] Inserting grid: top
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_dp/u_feeder/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[0\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[1\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[2\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[3\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[4\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[5\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[6\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[7\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_luts/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_wbuf/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_rbuf/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_dp/u_acc/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_rs/u_macro
+[INFO PDN-0500] Runtime: 2.12s
+Design area 64741 um^2 57% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_4_floorplan_pdn.odb
+Elapsed time: 0:15.41[h:]min:sec. CPU time: user 15.12 sys 0.28 (99%). Peak memory: 820712KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_4_floorplan_pdn      .odb         15       15     1.00      801 515d3f5202
