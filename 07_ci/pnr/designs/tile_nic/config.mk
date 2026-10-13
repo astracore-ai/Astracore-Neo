@@ -14,3 +14,8 @@ export SKIP_LAST_GASP = 1
 # (GRT-0704) is a lower adjustment, so more of each layer's tracks are offered. Run 174 at 0.10: no overflow (14.3 %
 # usage), 0 DRC at detailed routing's 19th iteration
 export ROUTING_LAYER_ADJUSTMENT = 0.10
+
+# run 188 (drop 0.43, NCHK = 4): the macro placer put the partial-sum rows' macro at the left edge mirrored (MX), its
+# 2,093-pin edge 11 um from the die boundary, and global routing overflowed on M6 (2,025 in all); macro_place.tcl stacks
+# both macros against the left edge with their pin edges inward, as run 174's placement had them
+export MACRO_PLACEMENT_TCL = $(dir $(DESIGN_CONFIG))macro_place.tcl
