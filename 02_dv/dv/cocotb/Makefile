@@ -22,9 +22,9 @@
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
-CORE_SRCS := $(addprefix $(RTL)/, delay_line.sv mac_pe.sv skew_in.sv deskew_out.sv systolic_array.sv abft_checker.sv neo_mem.sv neo_mac_core.sv \
+CORE_SRCS := $(addprefix $(RTL)/, neo_icg.sv delay_line.sv mac_pe.sv skew_in.sv deskew_out.sv systolic_array.sv abft_checker.sv neo_mem.sv neo_mac_core.sv \
   act_feeder.sv acc_bank.sv neo_mac_core_v02.sv core_seq.sv ecc39.sv wbuf_mem.sv requant.sv neo_core.sv)
-TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv crc16_beat.sv tile_nic.sv tile_dma.sv \
+TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, tile_telem.sv neo_iso.sv noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv crc16_beat.sv tile_nic.sv tile_dma.sv \
   prog_mem.sv host_if.sv esm.sv link_pack.sv neo_tile.sv tile_mesh.sv)
 TOP_SRCS := $(TILE_SRCS) $(addprefix $(RTL)/, cdc_bits.sv cdc_fifo.sv cdc_sync.sv noc_axi_bridge.sv top_ctrl.sv mesh_ctrl.sv neo_top.sv)
 export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH)
@@ -133,7 +133,7 @@ else ifeq ($(TARGET),top)
   MODULE ?= test_neo_top
   EXTRA_ARGS += -GNX=$(NX) -GNY=$(NY) -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) \
     -GWBUF_DEPTH=$(WBUF_DEPTH) -GBANK_DEPTH=$(BANK_DEPTH) -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS) -GWPF=$(WPF) \
-    -GAXI_DW=$(AXI_DW) -GN_MEM_BRIDGES=$(N_MEM_BRIDGES) -GN_HOST_BRIDGES=$(N_HOST_BRIDGES) -GHOST_TIMEOUT=$(HOST_TIMEOUT)
+    -GAXI_DW=$(AXI_DW) -GN_MEM_BRIDGES=$(N_MEM_BRIDGES) -GN_HOST_BRIDGES=$(N_HOST_BRIDGES) -GHOST_TIMEOUT=$(HOST_TIMEOUT) -GNCHK=$(NCHK)
 else
   VERILOG_SOURCES = $(CORE_SRCS)
   TOPLEVEL = neo_core

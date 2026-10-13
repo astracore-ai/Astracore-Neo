@@ -11,6 +11,8 @@
 //   mode), the shadow chain takes {index, weight} per column and NCHK check weights per row, cfg_sparse (the
 //   descriptor's flag) selects the 2:4 mode for the feeder and the core's row buses. NCHK = 1 is the datapath of
 //   drop 0.41.
+//   Drop 0.43: arr_valid shows the feeder's valid (a row enters the array) for the tile's telemetry; neo_core runs this
+//   whole datapath on its gated clock (the port clk).
 module neo_mac_core_v02 #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
@@ -85,7 +87,8 @@ module neo_mac_core_v02 #(
   output logic                  acc_ctrl_err,         // drop 0.43: the accumulator's stage-0 control against its copies (neo_core's R10 list)
   // DV only
   input  logic                  fault_inject,
-  input  logic                  ctrl_fault_inject
+  input  logic                  ctrl_fault_inject,
+  output logic                  arr_valid              // drop 0.43: a row enters the array this cycle (the telemetry's utilization)
 );
   localparam int LATENCY = PE_LAT * ROWS + COLS;
 
@@ -94,6 +97,7 @@ module neo_mac_core_v02 #(
   logic                 f_swap;
   logic [IDXW-1:0]      f_idx;
   logic                 f_first;
+  assign arr_valid = f_valid;
 
   act_feeder #(.ROWS(ROWS), .XW(XW), .ABUF_DEPTH(ABUF_DEPTH), .AW(AW), .IDXW(IDXW), .NCHK(NCHK)) u_feeder (
     .clk(clk), .rst_n(rst_n),

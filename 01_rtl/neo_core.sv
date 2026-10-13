@@ -16,6 +16,12 @@
 //   of these, corrupted, feeds the array or the accumulator a consistent wrong row -- a weight row loaded a cycle early or
 //   late or from another entry, a partial-sum row added to the wrong row, overwritten instead of accumulated, or the wrong
 //   row drained -- which neither the SECDED lanes nor the ABFT check sees.
+//   Drop 0.43 (stream B2): architectural clock gating -- the datapath (feeder, array, accumulator: neo_mac_core_v02) runs
+//   on a gated clock (neo_icg) enabled while the sequencer is busy and for four cycles after (the drain's last row through
+//   the accumulator's read and its two ABFT stages), on an activation-buffer write (the DMA fills the buffer before go),
+//   on err_clear (the stickies) and through the reset; each requantizer gates itself (requant.sv). cg_en shows the three
+//   enables, tel_ev the telemetry's core events (a row entering the array; the feeder stalled: the sequencer in a load,
+//   start or run state with no row entering), both observation only.
 module neo_core #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
@@ -120,7 +126,11 @@ module neo_core #(
   input  logic                  dv_wbuf_flip,         // drop 0.37 (DV_HOOKS = 1): a stored weight codeword's lane XOR a mask at the falling edge
   input  logic [WAW-1:0]        dv_wbuf_addr,
   input  logic [3:0]            dv_wbuf_lane,
-  input  logic [38:0]           dv_wbuf_mask
+  input  logic [38:0]           dv_wbuf_mask,
+  // drop 0.43: observation -- the clock enables {requant duplicate, requant, datapath} and the telemetry events
+  // {feeder stall, array valid}
+  output logic [2:0]            cg_en,
+  output logic [1:0]            tel_ev
 );
   logic signed [15:0]    f_ct, f_ky, f_kx;
   logic                  f_first, f_start, f_busy;
@@ -206,10 +216,20 @@ module neo_core #(
     else        begin d_w_load_q <= d_w_load; d_w_raddr_q <= d_w_raddr; end
   end
 
+  // the datapath's clock gate (drop 0.43)
+  logic       clk_dp, dp_en, arr_valid;
+  logic [3:0] busy_q;                        // busy one to four cycles ago: the drain's last row in the accumulator's stages
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) busy_q <= '0;
+    else        busy_q <= {busy_q[2:0], busy};
+  end
+  assign dp_en = busy || (busy_q != 4'd0) || abuf_we || abuf_we2 || err_clear || !rst_n;
+  neo_icg u_icg_dp (.clk(clk), .en(dp_en), .te(1'b0), .gclk(clk_dp));
+
   neo_mac_core_v02 #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .WCW(WCW), .ACC_ROWS(ACC_ROWS),
                      .ABUF_DEPTH(ABUF_DEPTH), .IDXW(IDXW), .AW(AW), .PE_LAT(PE_LAT), .NCHK(NCHK),
                      .FAULT_ROW(FAULT_ROW), .FAULT_COL(FAULT_COL)) u_dp (
-    .clk(clk), .rst_n(rst_n),
+    .clk(clk_dp), .rst_n(rst_n),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(abuf_we2), .abuf_wdata2(abuf_wdata2),
     .cfg_h(cfg_h), .cfg_w(cfg_w), .cfg_ho(cfg_ho), .cfg_wo(cfg_wo), .cfg_oy0(cfg_oy0), .cfg_oy_n(cfg_oy_n), .cfg_iy0(cfg_iy0),
     .cfg_s(cfg_s), .cfg_p(cfg_p), .cfg_tile_pixels(cfg_tile_pixels), .cfg_regions_m1(cfg_regions_m1), .cfg_ct(f_ct), .cfg_ky(f_ky), .cfg_kx(f_kx), .acc_first(f_first),
@@ -220,7 +240,8 @@ module neo_core #(
     .abft_clear(err_clear), .array_abft_err(array_abft_err), .array_abft_err_valid(array_abft_err_valid), .array_abft_sticky(array_abft_sticky),
     .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid), .acc_abft_sticky(acc_abft_sticky),
     .ctrl_err(ctrl_err), .ctrl_err_sticky(ctrl_err_sticky), .acc_ctrl_err(acc_ctrl_err),
-    .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject));
+    .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject), .arr_valid(arr_valid));
+  assign tel_ev = {(state_dbg == 3'd1 || state_dbg == 3'd2 || state_dbg == 3'd3) && !arr_valid, arr_valid};
 
   // requantization, duplicated with a comparator (R10); the fault hook corrupts the primary's input only
   logic signed [PW-1:0] rq_in_p [COLS];
@@ -236,19 +257,21 @@ module neo_core #(
       end
     end
   endgenerate
+  logic rq_cg_en, rq_cg_en_d;                // the requantizers' clock enables (whole signals: neosim connects no output to a bit)
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq (
     .clk(clk), .rst_n(rst_n),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
     .in_valid(rd_valid), .in_acc(rq_in_p), .out_valid(rq_valid), .out_q(rq_q),
-    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_sticky), .tbl_fault_inject(rq_tbl_fault_inject));
+    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_sticky), .tbl_fault_inject(rq_tbl_fault_inject), .cg_en(rq_cg_en));
   logic rq_tbl_perr_d;
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq_dup (
     .clk(clk), .rst_n(rst_n),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
     .in_valid(rd_valid), .in_acc(rd_data), .out_valid(rq_valid_d), .out_q(rq_q_d),
-    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_d), .tbl_fault_inject(1'b0));
+    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_d), .tbl_fault_inject(1'b0), .cg_en(rq_cg_en_d));
+  assign cg_en = {rq_cg_en_d, rq_cg_en, dp_en};
   always_comb begin
     rq_err = (rq_valid != rq_valid_d);
     for (int j = 0; j < COLS; j++) if (rq_valid && (rq_q[j] != rq_q_d[j])) rq_err = 1'b1;

@@ -32,7 +32,25 @@ two bridge nodes at x = 2: row 0 the memory and the host bridge, row 1 an unused
   T5  tile-enable: tile (1,1) disabled while the mesh is in reset -- it leaves reset fenced: its window answers SLVERR, a host
       read of its bank times out SLVERR, a tile's fetch from it times out (fetch_timeout); the layer runs on the three others
       with the compiler's exclusion map (compile_layer(..., exclude)), its data behind the memory bridge; a bit cleared for a
-      running tile stays pending until its program ends; the tiles re-enabled while idle answer again
+      running tile stays pending until its program ends; the tiles re-enabled while idle answer again -- since drop 0.43
+      (TILE_EN is the power map) out of reset: the cause the second tile held before it was switched off reads 0
+  T6  power gating (drop 0.43): tile (1,0) powered down (TILE_EN cleared while idle) -- the sequencer's outputs change in
+      the order iso on, clock off, reset, power off (tile_pwr_en the pin), PWR_STATE reads OFF, the window SLVERR -- while
+      the three others run a layer whose every activation and weight from the memory bridge at (2, 0) crosses its router
+      (XY routing: west along row 0, then south); then powered up (power on, reset released, clock on, iso off), its
+      registers back at their reset values (nothing retained) and the layer run again by it alone, bit-exact
+  T7  dual-tile lockstep (drop 0.43): tiles 0 and 1 run the compiler's pair programs (compile_pair: the same layer, the
+      same inputs, each draining into its own bank) with LS_PAIR 0 naming them -- both results bit-exact, LS_ERR clean; the
+      same again with tile 1's self-test fault hook asserted (a +1 on one PE's product): its drain differs, LS_ERR bit 0,
+      IRQ_STATUS bit 3, err; disabling the pair clears it
+  T8  the command queue (drop 0.43): a two-layer program played by the control plane -- layer 1 (a 3x3 conv, K-split on
+      tiles 0 and 1, requantized INT8 drained into tile 0's bank: its tables are image entries too) and layer 2 (a 1x1 conv
+      of layer 1's INT8 rows read as pair-pixels of 16 channels, on tile 2, INT32 into its bank) as two commands of the
+      ring with their register images in the command memory, one doorbell; two completion records in order with their
+      tags, entries played and done times from the global timer, an interrupt per completion; both layers bit-exact
+  Since drop 0.43 T3b also measures the memory bridge against a DRAM-like memory (32 aclk to a burst's first R beat, 16 to
+  B; the model pipelines reads as a DRAM controller does) -- the drains landing in memory and four 4,092-word fetches at
+  once -- and checks the bridge's wait counters (RD_WAIT / WR_WAIT) against the cycles this file counts on the AXI ports.
 """
 import os
 import cocotb
@@ -72,6 +90,11 @@ CFG_ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_i
 NODE_BASE, GBASE = 0x1_0000, 0x2_0000
 G_ID, G_VERSION, G_CONFIG, G_CONFIG2, G_SCRATCH, G_TIMER_LO, G_TIMER_HI = 0x000, 0x004, 0x008, 0x00C, 0x010, 0x018, 0x01C
 G_TILE_EN, G_TILE_EN_EFF, G_DONE, G_ERR, G_IRQ_STATUS, G_IRQ_MASK, G_STATUS = 0x020, 0x028, 0x030, 0x038, 0x040, 0x044, 0x048
+G_PRIO, G_LS_PAIR, G_LS_ERR, G_PWR_STATE = 0x04C, 0x050, 0x070, 0x080   # drop 0.43
+G_CQ_CTRL, G_CQ_RING, G_CQ_TAIL, G_CQ_HEAD, G_CC_RING, G_CC_HEAD, G_CC_TAIL, G_CQ_STATUS = range(0x0A0, 0x0C0, 4)
+G_TEL_CTRL, G_TEL_CYCLES, G_CMEM = 0x0C0, 0x0C4, 0x1000
+REG_RQ_TBL, REG_RQ_ADDR, REG_RQ_RELU = 0x30, 0x31, 0x32
+PWR_ON, PWR_OFF = 0, 4                              # PWR_STATE values (mesh_ctrl.sv: 0 ON .. 4 OFF .. 7 CLKON)
 G_BR = 0x100                                        # + 0x20 * b: WIN_LO, WIN_HI, CTRL, ERR
 OKAY, SLVERR, DECERR = 0, 2, 3
 BR_CRC, BR_LOST, BR_AXI, BR_TIMEOUT, BR_HOST, BR_PARITY = 0, 1, 2, 3, 4, 5
@@ -279,17 +302,47 @@ class AxiHost:
 
 class AxiMem:
     """AXI4 slave memory behind the memory bridge's master port (aclk): byte-addressed words, INCR bursts of full-width
-    beats checked against the 4 KB rule, a read latency, SLVERR on chosen byte ranges; every burst logged."""
+    beats checked against the 4 KB rule, SLVERR on chosen byte ranges; every burst logged. Reads are pipelined as a DRAM
+    controller's (drop 0.43): AR is taken while fewer than `depth` bursts wait, and each burst's first R beat comes
+    `latency` cycles after its AR at the earliest, in order -- one burst at a time (B1's bridge) sees exactly the model of
+    drop 0.42. Writes: AW, its W beats, then B `wlatency` cycles after the last W (0: the next cycle, as before).
+    Telemetry check (drop 0.43): rd_wait / wr_wait count the cycles the bridge's counters count -- a read burst outstanding
+    (its AR taken, its last R beat not yet) and no R beat transferred; a write burst outstanding (its AW taken, its B not
+    yet) and no W beat transferred -- from these ports, per window (tel_reset)."""
 
-    def __init__(self, dut, latency=3):
-        self.d, self.clk, self.latency = dut, dut.aclk, latency
+    def __init__(self, dut, latency=3, wlatency=0, depth=8):
+        self.d, self.clk, self.latency, self.wlatency, self.depth = dut, dut.aclk, latency, wlatency, depth
         self.mem = {}
         self.err_ranges = []
         self.reads, self.writes = [], []
+        self.arq = []
+        self.rd_wait = self.wr_wait = 0
         for s in ("arready", "rvalid", "awready", "wready", "bvalid"):
             getattr(dut, "m_axi_" + s).value = 0
+        cocotb.start_soon(self._ar())
         cocotb.start_soon(self._reads())
         cocotb.start_soon(self._writes())
+        cocotb.start_soon(self._tel())
+
+    def tel_reset(self):
+        self.rd_wait = self.wr_wait = 0
+
+    async def _tel(self):
+        d = self.d
+        rd_out = wr_out = 0
+        while True:
+            await RisingEdge(self.clk)
+            await ReadOnly()
+            ar = int(d.m_axi_arvalid.value) & int(d.m_axi_arready.value)
+            r = int(d.m_axi_rvalid.value) & int(d.m_axi_rready.value)
+            rl = r & int(d.m_axi_rlast.value)
+            aw = int(d.m_axi_awvalid.value) & int(d.m_axi_awready.value)
+            w = int(d.m_axi_wvalid.value) & int(d.m_axi_wready.value)
+            b = int(d.m_axi_bvalid.value) & int(d.m_axi_bready.value)
+            self.rd_wait += int(rd_out > 0 and not r)
+            self.wr_wait += int(wr_out > 0 and not w)
+            rd_out += ar - rl
+            wr_out += aw - b
 
     def word(self, a):
         return self.mem.get(a & ~3, 0)
@@ -303,17 +356,31 @@ class AxiMem:
         assert addr % BB == 0, f"burst address 0x{addr:x} not beat-aligned"
         assert (addr % 4096) + nbeats * BB <= 4096, f"burst at 0x{addr:x} of {nbeats} beats crosses a 4 KB boundary"
 
+    async def _ar(self):
+        """AR taken while fewer than `depth` bursts wait; each stamped with the time its first beat may come."""
+        d = self.d
+        while True:
+            d.m_axi_arready.value = int(len(self.arq) < self.depth)
+            await ReadOnly()
+            fire = int(d.m_axi_arvalid.value) and int(d.m_axi_arready.value)
+            vals = (int(d.m_axi_araddr.value), int(d.m_axi_arlen.value) + 1, int(d.m_axi_arsize.value),
+                    int(d.m_axi_arburst.value)) if fire else None
+            await RisingEdge(self.clk)
+            if fire:
+                self.arq.append(vals + (get_sim_time("ps") + self.latency * ACLK_PS,))
+
     async def _reads(self):
         d = self.d
         while True:
-            d.m_axi_arready.value = 1                     # the AR handshake: the address sampled in the cycle before its edge
-            addr, nb, size, burst = await handshake(self.clk, d.m_axi_arvalid, lambda: (
-                int(d.m_axi_araddr.value), int(d.m_axi_arlen.value) + 1, int(d.m_axi_arsize.value), int(d.m_axi_arburst.value)))
-            d.m_axi_arready.value = 0
+            if not self.arq:
+                await RisingEdge(self.clk)
+                continue
+            addr, nb, size, burst, t_first = self.arq[0]
+            while get_sim_time("ps") < t_first:
+                await RisingEdge(self.clk)
+            self.arq.pop(0)
             self.burst_ok(addr, nb, size, burst)
             self.reads.append((addr, nb))
-            for _ in range(self.latency):
-                await RisingEdge(self.clk)
             for b in range(nb):
                 a = addr + b * BB
                 d.m_axi_rdata.value = sum(self.word(a + 4 * i) << (32 * i) for i in range(WPB))
@@ -347,6 +414,8 @@ class AxiMem:
                 strobes.append(strb)
             d.m_axi_wready.value = 0
             self.writes.append((addr, nb, strobes))
+            for _ in range(self.wlatency):
+                await RisingEdge(self.clk)
             d.m_axi_bresp.value = OKAY
             d.m_axi_bvalid.value = 1
             await handshake(self.clk, d.m_axi_bready)
@@ -440,6 +509,19 @@ class Top:
     async def br_err(self, b=0):
         return await self.greg_r(G_BR + 0x20 * b + 0xC)
 
+    async def pwr_state(self, n):
+        return (await self.greg_r(G_PWR_STATE + 4 * (n // 8)) >> (4 * (n % 8))) & 0xF
+
+    async def wait_eff(self, want, limit_ns=2000):
+        """Poll TILE_EN_EFF (the tiles that are on) until it equals `want`; returns ns."""
+        t0 = get_sim_time("ns")
+        while True:
+            eff = await self.greg_r(G_TILE_EN_EFF)
+            if eff == want:
+                return get_sim_time("ns") - t0
+            assert get_sim_time("ns") - t0 < limit_ns, f"TILE_EN_EFF 0x{eff:x}, waiting for 0x{want:x}"
+            await ClockCycles(self.d.aclk, 4)
+
 
 async def setup(dut, tile_en=None):
     cocotb.start_soon(Clock(dut.clk, CLK_PS, units="ps").start())
@@ -466,7 +548,7 @@ async def run_layer(top, lp):
 async def t1_registers(dut):
     top = await setup(dut)
     assert await top.greg_r(G_ID) == 0x4E454F54, "ID"
-    assert await top.greg_r(G_VERSION) == 0x44, "VERSION"
+    assert await top.greg_r(G_VERSION) == 0x45, "VERSION"
     cfg = await top.greg_r(G_CONFIG)
     assert cfg == (COLS << 24) | (ROWS << 16) | (N_HOST << 12) | (N_MEM << 8) | (NY << 4) | NX, f"CONFIG 0x{cfg:08x}"
     cfg2 = await top.greg_r(G_CONFIG2)
@@ -516,7 +598,17 @@ async def t1_registers(dut):
     await top.greg_w(G_BR + 0x8, 0x5)
     assert (await top.greg_r(G_BR + 0x0), await top.greg_r(G_BR + 0x4), await top.greg_r(G_BR + 0x8)) == (0x8765_43C0, 0xAB, 0x5)
     await top.greg_w(G_BR + 0x8, 0)
-    assert await top.br_err() == 0 and await top.greg_r(G_IRQ_STATUS) == 0 and await top.greg_r(G_IRQ_MASK) == 7
+    assert await top.br_err() == 0 and await top.greg_r(G_IRQ_STATUS) == 0 and await top.greg_r(G_IRQ_MASK) == 0x1F
+    # drop 0.43: every tile's power sequencer at ON, no lockstep error, the pair registers read back
+    assert all([await top.pwr_state(n) == PWR_ON for n in range(NT)]), "PWR_STATE after reset"
+    assert await top.greg_r(G_LS_ERR) == 0 and int(dut.tile_pwr_en.value) == (1 << NT) - 1
+    await top.greg_w(G_LS_PAIR + 4, (2 << 8) | 3)
+    assert await top.greg_r(G_LS_PAIR + 4) == (2 << 8) | 3, "LS_PAIR 1 read-back"
+    await top.greg_w(G_LS_PAIR + 4, 0)
+    # the command memory's last word and the queue at reset
+    await top.greg_w(G_CMEM + 4 * 1023, 0xC0DE_1023)
+    assert await top.greg_r(G_CMEM + 4 * 1023) == 0xC0DE_1023, "command memory read-back"
+    assert [await top.greg_r(r) for r in (G_CQ_CTRL, G_CQ_HEAD, G_CC_TAIL, G_CQ_STATUS)] == [0, 0, 0, 0], "the queue at reset"
     assert await top.greg_r(G_STATUS) == 0 and int(dut.irq.value) == 0 and int(dut.err.value) == 0
     dut._log.info(f"T1: ID / VERSION / CONFIG, {NT} tile windows (M15's read-back each), node window, timer {t1 - t0} cycles / 100, "
                   f"TILE_EN 0x{full:x} requested and in effect")
@@ -696,6 +788,58 @@ async def t3b_layer_memory_bridge(dut):
                   f"activations and weights from it ({n_reads4} bursts), bit-exact in {t4:.0f} ns; a tile's {lp1.M} INT32 rows drained into it "
                   f"({nw0} AXI write bursts, the beat across 4 KB split in two), bit-exact in {t1:.0f} ns; two tiles draining into it at once ({n_two} bursts), "
                   f"both bit-exact in {t2:.0f} ns")
+    # the bridge's throughput (drop 0.43, against B1's one burst in flight): a memory with DRAM-like latencies -- 32 aclk from
+    # AR to a burst's first R beat (pipelined: several bursts may wait), 16 from the last W beat to B
+    top.mem.latency, top.mem.wlatency = 32, 16
+    await top.expect_clean()
+    assert (await top.greg_r(G_BR + 0x18)) & 1 == 0, "the bridge holds writes before the throughput section"
+    await top.greg_w(G_TEL_CTRL, 2)                     # the counters' window starts with the bridge idle
+    top.mem.tel_reset()
+    # (i) writes: the single tile's drain again, then the two tiles' drains at once (their programs are still loaded), each
+    # timed from its start to the moment the memory holds every word of it (the result areas cleared first)
+    nwd = lp1.M * (COLS + 1)
+
+    async def landed(areas, t0, limit_ns=30000):
+        while True:
+            if all(np.array_equal(to_image([top.mem.word(WIN_BASE + 4 * (wr + i)) for i in range(nwd)], ref), ref) for wr in areas):
+                return get_sim_time("ns") - t0
+            assert get_sim_time("ns") - t0 < limit_ns, f"drains into {[hex(a) for a in areas]} not in memory after {limit_ns} ns"
+            await ClockCycles(dut.aclk, 4)
+    for wr in [WR] + list(outs.values()):
+        top.mem.load(WIN_BASE + 4 * wr, [0] * nwd)
+    nw1 = len(top.mem.writes)
+    t0 = get_sim_time("ns")
+    await top.start([n1])
+    t1l = await landed([WR], t0)
+    await top.wait_done([n1])
+    nw2 = len(top.mem.writes)
+    t0 = get_sim_time("ns")
+    await top.start(list(outs))
+    t2l = await landed(list(outs.values()), t0)
+    await top.wait_done(list(outs))
+    nw3 = len(top.mem.writes)
+    # (ii) reads: every tile one FETCH_A of 4,092 words at once (no compute; four 4 KB bursts each), the time to the last done
+    FW, RB = 4092, 0x8000
+    top.mem.load(WIN_BASE + 4 * RB, [(0x5A5A0000 + i) & 0xFFFFFFFF for i in range(NT * 0x1000)])
+    top.mem.reads.clear()
+    for nn in range(NT):
+        await top.program(nn, [ins(OP_FETCH_A, BX, 0, RB + nn * 0x1000, FW, 0), ins(OP_END)])
+    await top.start(list(range(NT)))
+    t_rd = await top.wait_done(list(range(NT)))
+    await top.expect_clean()
+    assert await top.br_err() == 0
+    n_rd = len(top.mem.reads)
+    bpc = NT * FW * 4 / (t_rd / (ACLK_PS / 1000))
+    while (await top.greg_r(G_BR + 0x18)) & 1:          # every write answered, then the window closes with the bridge idle
+        await ClockCycles(dut.aclk, 8)
+    await top.greg_w(G_TEL_CTRL, 1)
+    rdw, wrw, cyc = await top.greg_r(G_BR + 0x10), await top.greg_r(G_BR + 0x14), await top.greg_r(G_TEL_CYCLES)
+    assert (rdw, wrw) == (top.mem.rd_wait, top.mem.wr_wait), \
+        f"bridge RD_WAIT {rdw} / WR_WAIT {wrw} against the ports' {top.mem.rd_wait} / {top.mem.wr_wait}"
+    dut._log.info(f"T3b telemetry: RD_WAIT {rdw}, WR_WAIT {wrw} of {cyc} aclk cycles, equal to the counts on the AXI ports")
+    dut._log.info(f"T3b throughput (read latency 32, write latency 16 aclk): a tile's layer and drain in memory {t1l:.0f} ns after its start "
+                  f"({nw2 - nw1} AXI write bursts), two tiles' at once in {t2l:.0f} ns ({nw3 - nw2} bursts); {NT} x {FW}-word fetches from the "
+                  f"memory bridge at once in {t_rd:.0f} ns ({n_rd} AXI read bursts, {bpc:.1f} bytes per aclk cycle of {BB})")
 
 
 @cocotb.test()
@@ -818,14 +962,265 @@ async def t5_tile_enable(dut):
     while (await top.greg_r(G_TILE_EN_EFF)) & (1 << n2):
         await ClockCycles(dut.aclk, 64)
     assert (await top.treg_r(n2, REG_STATUS, expect=SLVERR)) == 0, "the newly disabled tile's window"
-    # re-enabled while idle: they answer again
+    # re-enabled while idle: they answer again -- powered up, out of reset (drop 0.43: TILE_EN is the power map)
     await top.greg_w(G_TILE_EN, full)
-    await ClockCycles(dut.aclk, 8)
-    assert await top.greg_r(G_TILE_EN_EFF) == full
+    await top.wait_eff(full)
     await top.treg_w(off, REG_PARTITION, 3)
     assert await top.treg_r(off, REG_PARTITION) == 3
     c = await top.treg_r(n2, REG_ERR_CAUSE)
-    assert (c >> CAUSE_TIMEOUT) & 1, f"tile {n2}'s fetch: cause 0x{c:05x}"
+    assert c == 0, f"tile {n2} back from power-down: cause 0x{c:05x} (nothing is retained)"
     dut._log.info(f"T5: tile {off} disabled at reset -- registers SLVERR, host read SLVERR after {t_host:.0f} ns, a tile's fetch timed out; "
                   f"the layer on {len(lp.tiles)} tiles with the exclusion map bit-exact in {t:.0f} ns; a change for a running tile held until its "
-                  f"program ended; re-enabled while idle")
+                  f"program ended; re-enabled while idle (back from power-down, the held cause gone)")
+
+
+class PwrMonitor:
+    """Records the order in which mesh_ctrl's four outputs of one tile change (sampled at every mesh clock edge)."""
+
+    def __init__(self, dut, n):
+        self.d, self.n, self.events = dut, n, []
+        cocotb.start_soon(self._run())
+
+    def sample(self):
+        m, n = self.d.u_mctrl, self.n
+        return {"iso": (int(m.tile_iso_en.value) >> n) & 1, "clk": (int(m.tile_clk_en.value) >> n) & 1,
+                "rst_n": (int(m.tile_rst_n.value) >> n) & 1, "pwr": (int(self.d.tile_pwr_en.value) >> n) & 1}
+
+    async def _run(self):
+        await RisingEdge(self.d.clk)
+        await ReadOnly()
+        last = self.sample()
+        while True:
+            await RisingEdge(self.d.clk)
+            await ReadOnly()
+            cur = self.sample()
+            for k in cur:
+                if cur[k] != last[k]:
+                    self.events.append((get_sim_time("ns"), k, cur[k]))
+            last = cur
+
+
+def order_ok(events, want):
+    """events (t, signal, value) hold the transitions `want` in that order, each later than the one before."""
+    times = []
+    for sig, val in want:
+        t = next((t for t, k, v in events if k == sig and v == val and (not times or t > times[-1])), None)
+        if t is None:
+            return False, times
+        times.append(t)
+    return True, times
+
+
+@cocotb.test()
+async def t6_power_gating(dut):
+    from neo_backend import compile_layer
+    top = await setup(dut)
+    full = (1 << NT) - 1
+    off = node(1, 0)
+    mon = PwrMonitor(dut, off)
+    x, wgt, ref, act, wts = conv_data()
+    await top.greg_w(G_BR + 0x0, WIN_BASE & 0xFFFFFFFF)
+    await top.greg_w(G_BR + 0x4, WIN_BASE >> 32)
+    WA, WB = 0x2000, 0x3F1
+    top.mem.load(WIN_BASE + 4 * WA, act)
+    top.mem.load(WIN_BASE + 4 * WB, wts)
+    await top.treg_w(off, REG_PARTITION, 5)               # state the power-down must not keep
+    # power down: TILE_EN cleared while the tile is idle
+    await top.greg_w(G_TILE_EN, full & ~(1 << off))
+    t_dn = await top.wait_eff(full & ~(1 << off))
+    while await top.pwr_state(off) != PWR_OFF:
+        await ClockCycles(dut.aclk, 4)
+    assert (int(dut.tile_pwr_en.value) >> off) & 1 == 0, "tile_pwr_en of the tile powered down"
+    ok, t_seq = order_ok(mon.events, [("iso", 1), ("clk", 0), ("rst_n", 0), ("pwr", 0)])
+    assert ok, f"power-down order: {mon.events}"
+    await top.treg_w(off, REG_SCRATCH_PROBE, 1, expect=SLVERR)
+    # the layer on the three others: the data from the memory bridge at (BX, 0) reaches (0, 0) and (0, 1) through (1, 0)'s
+    # router only (XY: west along row 0 first), the result read back from (0, 0) through it too
+    lp = compile_layer("t6", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(BX, 0), act_base=WA, w_bank=(BX, 0), w_base=WB,
+                       owner=(0, 0), shares=NT, exclude=[(1, 0)])
+    assert len(lp.tiles) == NT - 1 and all(node(*tp.tile) != off for tp in lp.tiles), [tp.tile for tp in lp.tiles]
+    t = await run_layer(top, lp)
+    words, r = await top.host.read_words(node(*lp.out_bank), lp.out_base, lp.M * (COLS + 1))
+    assert r == OKAY
+    check(to_image(words, ref), ref, "T6 three tiles through the powered-down tile's router")
+    await top.expect_clean([k for k in range(NT) if k != off])
+    assert await top.br_err() == 0 and await top.greg_r(G_ERR) == 0
+    assert await top.pwr_state(off) == PWR_OFF and (await top.greg_r(G_DONE)) & (1 << off) == 0
+    # power up, then the tile out of reset re-used
+    mon.events.clear()
+    await top.greg_w(G_TILE_EN, full)
+    t_up = await top.wait_eff(full)
+    assert await top.pwr_state(off) == PWR_ON and (int(dut.tile_pwr_en.value) >> off) & 1
+    ok, t_seq2 = order_ok(mon.events, [("pwr", 1), ("rst_n", 1), ("clk", 1), ("iso", 0)])
+    assert ok, f"power-up order: {mon.events}"
+    assert await top.treg_r(off, REG_PARTITION) == 0, "PARTITION after the power cycle: reset value expected"
+    assert await top.treg_r(off, REG_ERR_CAUSE) == 0
+    lp1 = compile_layer("t6b", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(BX, 0), act_base=WA, w_bank=(BX, 0), w_base=WB,
+                        owner=(1, 0), shares=1, out_base=R0)
+    t1 = await run_layer(top, lp1)
+    words, r = await top.host.read_words(off, R0, lp1.M * (COLS + 1))
+    assert r == OKAY
+    check(to_image(words, ref), ref, "T6 the tile re-used after the power cycle")
+    await top.expect_clean()
+    dut._log.info(f"T6: tile {off} powered down (iso on, clock off, reset, power off at {', '.join(f'{v:.0f}' for v in t_seq)} ns, "
+                  f"TILE_EN_EFF after {t_dn:.0f} ns, PWR_STATE OFF); the layer on {len(lp.tiles)} tiles through its router bit-exact in "
+                  f"{t:.0f} ns; powered up (power on, reset off, clock on, iso off at {', '.join(f'{v:.0f}' for v in t_seq2)} ns, on after "
+                  f"{t_up:.0f} ns), registers at reset, the layer alone on it bit-exact in {t1:.0f} ns")
+
+
+@cocotb.test()
+async def t7_lockstep(dut):
+    from neo_backend import compile_pair
+    top = await setup(dut)
+    a, b = node(0, 0), node(1, 0)
+    x, wgt, ref, act, wts = conv_data()
+    await top.greg_w(G_BR + 0x0, WIN_BASE & 0xFFFFFFFF)
+    await top.greg_w(G_BR + 0x4, WIN_BASE >> 32)
+    WA, WB = 0x2000, 0x3F1
+    top.mem.load(WIN_BASE + 4 * WA, act)
+    top.mem.load(WIN_BASE + 4 * WB, wts)
+    lp = compile_pair("t7", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(BX, 0), act_base=WA, w_bank=(BX, 0), w_base=WB,
+                      pair=((0, 0), (1, 0)), out_base=R0)
+    assert [node(*tp.tile) for tp in lp.tiles] == [a, b]
+    await top.greg_w(G_IRQ_MASK, 0x17)                    # the lockstep cause unmasked
+    await top.greg_w(G_LS_PAIR, (1 << 31) | (b << 8) | a)
+    assert await top.greg_r(G_LS_PAIR) == (1 << 31) | (b << 8) | a
+    # (a) the pair on the same inputs: no mismatch
+    t = await run_layer(top, lp)
+    await ClockCycles(dut.aclk, 8)
+    for n in (a, b):
+        words, r = await top.host.read_words(n, R0, lp.M * (COLS + 1))
+        assert r == OKAY
+        check(to_image(words, ref), ref, f"T7 tile {n} of the pair")
+    assert await top.greg_r(G_LS_ERR) == 0 and not (await top.greg_r(G_IRQ_STATUS)) & 0x8 and int(dut.err.value) == 0, "a clean pair"
+    await top.expect_clean([a, b])
+    # (b) tile b's self-test fault hook: one PE's product +1 while asserted -- its drained rows differ, the comparison fires
+    await top.treg_w(b, REG_SELFTEST, 1)
+    await top.start([a, b])
+    t2 = await top.wait_done([a, b])
+    await ClockCycles(dut.aclk, 8)
+    lse = await top.greg_r(G_LS_ERR)
+    st = await top.greg_r(G_IRQ_STATUS)
+    assert lse == 1 and st & 0x8 and int(dut.irq.value) == 1 and int(dut.err.value) == 1, f"LS_ERR {lse} IRQ_STATUS 0x{st:x}"
+    words, _ = await top.host.read_words(b, R0, lp.M * (COLS + 1))
+    nbad = int(np.sum(to_image(words, ref) != ref))
+    assert nbad > 0, "the fault left tile b's result unchanged"
+    c = await top.treg_r(b, REG_ERR_CAUSE)
+    assert (c >> CAUSE_ARRAY_ABFT) & 1, f"tile {b} cause 0x{c:05x}: the array's ABFT should see the fault too"
+    # clearing: the pair's enable off clears its error; the tile's own cause through its CTRL
+    await top.treg_w(b, REG_SELFTEST, 0)
+    await top.treg_w(b, REG_CTRL, 2)
+    await top.greg_w(G_LS_PAIR, 0)
+    await ClockCycles(dut.aclk, 8)
+    await top.greg_w(G_IRQ_STATUS, 0x1F)
+    await ClockCycles(dut.aclk, 8)
+    assert await top.greg_r(G_LS_ERR) == 0 and int(dut.err.value) == 0 and int(dut.irq.value) == 0, "cleared"
+    dut._log.info(f"T7: the pair ({a}, {b}) on the compiler's pair programs, both bit-exact, no mismatch, in {t:.0f} ns; tile {b}'s fault "
+                  f"hook: {nbad} of {ref.size} values differ, LS_ERR 0x{lse:x}, IRQ_STATUS 0x{st:x}, err high, in {t2:.0f} ns; cleared by the "
+                  f"pair's enable")
+
+
+def rq_model(acc, mult, shift, zp, relu):
+    """requant.sv's rounding: (acc * mult + 2^(shift-1)) >> shift, + zp, ReLU at zp, saturated to INT8 (test_two_layer.py)."""
+    r = (int(acc) * int(mult) + ((1 << int(shift)) >> 1)) >> int(shift)
+    v = r + int(zp)
+    if relu and v < zp:
+        v = zp
+    return max(-128, min(127, v))
+
+
+@cocotb.test()
+async def t8_command_queue(dut):
+    from neo_backend import compile_layer, cq_image
+    top = await setup(dut)
+    rng = np.random.default_rng(29)
+    C1 = 8                                              # layer 1's output channels: one output tile of the 16x8 core
+    x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
+    w1 = rng.integers(-128, 128, size=(C1, CIN, 3, 3), dtype=np.int64)
+    w2 = rng.integers(-128, 128, size=(7, 2 * C1, 1, 1), dtype=np.int64)
+    mult = rng.integers(20000, 60000, size=C1)
+    shift = np.full(C1, 21)
+    zp = rng.integers(-8, 9, size=C1)
+    y1 = direct_conv(x, w1, 1, 1)
+    q1 = np.vectorize(lambda v, c: rq_model(v, mult[c], shift[c], zp[c], 1))(y1, np.arange(C1)[:, None, None]).astype(np.int64)
+    # layer 2 reads layer 1's INT8 rows (8 channels, two words a pixel) as entries of four words: pixels (2j, 2j+1) of a row
+    # are one 16-channel pair-pixel -- a 1x1 conv over the 6 x 3 pair image
+    z = np.concatenate([q1[:, :, 0::2], q1[:, :, 1::2]], axis=0)
+    y2 = direct_conv(z, w2, 1, 0)
+    act, wts1 = pack_words(x, w1, CT_N, 3, C1, rows=ROWS, cols=COLS)
+    _, wts2 = pack_words(z, w2, 1, 1, 7, rows=ROWS, cols=COLS)
+    await top.greg_w(G_BR + 0x0, WIN_BASE & 0xFFFFFFFF)
+    await top.greg_w(G_BR + 0x4, WIN_BASE >> 32)
+    WA, W1B, W2B, R1, R2 = 0x2000, 0x3F1, 0x1000, 2048, 2048
+    top.mem.load(WIN_BASE + 4 * WA, act)
+    top.mem.load(WIN_BASE + 4 * W1B, wts1)
+    top.mem.load(WIN_BASE + 4 * W2B, wts2)
+    lp1 = compile_layer("t8a", 6, 6, CIN, C1, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(BX, 0), act_base=WA, w_bank=(BX, 0), w_base=W1B,
+                        owner=(0, 0), shares=2, int8_out=True, out_base=R1, exclude=[(0, 1), (1, 1)])
+    lp2 = compile_layer("t8b", 6, 3, 2 * C1, 7, 1, 1, 0, ROWS, COLS, NX, NY, act_bank=(0, 0), act_base=R1, w_bank=(BX, 0), w_base=W2B,
+                        owner=(0, 1), shares=1, out_base=R2)
+    assert sorted(node(*tp.tile) for tp in lp1.tiles) == [0, 1] and [node(*tp.tile) for tp in lp2.tiles] == [2]
+    # the owner's requantization tables and ReLU: entries of command 1
+    rq = []
+    for c in range(C1):
+        rq += [((1 << 14) | (0 << 8) | REG_RQ_ADDR, c), ((1 << 14) | (0 << 8) | REG_RQ_TBL,
+                                                          ((int(zp[c]) & 0xFF) << 24) | (int(shift[c]) << 16) | int(mult[c]))]
+    rq.append(((1 << 14) | (0 << 8) | REG_RQ_RELU, 1))
+    img1, img2 = cq_image(lp1.tiles, NX, rq), cq_image(lp2.tiles, NX)   # the image neo_host.c's neo_cq_image writes
+    # the command memory: the command ring at word 0 (4 entries), the completion ring at word 16 (4 entries), the images
+    IMG1, IMG2 = 64, 64 + 2 * len(img1)
+    assert IMG2 + 2 * len(img2) <= 1024, "the images do not fit the command memory"
+    cmds = [(0x3, 0, (len(img1) << 16) | IMG1, 0xA11CE001), (0x4, 0, (len(img2) << 16) | IMG2, 0xA11CE002)]
+    words = {}
+    for i, c in enumerate(cmds):
+        for k, v in enumerate(c):
+            words[4 * i + k] = v
+    for base, img in ((IMG1, img1), (IMG2, img2)):
+        for i, (e0, v) in enumerate(img):
+            words[base + 2 * i], words[base + 2 * i + 1] = e0, v & 0xFFFFFFFF
+    for a in sorted(words):
+        await top.greg_w(G_CMEM + 4 * a, words[a])
+    for k in range(16):                                 # the completion ring cleared
+        await top.greg_w(G_CMEM + 4 * (16 + k), 0)
+    await top.greg_w(G_CQ_RING, (2 << 16) | 0)
+    await top.greg_w(G_CC_RING, (2 << 16) | 16)
+    await top.greg_w(G_IRQ_MASK, 0x0F)                  # the command cause unmasked
+    await top.greg_w(G_CQ_CTRL, 1)
+    t_lo0 = await top.greg_r(G_TIMER_LO)
+    t0 = get_sim_time("ns")
+    await top.greg_w(G_CQ_TAIL, 2)                      # the doorbell: two commands
+    # the first completion: its interrupt, cleared while the second command runs; then the second's
+    seen = []
+    while len(seen) < 2:
+        tail = await top.greg_r(G_CC_TAIL)
+        if tail > len(seen):
+            assert int(dut.irq.value) == 1 and (await top.greg_r(G_IRQ_STATUS)) & 0x10, f"no interrupt for completion {len(seen) + 1}"
+            seen.append(get_sim_time("ns") - t0)
+            await top.greg_w(G_IRQ_STATUS, 0x10)
+            if len(seen) == 1:
+                assert await top.greg_r(G_CC_TAIL) == 1, "the second command completed with the first: its interrupt is not seen apart"
+        assert get_sim_time("ns") - t0 < 100_000, f"completions {tail} after 100 us; CQ_STATUS 0x{await top.greg_r(G_CQ_STATUS):x}"
+        await ClockCycles(dut.aclk, 8)
+    await ClockCycles(dut.aclk, 4)
+    assert int(dut.irq.value) == 0
+    recs = [[await top.greg_r(G_CMEM + 4 * (16 + 4 * r + k)) for k in range(4)] for r in range(2)]
+    assert [r[0] for r in recs] == [0xA11CE001, 0xA11CE002], f"record tags {recs}"
+    assert [r[1] for r in recs] == [len(img1) << 16, len(img2) << 16], f"record status {recs}"
+    tdone = [r[2] | (r[3] << 32) for r in recs]
+    assert t_lo0 < tdone[0] < tdone[1], f"done times {tdone} after the doorbell at {t_lo0}"
+    assert await top.greg_r(G_CQ_HEAD) == 2 and (await top.greg_r(G_CQ_STATUS)) == 0
+    # layer 1's INT8 rows and layer 2's INT32 result, read back through the host bridge
+    got1, r = await top.host.read_words(0, R1, 36 * C1 // 4)
+    assert r == OKAY
+    exp1 = []
+    for m in range(36):
+        for k in range(C1 // 4):
+            exp1.append(sum((int(q1[4 * k + b, m // 6, m % 6]) & 0xFF) << (8 * b) for b in range(4)))
+    assert got1 == exp1, "layer 1's INT8 rows differ from the requantization model"
+    got2, r = await top.host.read_words(2, R2, 18 * (COLS + 1))
+    assert r == OKAY
+    check(to_image(got2, y2, M=18, cout=7, wo=3), y2, "T8 layer 2 through the command queue")
+    await top.expect_clean([0, 1, 2])
+    dut._log.info(f"T8: two commands ({len(img1)} + {len(img2)} image entries) from one doorbell: layer 1 on tiles 0, 1 (K-split, INT8) "
+                  f"complete {seen[0]:.0f} ns after it (done at timer {tdone[0] - t_lo0} aclk), layer 2 on tile 2 {seen[1]:.0f} ns (timer "
+                  f"{tdone[1] - t_lo0}); records in order with their tags, an interrupt each; both layers bit-exact")

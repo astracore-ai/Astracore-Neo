@@ -74,13 +74,21 @@ module tile_mesh_cocotb #(
   input  logic [DWL-1:0] fi_mask,                 // as wide as the link payload (drop 0.27): a flit fault can hit any word
   // observation of node fi_node's router output stage: valid of port k in bit k, and the local-port (4) flit
   output logic [4:0]    ob_out_valid,
-  output logic [FW-1:0] ob_out_flit4
+  output logic [FW-1:0] ob_out_flit4,
+  // drop 0.43: tile n's observation word at [n*32 +: 32] (neo_tile's dv_obs): bits 0..11 the clock enables of its gated
+  // blocks, 12..22 the telemetry counters' events -- the suite counts both every cycle (the gated fractions, the counters'
+  // validation)
+  output logic [N*32-1:0] obs,
+  // drop 0.43: tile n's lockstep pair at [n*32 +: 32]: {drain_msg_cnt, drain_crc_last} (the NIC's drain messages)
+  output logic [N*32-1:0] lsp
 );
   logic          h_we_a [N], h_re_a [N], err_pin_a [N], prog_done_a [N], drain_busy_a [N], done_a [N], crc_err_a [N], parity_err_a [N];
   logic          array_abft_a [N], acc_abft_a [N], ctrl_err_a [N], seq_err_a [N], rq_err_a [N], ecc_ce_a [N], ecc_ue_a [N],
                  wbuf_ce_a [N], wbuf_ue_a [N], rq_tbl_perr_a [N], lost_err_a [N], fetch_timeout_a [N];
   logic [7:0]    h_addr_a [N];
   logic [31:0]   h_wdata_a [N], h_rdata_a [N];
+  logic [31:0]   obs_a [N];
+  logic [15:0]   dcrc_a [N], dcnt_a [N];
 
   generate
     for (genvar n = 0; n < N; n++) begin : g_pack
@@ -97,6 +105,8 @@ module tile_mesh_cocotb #(
       assign done[n]       = done_a[n];
       assign crc_err[n]    = crc_err_a[n];
       assign parity_err[n] = parity_err_a[n];
+      assign obs[n*32 +: 32] = obs_a[n];
+      assign lsp[n*32 +: 32] = {dcnt_a[n], dcrc_a[n]};
     end
   endgenerate
 
@@ -109,8 +119,9 @@ module tile_mesh_cocotb #(
     .array_abft_sticky(array_abft_a), .acc_abft_sticky(acc_abft_a), .ctrl_err_sticky(ctrl_err_a), .seq_err_sticky(seq_err_a),
     .rq_err_sticky(rq_err_a), .ecc_ce(ecc_ce_a), .ecc_ue(ecc_ue_a), .wbuf_ce(wbuf_ce_a), .wbuf_ue(wbuf_ue_a),
     .rq_tbl_perr(rq_tbl_perr_a), .lost_err(lost_err_a), .fetch_timeout(fetch_timeout_a),
+    .drain_crc_last(dcrc_a), .drain_msg_cnt(dcnt_a),
     .dv_bd_node(bd_node), .dv_bd_we(bd_we), .dv_bd_addr(bd_addr), .dv_bd_wdata(bd_wdata), .dv_bd_rdata(bd_rdata),
     .dv_fi_node(fi_node), .dv_fi_sel(fi_sel), .dv_fi_en(fi_en), .dv_fi_idx(fi_idx), .dv_fi_mask(fi_mask),
-    .dv_rt_valid(ob_out_valid), .dv_rt_flit4(ob_out_flit4));
+    .dv_rt_valid(ob_out_valid), .dv_rt_flit4(ob_out_flit4), .dv_obs(obs_a));
 
 endmodule

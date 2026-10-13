@@ -23,6 +23,11 @@
 //   ins_in is the instruction at the current pc in every cycle, as the combinational read gave it: the engine's timing
 //   is unchanged (no cycle per instruction). The alternative, one more state per instruction to wait for the registered
 //   word, costs a cycle per executed instruction (synth_report_drop043.md measures both).
+//   Drop 0.43 (stream B2): the engine runs on a gated clock (neo_icg), on while a program runs (every state but IDLE and
+//   END) and at prog_start (and through the reset): idle, nothing of it moves but the counts of ct_free / done pulses,
+//   which the start resets anyway. The tile's two engines gate themselves, each from its own state (a fault in one gate
+//   shows as a lockstep mismatch). cg_en shows the enable; fetch_wait the cycles the engine waits on a FETCH (WAITCMD), the
+//   tile's telemetry.
 module tile_dma #(
   parameter int XW = 2,
   parameter int YW = 2,
@@ -60,7 +65,10 @@ module tile_dma #(
   output logic signed [15:0] tiles_ready,
   // testbench hook (drop 0.35; DV_HOOKS = 1): pc XOR dv_pc_mask at the falling edge while dv_pc_flip
   input  logic          dv_pc_flip,
-  input  logic [PAW-1:0] dv_pc_mask
+  input  logic [PAW-1:0] dv_pc_mask,
+  // drop 0.43: observation and telemetry
+  output logic          cg_en,
+  output logic          fetch_wait
 );
   localparam logic [3:0] S_IDLE = 4'd0, S_FETCH = 4'd1, S_ISSUE = 4'd2, S_WAITCMD = 4'd3,
                          S_WAITFREE = 4'd4, S_WAITDONE = 4'd5, S_END = 4'd6, S_WAITRDY = 4'd7, S_WAITRED = 4'd8,
@@ -96,6 +104,11 @@ module tile_dma #(
   assign prog_done = (state == S_END);
   assign prog_busy = (state != S_IDLE) && (state != S_END);
   assign tiles_ready = ready_q;
+  assign fetch_wait  = (state == S_WAITCMD);
+  // the gated clock (drop 0.43)
+  logic gclk;
+  assign cg_en = ((state != S_IDLE) && (state != S_END)) || prog_start || !rst_n;
+  neo_icg u_icg (.clk(clk), .en(cg_en), .te(1'b0), .gclk(gclk));
 
   generate
     if (DV_HOOKS != 0) begin : g_dv
@@ -105,7 +118,7 @@ module tile_dma #(
       assign unused_dv = ^{dv_pc_flip, dv_pc_mask};
     end
   endgenerate
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge gclk or negedge rst_n) begin
     if (!rst_n) begin
       state <= S_IDLE; pc <= '0; ins <= '0; tiles_freed <= '0; done_seen <= 1'b0; ready_q <= '0;
     end else begin

@@ -21,6 +21,13 @@
 //     0x0A MBIST     w: any write starts the bank MBIST (March C-); r: bit0 active, bit1 done, bit2 fail,
 //                       bit3 fail found by ECC correction, [31:12] failing address (20 bits since drop 0.22)
 //     0x0B PARTITION w/r: [3:0] this tile's spatial partition; flits from another partition are dropped and flagged
+//     0x0C PRIO      w/r: [15:0] the router's priority map (drop 0.43): bit p = partition p is the high class of the
+//                       router's arbitration (noc_router.sv); 0 after reset: one class, the round-robin of drop 0.41
+//     0x40 TEL_CTRL  w: bit0 snapshot, bit1 clear (pulses; drop 0.43): the telemetry counters (tile_telem.sv) copied into
+//                       their snapshots / zeroed, both = the window's snapshot and a new window; r: [15:8] the counters
+//     0x41..0x4C TEL r: the snapshots, 32-bit saturating counts of the window -- 0x41 cycles, 0x42 array valid (MAC
+//                       utilization = 0x42 / 0x41), 0x43 feeder stall, 0x44 fetch wait, 0x45 drain, 0x46..0x4A link stall of
+//                       router output N, E, S, W, L, 0x4B bank read busy, 0x4C bank write busy (tile_telem.sv)
 //   The descriptor registers are kept twice and compared every cycle (cfg_err): a corrupted descriptor is a
 //   control-path fault the datapath checks cannot see. Causes: bits 0-17 (see neo_tile), bit 18 = watchdog.
 //   Timing: writes take effect one cycle after the bus cycle (CTRL pulses are one cycle wide); a read
@@ -58,6 +65,10 @@ module host_if #(
   output logic [18:0] err_mask,
   input  logic [18:0] err_cause,
   output logic [3:0]  partition,
+  output logic [15:0] prio,               // drop 0.43: the router's priority map (0x0C)
+  output logic        tel_snap,           // drop 0.43: telemetry snapshot / clear (TEL_CTRL, one-cycle pulses)
+  output logic        tel_clear,
+  input  logic [31:0] tel_rdata,          // ... the snapshot word the bus address selects (0x40 + k)
   output logic        cfg_err,            // descriptor register pair disagrees
   output logic        wd_enable,
   output logic [23:0] wd_window,
@@ -90,10 +101,11 @@ module host_if #(
       prog_lo <= '0; done_latched <= 1'b0; cfg_m <= '0; rq_tbl_we <= 1'b0; rq_tbl_addr <= '0;
       rq_tbl_mult <= '0; rq_tbl_shift <= '0; rq_tbl_zp <= '0; rq_relu <= 1'b0; h_rdata <= '0;
       err_mask <= '0; wd_enable <= 1'b0; wd_window <= '0; wd_kick <= 1'b0; selftest_inject <= 1'b0; bist_start <= 1'b0;
-      partition <= '0; cfg_m_dup <= '0;
+      partition <= '0; prio <= '0; cfg_m_dup <= '0; tel_snap <= 1'b0; tel_clear <= 1'b0;
       for (int i = 0; i < 20; i++) begin cfg[i] <= '0; cfg_dup[i] <= '0; end
     end else begin
       prog_we <= 1'b0; prog_start <= 1'b0; err_clear <= 1'b0; rq_tbl_we <= 1'b0; wd_kick <= 1'b0; bist_start <= 1'b0;
+      tel_snap <= 1'b0; tel_clear <= 1'b0;
       if (core_done) done_latched <= 1'b1;
       if (h_we) begin
         case (h_addr)
@@ -103,6 +115,8 @@ module host_if #(
           8'h04: begin prog_wdata <= {h_wdata, prog_lo}; prog_we <= 1'b1; end
           8'h05: err_mask <= h_wdata[18:0];
           8'h0B: partition <= h_wdata[3:0];
+          8'h0C: prio <= h_wdata[15:0];
+          8'h40: begin tel_snap <= h_wdata[0]; tel_clear <= h_wdata[1]; end
           8'h07: begin wd_enable <= h_wdata[0]; wd_window <= h_wdata[31:8]; end
           8'h08: wd_kick <= 1'b1;
           8'h09: selftest_inject <= h_wdata[0];
@@ -123,10 +137,12 @@ module host_if #(
           8'h05: h_rdata <= {13'd0, err_mask};
           8'h06: h_rdata <= {13'd0, err_cause};
           8'h0B: h_rdata <= {28'd0, partition};
+          8'h0C: h_rdata <= {16'd0, prio};
           8'h0A: h_rdata <= {bist_fail_addr, 8'd0, bist_fail_ce, bist_fail, bist_done, bist_active};
           8'h03: h_rdata <= prog_lo;
           8'h24: h_rdata <= {{(32-IDXW){1'b0}}, cfg_m};
-          default: h_rdata <= (h_addr >= 8'h10 && h_addr < 8'h24) ? {16'd0, cfg[5'(h_addr - 8'h10)]} : 32'd0;
+          default: h_rdata <= (h_addr >= 8'h10 && h_addr < 8'h24) ? {16'd0, cfg[5'(h_addr - 8'h10)]} :
+                              (h_addr[7:4] == 4'h4) ? tel_rdata : 32'd0;
         endcase
       end
     end

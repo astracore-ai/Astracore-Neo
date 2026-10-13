@@ -210,12 +210,12 @@ def main():
     # ---- gates
     L.append("## Gates")
     L.append("")
-    L.append("| Unit | Synthesized | Latches | Multiple drivers | Hierarchy check | PE count | DV_HOOKS = 0 |")
-    L.append("| --- | --- | --- | --- | --- | --- | --- |")
+    L.append("| Unit | Synthesized | Latches | Multiple drivers | Hierarchy check | PE count | DV_HOOKS = 0 | ICG cells (own) |")
+    L.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
     for n in order:
         r = units[n]
         if r.get("failed"):
-            L.append(f"| `{n}` | **failed**: {r['failed']} | | | | | |")
+            L.append(f"| `{n}` | **failed**: {r['failed']} | | | | | | |")
             continue
         chk = r.get("check") or {}
         pe = "—" if r.get("pe_expected") is None else (f"{r.get('pe_count')} = {r['pe_expected']} ✓" if r.get("pe_check") else f"**{r.get('pe_count')} ≠ {r['pe_expected']}**")
@@ -230,18 +230,21 @@ def main():
             dvs += " — tree " + ("✓" if r["dv_hooks_tree"]["passed"] else f"**{r['dv_hooks_tree']['failing_units']}**")
         L.append(f"| `{n}` | ✓ | {'none' if not r.get('latches') else '**%d**' % r['latches']} | "
                  f"{'none' if not chk.get('multiple_drivers') else '**%d**' % chk['multiple_drivers']} | "
-                 f"{'✓' if not r.get('hierarchy_problems') else '**' + '; '.join(r['hierarchy_problems']) + '**'} | {pe} | {dvs} |")
+                 f"{'✓' if not r.get('hierarchy_problems') else '**' + '; '.join(r['hierarchy_problems']) + '**'} | {pe} | {dvs} | "
+                 f"{r.get('icg_cells', 0)}{'' if not r.get('icg_unmapped') else ' **+%d unmapped**' % r['icg_unmapped']} |")
     L.append("")
     # ---- units
     L.append("## Units")
     L.append("")
-    L.append("Own cells = the unit's library cells; cells, flops and area with its subtree (one instance of the unit); macro area from the model. "
+    L.append("Own cells = the unit's library cells; cells, flops and area with its subtree (one instance of the unit); macro area from the model; "
+             "clock-gated flops (drop 0.43) = the flops of the subtree whose clock pin an ICG cell drives, a child's all when its clk is a gated "
+             "clock, and the ICG cells of the subtree. "
              f"Timing is the unit's own logic with its child units as extracted timing models (a child's inside is the child's row): WNS against the "
              f"{res['period_ps']:.0f} ps clock; minimum period from OpenSTA's `report_clock_min_period` (register-to-register paths of the clock, a "
              "child's clock-to-output and setup arcs included); violating endpoints of the unit's timing endpoints; the Yosys time of the unit alone.")
     L.append("")
-    L.append("| Unit | Own cells | Cells | Flops | Cell area µm² | Macro area µm² | Total area µm² | WNS ps | Min period ps (Fmax) | Violating endpoints | Yosys s |")
-    L.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    L.append("| Unit | Own cells | Cells | Flops | Clock-gated flops | ICG cells | Cell area µm² | Macro area µm² | Total area µm² | WNS ps | Min period ps (Fmax) | Violating endpoints | Yosys s |")
+    L.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for n in order:
         r = units[n]
         if r.get("failed"):
@@ -251,7 +254,8 @@ def main():
         fmax = sta.get("fmax_mhz")
         eps = sta.get("endpoints")
         viol = sta.get("endpoints_violating")
-        L.append(f"| `{n}` | {f0(r.get('own_cells'))} | {f0(r.get('cells'))} | {f0(r.get('flops'))} | {f0(r.get('cell_area_um2'))} | "
+        L.append(f"| `{n}` | {f0(r.get('own_cells'))} | {f0(r.get('cells'))} | {f0(r.get('flops'))} | "
+                 f"{f0(r.get('gated_flops'))} ({pct(r.get('gated_flops') or 0, r.get('flops'))}) | {f0(r.get('icgs'))} | {f0(r.get('cell_area_um2'))} | "
                  f"{f0(r.get('macro_area_um2'))} | {f0(r.get('total_area_um2'))} | {f0(sta.get('wns_max_ps'))} | "
                  f"{(f0(mp) + (f' ({fmax:,.0f} MHz)' if fmax else '')) if mp else '—'} | "
                  f"{(f'{viol:,} of {eps:,}') if eps else '—'} | {f0(r.get('synth_seconds'))} |")

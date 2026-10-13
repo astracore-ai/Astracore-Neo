@@ -38,6 +38,8 @@ module tile_mesh #(
   output logic          rq_tbl_perr       [NX*NY],
   output logic          lost_err          [NX*NY],
   output logic          fetch_timeout     [NX*NY],
+  output logic [15:0]   drain_crc_last    [NX*NY],     // drop 0.43: each tile's last drain message's CRC and count (lockstep)
+  output logic [15:0]   drain_msg_cnt     [NX*NY],
   // testbench hooks (drop 0.35; DV_HOOKS = 1): one tile at a time, selected by node index y * NX + x -- the bank backdoor
   // (dv_bd_*), the fault injection (dv_fi_*: see neo_tile) and the observation of node dv_fi_node's router output registers
   input  logic [NW-1:0] dv_bd_node,
@@ -51,7 +53,8 @@ module tile_mesh #(
   input  logic [19:0]   dv_fi_idx,
   input  logic [DWL-1:0] dv_fi_mask,
   output logic [4:0]    dv_rt_valid,
-  output logic [FW-1:0] dv_rt_flit4
+  output logic [FW-1:0] dv_rt_flit4,
+  output logic [31:0]   dv_obs [NX*NY]     // drop 0.43: every tile's clock enables and telemetry events (neo_tile; 0 at DV_HOOKS = 0)
 );
   logic          o_valid [NX*NY][4];
   logic [FW-1:0] o_flit  [NX*NY][4];
@@ -89,7 +92,8 @@ module tile_mesh #(
                    .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH),
                    .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT), .BIST_WORDS(BIST_WORDS),
                    .NCHK(NCHK), .DV_HOOKS(DV_HOOKS)) u_t (
-          .clk(clk), .rst_n(rst_n), .my_x(XW'(x)), .my_y(YW'(y)),
+          .clk(clk), .rst_n(rst_n), .router_rst_n(rst_n), .tile_clk_en(1'b1), .iso_en(1'b0),   // drop 0.43: always on here
+          .my_x(XW'(x)), .my_y(YW'(y)),
           .in_valid(t_in_valid), .in_flit(t_in_flit), .in_ready(t_in_ready),
           .out_valid(t_out_valid), .out_flit(t_out_flit), .out_ready(t_out_ready),
           .h_we(h_we[n]), .h_re(h_re[n]), .h_addr(h_addr[n]), .h_wdata(h_wdata[n]), .h_rdata(h_rdata[n]), .err_pin(err_pin[n]),
@@ -98,10 +102,10 @@ module tile_mesh #(
           .array_abft_sticky(array_abft_sticky[n]), .acc_abft_sticky(acc_abft_sticky[n]), .ctrl_err_sticky(ctrl_err_sticky[n]),
           .seq_err_sticky(seq_err_sticky[n]), .rq_err_sticky(rq_err_sticky[n]), .ecc_ce(ecc_ce[n]), .ecc_ue(ecc_ue[n]),
           .wbuf_ce(wbuf_ce[n]), .wbuf_ue(wbuf_ue[n]), .rq_tbl_perr(rq_tbl_perr[n]),
-          .lost_err(lost_err[n]), .fetch_timeout(fetch_timeout[n]),
+          .lost_err(lost_err[n]), .fetch_timeout(fetch_timeout[n]), .drain_crc_last(drain_crc_last[n]), .drain_msg_cnt(drain_msg_cnt[n]),
           .dv_bd_we(dv_bd_we && (dv_bd_node == NW'(n))), .dv_bd_addr(dv_bd_addr[BAW-1:0]), .dv_bd_wdata(dv_bd_wdata), .dv_bd_rdata(dv_bd_rd[n]),
           .dv_fi_en(dv_fi_en && (dv_fi_node == NW'(n))), .dv_fi_sel(dv_fi_sel), .dv_fi_idx(dv_fi_idx), .dv_fi_mask(dv_fi_mask),
-          .dv_rt_valid(dv_rv[n]), .dv_rt_flit4(dv_rf4[n]));
+          .dv_rt_valid(dv_rv[n]), .dv_rt_flit4(dv_rf4[n]), .dv_obs(dv_obs[n]));
         // north input (0) <- south output (2) of the node above; south input (2) <- north output (0) of the node below
         if (y > 0) begin : g_n_in
           assign i_valid[n][0] = o_valid[n-NX][2]; assign i_flit[n][0] = o_flit[n-NX][2]; assign o_ready[n-NX][2] = i_ready[n][0];

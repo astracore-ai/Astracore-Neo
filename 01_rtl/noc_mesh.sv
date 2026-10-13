@@ -1,4 +1,6 @@
 // noc_mesh.sv -- NX x NY mesh of noc_router, local ports exposed, edges terminated (drop 0.4).
+//   Drop 0.43: the routers' per-partition priority map (prio, bit p = partition p is the high class) is one input shared
+//   by every router of the mesh (neosim run_noc.py N4); the output stages' clock enables are not observed here.
 module noc_mesh #(
   parameter int NX = 3,
   parameter int NY = 3,
@@ -16,6 +18,7 @@ module noc_mesh #(
   output logic [FW-1:0] l_out_flit  [NX*NY],
   input  logic          l_out_ready [NX*NY],
   input  logic          err_clear,
+  input  logic [15:0]   prio,                  // drop 0.43: the routers' priority map
   output logic          parity_err  [NX*NY]
 );
   // link signals indexed [node][port]: what node n drives OUT of port p, and what it accepts
@@ -30,12 +33,15 @@ module noc_mesh #(
     for (genvar y = 0; y < NY; y++) begin : g_y
       for (genvar x = 0; x < NX; x++) begin : g_x
         localparam int n = y * NX + x;
+        logic [4:0] stage_en;                // (the output stages' clock enables: not observed on the bare mesh)
         noc_router #(.XW(XW), .YW(YW), .DW(DW), .FW(FW)) u_r (
-          .clk(clk), .rst_n(rst_n), .my_x(XW'(x)), .my_y(YW'(y)),
+          .clk(clk), .rst_n(rst_n), .my_x(XW'(x)), .my_y(YW'(y)), .prio(prio),
           .in_valid(i_valid[n]), .in_flit(i_flit[n]), .in_ready(i_ready[n]),
           .out_valid(o_valid[n]), .out_flit(o_flit[n]), .out_ready(o_ready[n]),
-          .err_clear(err_clear), .parity_err_sticky(parity_err[n]),
+          .err_clear(err_clear), .parity_err_sticky(parity_err[n]), .stage_en(stage_en),
           .dv_flit_flip(1'b0), .dv_valid_clear(1'b0), .dv_port('0), .dv_mask('0));    // no testbench hooks on the bare mesh
+        logic unused_stage_en;
+        assign unused_stage_en = ^stage_en;
         // local port 4
         assign i_valid[n][4]   = l_in_valid[n];
         assign i_flit[n][4]    = l_in_flit[n];

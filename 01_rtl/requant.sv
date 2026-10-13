@@ -22,6 +22,12 @@
 //   Bit-identical to the two-stage form wherever that one does not wrap (PW + MW >= 32, the core's 32 and 16; the sums
 //   here are SW bits wide and never wrap; MW >= 2); only the latency changed. The table parity check is on the table
 //   read (in_valid's cycle), not in the pipeline, and is unchanged.
+//   Drop 0.43 (stream B2): the whole block runs on a gated clock (neo_icg), enabled while a row is in the pipeline (in_valid,
+//   v1, v2, out_valid: the edge that clears out_valid included), a table entry is written, the sticky is cleared, and
+//   through the reset (cg_en, also an output: the tile's observation of its gated fraction). Every register that a reader
+//   samples -- the valids, the tables, the sticky, out_q under out_valid -- changes only in those cycles; the stage
+//   registers that load the row unconditionally hold their last row instead of the idle input in the others, which no one
+//   reads (out_q is read under out_valid, the comparator and the drain FIFO likewise).
 module requant #(
   parameter int COLS = 32,
   parameter int PW   = 32,
@@ -45,7 +51,8 @@ module requant #(
   // table parity (drop 0.12): each entry stores odd parity over {mult, shift, zp}; checked on every use
   input  logic                 err_clear,
   output logic                 tbl_perr_sticky,
-  input  logic                 tbl_fault_inject    // DV: corrupt bit 0 of column 0's multiplier
+  input  logic                 tbl_fault_inject,   // DV: corrupt bit 0 of column 0's multiplier
+  output logic                 cg_en               // drop 0.43: the block's clock enable (observation)
 );
   localparam int BW   = PW + MW + 1;               // product width
   localparam int CTW  = 40;                        // c = 2^(shift-1) + zp * 2^shift: |zp * 2^31| <= 2^38
@@ -62,8 +69,13 @@ module requant #(
   logic               wrt   [COLS];                  // entry has been written (parity meaningful)
   logic [MW-1:0]      mult_p [COLS];                 // multiplier as used (with the DV fault on column 0)
   logic               perr;
+  // the gated clock (drop 0.43); v1 / v2 are the stage-1 and stage-2 valids (the stages below)
+  logic               gclk;
+  logic               v1, v2;
+  assign cg_en = in_valid || v1 || v2 || out_valid || tbl_we || err_clear || !rst_n;
+  neo_icg u_icg (.clk(clk), .en(cg_en), .te(1'b0), .gclk(gclk));
 
-  always_ff @(posedge clk) begin
+  always_ff @(posedge gclk) begin
     if (tbl_we) begin
       mult[tbl_addr] <= tbl_mult;
       shft[tbl_addr] <= tbl_shift;
@@ -71,7 +83,7 @@ module requant #(
       par[tbl_addr]  <= ~(^{tbl_mult, tbl_shift, tbl_zp});     // odd parity
     end
   end
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge gclk or negedge rst_n) begin
     if (!rst_n) begin
       for (int j = 0; j < COLS; j++) wrt[j] <= 1'b0;
     end else if (tbl_we) begin
@@ -95,7 +107,7 @@ module requant #(
       end
     end
   end
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge gclk or negedge rst_n) begin
     if (!rst_n)         tbl_perr_sticky <= 1'b0;
     else if (err_clear) tbl_perr_sticky <= 1'b0;
     else if (perr)      tbl_perr_sticky <= 1'b1;
@@ -121,20 +133,18 @@ module requant #(
       end
     end
   end
-  logic                     v1;
-  logic [SW-1:0]            ra1  [COLS];             // the two rows
+  logic [SW-1:0]            ra1  [COLS];             // the two rows (stage 1; v1 above)
   logic [SW-1:0]            rb1  [COLS];
   logic                     n1   [COLS];             // acc < 0
   logic [4:0]               sh1  [COLS];
   logic signed [7:0]        zp1  [COLS];
-  // stage 2: s = acc * mult + 2^(shift-1) + zp * 2^shift
-  logic                     v2;
+  // stage 2: s = acc * mult + 2^(shift-1) + zp * 2^shift (v2 above)
   logic [SW-1:0]            sum2 [COLS];
   logic                     n2   [COLS];
   logic [4:0]               sh2  [COLS];
   logic signed [7:0]        zp2  [COLS];
 
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge gclk or negedge rst_n) begin
     if (!rst_n) begin
       v1 <= 1'b0; v2 <= 1'b0;
       out_valid <= 1'b0;

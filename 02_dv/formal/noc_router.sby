@@ -3,8 +3,10 @@
 # whose XY port it is; no output ever holds odd parity, a bad head is popped the cycle it is the head and
 # parity_err_sticky is exactly "a bad head was dropped since err_clear"; every flit value that leaves was accepted; a
 # picked accepted flit stays in its FIFO slot, moves into exactly one output register (its XY port), unchanged until it
-# leaves; a requesting head is granted within 5 fires of its output. Full proof by k-induction (drop 0.41);
-# noc_router_fv.sv holds the harness.
+# leaves; fairness with two priority classes (drop 0.43): a high-class head lets at most 5 + floor(4 / PRIO_N) fires of its
+# output go to other inputs, a low-class head at most 5 PRIO_N + 4 (5 and 44 at PRIO_N = 8), for every priority map; the
+# output stages' clock enables cover every change of their registers (the gate's formal model neo_icg_formal.sv, ungated).
+# Full proof by k-induction (drop 0.41); noc_router_fv.sv holds the harness.
 [options]
 mode prove
 depth 2
@@ -14,9 +16,10 @@ smtbmc yices
 
 [script]
 plugin -i slang
-read_slang -DFORMAL --top noc_router_fv noc_router.sv noc_router_fv.sv
+read_slang -DFORMAL --top noc_router_fv neo_icg_formal.sv noc_router.sv noc_router_fv.sv
 prep -top noc_router_fv
 
 [files]
+formal/neo_icg_formal.sv
 rtl/noc_router.sv
 formal/noc_router_fv.sv

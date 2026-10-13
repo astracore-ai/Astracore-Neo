@@ -336,10 +336,73 @@ def to_image(out, ref, M, cout=7, wo=6):
     return got
 
 
-async def setup(dut):
+# drop 0.43: the tiles' observation words (tile_mesh_cocotb's obs, neo_tile's dv_obs) -- bits 0..11 the clock enables of the
+# gated blocks, 12..22 the telemetry counters' events
+OBS_CG = ["dp", "rq", "rq_dup", "nic_rx", "nic_tx", "rt_n", "rt_e", "rt_s", "rt_w", "rt_l", "dma", "dma_dup"]
+OBS_EV = ["array_valid", "feeder_stall", "fetch_wait", "drain", "stall_n", "stall_e", "stall_s", "stall_w", "stall_l",
+          "bank_rd", "bank_wr"]
+TEL_CTRL, TEL_BASE = 0x40, 0x41                      # host_if: TEL_CTRL, then the snapshots (0x41 cycles, 0x42 + k event k)
+
+
+class ObsCounter:
+    """Counts the observation words of every tile at every rising edge (a histogram of the whole word, decoded per bit at the
+    end: cheap per cycle). The word read after an edge is the cycle that edge starts, which the next edge counts in RTL.
+    On the 2x2 builds (the 8x8 meshes do not run it) every test reports, as it ends, the fraction of its cycles each gated
+    block of each tile spent with its clock off -- the gated fractions of the stream's report."""
+
+    def __init__(self, dut, n, tag):
+        self.dut, self.n, self.tag = dut, n, tag
+        self.hist = {}
+        self.task = cocotb.start_soon(self._loop())
+
+    async def _loop(self):
+        try:
+            while True:
+                await RisingEdge(self.dut.clk)
+                v = int(self.dut.obs.value)
+                self.hist[v] = self.hist.get(v, 0) + 1
+        finally:                                     # the test ended (cocotb closes its coroutines): the report
+            self.report()
+
+    def counts(self):
+        """(cycles, per tile: {bit: cycles it was 1})."""
+        cyc = sum(self.hist.values())
+        per = [dict() for _ in range(self.n)]
+        for v, c in self.hist.items():
+            for t in range(self.n):
+                w = (v >> (32 * t)) & 0xFFFFFFFF
+                b = 0
+                while w:
+                    if w & 1:
+                        per[t][b] = per[t].get(b, 0) + c
+                    w >>= 1
+                    b += 1
+        return cyc, per
+
+    def report(self):
+        try:
+            cyc, per = self.counts()
+            if cyc == 0:
+                return
+            parts = []
+            for t in range(self.n):
+                parts.append(f"tile {t}: " + " ".join(f"{name} {100.0 * (1 - per[t].get(b, 0) / cyc):.0f}" for b, name in enumerate(OBS_CG)))
+            self.dut._log.info(f"{self.tag} gated fractions (% of {cyc} cycles off): " + "; ".join(parts))
+        except Exception:                            # noqa: BLE001 -- a report never fails a test
+            pass
+
+
+async def setup(dut, tag=None):
     cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
     mesh = Mesh(dut)
     await mesh.reset()
+    if NX * NY <= 4 and hasattr(dut, "obs"):
+        if tag is None:
+            try:
+                tag = cocotb.regression_manager._test.__qualname__.split("_")[0].upper()
+            except Exception:                        # noqa: BLE001
+                tag = "test"
+        mesh.obs = ObsCounter(dut, NX * NY, tag)
     return mesh
 
 
@@ -992,6 +1055,162 @@ async def m20_sparse_program(dut):
 
 
 MAX_FETCH_WORDS = (4095 // WPA) * WPA                # the longest entry-aligned fetch one DMA instruction can issue (4,088 at 8 words per entry)
+
+
+@cocotb.test()
+async def m22_self_serve(dut):
+    """M22 (drop 0.43, stream B2): the placement the chip-top suite avoided -- the tile that holds the layer's data computes
+    a share as well, fetching activations and weights from its own bank while it serves the other tiles' fetches. Before the
+    fix the other tiles' requests waited in that tile's receive stage in front of its own responses, which came back through
+    its router's local port, and every requester timed out (B1's finding). tile_nic now keeps a tile's fetch from its own
+    bank out of the mesh (the fetch goes to the server directly, the beats come back through the loopback register) and
+    holds a request from the link outside the receive stage while that serve is in progress or pending. Checked: the layer
+    bit-exact on all four tiles with every cause clean, and no flit from the data tile ever on its router's local output
+    (watched every cycle through the observation port)."""
+    from neo_backend import compile_layer
+    mesh = await setup(dut)
+    x, wgt, ref, act, wts = conv_data()
+    await mesh.load_bank(N11, act, wts)
+    lp = compile_layer("m22", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(1, 1), act_base=A0, w_bank=(1, 1), w_base=W0,
+                       owner=(0, 0), shares=4, nchk=NCHK)
+    assert any(tuple(tp.tile) == (1, 1) for tp in lp.tiles), f"the data tile takes no share: {[tp.tile for tp in lp.tiles]}"
+    mesh.fault_arm(N11, FI_NONE)                       # fi_node selects the observed router (no fault: fi_en stays low)
+    src_lo = DWL + 8                                   # the link flit's src_x, src_y above seq
+    xw, yw = max(1, (NX - 1).bit_length()), max(1, (NY - 1).bit_length())
+    seen = {"self": 0, "local": 0}
+    stop = []
+
+    async def watch():
+        while not stop:
+            await RisingEdge(dut.clk)
+            await ReadOnly()
+            if mesh.router_valid(4):
+                f = mesh.router_flit4()
+                sx, sy = (f >> src_lo) & ((1 << xw) - 1), (f >> (src_lo + xw)) & ((1 << yw) - 1)
+                seen["self" if (sx, sy) == (1, 1) else "local"] += 1
+    w = cocotb.start_soon(watch())
+    nodes = []
+    for tp in lp.tiles:
+        n = tp.tile[1] * NX + tp.tile[0]
+        nodes.append(n)
+        for name, v in tp.descriptor.items():
+            await mesh.set_cfg(n, name, v)
+        await mesh.program(n, tp.program)
+    await mesh.start(nodes)
+    onode = lp.out_bank[1] * NX + lp.out_bank[0]
+    n = await mesh.wait_prog(onode)
+    for nn in nodes:
+        await mesh.wait_prog(nn)
+    await mesh.tick(40)
+    stop.append(1)
+    await w
+    await RisingEdge(dut.clk)                          # (the watcher ends in a read-only phase)
+    got = to_image(await mesh.read_rows(onode, lp.out_base, 36), ref, 36)
+    await check_result(mesh, got, ref, "M22")
+    await expect_clean(mesh)
+    assert seen["self"] == 0, f"M22: {seen['self']} flits of the data tile came back through its router's local port"
+    dut._log.info(f"M22: the data tile computing a share while serving the other three, {len(lp.tiles)} tiles, bit-exact in {n} clocks, "
+                  f"causes clean; its own fetches stayed off the mesh ({seen['local']} flits from other tiles on its local port, none of its own)")
+
+
+async def tel_snapshot(mesh, node):
+    """Take tile `node`'s telemetry snapshot and read it: {name: count} with the cycle count as 'cycles'."""
+    await mesh.reg_write(node, TEL_CTRL, 1)
+    await mesh.tick(2)
+    out = {"cycles": await mesh.reg_read(node, TEL_BASE)}
+    for k, name in enumerate(OBS_EV):
+        out[name] = await mesh.reg_read(node, TEL_BASE + 1 + k)
+    return out
+
+
+@cocotb.test(skip=(NX * NY > 4))
+async def m23_telemetry(dut):
+    """M23 (drop 0.43, stream B2): the telemetry counters (tile_telem behind host_if 0x40 .. 0x4C) against the testbench's
+    own counts. (a) M2's K-split -- three tiles computing, the fourth serving their fetches and taking the owner's drain,
+    partial sums and RDY over the mesh -- with the observation words of all four tiles counted every cycle (ObsCounter);
+    once the mesh is quiet every tile's snapshot is read and each of the eleven event counters must equal the count of
+    its event bit exactly, the array-valid count must also equal the rows the tile streamed (runs x M, the descriptor's
+    arithmetic), and the window's cycle count must equal the cycles between a clear and a snapshot. (b) single-tile
+    convolutions of M18's class with the counters cleared at the start: the measured MAC utilization (array valid /
+    cycles of the window) beside the performance model's prediction (neo_perf_v3.tile_layer) -- the table of the report."""
+    from neo_perf_v3 import tile_layer
+    mesh = await setup(dut)
+    x, wgt, ref, act, wts = conv_data()
+    await mesh.load_bank(N11, act, wts)
+    owner, contribs = N00, [N10, N01]
+    for n, ct in ((owner, 0), (contribs[0], 1), (contribs[1], 2)):
+        await mesh.descriptor(n, 6, 6, 6, 6, 1, 1, 3, CT_N, ct, 9, 2 if n == owner else 0, 36)
+        fetch = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36), ins(OP_FETCH_W, 1, 1, W0 + ct * WPT, WPT, 0)]
+        if n == owner:
+            prog = fetch + [ins(OP_DRAIN_WR, 1, 1, R0, 36), ins(OP_GO), ins(OP_WAIT_REDUCE)]
+            prog += [ins(OP_NOTIFY, xy(c)[0], xy(c)[1]) for c in contribs] + [ins(OP_WAIT_DONE), ins(OP_END)]
+        else:
+            prog = fetch + [ins(OP_GO), ins(OP_WAIT_RDY), ins(OP_DRAIN_PSUM, xy(owner)[0], xy(owner)[1], 0, 36), ins(OP_WAIT_DONE), ins(OP_END)]
+        await mesh.program(n, prog)
+    await mesh.start([owner, *contribs])
+    for n in (owner, *contribs):
+        await mesh.wait_prog(n)
+    await mesh.tick(200)                                 # quiet: no event bit is high in any tile
+    _, tb = mesh.obs.counts()
+    rows_streamed = {owner: 9 * 36, contribs[0]: 9 * 36, contribs[1]: 9 * 36, N11: 0}
+    lines, bad = [], []
+    for n in range(mesh.N):
+        tel = await tel_snapshot(mesh, n)
+        for k, name in enumerate(OBS_EV):
+            if tel[name] != tb[n].get(12 + k, 0):
+                bad.append(f"tile {n} {name}: counter {tel[name]}, testbench {tb[n].get(12 + k, 0)}")
+        if tel["array_valid"] != rows_streamed[n]:
+            bad.append(f"tile {n} array_valid {tel['array_valid']} != runs x M = {rows_streamed[n]}")
+        lines.append(f"tile {n}: " + " ".join(f"{name} {tel[name]}" for name in ["cycles"] + OBS_EV))
+    # the window's cycle count: a clear, k cycles, a snapshot
+    await mesh.reg_write(N10, TEL_CTRL, 2)
+    await mesh.tick(1000)
+    win = (await tel_snapshot(mesh, N10))["cycles"]
+    if win != 1000:
+        bad.append(f"cycle count {win} over a clear and a snapshot 1,000 cycles apart")
+    assert not bad, "M23 (a): " + "; ".join(bad)
+    dut._log.info("M23 (a): eleven event counters on four tiles equal to the testbench's counts, array valid = runs x M, the window's "
+                  "cycles exact; " + " | ".join(lines))
+    # (b) utilization, measured against the model
+    rng = np.random.default_rng(31)
+    table = []
+    for k, s, ct_n in ((3, 1, 3), (1, 1, 4), (3, 2, 2), (5, 1, 1)):
+        p = k // 2
+        cin = ct_n * ROWS
+        xx = rng.integers(-128, 128, size=(cin, 6, 6), dtype=np.int64)
+        ww = rng.integers(-128, 128, size=(7, cin, k, k), dtype=np.int64)
+        rr = direct_conv(xx, ww, s, p)
+        ho, wo = rr.shape[1], rr.shape[2]
+        M = ho * wo
+        aa, wt = pack_words(xx, ww, ct_n, k, 7, rows=ROWS, cols=COLS, nchk=NCHK)
+        a0, w0 = 0, _align(len(aa))
+        r0 = _align(w0 + len(wt))
+        await mesh.load_words(N11, a0, aa)
+        await mesh.load_words(N11, w0, wt)
+        await mesh.descriptor(0, 6, 6, ho, wo, s, p, k, ct_n, 0, ct_n * k * k, 0, M)
+        prog = [ins(OP_FETCH_A, 1, 1, a0 + ct * APT, APT, ct * 36) for ct in range(ct_n)]
+        prog += fetch_weights_chunks(1, 1, w0, ct_n, k)
+        prog += [ins(OP_DRAIN_WR, 1, 0, r0, M), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+        await mesh.program(0, prog)
+        await mesh.reg_write(0, TEL_CTRL, 2)              # a new window from the start
+        await mesh.start([0])
+        await mesh.wait_prog(0)
+        tel = await tel_snapshot(mesh, 0)
+        got = to_image(await mesh.read_rows(N10, r0, M), rr, M, wo=wo)
+        await check_result(mesh, got, rr, f"M23 k{k} s{s} ct{ct_n}")
+        meas = tel["array_valid"] / tel["cycles"]
+        model = tile_layer(6, 6, cin, 7, k, s, p, rows=ROWS, cols=COLS, nchk=NCHK)          # v3's link (64 B / cycle), passes of M
+        build = tile_layer(6, 6, cin, 7, k, s, p, rows=ROWS, cols=COLS, nchk=NCHK, rx_bytes=4 * WPF, tx_bytes=4 * WPF,
+                           run_spacing=True)                                                   # this build's link, the pass spacing
+        table.append((k, s, ct_n, M, tel["array_valid"], tel["cycles"], meas, model["utilization"], model["cycles"],
+                      build["utilization"], build["cycles"]))
+        assert tel["array_valid"] == ct_n * k * k * M, f"M23 k{k}: array valid {tel['array_valid']} != {ct_n * k * k * M}"
+    await expect_clean(mesh)
+    dut._log.info("M23 (b): MAC utilization of single-tile layers (6x6 inputs, 7 output channels), measured by the counters vs the "
+                  "model (neo_perf_v3.tile_layer as v3 has it / with this build's link and the pass spacing) -- " +
+                  "; ".join(f"k{k} s{s} {c} ch.tiles M {M}: {av} valid / {cy} cycles = {100 * u:.1f} % measured, {100 * mu:.1f} % "
+                            f"({mc:.0f} cycles) / {100 * bu:.1f} % ({bc:.0f} cycles) predicted"
+                            for k, s, c, M, av, cy, u, mu, mc, bu, bc in table))
 
 
 @cocotb.test(skip=(NX * NY < 16))

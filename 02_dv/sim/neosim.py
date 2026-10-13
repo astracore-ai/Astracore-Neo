@@ -25,6 +25,15 @@ interfaces, packages, multiple clocks (one clock named by the always_ff is assum
 negedge-clocked always_ff -- the testbench hooks of drop 0.35 -- runs at the falling edge
 of that same clock, i.e. after the rising edge within one tick()).
 
+Clock gating (drop 0.43): neo_icg (rtl/neo_icg.sv, a latch-based integrated clock gate) is a
+primitive here -- its body (an always_latch) is not simulated, the module need not be loaded.
+At every tick the settled value of its en | te is sampled before the rising edge (what the
+latch holds at the edge), and an always_ff whose clock is the gate's gclk runs at that edge
+only when the sample is 1 or its asynchronous reset is asserted. Gates may be chained (a gate
+whose clk is another gate's gclk: the tile's power-domain gate in front of its blocks' gates):
+a flop of the inner gate runs when every gate on its clock's path sampled 1.
+`always_latch` is parsed (so neo_icg.sv may be loaded) but refused anywhere else.
+
 Semantics implemented (IEEE 1800 essentials): expression signedness is signed only if
 every operand is signed; operands are extended to the assignment context; arithmetic is
 unbounded then truncated to the target width on assignment; comparisons and logical
@@ -53,7 +62,7 @@ TOKEN_RE = re.compile(r"""
 """, re.VERBOSE | re.DOTALL)
 
 KEYWORDS = {"module", "endmodule", "parameter", "localparam", "input", "output", "logic", "signed",
-            "int", "genvar", "assign", "always_ff", "always_comb", "posedge", "negedge", "or",
+            "int", "genvar", "assign", "always_ff", "always_comb", "always_latch", "posedge", "negedge", "or",
             "if", "else", "for", "begin", "end", "generate", "endgenerate", "wire", "reg",
             "unsigned", "integer", "case", "casez", "casex", "endcase", "default"}
 
@@ -257,6 +266,9 @@ class Parser:
         if tk.val == "always_comb":
             self.i += 1
             return [("always_comb", self.parse_stmt())]
+        if tk.val == "always_latch":                       # drop 0.43: parsed for neo_icg.sv, refused at elaboration
+            self.i += 1
+            return [("always_latch", self.parse_stmt())]
         if tk.val == "generate":
             self.i += 1
             items = []
@@ -639,6 +651,7 @@ class Design:
         self.comb_blocks: List[Any] = []                   # resolved stmts
         self.ff_blocks: List[Tuple[Any, Any, Any]] = []    # (clk_hier, rst_hier, stmt)
         self.ffn_blocks: List[Tuple[Any, Any]] = []        # (clk_hier, stmt): falling-edge blocks
+        self.icgs: List[Tuple[Any, Any, Any, Any]] = []    # drop 0.43: neo_icg primitives (gclk, en, te, clk declarations)
         self.top_ports: Dict[str, str] = {}                # port name -> hier
 
     # -- entry --
@@ -678,7 +691,19 @@ class Design:
         scope.names[name] = decl
         return decl
 
+    ICG_PORTS = [("input", False, None, "clk", []), ("input", False, None, "en", []), ("input", False, None, "te", []),
+                 ("output", False, None, "gclk", [])]
+
     def _elab_module(self, modname, params: Dict[str, int], path: str, port_conns, is_top=False):
+        if modname == "neo_icg":                           # drop 0.43: the clock gate is a primitive (the header)
+            scope = Scope(None, path)
+            for d, signed, rng, pname, dims in self.ICG_PORTS:
+                self._declare(scope, pname, 1, False, [], d)
+            for pname, conn in (port_conns or []):
+                if conn is not None:
+                    self._connect(scope.names[pname], conn)
+            self.icgs.append((scope.names["gclk"], scope.names["en"], scope.names["te"], scope.names["clk"]))
+            return
         m = self.modules.get(modname)
         if m is None:
             raise NameError(f"module {modname!r} not found")
@@ -765,6 +790,8 @@ class Design:
                 self.ffn_blocks.append((scope.lookup(it[1]), self._resolve_stmt(it[2], scope)))
             elif kind == "always_comb":
                 self.comb_blocks.append(self._resolve_stmt(it[1], scope))
+            elif kind == "always_latch":
+                raise ValueError(f"always_latch in {scope.prefix}: neosim simulates no latch (neo_icg is its primitive)")
             elif kind == "genfor":
                 _, var, init, cond, step, label, body = it
                 v = self._const(init, scope)
@@ -892,9 +919,36 @@ class Design:
                 fn({}, None)
                 return any(c.v != b for c, b in zip(written, before))
             self.comb_nodes.append(node)
+        # the clock gates (drop 0.43): gclk cell -> [en cell, te cell, the gate's enable at the edge (its own sample and its
+        # parents'), the keys of the gates on its clock's path from itself up (a gate whose clk is another gate's gclk)]
+        self.icg_cells = {}
+        clk_of = {}
+        for g, e, t, c in self.icgs:
+            gc = self.cells[g.hier]
+            if id(gc) in self.icg_cells:
+                raise ValueError(f"two clock gates drive one net ({g.hier})")
+            self.icg_cells[id(gc)] = [self.cells[e.hier], self.cells[t.hier], 1, []]
+            clk_of[id(gc)] = id(self.cells[c.hier])
+        for k, g in self.icg_cells.items():
+            path, a = [k], clk_of[k]
+            while a in self.icg_cells:
+                if a in path:
+                    raise ValueError("clock gates in a loop")
+                path.append(a)
+                a = clk_of[a]
+            g[3] = path
         self.ff_nodes = []
         for clk, rst, st in self.ff_blocks:
-            self.ff_nodes.append(self._compile_stmt(st, blocking=False))
+            fn = self._compile_stmt(st, blocking=False)
+            gate = self.icg_cells.get(id(self.cells[clk.hier])) if clk is not None and hasattr(clk, "hier") else None
+            if gate is not None:
+                rc = self.cells[rst.hier] if rst is not None else None
+
+                def gated(env, pending, fn=fn, gate=gate, rc=rc):
+                    if gate[2] or (rc is not None and rc.v == 0):
+                        fn(env, pending)
+                fn = gated
+            self.ff_nodes.append(fn)
         self.ffn_nodes = []
         for clk, st in self.ffn_blocks:
             self.ffn_nodes.append(self._compile_stmt(st, blocking=False))
@@ -1284,6 +1338,10 @@ class Design:
         (the negedge-clocked blocks, if any), so what the testbench pokes or the hooks change after a tick is what
         the next rising edge samples."""
         self.settle()
+        if self.icg_cells:                                 # the clock gates' latches at the edge (drop 0.43)
+            raw = {k: (g[0].v | g[1].v) & 1 for k, g in self.icg_cells.items()}
+            for g in self.icg_cells.values():
+                g[2] = 1 if all(raw[a] for a in g[3]) else 0
         self._edge(self.ff_nodes)
         if self.ffn_nodes:
             self._edge(self.ffn_nodes)

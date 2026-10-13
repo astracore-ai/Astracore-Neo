@@ -40,14 +40,20 @@ module neo_tile_axil #(
   neo_tile #(.XW(XW), .YW(YW), .NX(NX), .NY(NY), .WPF(WPF), .ROWS(ROWS), .COLS(COLS), .PW(PW),
              .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH),
              .FETCH_TIMEOUT(FETCH_TIMEOUT), .BIST_WORDS(BIST_WORDS), .DV_HOOKS(DV_HOOKS)) u_tile (
-    .clk(clk), .rst_n(rst_n), .my_x(my_x), .my_y(my_y),
+    .clk(clk), .rst_n(rst_n), .router_rst_n(rst_n), .tile_clk_en(1'b1), .iso_en(1'b0),   // drop 0.43: one tile, always on
+    .my_x(my_x), .my_y(my_y),
     .in_valid(in_valid), .in_flit(in_flit), .in_ready(in_ready), .out_valid(out_valid), .out_flit(out_flit), .out_ready(out_ready),
     .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata), .err_pin(err_pin),
     .prog_done(prog_done), .drain_busy(drain_busy), .done(done), .parity_err(parity_err), .crc_err(crc_err),
     .array_abft_sticky(array_abft_sticky), .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky), .ecc_ce(ecc_ce), .ecc_ue(ecc_ue),
     .wbuf_ce(wbuf_ce), .wbuf_ue(wbuf_ue), .rq_tbl_perr(rq_tbl_perr), .lost_err(lost_err), .fetch_timeout(fetch_timeout),
+    .drain_crc_last(drain_crc_last), .drain_msg_cnt(drain_msg_cnt),
     .dv_bd_we(dv_bd_we), .dv_bd_addr(dv_bd_addr), .dv_bd_wdata(dv_bd_wdata), .dv_bd_rdata(dv_bd_rdata),
     .dv_fi_en(dv_fi_en), .dv_fi_sel(dv_fi_sel), .dv_fi_idx(dv_fi_idx), .dv_fi_mask(dv_fi_mask),
-    .dv_rt_valid(dv_rt_valid), .dv_rt_flit4(dv_rt_flit4));
+    .dv_rt_valid(dv_rt_valid), .dv_rt_flit4(dv_rt_flit4), .dv_obs(dv_obs));
+  logic [31:0] dv_obs;                       // drop 0.43: the tile's observation word (zero at DV_HOOKS = 0) and the lockstep
+  logic [15:0] drain_crc_last, drain_msg_cnt;  // pair (a single tile has no partner), not carried out
+  logic        unused_obs;
+  assign unused_obs = ^{dv_obs, drain_crc_last, drain_msg_cnt};
 endmodule
