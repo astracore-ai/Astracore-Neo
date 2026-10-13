@@ -14,7 +14,8 @@
 //   is clk through one neo_icg enabled by tile_clk_en, its reset rst_n, and its outputs reach the always-on side through
 //   neo_iso cells clamped while iso_en -- the link into the router (valid and flit 0: an unpowered domain's outputs float),
 //   the router's local output ready (1: whatever reaches it drains), and the status toward the control plane
-//   (h_rdata, err_pin, prog_done, drain_busy, done, the stickies but the router's, the lockstep pair, dv_obs: 0). The
+//   (h_rdata, err_pin, prog_done, drain_busy, done, the stickies but the router's, the lockstep pair: 0; the dv_* hooks
+//   are not isolated -- testbench ports, constant or a black box's pins in silicon, the synthesis job's DV_HOOKS gate). The
 //   control plane sequences them (mesh_ctrl.sv: iso on, clock off, reset, power off; power on, reset released with the
 //   clock still off, clock on, iso off). Nothing is retained: a tile comes back from reset and re-loads its program,
 //   descriptor and tables.
@@ -394,35 +395,36 @@ module neo_tile #(
   // (the cells drive whole vectors, split by part-selects: neosim connects an output port to a signal and assigns no
   // concatenation)
   logic [16:0]  rt_iso_q;
-  logic [151:0] st_iso_q;
+  logic [80:0]  st_iso_q;
   neo_iso #(.W(17), .CLAMP(0)) u_iso_rt (.iso_en(iso_en), .d({prio, err_clear}), .q(rt_iso_q));   // one class, no clear
   assign rt_prio      = rt_iso_q[16:1];
   assign rt_err_clear = rt_iso_q[0];
-  neo_iso #(.W(32 + 17 + 32 + 39 + 32), .CLAMP(0)) u_iso_st (.iso_en(iso_en),
+  neo_iso #(.W(32 + 17 + 32), .CLAMP(0)) u_iso_st (.iso_en(iso_en),
     .d({h_rdata_t, err_pin_t, prog_done_t, drain_busy_t, done_t, crc_err_t, array_abft_sticky_t, acc_abft_sticky_t, ctrl_err_sticky_t,
         seq_err_sticky_t, rq_err_sticky_t, ecc_ce_t, ecc_ue_t, wbuf_ce_t, wbuf_ue_t, rq_tbl_perr_t, lost_err_t, fetch_timeout_t,
-        drain_crc_last_t, drain_msg_cnt_t, dv_bd_rdata_t, dv_obs_t}),
+        drain_crc_last_t, drain_msg_cnt_t}),
     .q(st_iso_q));
-  assign h_rdata           = st_iso_q[151:120];
-  assign err_pin           = st_iso_q[119];
-  assign prog_done         = st_iso_q[118];
-  assign drain_busy        = st_iso_q[117];
-  assign done              = st_iso_q[116];
-  assign crc_err           = st_iso_q[115];
-  assign array_abft_sticky = st_iso_q[114];
-  assign acc_abft_sticky   = st_iso_q[113];
-  assign ctrl_err_sticky   = st_iso_q[112];
-  assign seq_err_sticky    = st_iso_q[111];
-  assign rq_err_sticky     = st_iso_q[110];
-  assign ecc_ce            = st_iso_q[109];
-  assign ecc_ue            = st_iso_q[108];
-  assign wbuf_ce           = st_iso_q[107];
-  assign wbuf_ue           = st_iso_q[106];
-  assign rq_tbl_perr       = st_iso_q[105];
-  assign lost_err          = st_iso_q[104];
-  assign fetch_timeout     = st_iso_q[103];
-  assign drain_crc_last    = st_iso_q[102:87];
-  assign drain_msg_cnt     = st_iso_q[86:71];
-  assign dv_bd_rdata       = st_iso_q[70:32];
-  assign dv_obs            = st_iso_q[31:0];
+  assign h_rdata           = st_iso_q[80:49];
+  assign err_pin           = st_iso_q[48];
+  assign prog_done         = st_iso_q[47];
+  assign drain_busy        = st_iso_q[46];
+  assign done              = st_iso_q[45];
+  assign crc_err           = st_iso_q[44];
+  assign array_abft_sticky = st_iso_q[43];
+  assign acc_abft_sticky   = st_iso_q[42];
+  assign ctrl_err_sticky   = st_iso_q[41];
+  assign seq_err_sticky    = st_iso_q[40];
+  assign rq_err_sticky     = st_iso_q[39];
+  assign ecc_ce            = st_iso_q[38];
+  assign ecc_ue            = st_iso_q[37];
+  assign wbuf_ce           = st_iso_q[36];
+  assign wbuf_ue           = st_iso_q[35];
+  assign rq_tbl_perr       = st_iso_q[34];
+  assign lost_err          = st_iso_q[33];
+  assign fetch_timeout     = st_iso_q[32];
+  assign drain_crc_last    = st_iso_q[31:16];
+  assign drain_msg_cnt     = st_iso_q[15:0];
+  // the testbench hooks pass straight out (DV_HOOKS = 0: the bank's tied-off pins and a constant -- nothing for a clamp)
+  assign dv_bd_rdata       = dv_bd_rdata_t;
+  assign dv_obs            = dv_obs_t;
 endmodule

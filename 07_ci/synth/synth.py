@@ -37,7 +37,10 @@ sandbox's memory in Yosys's own front end, while slang reads one module in secon
      ICGx1_ASAP7_75t_R / CLKGATETST_X1: the enable on ENA / E, the test enable on SE), so no latch reaches the netlist and the
      latch gate stands; a gated clock net is a clock (no repeater tree: the clock tree is the physical flow's). Per unit
      the ICG cells and the flops whose clock pin a gate drives -- with the children's flops when the child's clk is gated --
-     and the gate: every unit has exactly the ICG cells its definition declares (U(..., icg=N)), none left unmapped.
+     and the gate: every unit has exactly the ICG cells its definition declares (U(..., icg=N)), none left unmapped. The
+     timing models' clock tree paths are set to 0 (ideal_clock_tree): the analysis is before clock tree synthesis with an
+     ideal clock, and write_timing_model would price an ICG driving thousands of flop clock pins unbuffered -- nanoseconds
+     of insertion delay that the parent's run subtracts from every capture inside the child.
   Then report.py writes synth_report.md from synth_results.json (and, given two outputs, the two libraries side by side).
   Drop 0.42 also made Nangate45 a full second library: its macro model is derived from the platform's FakeRAM45 liberty
   files (derive_macro), and a memory leaf is priced by the read ports it uses (macro_kind), not by its RB parameter.
@@ -1084,6 +1087,29 @@ def write_sdc(u, has_clk, pdk, period_ps, udir, cfg_ports=(), cfg_pins=(), fname
         f.write(s)
 
 
+CLK_TREE_RE = re.compile(r"timing\(\) \{[^{}]*timing_type : (?:min|max)_clock_tree_path;(?:[^{}]|\{[^{}]*\})*\}")
+
+
+def ideal_clock_tree(path):
+    """drop 0.43: the model's min / max clock tree paths (write_timing_model's clock insertion delay) at 0 -- an ideal clock
+    before clock tree synthesis, as the unit's own run analyses it (a model was 0 there before the clock gates: no cell
+    between the clk pin and the flops). Returns the largest value replaced, in the library's unit."""
+    with open(path) as f:
+        s = f.read()
+    worst = [0.0]
+
+    def zero_values(v):
+        nums = [float(x) for x in v.group(1).split(",")]
+        worst[0] = max([worst[0]] + nums)
+        return 'values("' + ",".join("0.00000" for _ in nums) + '")'
+
+    s, n = CLK_TREE_RE.subn(lambda m: re.sub(r'values\("([^"]*)"\)', zero_values, m.group(0)), s)
+    if n:
+        with open(path, "w") as f:
+            f.write(s)
+    return worst[0]
+
+
 def run_sta(u, results, t, pdk, args, out):
     """OpenSTA on the unit's own netlist, every child unit a liberty cell from its own run's extracted timing model
     (`write_timing_model`: setup / hold on the inputs, clock-to-output and input-to-output arcs) -- the paths inside a child
@@ -1114,6 +1140,8 @@ def run_sta(u, results, t, pdk, args, out):
     if rc == 0 and not os.path.isfile(os.path.join(udir, "etm.lib")):
         r["exit"] = -2
         r["error"] = "no timing model written"
+    elif os.path.isfile(os.path.join(udir, "etm.lib")):       # drop 0.43: the parent sees an ideal clock tree in the model
+        r["etm_clock_tree_zeroed_ps"] = ideal_clock_tree(os.path.join(udir, "etm.lib")) * pdk["time_unit_ps"]
     r["seconds"] = time.time() - t0
     r["models"] = children
     return r
