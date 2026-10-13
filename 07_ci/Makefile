@@ -387,6 +387,21 @@ synth:
 synth_compare:
 	python3 synth/report.py --compare synth_out synth_out_nangate45 --out ci_logs/synth
 
+# gate-level simulation (drop 0.43, stream D2; the synth job, after the ASAP7 run): synth/gls.py simulates each unit's
+# netlist (synth_out/<unit>/netlist.v, ASAP7 cells) beside its RTL at the same parameters, the same random inputs every
+# cycle, every output compared every cycle -- Icarus 14 of the OSS CAD Suite with the PDK's behavioural cell models
+# (synth/tools.sh puts them in $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7); gls_report.md into ci_logs/synth/gls/; the target
+# fails on a mismatch. neosim (sim/) gives the testbench the RTL ports.
+NEO_SYNTH_TOOLS ?= /opt/neo-synth
+GLS_UNITS ?= mac_pe,mac_pe_chk,requant,crc16_beat,ecc39_enc,ecc39_dec,link_packer
+GLS_CELLS ?= $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7
+GLS_IVERILOG ?= $(NEO_SYNTH_TOOLS)/oss-cad-suite/bin/iverilog
+GLS_CYCLES ?= 3000
+.PHONY: gls
+gls:
+	python3 synth/gls.py --synth $(SYNTH_OUT) --rtl rtl --cells $(GLS_CELLS) --out $(SYNTH_LOGS)/gls --units $(GLS_UNITS) \
+	  --iverilog $(GLS_IVERILOG) --cycles $(GLS_CYCLES)
+
 # the formal job (drop 0.41): formal/run.py runs every task of every formal/*.sby with SymbiYosys (sby -f -d formal_out/<task>),
 # FORMAL_JOBS at a time, each under FORMAL_TIMEOUT seconds (the task's whole session -- sby and its solvers -- is killed at the
 # limit: TIMEOUT), writes formal_out/formal_report.md (result, mode, depth, engine, reached induction length or bmc steps, time

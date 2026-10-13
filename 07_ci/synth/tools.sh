@@ -11,7 +11,8 @@
 #   pdk/lib/asap7    ASAP7 7.5-track RVT NLDM liberty files (SS, TT: AO, INVBUF, OA, SIMPLE, SEQ), gunzipped, and the
 #                    platform's full-adder map; pdk/lib/nangate45: NangateOpenCellLibrary_typical.lib, its adder map and
 #                    the FakeRAM45 macros 2048x39 and 512x64 (the macro model, drop 0.42);
-#                    pdk/lib/common/lcu_kogge_stone.v -- all from OpenROAD-flow-scripts $ORFS_COMMIT (sparse checkout)
+#                    pdk/lib/common/lcu_kogge_stone.v -- all from OpenROAD-flow-scripts $ORFS_COMMIT (sparse checkout);
+#   pdk/verilog/asap7  the ASAP7 cells' behavioural Verilog models of the same commit (drop 0.43: synth/gls.py)
 # Every version is pinned here; every download is a GitHub clone or release asset. Idempotent: a tool that is already
 # there is kept (CI caches $NEO_SYNTH_TOOLS/sta between runs; the rest downloads in about a minute).
 # The sandbox (no apt) builds Tcl, SWIG, CUDD and Eigen from GitHub too -- the recipe is in the handoff's tools/TOOLS.md;
@@ -71,6 +72,23 @@ if [ ! -f "$T/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib" ]; then
   cd "$T" && rm -rf orfs
 fi
 ls "$T/pdk/lib/asap7" | head -3
+
+# ---- the ASAP7 cells' Verilog models (drop 0.43, D2: the gate-level simulation of synthesized units, synth/gls.py) --------
+# platforms/asap7/verilog/stdcell of the same ORFS commit: the PDK's behavioural models (asap7sc7p5t_{AO,OA,SIMPLE,INVBUF}
+# _RVT_TT_201020.v, asap7sc7p5t_SEQ_RVT_TT_220101.v, UDP flops with timing checks), unmodified, into pdk/verilog/asap7
+if [ ! -f "$T/pdk/verilog/asap7/asap7sc7p5t_SEQ_RVT_TT_220101.v" ]; then
+  echo "-- ASAP7 Verilog models at ${ORFS_COMMIT:0:7}"
+  rm -rf "$T/orfs_v" && mkdir "$T/orfs_v" && cd "$T/orfs_v"
+  git init -q && git remote add origin https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts
+  git sparse-checkout init --cone
+  git sparse-checkout set flow/platforms/asap7/verilog/stdcell
+  git fetch -q --depth 1 --filter=blob:none origin "$ORFS_COMMIT"
+  git checkout -q FETCH_HEAD
+  mkdir -p "$T/pdk/verilog/asap7"
+  cp flow/platforms/asap7/verilog/stdcell/asap7sc7p5t_*.v "$T/pdk/verilog/asap7/"
+  cd "$T" && rm -rf orfs_v
+fi
+ls "$T/pdk/verilog/asap7" | head -6
 
 # ---- OpenSTA ------------------------------------------------------------------------------------------------------------
 # the binary links libtcl8.6 dynamically: the runtime package every run (a cache hit skips the build), the build packages
