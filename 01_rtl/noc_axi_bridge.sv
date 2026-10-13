@@ -606,9 +606,10 @@ module noc_axi_bridge #(
       assign f_we     = (wb_step && !j_merge && ob_open) || do_close;
       assign f_wdata  = {st_strb, st_data};
       logic [AXI_DW+WPB-1:0] unused_wbuf_rb, unused_wbuf_bd;   // the leaf's unused read ports (RB = 0, no hooks)
+      logic [PBW-1:0]        unused_wbuf_bq;                   // its port-B address latch output (D2's rb_addr_q: 0 at RBQ = 0)
       neo_mem_rf #(.W(AXI_DW + WPB), .D(PB), .RB(0), .DV_HOOKS(0)) u_wbuf (
         .clk(clk), .we(f_we), .waddr(f_wp[PBW-1:0]), .wdata(f_wdata), .ra_addr(f_rp[PBW-1:0]), .ra_data(f_rdata),
-        .rb_en(1'b0), .rb_addr('0), .rb_data(unused_wbuf_rb),
+        .rb_en(1'b0), .rb_addr('0), .rb_data(unused_wbuf_rb), .rb_addr_q(unused_wbuf_bq),
         .bd_we(1'b0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_wbuf_bd), .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
       logic aq_push;                         // a burst closes: its {address, length} to the AW queue
       assign aq_push  = (wb_step && !j_merge && !j_append && ob_open) || do_close;
@@ -698,7 +699,7 @@ module noc_axi_bridge #(
       assign ev_wr_wait = (b_out != '0) && !w_fire;
       assign wr_busy    = wa_valid || wb_valid || ob_open || aq_ne || (b_out != '0);
       logic unused_mem_bits;                 // the byte addresses below a beat: the lanes come from the word addresses
-      assign unused_mem_bits = ^{is_a[LBB-1:0], wa_addr[LBB-1:0], unused_wbuf_rb, unused_wbuf_bd};
+      assign unused_mem_bits = ^{is_a[LBB-1:0], wa_addr[LBB-1:0], unused_wbuf_rb, unused_wbuf_bd, unused_wbuf_bq};
     end else begin : g_nomem
       assign rdreq_ok = 1'b1;                // no memory role: an RDREQ is consumed and dropped (the requester times out)
       assign wrdata_ok = 1'b1;

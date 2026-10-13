@@ -354,9 +354,10 @@ module top_ctrl #(
     return (a[CTRL_AW-1:16] == RGW'(2)) && (a[15:12] == 4'd1);
   endfunction
   logic [31:0] unused_cm_rb, unused_cm_bd;           // the leaf's unused read ports (RB = 0, no hooks)
+  logic [9:0]  unused_cm_bq;                         // its port-B address latch output (D2's rb_addr_q: 0 at RBQ = 0)
   neo_mem_rf #(.W(32), .D(1024), .RB(0), .DV_HOOKS(0)) u_cmem (
     .clk(clk), .we(cm_we), .waddr(cm_waddr), .wdata(cm_wdata), .ra_addr(cm_raddr), .ra_data(cm_rdata),
-    .rb_en(1'b0), .rb_addr('0), .rb_data(unused_cm_rb),
+    .rb_en(1'b0), .rb_addr('0), .rb_data(unused_cm_rb), .rb_addr_q(unused_cm_bq),
     .bd_we(1'b0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_cm_bd), .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
   // the player's addresses: command word p_k at the head, image word p_img, record word p_k at the tail
   assign p_raddr  = p_ra;                            // no decode or adder in front of the memory's read port
@@ -594,5 +595,5 @@ module top_ctrl #(
     end
   endgenerate
   logic unused_ctrl;                         // the byte lanes below a word; the mask's levels the player does not read
-  assign unused_ctrl = ^{a_addr[1:0], unused_cm_rb, unused_cm_bd};
+  assign unused_ctrl = ^{a_addr[1:0], unused_cm_rb, unused_cm_bd, unused_cm_bq};
 endmodule
