@@ -1,4 +1,4 @@
-// top_ctrl.sv -- the chip top's control plane, AXI side (drop 0.44): one AXI4-Lite slave (32-bit data, CTRL_AW-bit byte
+// top_ctrl.sv -- the chip top's control plane, AXI side (drop 0.42): one AXI4-Lite slave (32-bit data, CTRL_AW-bit byte
 //   addresses) in front of every tile's host register bus and the global registers. Runs in the AXI clock -- the port called
 //   clk here is neo_top's aclk; the tiles' buses are in the mesh clock behind cdc_sync (mesh_ctrl.sv), the status levels come
 //   in through cdc_bits, so this module itself is single-clock.
@@ -161,7 +161,7 @@ module top_ctrl #(
     end else begin
       case (d_g)
         10'h000: g_rd = 32'h4E45_4F54;                                    // 'NEOT'
-        10'h001: g_rd = 32'h0000_0044;                                    // drop 0.44
+        10'h001: g_rd = 32'h0000_0044;                                    // drop 0.42
         10'h002: g_rd = {8'(COLS), 8'(ROWS), 4'(N_HOST), 4'(N_MEM), 4'(NY), 4'(NX)};
         10'h003: g_rd = {8'(BAW), 8'(WPF), 16'(AXI_DW)};
         10'h004: g_rd = scratch;

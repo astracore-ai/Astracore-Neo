@@ -1,4 +1,4 @@
-# `neo_top` — integration note (drop 0.44, stream B1)
+# `neo_top` — integration note (drop 0.42, stream B1)
 
 What a licensee connects when Neo is delivered as the chip top: the tile mesh with a column of bridge nodes, AXI4 bridges
 to external memory and to the host, one AXI4-Lite control plane, an interrupt and an error level, two clocks and two

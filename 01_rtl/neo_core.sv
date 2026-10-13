@@ -4,6 +4,11 @@
 //   and weight buffers and the requantization tables, writes the descriptor, pulses go, and reads
 //   the drained rows (INT32 on rd_data/rd_valid, INT8 on rq_q/rq_valid) until done. All three ABFT/duplication
 //   error flags are sticky and cleared together.
+//   Drop 0.42: NCHK = 4, the 2:4 sparse-capable core. The weight buffer's write ports take the new entry ({index,
+//   weight} per column, NCHK check weights; wbuf_mem's header), cfg_sparse (the descriptor's flag, host_if's cfg[18]
+//   bit 0 on the tile) selects the sparse mode of the feeder and the row buses. The sequencer is unchanged: cfg_ct_n,
+//   cfg_ct0 and the run count are in the mode's channel tiles (64 channels in sparse mode at 32 rows), and a sparse
+//   run's weight tile is ROWS entries as a dense one is. NCHK = 1 is the core of drop 0.41.
 module neo_core #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
@@ -18,6 +23,8 @@ module neo_core #(
   parameter int AW         = $clog2(ABUF_DEPTH),
   parameter int WAW        = $clog2(WBUF_DEPTH),
   parameter int PE_LAT     = 2,
+  parameter int NCHK       = 1,                 // check columns: 4 = the 2:4 sparse-capable core (drop 0.42)
+  parameter int IW         = (NCHK > 1) ? 2 : 0,   // index bits per weight (derived)
   parameter int FAULT_ROW  = 0,
   parameter int FAULT_COL  = 0,
   parameter int DV_HOOKS   = 0                  // 1: the weight-buffer fault hook exists (drop 0.37); the tile leaves it at 0
@@ -32,11 +39,11 @@ module neo_core #(
   input  logic signed [XW-1:0]  abuf_wdata2 [ROWS],
   input  logic                  wbuf_we,
   input  logic [WAW-1:0]        wbuf_waddr,
-  input  logic signed [WW-1:0]  wbuf_wdata [COLS],
-  input  logic signed [WCW-1:0] wcbuf_wdata,
+  input  logic [WW+IW-1:0]      wbuf_wdata [COLS],        // {index, weight} per column (drop 0.42: WW + 2 bits at NCHK = 4)
+  input  logic [NCHK*WCW-1:0]   wcbuf_wdata,              // the check weights, column k at [k*WCW +: WCW]
   input  logic                  wbuf_we2,                 // the upper entry of the same pair, wbuf_waddr even (drop 0.32)
-  input  logic signed [WW-1:0]  wbuf_wdata2 [COLS],
-  input  logic signed [WCW-1:0] wcbuf_wdata2,
+  input  logic [WW+IW-1:0]      wbuf_wdata2 [COLS],
+  input  logic [NCHK*WCW-1:0]   wcbuf_wdata2,
   // layer descriptor
   input  logic signed [15:0]    cfg_h,
   input  logic signed [15:0]    cfg_w,
@@ -56,6 +63,7 @@ module neo_core #(
   input  logic signed [15:0]    cfg_contrib_n,
   input  logic signed [15:0]    cfg_tile_pixels,
   input  logic signed [15:0]    cfg_regions_m1,     // activation buffer regions minus one (0 = all tiles resident)
+  input  logic                  cfg_sparse,         // drop 0.42 (NCHK = 4): the layer is 2:4 sparse along K
   input  logic signed [15:0]    tiles_ready,        // from the DMA; tie to a large value when all tiles are resident
   input  logic [IDXW-1:0]       cfg_m,
   input  logic                  go,
@@ -112,8 +120,8 @@ module neo_core #(
   logic                  w_load;
   logic                  w_load_q;                  // drop 0.41: w_load one cycle later, beside the weight buffer's registered read
   logic [WAW-1:0]        w_raddr;
-  logic signed [WW-1:0]  w_in [COLS];
-  logic signed [WCW-1:0] wc_in;
+  logic [WW+IW-1:0]      w_in [COLS];
+  logic [NCHK*WCW-1:0]   wc_in;
   logic                  rd_en;
   logic [IDXW-1:0]       rd_idx_p;
   logic [IDXW-1:0]       rd_idx;
@@ -131,7 +139,7 @@ module neo_core #(
   assign ext_gated = ext_valid && reduce_ready;
   assign ext_ready = acc_ext_ready && reduce_ready;
 
-  wbuf_mem #(.COLS(COLS), .WW(WW), .WCW(WCW), .DEPTH(WBUF_DEPTH), .WAW(WAW), .DV_HOOKS(DV_HOOKS)) u_wbuf (
+  wbuf_mem #(.COLS(COLS), .WW(WW), .WCW(WCW), .DEPTH(WBUF_DEPTH), .WAW(WAW), .NCHK(NCHK), .DV_HOOKS(DV_HOOKS)) u_wbuf (
     .clk(clk), .rst_n(rst_n), .we(wbuf_we), .waddr(wbuf_waddr), .wdata(wbuf_wdata), .wcdata(wcbuf_wdata),
     .we2(wbuf_we2), .wdata2(wbuf_wdata2), .wcdata2(wcbuf_wdata2),
     .raddr(w_raddr), .rdata(w_in), .rcdata(wc_in),
@@ -179,13 +187,13 @@ module neo_core #(
   end
 
   neo_mac_core_v02 #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .WCW(WCW), .ACC_ROWS(ACC_ROWS),
-                     .ABUF_DEPTH(ABUF_DEPTH), .IDXW(IDXW), .AW(AW), .PE_LAT(PE_LAT),
+                     .ABUF_DEPTH(ABUF_DEPTH), .IDXW(IDXW), .AW(AW), .PE_LAT(PE_LAT), .NCHK(NCHK),
                      .FAULT_ROW(FAULT_ROW), .FAULT_COL(FAULT_COL)) u_dp (
     .clk(clk), .rst_n(rst_n),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(abuf_we2), .abuf_wdata2(abuf_wdata2),
     .cfg_h(cfg_h), .cfg_w(cfg_w), .cfg_ho(cfg_ho), .cfg_wo(cfg_wo), .cfg_oy0(cfg_oy0), .cfg_oy_n(cfg_oy_n), .cfg_iy0(cfg_iy0),
     .cfg_s(cfg_s), .cfg_p(cfg_p), .cfg_tile_pixels(cfg_tile_pixels), .cfg_regions_m1(cfg_regions_m1), .cfg_ct(f_ct), .cfg_ky(f_ky), .cfg_kx(f_kx), .acc_first(f_first),
-    .start(f_start), .busy(f_busy),
+    .cfg_sparse(cfg_sparse), .start(f_start), .busy(f_busy),
     .w_load(w_load_q), .w_in(w_in), .wc_in(wc_in),
     .ext_valid(ext_gated), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(acc_ext_ready),
     .rd_en(rd_en), .rd_idx(rd_idx), .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid),

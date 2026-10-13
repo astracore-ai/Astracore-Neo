@@ -1,5 +1,5 @@
 `verilator_config
-// silicon.vlt (drop 0.44) -- for `make lint`'s two passes at the silicon parameters (the chip top's tile, and neo_top over the
+// silicon.vlt (drop 0.42) -- for `make lint`'s two passes at the silicon parameters (the chip top's tile, and neo_top over the
 // tile stub). Exactly one finding of those passes is waived here, and it is not in B1's RTL: link_unpacker (01_rtl/link_pack.sv)
 // shifts the link flit's 32 words into `sh` and presents the low 16 as the beat, so at WPF = 32 > BW = 16 the upper half of
 // `sh` is never read (UNUSEDSIGNAL 'sh'[1023:512]). The existing lint passes run at WPF = 1 and never met it. The fix is a

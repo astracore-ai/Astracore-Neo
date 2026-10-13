@@ -19,6 +19,13 @@ overlapped shadow loads, swap tokens, drain) is the sequencer RTL.
   C9  weight-buffer ECC: flipped bits in stored codewords corrected on read, result bit-exact, ce flagged
   C10 requant table parity: a corrupted multiplier is flagged on use
       (a bit-0 fault is masked by quantization and harmless, which is why the hook uses bit 12)
+  C11 (drop 0.42) a whole 2:4 sparse convolution on the sparse-capable core (NCHK = 4, 16x8): 2:4-pruned weights,
+      everything from the compiler -- neo_backend's validator and compressor, its bank layouts (the activation tiles of
+      64 channels, two entries per pixel; the compressed weight entries with four check weights) written into the buffers
+      as the DMA would, its descriptor (cfg_flags = sparse, cfg_ct_n in 2*ROWS-channel tiles) -- bit-exact against the
+      dense reference convolution on the pruned weights, every flag clean; the same layer dense on the NCHK = 4 core gives
+      the same result with twice the runs. `--nchk 4` runs C2-C10 on NCHK = 4 cores (the dense entry: index 0, the check
+      weight in column 0): the same results and the same cycle counts as at NCHK = 1. `--c11` runs C11 alone.
 """
 import math
 import os
@@ -32,6 +39,8 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "compiler"))
 from neosim import Design, load  # noqa: E402
 from neo_compile import direct_conv  # noqa: E402
+import neo_backend as nb  # noqa: E402
+NCHK_DEFAULT = 4 if "--nchk" in sys.argv and sys.argv[sys.argv.index("--nchk") + 1] == "4" else 1
 
 RTL = ["delay_line.sv", "mac_pe.sv", "skew_in.sv", "deskew_out.sv", "systolic_array.sv",
        "abft_checker.sv", "neo_mem.sv", "neo_mac_core.sv", "act_feeder.sv", "acc_bank.sv", "neo_mac_core_v02.sv",
@@ -49,16 +58,17 @@ def sbits(v, w):
 
 
 class NeoCore:
-    def __init__(self, rows, cols, acc_rows, abuf_depth, wbuf_depth):
+    def __init__(self, rows, cols, acc_rows, abuf_depth, wbuf_depth, nchk=None):
         self.R, self.C = rows, cols
+        self.NCHK = NCHK_DEFAULT if nchk is None else nchk
         self.WCW = 8 + (0 if rows <= 1 else (rows - 1).bit_length()) + 1
         rtl = os.path.join(HERE, "..", "rtl")
         self.d = Design(load([os.path.join(rtl, f) for f in RTL]))
         self.d.elaborate("neo_core", {"ROWS": rows, "COLS": cols, "ACC_ROWS": acc_rows,
-                                      "ABUF_DEPTH": abuf_depth, "WBUF_DEPTH": wbuf_depth})
+                                      "ABUF_DEPTH": abuf_depth, "WBUF_DEPTH": wbuf_depth, "NCHK": self.NCHK})
         d = self.d
         self.p = {n: d.cell_of(n) for n in (
-            "rst_n", "abuf_we", "abuf_waddr", "wbuf_we", "wbuf_waddr", "wcbuf_wdata",
+            "rst_n", "abuf_we", "abuf_waddr", "wbuf_we", "wbuf_waddr", "wcbuf_wdata", "cfg_sparse",
             "cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_tile_pixels",
             "cfg_ct0", "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "ext_valid", "ext_idx", "ext_chk",
             "ext_ready", "reduce_ready",
@@ -75,7 +85,7 @@ class NeoCore:
         self.ext_y = d.array_of("ext_y")
         for n in ("abuf_we", "wbuf_we", "go", "err_clear", "fault_inject", "ctrl_fault_inject", "rq_tbl_we", "rq_relu",
                   "ext_valid", "cfg_ct0", "cfg_ky0", "cfg_kx0", "cfg_contrib_n", "seq_fault_inject", "rq_fault_inject",
-                  "rq_tbl_fault_inject"):
+                  "rq_tbl_fault_inject", "cfg_sparse"):
             self.p[n].v = 0
         self.p["cfg_regions_m1"].v = 0xFFFF        # all channel tiles resident: region = ct
         self.p["tiles_ready"].v = 0x7FFF
@@ -113,6 +123,7 @@ class NeoCore:
         self.rq_tables = (np.array(mult), np.array(shift), np.array(zp), relu)
 
     def write_wtile(self, tile_index, Wt):
+        """A dense weight tile: index 0, the row sum as the check weight of column 0 (columns 1..3 zero at NCHK = 4)."""
         for r in range(self.R):
             self.p["wbuf_we"].v = 1
             self.p["wbuf_waddr"].v = tile_index * self.R + r
@@ -122,13 +133,47 @@ class NeoCore:
             self.tick()
         self.p["wbuf_we"].v = 0
 
-    def execute(self, h, w, ho, wo, s, p, k, ct_n, tile_pixels, m, poke=None, ctrl_fault_at=None, seq_fault=False, rq_fault=False):
-        """Write the descriptor, pulse go, collect drained rows until done."""
-        for n, v in (("cfg_h", h), ("cfg_w", w), ("cfg_ho", ho), ("cfg_wo", wo), ("cfg_s", s), ("cfg_p", p),
-                     ("cfg_oy0", 0), ("cfg_oy_n", ho), ("cfg_iy0", 0),
-                     ("cfg_k", k), ("cfg_ct_n", ct_n), ("cfg_tile_pixels", tile_pixels),
-                     ("cfg_rn", ct_n * k * k), ("cfg_ct0", 0), ("cfg_ky0", 0), ("cfg_kx0", 0), ("cfg_contrib_n", 0)):
+    def write_wbuf_words(self, words):
+        """Bank words of weight entries (neo_backend.pack_entry's layout) into consecutive weight-buffer entries, as the
+        NIC's fetch assembly unpacks them: {index, weight} per column, the NCHK check weights packed."""
+        wpw = (nb.entry_bits(self.C, self.R, self.NCHK) + 31) // 32
+        iw = 2 if self.NCHK > 1 else 0
+        for e in range(len(words) // wpw):
+            v = sum(int(words[e * wpw + i]) << (32 * i) for i in range(wpw))
+            self.p["wbuf_we"].v = 1
+            self.p["wbuf_waddr"].v = e
+            for j in range(self.C):
+                idx = (v >> (8 * self.C + self.NCHK * self.WCW + 2 * j)) & 3 if iw else 0
+                self.wbuf_wdata[j].v = ((v >> (8 * j)) & 0xFF) | (idx << 8)
+            self.p["wcbuf_wdata"].v = (v >> (8 * self.C)) & ((1 << (self.NCHK * self.WCW)) - 1)
+            self.tick()
+        self.p["wbuf_we"].v = 0
+
+    def write_abuf_words(self, words):
+        """Bank words of activation entries (ROWS / 4 words each) into consecutive activation-buffer entries."""
+        wpe = self.R // 4
+        for e in range(len(words) // wpe):
+            self.p["abuf_we"].v = 1
+            self.p["abuf_waddr"].v = e
+            for c in range(self.R):
+                self.abuf_wdata[c].v = (int(words[e * wpe + c // 4]) >> (8 * (c % 4))) & 0xFF
+            self.tick()
+        self.p["abuf_we"].v = 0
+
+    def execute(self, h, w, ho, wo, s, p, k, ct_n, tile_pixels, m, poke=None, ctrl_fault_at=None, seq_fault=False, rq_fault=False,
+                desc=None):
+        """Write the descriptor, pulse go, collect drained rows until done. desc: a compiler descriptor (neo_backend's
+        dict: the cfg_* fields, cfg_flags, cfg_m) written instead of the one the arguments describe."""
+        fields = (("cfg_h", h), ("cfg_w", w), ("cfg_ho", ho), ("cfg_wo", wo), ("cfg_s", s), ("cfg_p", p),
+                  ("cfg_oy0", 0), ("cfg_oy_n", ho), ("cfg_iy0", 0),
+                  ("cfg_k", k), ("cfg_ct_n", ct_n), ("cfg_tile_pixels", tile_pixels),
+                  ("cfg_rn", ct_n * k * k), ("cfg_ct0", 0), ("cfg_ky0", 0), ("cfg_kx0", 0), ("cfg_contrib_n", 0))
+        if desc is not None:
+            fields = tuple((n, v) for n, v in desc.items() if n not in ("cfg_m", "cfg_flags", "cfg_regions_m1"))
+            m = desc["cfg_m"]
+        for n, v in fields:
             self.p[n].v = bits(v, 16)
+        self.p["cfg_sparse"].v = (desc.get("cfg_flags", 0) & 1) if desc is not None else 0
         self.p["cfg_m"].v = m
         self.p["go"].v = 1
         self.tick()
@@ -292,6 +337,58 @@ def dump_vectors(out_dir, rows=16, cols=8, seed=9):
     print(f"vectors for tb_neo_core.sv written to {os.path.abspath(out_dir)}")
 
 
+def c11_sparse(rng):
+    """C11 (drop 0.42): a 2:4 sparse convolution through the compiler on the NCHK = 4 core (16x8): 64 input channels are
+    two sparse channel tiles of 32 (four dense ones), 3x3 kernel -- 18 runs instead of 36."""
+    t0 = time.time()
+    R, C = 16, 8
+    cin, cout, h, w, k, s, p = 64, 7, 6, 6, 3, 1, 1
+    x = rng.integers(-128, 128, size=(cin, h, w), dtype=np.int64)
+    dense = rng.integers(-128, 128, size=(cout, cin, k, k), dtype=np.int64)
+    try:
+        nb.check_2_4(dense)
+        rejected = False
+    except ValueError:
+        rejected = True
+    wgt = nb.prune_2_4(dense)                                  # training-side pruning; the validator accepts the result
+    nb.check_2_4(wgt)
+    ref = direct_conv(x, wgt, s, p)                            # ground truth: dense arithmetic on the pruned weights
+    ho, wo = ref.shape[1], ref.shape[2]
+    M = ho * wo
+    lp = nb.compile_layer("c11", h, w, cin, cout, k, s, p, R, C, 2, 2, (1, 1), 0, (1, 1), 0, owner=(0, 0), shares=1,
+                          nchk=4, sparse=True)
+    desc = lp.tiles[0].descriptor
+    act, wts = nb.pack_words(x, wgt, desc["cfg_ct_n"], k, cout, R, C, nchk=4, sparse=True)
+    core = NeoCore(R, C, acc_rows=64, abuf_depth=256, wbuf_depth=512, nchk=4)
+    core.write_abuf_words(act)                                 # entries 2(ct*36 + pixel) and +1: the DMA's FETCH_A
+    core.write_wbuf_words(wts)                                 # entries run*ROWS + row: FETCH_W
+    out, errs, cycles = core.execute(h, w, ho, wo, s, p, k, 0, 0, M, desc=desc)
+    got = np.zeros_like(ref)
+    for mm in range(M):
+        for c in range(cout):
+            got[c, mm // wo, mm % wo] = out[mm, c]
+    flags = {n: core.p[n + "_sticky"].v for n in ("array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "wbuf_ce", "wbuf_ue")}
+    ok = (rejected and desc.get("cfg_flags") == 1 and desc["cfg_ct_n"] == 2 and desc["cfg_rn"] == 18 and out.shape[0] == M
+          and np.array_equal(got, ref) and sum(errs) == 0 and len(errs) == M and not any(flags.values()))
+    print(f"  C11: 2:4 sparse conv {cin}x{h}x{w} -> {cout}x{ho}x{wo} k{k} on the 16x8 NCHK = 4 core through the compiler "
+          f"(validator rejects the dense tensor: {rejected}; descriptor cfg_flags={desc.get('cfg_flags')} cfg_ct_n={desc['cfg_ct_n']} "
+          f"cfg_rn={desc['cfg_rn']}; {len(act)} activation words, {len(wts)} weight words of {len(wts) // (desc['cfg_rn'] * R)} per entry): "
+          f"{'bit-exact' if np.array_equal(got, ref) else 'MISMATCH'} vs the dense convolution on the pruned weights, "
+          f"{sum(errs)} ABFT verdicts flagged, flags {flags}, {cycles} sequencer cycles, {time.time() - t0:.0f} s -> {'PASS' if ok else 'FAIL'}")
+    if not np.array_equal(got, ref):
+        diff = np.argwhere(got != ref)
+        print("     first differences:", diff[:4].tolist())
+    # the same pruned layer dense on the NCHK = 4 core: the same result, twice the runs
+    t0 = time.time()
+    core = NeoCore(R, C, acc_rows=64, abuf_depth=256, wbuf_depth=1024, nchk=4)
+    got_d, errs_d, cycles_d = conv_on_core(core, x, wgt, s, p)
+    ok_d = np.array_equal(got_d, ref) and sum(sum(e) for e in errs_d) == 0
+    print(f"  C11 dense: the same pruned layer in dense mode on the NCHK = 4 core (4 channel tiles, 36 runs): "
+          f"{'bit-exact' if ok_d else 'MISMATCH'}, {cycles_d} sequencer cycles against {cycles} sparse "
+          f"({cycles_d / cycles:.2f}x), {time.time() - t0:.0f} s -> {'PASS' if ok_d else 'FAIL'}")
+    return (not ok) + (not ok_d)
+
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--dump":
         dump_vectors(sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, "..", "vectors_core"))
@@ -300,7 +397,13 @@ def main():
     fails = 0
     late_only = "--late" in sys.argv
     c6_only = "--c6" in sys.argv
-    print("Convolutions executed on neo_core RTL (hardware sequencer) under neosim:" + (" (C9-C10)" if late_only else " (C1-C8)"))
+    if "--c11" in sys.argv:
+        print("C11: a 2:4 sparse convolution on neo_core (NCHK = 4) under neosim:")
+        fails = c11_sparse(np.random.default_rng(23))
+        print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
+        return 1 if fails else 0
+    print("Convolutions executed on neo_core RTL (hardware sequencer) under neosim:" + (" (C9-C10)" if late_only else " (C1-C8, C11)")
+          + (f" on NCHK = {NCHK_DEFAULT} cores" if NCHK_DEFAULT > 1 else ""))
     mult = rng.integers(20000, 60000, size=8)
     shift = rng.integers(16, 22, size=8)
     zp = rng.integers(-8, 9, size=8)
@@ -355,6 +458,10 @@ def main():
           f"INT32 drain still {'bit-exact' if np.array_equal(got, ref) else 'WRONG'}, ABFT silent -> {'PASS' if ok8 else 'FAIL'}")
     fails += not ok8
 
+    # C11 (drop 0.42): the 2:4 sparse convolution on the sparse-capable core
+    if not c6_only:
+        fails += c11_sparse(np.random.default_rng(23))
+
     print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
     return 1 if fails else 0
 
@@ -398,7 +505,7 @@ def late_tests(rng, fails, mult, shift, zp, x, wgt, ref):
     core = NeoCore(16, 8, acc_rows=64, abuf_depth=256, wbuf_depth=512)
     got, acc_errs, _ = conv_on_core(core, x, wgt, 1, 1)         # loads the buffers
     # the buffer's leaf holds a pair of coded entries per word, lane l of entry e at bits [39 * (LANES * e + l) +: 39] (drop 0.40)
-    lanes = (8 * core.C + (8 + (core.R - 1).bit_length() + 1) + 31) // 32   # (COLS * 8 + WCW + 31) / 32 = 3 at 16x8
+    lanes = (nb.entry_bits(core.C, core.R, core.NCHK) + 31) // 32   # (COLS * 8 + WCW + 31) / 32 = 3 at 16x8; 5 at NCHK = 4
     core.d.cells["top.u_wbuf.u_mem.mem[50]"].v ^= 1 << (9 + 39 * (lanes * 0 + 0))    # a data bit of entry 100 (pair 50, lower entry), lane 0
     core.d.cells["top.u_wbuf.u_mem.mem[3]"].v ^= 1 << (34 + 39 * (lanes * 1 + 1))    # a check bit of entry 7 (pair 3, upper entry), lane 1
     core.p["err_clear"].v = 1; core.tick(); core.p["err_clear"].v = 0

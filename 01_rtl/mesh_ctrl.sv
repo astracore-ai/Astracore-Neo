@@ -1,4 +1,4 @@
-// mesh_ctrl.sv -- the chip top's control plane, mesh side (drop 0.44): serves the register accesses top_ctrl sends through
+// mesh_ctrl.sv -- the chip top's control plane, mesh side (drop 0.42): serves the register accesses top_ctrl sends through
 //   cdc_sync on the tiles' host register buses, keeps the tile-enable map in effect, and registers the status levels that
 //   cross back to the AXI clock. Runs in the mesh clock (clk, rst_n); single-clock.
 //   An access (rq_req, one cycle, the payload {we, target, word address, data} held by cdc_sync): the decode is registered --

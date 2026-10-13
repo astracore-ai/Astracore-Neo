@@ -1,4 +1,4 @@
-// cdc_sync.sv -- request / acknowledge handshake synchronizer (drop 0.44, the chip top): carries the control plane's
+// cdc_sync.sv -- request / acknowledge handshake synchronizer (drop 0.42, the chip top): carries the control plane's
 //   register accesses from the AXI clock (top_ctrl) to the mesh clock (mesh_ctrl, the tiles' register buses) and their
 //   responses back, one access in flight (neo_top.sv).
 //   Mechanism (two-phase toggle handshake with held payloads): side A loads the request payload into a_hold and flips

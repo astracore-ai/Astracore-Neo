@@ -1,4 +1,4 @@
-// cdc_fifo.sv -- asynchronous FIFO between two unrelated clocks (drop 0.44, the chip top): the data path of every
+// cdc_fifo.sv -- asynchronous FIFO between two unrelated clocks (drop 0.42, the chip top): the data path of every
 //   noc_axi_bridge crosses the mesh clock / AXI clock boundary through two of these, one per direction (neo_top.sv).
 //   Mechanism (the classic dual-clock FIFO): DEPTH entries of W bits in flops (a router-FIFO-sized array, not a memory leaf),
 //   written at the write side's binary pointer on the write clock and read combinationally at the read side's binary

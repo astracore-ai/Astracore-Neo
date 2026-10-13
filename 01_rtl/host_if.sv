@@ -8,7 +8,9 @@
 //     0x02 PROG_ADDR w: program entry index (0..31; 32 entries since drop 0.22)
 //     0x03 PROG_LO   w: low 32 bits of the entry
 //     0x04 PROG_HI   w: high 32 bits; writing it commits the 64-bit entry at PROG_ADDR
-//     0x10..0x23     w: descriptor registers in the order of neo_tile's cfg_* ports (20 x 16-bit)
+//     0x10..0x23     w: descriptor registers in the order of neo_tile's cfg_* ports (20 x 16-bit); 0x22 (cfg[18],
+//                       reserved before drop 0.42) is CFG_FLAGS: bit 0 the layer is 2:4 sparse (the NCHK = 4 core),
+//                       duplicated and compared with the rest of the descriptor
 //     0x30 RQ_TBL    w: {zp[7:0], shift[4:0], 3'b0, mult[15:0]} -> table row at RQ_ADDR (0x31)
 //     0x32 RQ_RELU   w: bit0
 //     0x05 ERR_MASK  w: bit i masks cause i from err_pin (bit 16 = watchdog)

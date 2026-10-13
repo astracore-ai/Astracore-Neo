@@ -1,4 +1,4 @@
-// neo_tile.sv (lint stub, drop 0.44) -- neo_tile's parameters and ports with no body, for `make lint`'s pass over neo_top at
+// neo_tile.sv (lint stub, drop 0.42) -- neo_tile's parameters and ports with no body, for `make lint`'s pass over neo_top at
 //   the silicon parameters: Verilator flattens every instance even with --lint-only, and 64 tiles of 32x32 cores need more
 //   than 16 GB (measured: 2x2 1.5 GB, 4x4 over 5.8 GB), so the top's own logic -- the bridges, the control plane, the bridge
 //   column's routers, the fences, the wiring at XW = 4 / YW = 3 -- is linted against this stub, and the real tile is linted

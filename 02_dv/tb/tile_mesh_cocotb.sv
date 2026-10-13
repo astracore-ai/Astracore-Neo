@@ -19,6 +19,7 @@ module tile_mesh_cocotb #(
   parameter int NX = 2, NY = 2, ROWS = 16, COLS = 8, PW = 32,
   parameter int ACC_ROWS = 64, ABUF_DEPTH = 256, WBUF_DEPTH = 512, BANK_DEPTH = 4096,
   parameter int FETCH_TIMEOUT = 8192, BIST_WORDS = 16,
+  parameter int NCHK = 1,                    // the cores' check columns: 4 = the 2:4 sparse-capable core (drop 0.42, M20)
   parameter int N = NX * NY,
   parameter int NW = (N > 1) ? $clog2(N) : 1,
   parameter int XW = (NX > 1) ? $clog2(NX) : 1,
@@ -101,7 +102,7 @@ module tile_mesh_cocotb #(
 
   tile_mesh #(.NX(NX), .NY(NY), .XW(XW), .YW(YW), .WPF(WPF), .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS),
               .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT),
-              .BIST_WORDS(BIST_WORDS), .DV_HOOKS(1)) u_mesh (
+              .BIST_WORDS(BIST_WORDS), .NCHK(NCHK), .DV_HOOKS(1)) u_mesh (
     .clk(clk), .rst_n(rst_n),
     .h_we(h_we_a), .h_re(h_re_a), .h_addr(h_addr_a), .h_wdata(h_wdata_a), .h_rdata(h_rdata_a), .err_pin(err_pin_a),
     .prog_done(prog_done_a), .drain_busy(drain_busy_a), .done(done_a), .crc_err(crc_err_a), .parity_err(parity_err_a),

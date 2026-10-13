@@ -52,12 +52,18 @@ int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *
                       neo_tile_prog_t *out) {
     int ho = (g->h + 2 * g->p - g->k) / g->s + 1;
     int wo = (g->w + 2 * g->p - g->k) / g->s + 1;
-    int cin_tiles = ceil_div(g->cin, g->rows);
-    int wpa = g->rows * 8 / 32;
+    /* drop 0.42: a sparse layer's channel tile is 2*rows channels, two activation entries per pixel; the weight entry
+     * follows the core's check columns: cols x (8 + 2) + nchk x wcw bits at nchk 4 (neo_backend.geometry) */
+    int nchk = g->nchk > 1 ? g->nchk : 1;
+    int epp = g->sparse ? 2 : 1;                              /* entries per pixel */
+    int cin_tiles = ceil_div(g->cin, g->rows * epp);
+    int wpe = g->rows * 8 / 32;                               /* words per activation entry */
+    int wpa = epp * wpe;                                      /* words per pixel */
     int wcw = 8 + ilog2_floor(g->rows - 1) + 1 + (((g->rows - 1) & (g->rows - 2)) ? 1 : 0); /* bit_length(rows-1)+9 */
     /* bit_length(rows-1): ilog2_floor(rows-1)+1 for rows-1 >= 1 */
     wcw = 8 + (g->rows <= 1 ? 0 : ilog2_floor(g->rows - 1) + 1) + 1;
-    int wpw = (g->cols * 8 + wcw + 31) / 32;
+    int wpw = (g->cols * (8 + (nchk > 1 ? 2 : 0)) + nchk * wcw + 31) / 32;
+    if (g->sparse && nchk != 4) return -1;
     int apt = g->h * g->w * wpa, wpt_run = g->rows * wpw;
     int iy_lo = g->oy0 * g->s - g->p; if (iy_lo < 0) iy_lo = 0;
     int iy_hi = (g->oy0 + g->oy_n - 1) * g->s + g->k - 1 - g->p; if (iy_hi > g->h - 1) iy_hi = g->h - 1;
@@ -83,12 +89,12 @@ int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *
         c[D_H] = g->h; c[D_W] = g->w; c[D_HO] = ho; c[D_WO] = wo; c[D_OY0] = g->oy0; c[D_OY_N] = g->oy_n; c[D_IY0] = iy_lo;
         c[D_S] = g->s; c[D_P] = g->p; c[D_K] = g->k; c[D_CT_N] = cin_tiles; c[D_CT0] = ct0; c[D_KY0] = ky0; c[D_KX0] = kx0;
         c[D_RN] = r1 - r0; c[D_CONTRIB_N] = (i == 0) ? shares - 1 : 0; c[D_TILE_PIXELS] = region_pixels; c[D_REGIONS_M1] = 0xFFFF;
-        c[D_RSV1] = 0; c[D_RSV2] = 0;
+        c[D_FLAGS] = g->sparse ? NEO_FLAG_SPARSE : 0; c[D_RSV2] = 0;
         tp->cfg_m = M;
         tp->nprog = 0;
         for (int ct = ct_lo; ct <= ct_hi; ct++) {
             int r = emit_fetch(tp, NEO_OP_FETCH_A, g->act_bank, g->act_base + ct * apt + iy_lo * g->w * wpa,
-                               region_pixels * wpa, ct * region_pixels, wpa);
+                               region_pixels * wpa, ct * region_pixels * epp, wpe);
             if (r < 0) return r;
         }
         {

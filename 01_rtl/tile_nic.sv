@@ -87,8 +87,10 @@ module tile_nic #(
   parameter int LW    = $clog2(BW),         // lane bits of a word address
   parameter int BRAW  = (BAW > LW) ? BAW - LW : 1,   // bank row address width
   parameter int PW    = 32,
+  parameter int NCHK  = 1,                  // the core's check columns: 4 = the 2:4 sparse-capable core (drop 0.42)
+  parameter int IW    = (NCHK > 1) ? 2 : 0, // index bits per weight (derived)
   parameter int WPA   = ROWS * 8 / 32,      // words per activation entry
-  parameter int WPW   = (COLS * 8 + WCW + 31) / 32,   // words per weight entry
+  parameter int WPW   = (COLS * (8 + IW) + NCHK * WCW + 31) / 32,   // words per weight entry (12 at 32x32 with NCHK = 4, 9 before)
   parameter int DFD   = 64,                 // drain FIFO rows
   parameter int DV_HOOKS = 0,               // 1: the dead-server hook below exists (drop 0.35)
   parameter int FETCH_TIMEOUT = 1048575     // cycles a fetch may wait for its response. Silicon rule (drop 0.24): every tile has at
@@ -125,11 +127,11 @@ module tile_nic #(
   output logic signed [7:0]     abuf_wdata2 [ROWS],
   output logic                  wbuf_we,
   output logic [WAW-1:0]        wbuf_waddr,
-  output logic signed [7:0]     wbuf_wdata [COLS],
-  output logic signed [WCW-1:0] wcbuf_wdata,
+  output logic [8+IW-1:0]       wbuf_wdata [COLS],        // {index, weight} per column (drop 0.42: the entry of wbuf_mem)
+  output logic [NCHK*WCW-1:0]   wcbuf_wdata,              // the check weights, column k at [k*WCW +: WCW]
   output logic                  wbuf_we2,
-  output logic signed [7:0]     wbuf_wdata2 [COLS],
-  output logic signed [WCW-1:0] wcbuf_wdata2,
+  output logic [8+IW-1:0]       wbuf_wdata2 [COLS],
+  output logic [NCHK*WCW-1:0]   wcbuf_wdata2,
   // core reduce port
   output logic                  ext_valid,
   output logic [IDXW-1:0]       ext_idx,
@@ -544,13 +546,29 @@ module tile_nic #(
       assign abuf_wdata[c]  = ent[c / 4][8 * (c % 4) +: 8];
       assign abuf_wdata2[c] = ent2[c / 4][8 * (c % 4) +: 8];
     end
+    // a weight entry (drop 0.42: {idx[COLS-1..0], wc[NCHK-1..0], w[COLS-1..0]}, wbuf_mem's layout): its WPW words as one
+    // vector, the fields sliced out of it (NCHK = 1: the weight bytes and the check weight where they were)
+    logic [32*WPW-1:0] wev, wev2;
+    for (genvar w = 0; w < WPW; w++) begin : g_wev
+      assign wev[32*w +: 32]  = ent[w];
+      assign wev2[32*w +: 32] = ent2[w];
+    end
     for (genvar j = 0; j < COLS; j++) begin : g_w
-      assign wbuf_wdata[j]  = ent[j / 4][8 * (j % 4) +: 8];
-      assign wbuf_wdata2[j] = ent2[j / 4][8 * (j % 4) +: 8];
+      if (IW > 0) begin : g_wi
+        assign wbuf_wdata[j]  = {wev[COLS * 8 + NCHK * WCW + IW * j +: IW], wev[8 * j +: 8]};
+        assign wbuf_wdata2[j] = {wev2[COLS * 8 + NCHK * WCW + IW * j +: IW], wev2[8 * j +: 8]};
+      end else begin : g_wn
+        assign wbuf_wdata[j]  = wev[8 * j +: 8];
+        assign wbuf_wdata2[j] = wev2[8 * j +: 8];
+      end
+    end
+    if (32 * WPW > COLS * (8 + IW) + NCHK * WCW) begin : g_wpad   // the entry's last word above its fields
+      logic unused_wpad;
+      assign unused_wpad = ^{wev[32*WPW-1:COLS*(8+IW)+NCHK*WCW], wev2[32*WPW-1:COLS*(8+IW)+NCHK*WCW]};
     end
   endgenerate
-  assign wcbuf_wdata  = ent[(COLS * 8) / 32][WCW-1:0];
-  assign wcbuf_wdata2 = ent2[(COLS * 8) / 32][WCW-1:0];
+  assign wcbuf_wdata  = wev[COLS * 8 +: NCHK * WCW];
+  assign wcbuf_wdata2 = wev2[COLS * 8 +: NCHK * WCW];
   assign abuf_we    = fx_entry && !fetch_is_w;
   assign abuf_we2   = fx_two && !fetch_is_w;
   assign wbuf_we    = fx_entry && fetch_is_w;

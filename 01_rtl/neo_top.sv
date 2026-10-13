@@ -1,4 +1,4 @@
-// neo_top.sv -- the chip top (drop 0.44): the NX x NY tile mesh plus a column of bridge nodes at x = NX, the NoC-to-AXI4
+// neo_top.sv -- the chip top (drop 0.42): the NX x NY tile mesh plus a column of bridge nodes at x = NX, the NoC-to-AXI4
 //   bridges in them, the AXI4-Lite control plane, two clock domains with documented crossings (08_ip_product/
 //   neo_top_integration.md). The silicon configuration is the default: 8 x 8 tiles of 32 x 32 cores, 2 MB banks, 1024-bit
 //   links (WPF 32), a 512-bit AXI4 memory bridge in every row and the host bridge in row 0.

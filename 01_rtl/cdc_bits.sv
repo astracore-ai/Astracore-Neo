@@ -1,4 +1,4 @@
-// cdc_bits.sv -- two-flop synchronizer of a vector of levels (drop 0.44, the chip top): every flop of neo_top that samples a
+// cdc_bits.sv -- two-flop synchronizer of a vector of levels (drop 0.42, the chip top): every flop of neo_top that samples a
 //   signal of the other clock domain is the first stage of one of these, so the design's synchronizers are one module a
 //   licensee swaps for its synchronizer cell and its CDC tool recognizes. Uses in neo_top: the tiles' status levels (done,
 //   err_pin), the effective tile-enable map and the bridge routers' parity flags into the AXI clock; the tile-enable request

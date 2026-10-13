@@ -1,4 +1,4 @@
-"""test_neo_top.py -- the chip top's suite under cocotb on Verilator (drop 0.44).
+"""test_neo_top.py -- the chip top's suite under cocotb on Verilator (drop 0.42).
 
 neo_top is driven the way a licensee's SoC drives it: the AXI4-Lite control plane (the tiles' register windows and the
 global registers), the host bridge's AXI4 slave (bank fills and read-backs), the memory bridge's AXI4 master answered by an

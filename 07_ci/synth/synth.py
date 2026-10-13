@@ -25,7 +25,7 @@ sandbox's memory in Yosys's own front end, while slang reads one module in secon
      (09_synthesis/constraints.sdc in the library's units) or the generic block SDC (the clock, 20 % of the period on the
      I/O); the worst paths, WNS / TNS, the minimum period, the endpoint slacks.
   5. The gates: every unit synthesizes; no latch; no multiply-driven net; the hierarchy check; the PE count = ROWS x
-     (COLS + 1) on the cores; at DV_HOOKS = 0 no dv_* input of any unit drives logic and every dv_* output is constant or a
+     (COLS + NCHK) on the cores (drop 0.42: NCHK = 4 check columns, 1,152 PEs at 32x32); at DV_HOOKS = 0 no dv_* input of any unit drives logic and every dv_* output is constant or a
      child's output; every OpenSTA run completes. Cells, flops and area are summed through the tree (instances x unit).
   6. (drop 0.42) --sweep: OpenSTA again per unit at every period of a list, one session per unit reading each period's
      SDC in turn (the children's timing models do not depend on the period): WNS, TNS, violating endpoints of all, the
@@ -170,9 +170,11 @@ def clog2(x):
 # ---------------------------------------------------------------------------------------------------------------------
 # the units
 # ---------------------------------------------------------------------------------------------------------------------
+# NCHK = 4 (drop 0.42): the 2:4 sparse-capable core -- four check columns, the PEs' index path and four-byte row buses, the
+# weight entry {idx, wc[4], w}; the silicon configuration (the RTL's default NCHK = 1 is the dense-only core of drop 0.41)
 TILE = dict(XW=3, YW=3, NX=8, NY=8, WPF=32, ROWS=32, COLS=32, ACC_ROWS=512, ABUF_DEPTH=2048, WBUF_DEPTH=1024,
-            BANK_DEPTH=524288, FETCH_TIMEOUT=1048575, DV_HOOKS=0)
-CORE16 = dict(ROWS=16, COLS=8, ACC_ROWS=64, ABUF_DEPTH=256, WBUF_DEPTH=512)
+            BANK_DEPTH=524288, FETCH_TIMEOUT=1048575, NCHK=4, DV_HOOKS=0)
+CORE16 = dict(ROWS=16, COLS=8, ACC_ROWS=64, ABUF_DEPTH=256, WBUF_DEPTH=512, NCHK=4)
 
 
 def U(name, module, params, desc, children=None, macros=(), pe=None, tile=False):
@@ -186,29 +188,36 @@ def core_units(c, p, desc):
     R, C, PW = c["ROWS"], c["COLS"], 32
     WCW = 8 + clog2(R) + 1
     IDXW, AW, WAW = clog2(c["ACC_ROWS"]), clog2(c["ABUF_DEPTH"]), clog2(c["WBUF_DEPTH"])
-    lanes = (C * 8 + WCW + 31) // 32
+    NCHK = c.get("NCHK", 1)                               # drop 0.42: the check columns (4: the sparse-capable core)
+    NB, IW = (4, 2) if NCHK > 1 else (1, 0)               # bytes per row bus, index bits per weight
+    lanes = (C * (8 + IW) + NCHK * WCW + 31) // 32        # the weight entry's SECDED lanes (12 at 32x32 with NCHK = 4; 9 before)
+    pe_kw = dict(NB=NB) if NB > 1 else {}
+    nk = dict(NCHK=NCHK) if NCHK > 1 else {}
     return [
-        U(p + "mac_pe", "mac_pe", dict(XW=8, WW=8, PW=PW), f"processing element, data column ({desc}): 8x8 signed multiply, 32-bit add, two stages"),
-        U(p + "mac_pe_chk", "mac_pe", dict(XW=8, WW=WCW, PW=PW), f"processing element, ABFT check column ({desc}): {WCW}-bit weight"),
-        U(p + "systolic_array", "systolic_array", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW),
-          f"{R}x{C + 1} PE array ({desc}): the PEs' wiring and the fault-hook select", children={"mac_pe": [p + "mac_pe", p + "mac_pe_chk"]}, pe=R * (C + 1)),
-        U(p + "neo_mac_core", "neo_mac_core", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW),
+        U(p + "mac_pe", "mac_pe", dict(XW=8, WW=8, PW=PW, **pe_kw),
+          f"processing element, data column ({desc}): 8x8 signed multiply, 32-bit add, two stages"
+          + (f"; a {8 * NB}-bit row bus and the 2-bit index's 4:1 byte mux before the multiplier" if NB > 1 else "")),
+        U(p + "mac_pe_chk", "mac_pe", dict(XW=8, WW=WCW, PW=PW), f"processing element, ABFT check column ({desc}): {WCW}-bit weight"
+          + (f", one byte of the last data PE's bus (check column k: byte k)" if NB > 1 else "")),
+        U(p + "systolic_array", "systolic_array", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW, **nk),
+          f"{R}x{C + NCHK} PE array ({desc}): the PEs' wiring and the fault-hook select", children={"mac_pe": [p + "mac_pe", p + "mac_pe_chk"]}, pe=R * (C + NCHK)),
+        U(p + "neo_mac_core", "neo_mac_core", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW, **nk),
           f"streaming core ({desc}): the array with its skew / deskew lines and the ABFT checker", children={"systolic_array": [p + "systolic_array"]}),
-        U(p + "act_feeder", "act_feeder", dict(ROWS=R, XW=8, ABUF_DEPTH=c["ABUF_DEPTH"], AW=AW, IDXW=IDXW),
+        U(p + "act_feeder", "act_feeder", dict(ROWS=R, XW=8, ABUF_DEPTH=c["ABUF_DEPTH"], AW=AW, IDXW=IDXW, **nk),
           f"activation feeder ({desc}): duplicated address generators around the {c['ABUF_DEPTH'] // 2} x {2 * R * 8} pair leaf (macro)", macros=["neo_mem_rf"]),
         U(p + "acc_bank", "acc_bank", dict(COLS=C, PW=PW, ACC_ROWS=c["ACC_ROWS"], IDXW=IDXW),
           f"accumulator ({desc}): {C + 1} adders and the ABFT check around the {c['ACC_ROWS']} x {(C + 1) * PW} leaf (macro)", macros=["neo_mem_rf"]),
-        U(p + "neo_mac_core_v02", "neo_mac_core_v02", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW, ACC_ROWS=c["ACC_ROWS"], ABUF_DEPTH=c["ABUF_DEPTH"], IDXW=IDXW, AW=AW),
+        U(p + "neo_mac_core_v02", "neo_mac_core_v02", dict(ROWS=R, COLS=C, XW=8, WW=8, PW=PW, WCW=WCW, ACC_ROWS=c["ACC_ROWS"], ABUF_DEPTH=c["ABUF_DEPTH"], IDXW=IDXW, AW=AW, **nk),
           f"core datapath ({desc}): feeder, streaming core, accumulator",
           children={"neo_mac_core": [p + "neo_mac_core"], "act_feeder": [p + "act_feeder"], "acc_bank": [p + "acc_bank"]}),
-        U(p + "wbuf_mem", "wbuf_mem", dict(COLS=C, WW=8, WCW=WCW, DEPTH=c["WBUF_DEPTH"], WAW=WAW, DV_HOOKS=0),
+        U(p + "wbuf_mem", "wbuf_mem", dict(COLS=C, WW=8, WCW=WCW, DEPTH=c["WBUF_DEPTH"], WAW=WAW, **nk, DV_HOOKS=0),
           f"weight buffer ({desc}): {lanes} SECDED lanes around the {c['WBUF_DEPTH'] // 2} x {2 * lanes * 39} pair leaf (macro)", macros=["neo_mem_rf"]),
         U(p + "requant", "requant", dict(COLS=C, PW=PW, MW=16), f"requantizer ({desc}): {C} columns of 32x17 multiply, shift, round, saturate; table parity"),
         U(p + "core_seq", "core_seq", dict(ROWS=R, COLS=C, IDXW=IDXW, WBUF_DEPTH=c["WBUF_DEPTH"], WAW=WAW, PE_LAT=2), f"sequencer ({desc}; a lockstep pair in the core)"),
-        U(p + "neo_core", "neo_core", dict(ROWS=R, COLS=C, PW=PW, ACC_ROWS=c["ACC_ROWS"], ABUF_DEPTH=c["ABUF_DEPTH"], WBUF_DEPTH=c["WBUF_DEPTH"], DV_HOOKS=0),
+        U(p + "neo_core", "neo_core", dict(ROWS=R, COLS=C, PW=PW, ACC_ROWS=c["ACC_ROWS"], ABUF_DEPTH=c["ABUF_DEPTH"], WBUF_DEPTH=c["WBUF_DEPTH"], **nk, DV_HOOKS=0),
           f"the {R}x{C} core: datapath, weight buffer, two sequencers, two requantizers, the comparators and flags",
           children={"neo_mac_core_v02": [p + "neo_mac_core_v02"], "wbuf_mem": [p + "wbuf_mem"], "requant": [p + "requant"], "core_seq": [p + "core_seq"]},
-          pe=R * (C + 1)),
+          pe=R * (C + NCHK)),
     ]
 
 
@@ -219,6 +228,8 @@ def tile_units(T):
     XW, YW, NX, NY, WPF = T["XW"], T["YW"], T["NX"], T["NY"], T["WPF"]
     DWL = 32 + 32 * WPF
     BW, LANES, PDEPTH = 16, 16, 32
+    NCHK = T.get("NCHK", 1)                               # drop 0.42: the core's check columns (the weight entry's format)
+    nk = dict(NCHK=NCHK) if NCHK > 1 else {}
     units = core_units(T, "", "32x32")
     units += [
         U("sram_bank", "sram_bank", dict(DEPTH=T["BANK_DEPTH"], LANES=LANES, DV_HOOKS=0),
@@ -232,7 +243,7 @@ def tile_units(T):
         U("link_packer", "link_packer", dict(XW=XW, YW=YW, BW=BW, WPF=WPF), "beats (16 words) to 32-word link flits"),
         U("link_unpacker", "link_unpacker", dict(XW=XW, YW=YW, BW=BW, WPF=WPF), "32-word link flits to beats"),
         U("tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX, NSRC=NX * NY, BW=BW, ROWS=R, COLS=C, WCW=WCW, IDXW=IDXW, AW=AW, WAW=WAW, BAW=BAW, PW=PW,
-                                       DFD=T["ACC_ROWS"], FETCH_TIMEOUT=T["FETCH_TIMEOUT"], DV_HOOKS=0),
+                                       **nk, DFD=T["ACC_ROWS"], FETCH_TIMEOUT=T["FETCH_TIMEOUT"], DV_HOOKS=0),
           "tile interface: fetch (two entries per cycle), serve, writeback, partial sums, CRC per beat, per-source state for 64 sources; the drain FIFO 512 x 1,068 and the partial-sum rows 64 x 1,024 are leaves (macros)",
           macros=["neo_mem_rf"]),
         U("noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router: 1077-bit flits, 2-entry input FIFOs, parity at the FIFO head, round-robin outputs"),
@@ -244,7 +255,7 @@ def tile_units(T):
           children={"neo_core": ["neo_core"], "tile_nic": ["tile_nic"], "noc_router": ["noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
                     "tile_dma": ["tile_dma"], "prog_mem": ["prog_mem"], "host_if": ["host_if"], "esm": ["esm"],
                     "link_packer": ["link_packer"], "link_unpacker": ["link_unpacker"]},
-          pe=R * (C + 1), tile=True),
+          pe=R * (C + NCHK), tile=True),
     ]
     return units
 
@@ -252,7 +263,7 @@ def tile_units(T):
 UNITS = tile_units(TILE) + core_units(CORE16, "c16_", "16x8")
 
 # ---------------------------------------------------------------------------------------------------------------------
-# the chip top (drop 0.44, stream B1; this block, TOP and RTL_FILES' extension below are B1's whole change to this file):
+# the chip top (drop 0.42, stream B1; this block, TOP and RTL_FILES' extension below are B1's whole change to this file):
 # neo_top at the silicon parameters -- 8 x 8 tiles and the bridge column at x = 8, a 512-bit memory bridge in every row and
 # the host bridge in row 0. The bridge column makes the coordinates 4 bits and the tile's source index 9 columns wide, so the
 # chip top's tile is a parameterization of neo_tile of its own (XW 4, NX 9) with units of its own for the children whose
@@ -931,7 +942,8 @@ set_max_transition {mtrans} [current_design]
 # writes during a layer. A unit gets the constraint from the descriptor inputs it has; the tile, whose descriptor lives
 # in host_if's registers, through the descriptor pins of its child instances (u_core/cfg_*); none when there are none.
 STATIC_CFG = ("cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n",
-              "cfg_ct0", "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1", "cfg_m")
+              "cfg_ct0", "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1", "cfg_m",
+              "cfg_sparse")                           # drop 0.42: the descriptor's flags (0x22) bit 0, the 2:4 sparse mode
 STATIC_SDC = """# the layer descriptor ({what}): written by the host or the DMA only between runs (before go) and held
 # for the whole run, the sequencer several cycles from go to its first f_start -- four cycles for its paths (drop 0.41)
 set_multicycle_path 4 -setup {how} [get_{kind} {{{names}}}]

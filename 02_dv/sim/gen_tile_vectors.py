@@ -25,7 +25,7 @@ with open(os.path.join(out, "bank11.hex"), "w") as f:          # sparse: "@addr 
 desc = dict(cfg_h=6, cfg_w=6, cfg_ho=ho, cfg_wo=wo, cfg_oy0=0, cfg_oy_n=ho, cfg_iy0=0, cfg_s=1, cfg_p=1, cfg_k=k, cfg_ct_n=cin_tiles,
             cfg_ct0=0, cfg_ky0=0, cfg_kx0=0, cfg_rn=cin_tiles * k * k, cfg_contrib_n=0, cfg_tile_pixels=36, cfg_regions_m1=0xFFFF)
 with open(os.path.join(out, "cfg.hex"), "w") as f:
-    for n in CFG_ORDER: f.write(f"{bits(desc[n], 16):04x}\n")
+    for n in CFG_ORDER[:18]: f.write(f"{bits(desc[n], 16):04x}\n")   # the 18 registers tb_tile_mesh writes (cfg_flags, 0x22, stays 0: dense)
     f.write(f"{M:04x}\n")
 prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(cin_tiles)]
 prog += [ins(OP_FETCH_W, 1, 1, W0, cin_tiles * WPT, 0), ins(OP_DRAIN_WR, 1, 0, R0, M), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]

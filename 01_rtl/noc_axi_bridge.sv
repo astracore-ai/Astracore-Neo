@@ -1,4 +1,4 @@
-// noc_axi_bridge.sv -- the NoC-to-AXI4 bridge engine of a bridge node (drop 0.44, the chip top): speaks the tile
+// noc_axi_bridge.sv -- the NoC-to-AXI4 bridge engine of a bridge node (drop 0.42, the chip top): speaks the tile
 //   interface's message protocol (tile_nic.sv) on its mesh side and AXI4 on the other, in two roles, each one present by
 //   parameter. The engine runs entirely in the AXI clock -- the port called clk here is neo_top's aclk -- and meets the mesh
 //   through two cdc_fifo of beat flits (16-word beats, the parity bit left out: the link packer / unpacker recompute it), so

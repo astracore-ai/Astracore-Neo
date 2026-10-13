@@ -14,6 +14,8 @@ module neo_tile #(
   parameter int BIST_WORDS = BANK_DEPTH,
   parameter int PDEPTH = 32,                 // DMA program memory entries (drop 0.22: 32, was 16)
   parameter int PAW = $clog2(PDEPTH),
+  parameter int NCHK = 1,                    // the core's check columns: 4 = the 2:4 sparse-capable silicon core (drop 0.42)
+  parameter int IW = (NCHK > 1) ? 2 : 0,     // index bits per weight (derived)
   parameter int DV_HOOKS = 0                 // 1: the testbench hooks (dv_* ports) exist; 0: the silicon tile, ports tied off (drop 0.35)
 )(
   input  logic          clk,
@@ -173,8 +175,8 @@ module neo_tile #(
   logic [AW-1:0]         abuf_waddr;
   logic [WAW-1:0]        wbuf_waddr;
   logic signed [7:0]     abuf_wdata [ROWS], abuf_wdata2 [ROWS];
-  logic signed [7:0]     wbuf_wdata [COLS], wbuf_wdata2 [COLS];
-  logic signed [WCW-1:0] wcbuf_wdata, wcbuf_wdata2;
+  logic [8+IW-1:0]       wbuf_wdata [COLS], wbuf_wdata2 [COLS];     // {index, weight} (drop 0.42)
+  logic [NCHK*WCW-1:0]   wcbuf_wdata, wcbuf_wdata2;
   logic                  ext_valid, ext_ready, reduce_ready;
   logic [IDXW-1:0]       ext_idx;
   logic signed [PW-1:0]  ext_y [COLS];
@@ -242,7 +244,7 @@ module neo_tile #(
   assign ctrl_path_err = dma_err_sticky | cfg_err_sticky | prog_ue | dma_fsm_err | dma_fsm_err_d;
 
   tile_nic #(.XW(XW), .YW(YW), .NX(NX), .NSRC(NX * NY), .BW(BW),
-             .ROWS(ROWS), .COLS(COLS), .WCW(WCW), .IDXW(IDXW), .AW(AW), .WAW(WAW), .BAW(BAW), .PW(PW),
+             .ROWS(ROWS), .COLS(COLS), .WCW(WCW), .IDXW(IDXW), .AW(AW), .WAW(WAW), .BAW(BAW), .PW(PW), .NCHK(NCHK),
              .DFD(ACC_ROWS), .FETCH_TIMEOUT(FETCH_TIMEOUT), .DV_HOOKS(DV_HOOKS)) u_nic (
     .clk(clk), .rst_n(rst_n), .my_x(my_x), .my_y(my_y),
     .rx_valid(nic_rx_valid), .rx_flit(nic_rx_flit), .rx_ready(nic_rx_ready),
@@ -285,7 +287,13 @@ module neo_tile #(
   assign unused_tile_bits = ^{busy, state_dbg, ct_free_idx, acc_abft_err, acc_abft_err_valid, prog_busy, d_prog_busy, d_rdy_clear,
                               rq_tbl_addr, dv_fi_idx};
 
-  neo_core #(.ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH)) u_core (
+  // the layer descriptor's flags (drop 0.42): cfg[18] (host register 0x22, reserved before) -- bit 0 the 2:4 sparse mode.
+  // A descriptor register, so it is kept twice and compared with the others (host_if's cfg_err): a flipped mode bit
+  // would feed the array consistently wrong bytes, which the ABFT cannot see
+  logic cfg_sparse;
+  assign cfg_sparse = cfg[18][0];
+  neo_core #(.ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH),
+             .NCHK(NCHK)) u_core (
     .clk(clk), .rst_n(rst_n),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(abuf_we2), .abuf_wdata2(abuf_wdata2),
     .wbuf_we(wbuf_we), .wbuf_waddr(wbuf_waddr), .wbuf_wdata(wbuf_wdata), .wcbuf_wdata(wcbuf_wdata),
@@ -293,7 +301,7 @@ module neo_tile #(
     .cfg_h(cfg[0]), .cfg_w(cfg[1]), .cfg_ho(cfg[2]), .cfg_wo(cfg[3]), .cfg_oy0(cfg[4]), .cfg_oy_n(cfg[5]), .cfg_iy0(cfg[6]),
     .cfg_s(cfg[7]), .cfg_p(cfg[8]), .cfg_k(cfg[9]), .cfg_ct_n(cfg[10]), .cfg_ct0(cfg[11]),
     .cfg_ky0(cfg[12]), .cfg_kx0(cfg[13]), .cfg_rn(cfg[14]),
-    .cfg_contrib_n(cfg[15]), .cfg_tile_pixels(cfg[16]), .cfg_regions_m1(cfg[17]),
+    .cfg_contrib_n(cfg[15]), .cfg_tile_pixels(cfg[16]), .cfg_regions_m1(cfg[17]), .cfg_sparse(cfg_sparse),
     .tiles_ready(tiles_ready), .cfg_m(cfg_m),
     .go(go), .done(done), .busy(busy), .state_dbg(state_dbg), .ct_free(ct_free), .ct_free_idx(ct_free_idx),
     .ext_valid(ext_valid), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(ext_ready), .reduce_ready(reduce_ready),
