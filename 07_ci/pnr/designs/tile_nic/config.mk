@@ -11,5 +11,6 @@ export SKIP_LAST_GASP = 1
 
 # run 168: global routing ended with overflow (20, at the platform's 25 % layer adjustment: 18 GCells over by one or two
 # tracks, all at the die's edges where the I/O pins crowd) and stopped the flow (GRT-0116); FastRoute's own hint
-# (GRT-0704) is a lower adjustment, so more of each layer's tracks are offered
+# (GRT-0704) is a lower adjustment, so more of each layer's tracks are offered. Run 174 at 0.10: no overflow (14.3 %
+# usage), 0 DRC at detailed routing's 19th iteration
 export ROUTING_LAYER_ADJUSTMENT = 0.10
