@@ -1,0 +1,84 @@
+Startpoint: first_dq_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: first_doq_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ first_dq_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  70.2   70.2 ^ first_dq_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+  14.5   84.7 v _07115_/Y (INVx1_ASAP7_75t_R)
+   0.0   84.7 v first_doq_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+         84.7   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ first_doq_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  15.2   15.2   library hold time
+         15.2   data required time
+-------------------------------------------------------
+         15.2   data required time
+        -84.7   data arrival time
+-------------------------------------------------------
+         69.5   slack (MET)
+
+
+Startpoint: first_q_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: first_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ first_q_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  70.2   70.2 ^ first_q_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+  14.5   84.7 v _07196_/Y (INVx1_ASAP7_75t_R)
+   0.0   84.7 v first_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+         84.7   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ first_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  15.2   15.2   library hold time
+         15.2   data required time
+-------------------------------------------------------
+         15.2   data required time
+        -84.7   data arrival time
+-------------------------------------------------------
+         69.5   slack (MET)
+
+
+Startpoint: m_d[5]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: idx_dq[5]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ m_d[5]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  70.2   70.2 ^ m_d[5]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+  17.7   87.9 v _06930_/Y (INVx1_ASAP7_75t_R)
+   0.0   87.9 v idx_dq[5]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+         87.9   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ idx_dq[5]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  14.0   14.0   library hold time
+         14.0   data required time
+-------------------------------------------------------
+         14.0   data required time
+        -87.9   data arrival time
+-------------------------------------------------------
+         73.8   slack (MET)
+
+

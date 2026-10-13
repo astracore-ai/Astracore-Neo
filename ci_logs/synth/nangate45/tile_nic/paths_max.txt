@@ -1,0 +1,518 @@
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_pcm[30]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.6    0.0    0.0    1.0 ^ _208641_/ZN (NAND2_X1)
+     2    1.8    0.0    0.0    1.0 v _208643_/ZN (OAI221_X1)
+     2    2.5    0.0    0.1    1.1 v _208674_/Z (MUX2_X1)
+     2    3.0    0.0    0.1    1.1 v _208675_/Z (MUX2_X1)
+     1    1.6    0.0    0.0    1.2 ^ _208734_/ZN (NOR2_X1)
+     1    1.5    0.0    0.0    1.2 v _208735_/ZN (AOI21_X1)
+     1    1.1    0.0    0.0    1.2 ^ _208736_/ZN (OAI21_X1)
+                 0.0    0.0    1.2 ^ q_pcm[30]_reg/D (DFFR_X1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_pcm[30]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.8   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_pcm[22]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.6    0.0    0.0    1.0 ^ _208641_/ZN (NAND2_X1)
+     2    1.8    0.0    0.0    1.0 v _208643_/ZN (OAI221_X1)
+     2    2.5    0.0    0.1    1.1 v _208674_/Z (MUX2_X1)
+     1    1.6    0.1    0.1    1.1 ^ _208710_/ZN (OAI33_X1)
+     1    1.5    0.0    0.0    1.2 v _208711_/ZN (AOI22_X1)
+     1    1.1    0.0    0.0    1.2 ^ _208712_/ZN (OAI21_X1)
+                 0.0    0.0    1.2 ^ q_pcm[22]_reg/D (DFFR_X1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_pcm[22]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.8   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: ps_has_chk_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.7    0.0    0.0    1.0 ^ _175606_/ZN (NAND2_X1)
+     2    2.4    0.0    0.0    1.0 v _175617_/ZN (NAND3_X1)
+     2    2.6    0.0    0.0    1.0 ^ _175628_/ZN (AOI21_X1)
+     2    3.2    0.0    0.0    1.1 ^ _175639_/ZN (OR2_X1)
+     1    0.9    0.0    0.0    1.1 v _175950_/ZN (NAND3_X1)
+     1    1.6    0.0    0.1    1.1 v _176039_/Z (MUX2_X1)
+     1    1.1    0.0    0.0    1.2 ^ _176050_/ZN (OAI21_X1)
+                 0.0    0.0    1.2 ^ ps_has_chk_reg/D (DFFR_X1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ps_has_chk_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_pcm[14]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.6    0.0    0.0    1.0 ^ _208641_/ZN (NAND2_X1)
+     2    1.8    0.0    0.0    1.0 v _208643_/ZN (OAI221_X1)
+     2    2.5    0.0    0.1    1.1 v _208674_/Z (MUX2_X1)
+     2    3.0    0.0    0.1    1.1 v _208675_/Z (MUX2_X1)
+     1    1.1    0.0    0.0    1.2 ^ _208676_/ZN (OAI21_X1)
+                 0.0    0.0    1.2 ^ q_pcm[14]_reg/D (DFFR_X1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_pcm[14]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_pcm[16]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.7    0.0    0.0    1.0 ^ _175606_/ZN (NAND2_X1)
+     2    2.4    0.0    0.0    1.0 v _175617_/ZN (NAND3_X1)
+     2    2.6    0.0    0.0    1.0 ^ _175628_/ZN (AOI21_X1)
+     2    3.2    0.0    0.0    1.1 ^ _175639_/ZN (OR2_X1)
+     1    0.9    0.0    0.0    1.1 v _208680_/ZN (NAND2_X1)
+     1    1.5    0.0    0.1    1.1 v _208681_/Z (MUX2_X1)
+     1    1.1    0.0    0.0    1.2 ^ _208682_/ZN (OAI21_X1)
+                 0.0    0.0    1.2 ^ q_pcm[16]_reg/D (DFFR_X1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_pcm[16]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_pcm[28]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.7    0.0    0.0    1.0 ^ _175606_/ZN (NAND2_X1)
+     2    2.4    0.0    0.0    1.0 v _175617_/ZN (NAND3_X1)
+     2    2.3    0.0    0.1    1.1 v _208656_/Z (MUX2_X1)
+     2    2.9    0.0    0.1    1.1 v _208657_/Z (MUX2_X1)
+     1    1.1    0.0    0.0    1.1 ^ _208730_/ZN (OAI21_X1)
+                 0.0    0.0    1.1 ^ q_pcm[28]_reg/D (DFFR_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_pcm[28]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_pcm[12]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.7    0.0    0.0    1.0 ^ _175606_/ZN (NAND2_X1)
+     2    2.4    0.0    0.0    1.0 v _175617_/ZN (NAND3_X1)
+     2    2.3    0.0    0.1    1.1 v _208656_/Z (MUX2_X1)
+     2    2.9    0.0    0.1    1.1 v _208657_/Z (MUX2_X1)
+     1    1.1    0.0    0.0    1.1 ^ _208658_/ZN (OAI21_X1)
+                 0.0    0.0    1.1 ^ q_pcm[12]_reg/D (DFFR_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_pcm[12]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_pcm[26]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.6    0.0    0.0    1.0 ^ _208641_/ZN (NAND2_X1)
+     2    1.8    0.0    0.0    1.0 v _208643_/ZN (OAI221_X1)
+     1    1.5    0.0    0.1    1.1 v _208644_/ZN (OR2_X1)
+     2    3.3    0.0    0.0    1.1 ^ _208645_/ZN (OAI21_X1)
+     2    3.0    0.0    0.0    1.1 v _208646_/ZN (OAI21_X1)
+     1    1.1    0.0    0.0    1.1 ^ _208723_/ZN (OAI221_X1)
+                 0.0    0.0    1.1 ^ q_pcm[26]_reg/D (DFFR_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_pcm[26]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_pcm[20]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.1    0.0    0.1    0.6 v _202727_/Z (MUX2_X1)
+     2    6.9    0.0    0.0    0.6 ^ _213151_/ZN (INV_X1)
+     4    6.3    0.0    0.0    0.7 ^ _230068_/CO (HA_X1)
+     4    6.0    0.0    0.0    0.7 v _174917_/ZN (OAI21_X1)
+     3    4.2    0.0    0.0    0.7 ^ _174928_/ZN (NAND2_X1)
+     2    3.3    0.0    0.0    0.7 ^ _175506_/ZN (AND2_X1)
+     3    3.9    0.0    0.0    0.8 v _175539_/ZN (AOI21_X1)
+    10   15.8    0.1    0.1    0.9 ^ _175562_/ZN (AOI21_X1)
+     5    6.9    0.0    0.0    0.9 v _175573_/ZN (NOR2_X1)
+     2    3.0    0.0    0.1    1.0 v _175595_/Z (MUX2_X1)
+     1    1.7    0.0    0.0    1.0 ^ _175606_/ZN (NAND2_X1)
+     2    2.4    0.0    0.0    1.0 v _175617_/ZN (NAND3_X1)
+     2    2.3    0.0    0.1    1.1 v _208656_/Z (MUX2_X1)
+     1    1.7    0.0    0.0    1.1 ^ _208701_/ZN (OAI22_X1)
+     1    1.5    0.0    0.0    1.1 v _208702_/ZN (NAND2_X1)
+     1    1.1    0.0    0.0    1.1 ^ _208704_/ZN (OAI221_X1)
+                 0.0    0.0    1.1 ^ q_pcm[20]_reg/D (DFFR_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_pcm[20]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: lb_csel_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: q_tt[18]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ lb_csel_reg/CK (DFFR_X1)
+     1    1.8    0.0    0.1    0.1 ^ lb_csel_reg/Q (DFFR_X1)
+     9   16.8    0.0    0.0    0.1 ^ _216437_/Z (BUF_X2)
+    10   16.3    0.0    0.0    0.2 ^ _132772_/Z (BUF_X2)
+    10   14.0    0.0    0.1    0.2 ^ _134105_/Z (BUF_X1)
+    10   17.6    0.0    0.0    0.3 ^ _134217_/Z (BUF_X2)
+    10   15.9    0.0    0.0    0.3 ^ _134328_/Z (BUF_X2)
+    10   15.6    0.0    0.1    0.4 ^ _134439_/Z (BUF_X1)
+    10   15.3    0.0    0.0    0.4 ^ _134550_/Z (BUF_X2)
+    10   17.2    0.0    0.1    0.5 ^ _174462_/Z (BUF_X1)
+     5   13.7    0.0    0.1    0.6 ^ _202727_/Z (MUX2_X1)
+     2    6.7    0.0    0.0    0.6 v _213151_/ZN (INV_X1)
+     4    6.1    0.0    0.0    0.6 v _230068_/CO (HA_X1)
+     4    6.6    0.0    0.1    0.7 ^ _174917_/ZN (OAI21_X1)
+     3    3.9    0.0    0.0    0.7 v _174928_/ZN (NAND2_X1)
+     2    3.0    0.0    0.0    0.7 v _175506_/ZN (AND2_X1)
+     3    4.2    0.0    0.1    0.8 ^ _175539_/ZN (AOI21_X1)
+     6    7.1    0.0    0.0    0.8 ^ _175850_/ZN (OR2_X1)
+     1    1.0    0.0    0.0    0.9 ^ _172238_/ZN (AND2_X1)
+     8   13.1    0.0    0.0    0.9 ^ _172240_/Z (BUF_X1)
+     1    0.8    0.0    0.0    0.9 v _172331_/ZN (OAI22_X1)
+     1    1.5    0.0    0.1    1.0 v _172334_/ZN (OR4_X1)
+     1    1.7    0.0    0.1    1.1 ^ _172336_/ZN (AOI221_X1)
+     1    1.1    0.0    0.0    1.1 v _172337_/ZN (OAI21_X1)
+                 0.0    0.0    1.1 v q_tt[18]_reg/D (DFFR_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ q_tt[18]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+

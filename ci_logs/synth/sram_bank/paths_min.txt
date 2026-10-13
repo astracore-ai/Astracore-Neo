@@ -1,0 +1,59 @@
+Startpoint: ecc_ce_sticky_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: ecc_ce_sticky_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ ecc_ce_sticky_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  70.2   70.2 ^ ecc_ce_sticky_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+  12.1   82.3 v _4953_/Y (INVx1_ASAP7_75t_R)
+  33.6  115.9 v _5007_/Y (AO21x2_ASAP7_75t_R)
+   0.0  115.9 v ecc_ce_sticky_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+        115.9   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ ecc_ce_sticky_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  16.0   16.0   library hold time
+         16.0   data required time
+-------------------------------------------------------
+         16.0   data required time
+       -115.9   data arrival time
+-------------------------------------------------------
+         99.9   slack (MET)
+
+
+Startpoint: ecc_ue_sticky_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: ecc_ue_sticky_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ ecc_ue_sticky_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  78.3   78.3 ^ ecc_ue_sticky_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+  14.7   92.9 v _6372_/Y (INVx1_ASAP7_75t_R)
+  29.9  122.9 v _6134_/Y (AO21x1_ASAP7_75t_R)
+  34.4  157.2 v _6135_/Y (OA31x2_ASAP7_75t_R)
+   0.0  157.2 v ecc_ue_sticky_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+        157.2   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ ecc_ue_sticky_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  15.7   15.7   library hold time
+         15.7   data required time
+-------------------------------------------------------
+         15.7   data required time
+       -157.2   data arrival time
+-------------------------------------------------------
+        141.5   slack (MET)
+
+

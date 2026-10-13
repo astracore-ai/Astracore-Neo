@@ -1,0 +1,216 @@
+Startpoint: d[17] (input port clocked by vclk)
+Endpoint: op (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     2    6.9    0.0    0.0    0.0 v d[17] (in)
+     1    4.4    0.0    0.1    0.1 v _094_/Z (XOR2_X2)
+     2    8.8    0.0    0.0    0.1 ^ _095_/ZN (XNOR2_X2)
+     2    7.1    0.0    0.0    0.1 ^ _096_/ZN (XNOR2_X2)
+     1    2.6    0.0    0.0    0.2 ^ _097_/ZN (XNOR2_X2)
+     1    4.4    0.0    0.0    0.2 ^ _098_/ZN (XNOR2_X1)
+     1    4.0    0.0    0.1    0.3 ^ _099_/Z (XOR2_X2)
+     1    0.0    0.0    0.0    0.3 ^ _113_/ZN (XNOR2_X2)
+                 0.0    0.0    0.3 ^ op (out)
+                               0.3   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.3   data arrival time
+-------------------------------------------------------------------------
+                               0.2   slack (MET)
+
+
+Startpoint: d[17] (input port clocked by vclk)
+Endpoint: p[1] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     2    6.9    0.0    0.0    0.0 v d[17] (in)
+     1    4.4    0.0    0.1    0.1 v _094_/Z (XOR2_X2)
+     2    8.8    0.0    0.0    0.1 ^ _095_/ZN (XNOR2_X2)
+     2    6.6    0.0    0.0    0.1 ^ _105_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.2 ^ _110_/ZN (XNOR2_X2)
+     2    4.4    0.0    0.0    0.2 ^ _111_/ZN (XNOR2_X2)
+                 0.0    0.0    0.2 ^ p[1] (out)
+                               0.2   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.2   data arrival time
+-------------------------------------------------------------------------
+                               0.3   slack (MET)
+
+
+Startpoint: d[17] (input port clocked by vclk)
+Endpoint: p[4] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     2    6.9    0.0    0.0    0.0 v d[17] (in)
+     1    4.4    0.0    0.1    0.1 v _094_/Z (XOR2_X2)
+     2    8.8    0.0    0.0    0.1 ^ _095_/ZN (XNOR2_X2)
+     2    7.1    0.0    0.0    0.1 ^ _096_/ZN (XNOR2_X2)
+     1    2.6    0.0    0.0    0.2 ^ _117_/ZN (XNOR2_X1)
+     1    0.0    0.0    0.0    0.2 ^ _118_/ZN (XNOR2_X1)
+                 0.0    0.0    0.2 ^ p[4] (out)
+                               0.2   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.2   data arrival time
+-------------------------------------------------------------------------
+                               0.3   slack (MET)
+
+
+Startpoint: d[19] (input port clocked by vclk)
+Endpoint: p[0] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 ^ input external delay
+     2    4.8    0.0    0.0    0.0 ^ d[19] (in)
+     1    2.2    0.0    0.0    0.0 ^ _062_/Z (XOR2_X1)
+     1    2.6    0.0    0.0    0.1 ^ _064_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.1 ^ _065_/ZN (XNOR2_X1)
+     1    4.8    0.0    0.0    0.2 ^ _066_/ZN (XNOR2_X1)
+     2    4.3    0.0    0.0    0.2 ^ _067_/ZN (XNOR2_X2)
+                 0.0    0.0    0.2 ^ p[0] (out)
+                               0.2   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.2   data arrival time
+-------------------------------------------------------------------------
+                               0.3   slack (MET)
+
+
+Startpoint: d[14] (input port clocked by vclk)
+Endpoint: p[2] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    4.5    0.0    0.0    0.0 v d[14] (in)
+     1    4.4    0.0    0.1    0.1 v _087_/Z (XOR2_X2)
+     2    7.4    0.0    0.0    0.1 ^ _088_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.1 ^ _089_/ZN (XNOR2_X2)
+     2    4.8    0.0    0.0    0.2 ^ _090_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.2 ^ _114_/ZN (XNOR2_X1)
+                 0.0    0.0    0.2 ^ p[2] (out)
+                               0.2   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.2   data arrival time
+-------------------------------------------------------------------------
+                               0.3   slack (MET)
+
+
+Startpoint: d[10] (input port clocked by vclk)
+Endpoint: p[3] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     2    4.7    0.0    0.0    0.0 v d[10] (in)
+     1    4.8    0.0    0.0    0.0 ^ _076_/ZN (XNOR2_X1)
+     2    8.0    0.0    0.0    0.1 ^ _077_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.1 ^ _081_/ZN (XNOR2_X2)
+     2    2.2    0.0    0.0    0.2 ^ _083_/ZN (XNOR2_X2)
+                 0.0    0.0    0.2 ^ p[3] (out)
+                               0.2   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.2   data arrival time
+-------------------------------------------------------------------------
+                               0.3   slack (MET)
+
+
+Startpoint: d[29] (input port clocked by vclk)
+Endpoint: p[5] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     2    4.5    0.0    0.0    0.0 v d[29] (in)
+     1    2.4    0.0    0.1    0.1 v _119_/Z (XOR2_X1)
+     1    2.4    0.0    0.0    0.1 v _120_/ZN (XNOR2_X1)
+     1    0.0    0.0    0.0    0.1 v _121_/ZN (XNOR2_X1)
+                 0.0    0.0    0.1 v p[5] (out)
+                               0.1   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.1   data arrival time
+-------------------------------------------------------------------------
+                               0.4   slack (MET)
+
+

@@ -1,0 +1,58 @@
+Startpoint: ecc_ce_sticky_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: ecc_ce_sticky_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ ecc_ce_sticky_reg/CK (DFFR_X1)
+   0.1    0.1 v ecc_ce_sticky_reg/Q (DFFR_X1)
+   0.0    0.1 ^ _5074_/ZN (INV_X1)
+   0.0    0.1 v _5126_/ZN (OAI22_X1)
+   0.0    0.1 v ecc_ce_sticky_reg/D (DFFR_X1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ ecc_ce_sticky_reg/CK (DFFR_X1)
+   0.0    0.0   library hold time
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.1   slack (MET)
+
+
+Startpoint: ecc_ue_sticky_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: ecc_ue_sticky_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ ecc_ue_sticky_reg/CK (DFFR_X1)
+   0.1    0.1 v ecc_ue_sticky_reg/Q (DFFR_X1)
+   0.0    0.1 ^ _6269_/ZN (INV_X1)
+   0.0    0.1 v _6317_/ZN (OAI22_X2)
+   0.0    0.1 v ecc_ue_sticky_reg/D (DFFR_X1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ ecc_ue_sticky_reg/CK (DFFR_X1)
+   0.0    0.0   library hold time
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.1   slack (MET)
+
+

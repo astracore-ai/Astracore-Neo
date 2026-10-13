@@ -1,0 +1,440 @@
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[10] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    2.2    0.0    0.0    0.6 ^ _6024_/ZN (NAND3_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6026_/ZN (XNOR2_X1)
+     1    4.0    0.0    0.0    0.7 ^ _6030_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.8 ^ _6039_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6060_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[10] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[3] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    4.8    0.0    0.0    0.6 ^ _6310_/ZN (NAND3_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6311_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.7 ^ _6315_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.8 ^ _6316_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6333_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[3] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[8] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    2.2    0.0    0.0    0.6 ^ _6102_/ZN (NAND3_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6104_/ZN (XNOR2_X1)
+     1    4.0    0.0    0.0    0.7 ^ _6108_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.8 ^ _6117_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6138_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[8] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[14] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    4.8    0.0    0.0    0.6 ^ _5845_/ZN (NAND3_X2)
+     1    4.8    0.0    0.0    0.7 ^ _5846_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.7 ^ _5847_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.8 ^ _5860_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _5861_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[14] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[11] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    4.8    0.0    0.0    0.6 ^ _5999_/ZN (NAND3_X2)
+     1    4.8    0.0    0.0    0.7 ^ _6000_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6001_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.8 ^ _6022_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6023_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[11] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[6] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    4.8    0.0    0.0    0.6 ^ _6201_/ZN (NAND3_X2)
+     1    4.8    0.0    0.0    0.7 ^ _6202_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6203_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.8 ^ _6212_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6213_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[6] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[7] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    4.0    0.0    0.0    0.6 ^ _6171_/ZN (NAND3_X2)
+     1    4.8    0.0    0.0    0.7 ^ _6173_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.7 ^ _6174_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.8 ^ _6175_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6177_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[7] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[2] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    4.8    0.0    0.0    0.6 ^ _6350_/ZN (NAND3_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6351_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6356_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.8 ^ _6364_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6366_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[2] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[9] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    4.0    0.0    0.0    0.6 ^ _6075_/ZN (NAND3_X2)
+     1    4.8    0.0    0.0    0.7 ^ _6078_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.7 ^ _6079_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.8 ^ _6080_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6101_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[9] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: words[168] (input port clocked by vclk)
+Endpoint: crc_out[0] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     1    3.0    0.0    0.0    0.0 v words[168] (in)
+     4   11.4    0.0    0.0    0.0 v _6154_/Z (BUF_X4)
+     1    4.4    0.0    0.1    0.1 v _6165_/Z (XOR2_X2)
+     3    6.8    0.0    0.0    0.1 ^ _6176_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.1    0.2 ^ _6187_/Z (XOR2_X1)
+     2    7.0    0.0    0.0    0.2 ^ _6198_/ZN (XNOR2_X2)
+     1    3.5    0.0    0.1    0.3 ^ _6209_/Z (XOR2_X2)
+     2    3.0    0.0    0.0    0.3 v _6435_/ZN (OAI221_X2)
+     2    5.1    0.0    0.0    0.4 v _6442_/ZN (AND3_X2)
+     2    5.9    0.0    0.1    0.5 v _6445_/ZN (OR4_X4)
+     2    8.5    0.0    0.0    0.5 v _6553_/ZN (AND3_X4)
+     1    5.8    0.0    0.1    0.6 v _6557_/ZN (OR3_X4)
+     7   21.8    0.0    0.0    0.6 v _6558_/Z (BUF_X8)
+    10   31.1    0.0    0.0    0.6 v _5844_/Z (BUF_X16)
+     1    4.0    0.0    0.0    0.6 ^ _6413_/ZN (NAND3_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6415_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.7 ^ _6419_/ZN (XNOR2_X2)
+     1    4.8    0.0    0.0    0.8 ^ _6428_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.8 ^ _6429_/ZN (XNOR2_X2)
+                 0.0    0.0    0.8 ^ crc_out[0] (out)
+                               0.8   data arrival time
+
+                 0.0    0.5    0.5   clock vclk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock reconvergence pessimism
+                        0.0    0.5   output external delay
+                               0.5   data required time
+-------------------------------------------------------------------------
+                               0.5   data required time
+                              -0.8   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+

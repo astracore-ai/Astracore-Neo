@@ -1,0 +1,335 @@
+Startpoint: link_flit[165] (input port clocked by clk)
+Endpoint: core_flit[564] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     2    3.9    0.0    0.0    0.1 ^ link_flit[165] (in)
+     1    2.2    0.0    0.0    0.1 ^ _2386_/Z (XOR2_X1)
+     1    2.2    0.0    0.0    0.2 ^ _2388_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.2 ^ _2392_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.3 ^ _2393_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.3 ^ _2394_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.4 ^ _2396_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.4 ^ _2397_/ZN (XNOR2_X1)
+     1    2.2    0.0    0.0    0.5 ^ _2398_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.5 ^ _2487_/ZN (XNOR2_X1)
+     1    3.6    0.0    0.0    0.5 ^ _2488_/ZN (XNOR2_X1)
+     1    3.8    0.0    0.0    0.6 v _2489_/ZN (NAND3_X2)
+     1    2.7    0.0    0.0    0.6 v _2497_/ZN (XNOR2_X2)
+     1    0.0    0.0    0.0    0.6 ^ _2498_/ZN (AOI21_X2)
+                 0.0    0.0    0.6 ^ core_flit[564] (out)
+                               0.6   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.6   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[519] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     4    7.6    0.0    0.1    0.3 ^ _2501_/ZN (NOR2_X1)
+     1    2.4    0.0    0.0    0.4 v _2507_/ZN (NAND4_X1)
+     1    0.0    0.0    0.0    0.4 v _2508_/ZN (XNOR2_X1)
+                 0.0    0.0    0.4 v core_flit[519] (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[520] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     2    2.6    0.0    0.0    0.3 ^ _5115_/ZN (AOI21_X1)
+    10   12.5    0.0    0.0    0.3 v _2509_/ZN (NOR2_X1)
+     1    0.0    0.0    0.1    0.4 v _2510_/ZN (OR2_X1)
+                 0.0    0.0    0.4 v core_flit[520] (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[521] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     2    2.6    0.0    0.0    0.3 ^ _5115_/ZN (AOI21_X1)
+    10   12.5    0.0    0.0    0.3 v _2509_/ZN (NOR2_X1)
+     1    0.0    0.0    0.1    0.4 v _2511_/ZN (OR2_X1)
+                 0.0    0.0    0.4 v core_flit[521] (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[522] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     2    2.6    0.0    0.0    0.3 ^ _5115_/ZN (AOI21_X1)
+    10   12.5    0.0    0.0    0.3 v _2509_/ZN (NOR2_X1)
+     1    0.0    0.0    0.1    0.4 v _2512_/ZN (OR2_X1)
+                 0.0    0.0    0.4 v core_flit[522] (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[523] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     2    2.6    0.0    0.0    0.3 ^ _5115_/ZN (AOI21_X1)
+    10   12.5    0.0    0.0    0.3 v _2509_/ZN (NOR2_X1)
+     1    0.0    0.0    0.1    0.4 v _2513_/ZN (OR2_X1)
+                 0.0    0.0    0.4 v core_flit[523] (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[517] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     4    7.6    0.0    0.1    0.3 ^ _2501_/ZN (NOR2_X1)
+     1    0.0    0.0    0.1    0.4 v _2503_/Z (MUX2_X1)
+                 0.0    0.0    0.4 v core_flit[517] (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[518] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     4    7.6    0.0    0.1    0.3 ^ _2501_/ZN (NOR2_X1)
+     1    2.4    0.0    0.0    0.3 v _2504_/ZN (NAND2_X1)
+     1    0.0    0.0    0.0    0.4 v _2505_/ZN (XNOR2_X1)
+                 0.0    0.0    0.4 v core_flit[518] (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: link_ready (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     2    2.6    0.0    0.0    0.3 ^ _5115_/ZN (AOI21_X1)
+     5    7.0    0.0    0.0    0.4 ^ _2361_/ZN (OR2_X1)
+     1    0.0    0.0    0.0    0.4 ^ _2472_/ZN (AND2_X1)
+                 0.0    0.0    0.4 ^ link_ready (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+
+Startpoint: idx[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[516] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ idx[4]_reg/CK (DFFR_X1)
+     1    0.9    0.0    0.1    0.1 v idx[4]_reg/Q (DFFR_X1)
+     5    6.8    0.0    0.0    0.1 v _4782_/Z (BUF_X1)
+     2    5.0    0.1    0.1    0.2 ^ _4893_/ZN (NOR4_X1)
+     4    7.2    0.0    0.0    0.3 v _5004_/ZN (NAND2_X1)
+     4    7.6    0.0    0.1    0.3 ^ _2501_/ZN (NOR2_X1)
+     1    0.0    0.0    0.0    0.4 ^ _2502_/Z (XOR2_X1)
+                 0.0    0.0    0.4 ^ core_flit[516] (out)
+                               0.4   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.4   data arrival time
+-------------------------------------------------------------------------
+                               0.0   slack (VIOLATED)
+
+

@@ -1,0 +1,300 @@
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[274] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1585_/Y (AND2x2_ASAP7_75t_R)
+     1    5.9   64.5   60.6  656.2 v _1587_/Y (AO21x1_ASAP7_75t_R)
+                64.5    0.0  656.2 v u_bank/wdata[274] (sram_bank)
+                             656.2   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -492.1  -32.1   library setup time
+                             -32.1   data required time
+-------------------------------------------------------------------------
+                             -32.1   data required time
+                            -656.2   data arrival time
+-------------------------------------------------------------------------
+                            -688.3   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[266] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1568_/Y (AND2x2_ASAP7_75t_R)
+     1    6.8   72.8   64.8  660.4 v _1569_/Y (AO21x1_ASAP7_75t_R)
+                72.8    0.0  660.4 v u_bank/wdata[266] (sram_bank)
+                             660.4   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -485.3  -25.3   library setup time
+                             -25.3   data required time
+-------------------------------------------------------------------------
+                             -25.3   data required time
+                            -660.4   data arrival time
+-------------------------------------------------------------------------
+                            -685.7   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[264] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1561_/Y (AND2x2_ASAP7_75t_R)
+     1    6.8   72.8   64.8  660.4 v _1562_/Y (AO21x1_ASAP7_75t_R)
+                72.8    0.0  660.4 v u_bank/wdata[264] (sram_bank)
+                             660.4   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -485.2  -25.2   library setup time
+                             -25.2   data required time
+-------------------------------------------------------------------------
+                             -25.2   data required time
+                            -660.4   data arrival time
+-------------------------------------------------------------------------
+                            -685.6   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[278] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1600_/Y (AND2x2_ASAP7_75t_R)
+     1    6.8   43.6   56.8  652.4 v _1601_/Y (AO21x2_ASAP7_75t_R)
+                43.6    0.0  652.4 v u_bank/wdata[278] (sram_bank)
+                             652.4   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -492.1  -32.1   library setup time
+                             -32.1   data required time
+-------------------------------------------------------------------------
+                             -32.1   data required time
+                            -652.4   data arrival time
+-------------------------------------------------------------------------
+                            -684.6   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[272] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1581_/Y (AND2x2_ASAP7_75t_R)
+     1    6.7   72.3   64.5  660.2 v _1582_/Y (AO21x1_ASAP7_75t_R)
+                72.3    0.0  660.2 v u_bank/wdata[272] (sram_bank)
+                             660.2   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -482.0  -22.0   library setup time
+                             -22.0   data required time
+-------------------------------------------------------------------------
+                             -22.0   data required time
+                            -660.2   data arrival time
+-------------------------------------------------------------------------
+                            -682.1   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[280] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1604_/Y (AND2x2_ASAP7_75t_R)
+     1    6.8   43.4   56.7  652.3 v _1605_/Y (AO21x2_ASAP7_75t_R)
+                43.4    0.0  652.3 v u_bank/wdata[280] (sram_bank)
+                             652.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -487.5  -27.5   library setup time
+                             -27.5   data required time
+-------------------------------------------------------------------------
+                             -27.5   data required time
+                            -652.3   data arrival time
+-------------------------------------------------------------------------
+                            -679.8   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[258] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1548_/Y (AND2x2_ASAP7_75t_R)
+     1    5.9   64.5   60.6  656.2 v _1549_/Y (AO21x1_ASAP7_75t_R)
+                64.5    0.0  656.2 v u_bank/wdata[258] (sram_bank)
+                             656.2   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -482.8  -22.8   library setup time
+                             -22.8   data required time
+-------------------------------------------------------------------------
+                             -22.8   data required time
+                            -656.2   data arrival time
+-------------------------------------------------------------------------
+                            -679.0   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[276] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1594_/Y (AND2x2_ASAP7_75t_R)
+     1    5.9   39.4   54.4  650.1 v _1595_/Y (AO21x2_ASAP7_75t_R)
+                39.4    0.0  650.1 v u_bank/wdata[276] (sram_bank)
+                             650.1   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -487.4  -27.4   library setup time
+                             -27.4   data required time
+-------------------------------------------------------------------------
+                             -27.4   data required time
+                            -650.1   data arrival time
+-------------------------------------------------------------------------
+                            -677.5   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[286] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1619_/Y (AND2x2_ASAP7_75t_R)
+     1    6.8   43.4   56.7  652.3 v _1621_/Y (AO21x2_ASAP7_75t_R)
+                43.4    0.0  652.3 v u_bank/wdata[286] (sram_bank)
+                             652.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -481.5  -21.5   library setup time
+                             -21.5   data required time
+-------------------------------------------------------------------------
+                             -21.5   data required time
+                            -652.3   data arrival time
+-------------------------------------------------------------------------
+                            -673.9   slack (VIOLATED)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bist/clk (mbist)
+     1    0.5   10.8  568.2  568.2 v u_bist/wdata[282] (mbist)
+     1    0.5   11.2   27.4  595.6 v _1608_/Y (AND2x2_ASAP7_75t_R)
+     1    6.8   43.4   56.7  652.3 v _1610_/Y (AO21x2_ASAP7_75t_R)
+                43.4    0.0  652.3 v u_bank/wdata[282] (sram_bank)
+                             652.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_bank/clk (sram_bank)
+                     -480.2  -20.2   library setup time
+                             -20.2   data required time
+-------------------------------------------------------------------------
+                             -20.2   data required time
+                            -652.3   data arrival time
+-------------------------------------------------------------------------
+                            -672.6   slack (VIOLATED)
+
+

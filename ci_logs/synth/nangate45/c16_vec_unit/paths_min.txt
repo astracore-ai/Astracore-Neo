@@ -1,0 +1,81 @@
+Startpoint: lut_we[7]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lut[0].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ lut_we[7]_reg/CK (DFFR_X1)
+   0.1    0.1 v lut_we[7]_reg/Q (DFFR_X1)
+   0.0    0.1 v g_lut[0].u_lutv/we (neo_mem_rf_w33_d256_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ g_lut[0].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+
+Startpoint: lut_we[6]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lut[1].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ lut_we[6]_reg/CK (DFFR_X1)
+   0.1    0.1 v lut_we[6]_reg/Q (DFFR_X1)
+   0.0    0.1 v g_lut[1].u_lutv/we (neo_mem_rf_w33_d256_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ g_lut[1].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+
+Startpoint: lut_we[5]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lut[2].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ lut_we[5]_reg/CK (DFFR_X1)
+   0.1    0.1 v lut_we[5]_reg/Q (DFFR_X1)
+   0.0    0.1 v g_lut[2].u_lutv/we (neo_mem_rf_w33_d256_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ g_lut[2].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+

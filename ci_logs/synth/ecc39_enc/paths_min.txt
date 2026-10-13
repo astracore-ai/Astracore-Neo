@@ -1,0 +1,85 @@
+Startpoint: d[12] (input port clocked by vclk)
+Endpoint: p[4] (output port clocked by vclk)
+Path Group: vclk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ input external delay
+   0.0    0.0 ^ d[12] (in)
+  33.2   33.2 ^ _107_/Y (XNOR2x2_ASAP7_75t_R)
+  30.4   63.6 ^ _118_/Y (XNOR2x2_ASAP7_75t_R)
+   0.0   63.6 ^ p[4] (out)
+         63.6   data arrival time
+
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+   0.0    0.0   output external delay
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+        -63.6   data arrival time
+-------------------------------------------------------
+         63.6   slack (MET)
+
+
+Startpoint: d[30] (input port clocked by vclk)
+Endpoint: p[5] (output port clocked by vclk)
+Path Group: vclk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ input external delay
+   0.0    0.0 ^ d[30] (in)
+  33.2   33.2 ^ _063_/Y (XNOR2x2_ASAP7_75t_R)
+  30.4   63.6 ^ _121_/Y (XNOR2x2_ASAP7_75t_R)
+   0.0   63.6 ^ p[5] (out)
+         63.6   data arrival time
+
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+   0.0    0.0   output external delay
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+        -63.6   data arrival time
+-------------------------------------------------------
+         63.6   slack (MET)
+
+
+Startpoint: d[4] (input port clocked by vclk)
+Endpoint: p[3] (output port clocked by vclk)
+Path Group: vclk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ input external delay
+   0.0    0.0 ^ d[4] (in)
+  30.1   30.1 ^ _073_/Y (XNOR2x2_ASAP7_75t_R)
+  16.0   46.1 v _074_/Y (XNOR2x1_ASAP7_75t_R)
+  20.6   66.7 ^ _083_/Y (XNOR2x1_ASAP7_75t_R)
+   0.0   66.7 ^ p[3] (out)
+         66.7   data arrival time
+
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+   0.0    0.0   output external delay
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+        -66.7   data arrival time
+-------------------------------------------------------
+         66.7   slack (MET)
+
+

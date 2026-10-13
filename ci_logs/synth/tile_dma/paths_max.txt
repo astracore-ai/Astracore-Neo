@@ -1,0 +1,351 @@
+Startpoint: tiles_freed[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: state[3]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ tiles_freed[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.1   35.8   77.7   77.7 ^ tiles_freed[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     3    2.2   29.5   26.4  104.1 v _899_/Y (INVx1_ASAP7_75t_R)
+     3    2.0   56.1   83.6  187.7 v _906_/SN (HAxp5_ASAP7_75t_R)
+     1    0.5   14.4   47.2  234.9 v _874_/Y (OA21x2_ASAP7_75t_R)
+     1    0.4   18.9   55.6  290.5 v _875_/Y (OR4x1_ASAP7_75t_R)
+     1    0.5   19.7   55.8  346.3 v _876_/Y (OA211x2_ASAP7_75t_R)
+     4    2.2   32.2   73.8  420.1 v _888_/Y (OR4x2_ASAP7_75t_R)
+     1    0.6   17.4   49.1  469.2 v _889_/Y (AO32x1_ASAP7_75t_R)
+     1    0.5    9.7   27.0  496.2 v _890_/Y (BUFx3_ASAP7_75t_R)
+                 9.7    0.0  496.2 v state[3]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             496.2   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ state[3]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -10.9  449.1   library setup time
+                             449.1   data required time
+-------------------------------------------------------------------------
+                             449.1   data required time
+                            -496.2   data arrival time
+-------------------------------------------------------------------------
+                             -47.1   slack (VIOLATED)
+
+
+Startpoint: tiles_freed[0]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: tiles_freed[8]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ tiles_freed[0]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     4    2.7   58.5  100.5  100.5 v tiles_freed[0]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.7   40.0   33.2  133.8 ^ _788_/Y (INVx1_ASAP7_75t_R)
+     3    1.9   53.8   36.9  170.7 v _903_/CON (HAxp5_ASAP7_75t_R)
+     2    1.4   30.4   70.9  241.5 v _801_/Y (OR4x1_ASAP7_75t_R)
+     1    0.5   13.8   38.7  280.2 v _802_/Y (OR2x2_ASAP7_75t_R)
+     9    5.7   35.2   43.1  323.3 v _803_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   25.4   63.7  387.0 v _816_/Y (OR4x1_ASAP7_75t_R)
+     1    0.5   13.9   51.1  438.1 ^ _817_/Y (XOR2x2_ASAP7_75t_R)
+     1    0.5   12.8   27.3  465.4 ^ _818_/Y (AND2x2_ASAP7_75t_R)
+                12.8    0.0  465.4 ^ tiles_freed[8]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             465.4   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ tiles_freed[8]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -33.9  426.1   library setup time
+                             426.1   data required time
+-------------------------------------------------------------------------
+                             426.1   data required time
+                            -465.4   data arrival time
+-------------------------------------------------------------------------
+                             -39.3   slack (VIOLATED)
+
+
+Startpoint: tiles_freed[0]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: tiles_freed[14]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ tiles_freed[0]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     4    2.7   58.5  100.5  100.5 v tiles_freed[0]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.7   40.0   33.2  133.8 ^ _788_/Y (INVx1_ASAP7_75t_R)
+     3    1.9   53.8   36.9  170.7 v _903_/CON (HAxp5_ASAP7_75t_R)
+     2    1.4   30.4   70.9  241.5 v _801_/Y (OR4x1_ASAP7_75t_R)
+     1    0.5   13.8   38.7  280.2 v _802_/Y (OR2x2_ASAP7_75t_R)
+     9    5.7   35.2   43.1  323.3 v _803_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   25.2   63.7  387.0 v _835_/Y (OR4x1_ASAP7_75t_R)
+     1    0.5   13.7   51.1  438.1 ^ _836_/Y (XOR2x2_ASAP7_75t_R)
+     1    0.5   13.0   27.3  465.3 ^ _838_/Y (AND2x2_ASAP7_75t_R)
+                13.0    0.0  465.3 ^ tiles_freed[14]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             465.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ tiles_freed[14]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -33.9  426.1   library setup time
+                             426.1   data required time
+-------------------------------------------------------------------------
+                             426.1   data required time
+                            -465.3   data arrival time
+-------------------------------------------------------------------------
+                             -39.3   slack (VIOLATED)
+
+
+Startpoint: tiles_freed[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: state[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ tiles_freed[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.1   35.8   77.7   77.7 ^ tiles_freed[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     3    2.2   29.5   26.4  104.1 v _899_/Y (INVx1_ASAP7_75t_R)
+     3    2.0   56.1   83.6  187.7 v _906_/SN (HAxp5_ASAP7_75t_R)
+     1    0.5   14.4   47.2  234.9 v _874_/Y (OA21x2_ASAP7_75t_R)
+     1    0.4   18.9   55.6  290.5 v _875_/Y (OR4x1_ASAP7_75t_R)
+     1    0.5   19.7   55.8  346.3 v _876_/Y (OA211x2_ASAP7_75t_R)
+     4    2.2   32.2   73.8  420.1 v _888_/Y (OR4x2_ASAP7_75t_R)
+     1    0.5   17.3   48.9  469.1 v _782_/Y (AO221x1_ASAP7_75t_R)
+                17.3    0.0  469.1 v state[1]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             469.1   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ state[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -13.0  447.0   library setup time
+                             447.0   data required time
+-------------------------------------------------------------------------
+                             447.0   data required time
+                            -469.1   data arrival time
+-------------------------------------------------------------------------
+                             -22.0   slack (VIOLATED)
+
+
+Startpoint: tiles_freed[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: state[0]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ tiles_freed[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.1   35.8   77.7   77.7 ^ tiles_freed[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     3    2.2   29.5   26.4  104.1 v _899_/Y (INVx1_ASAP7_75t_R)
+     3    2.0   56.1   83.6  187.7 v _906_/SN (HAxp5_ASAP7_75t_R)
+     1    0.5   14.4   47.2  234.9 v _874_/Y (OA21x2_ASAP7_75t_R)
+     1    0.4   18.9   55.6  290.5 v _875_/Y (OR4x1_ASAP7_75t_R)
+     1    0.5   19.7   55.8  346.3 v _876_/Y (OA211x2_ASAP7_75t_R)
+     4    2.2   32.2   73.8  420.1 v _888_/Y (OR4x2_ASAP7_75t_R)
+     1    0.5   28.1   23.1  443.3 ^ _778_/Y (AOI211x1_ASAP7_75t_R)
+                28.1    0.0  443.3 ^ state[0]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             443.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ state[0]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -38.3  421.7   library setup time
+                             421.7   data required time
+-------------------------------------------------------------------------
+                             421.7   data required time
+                            -443.3   data arrival time
+-------------------------------------------------------------------------
+                             -21.6   slack (VIOLATED)
+
+
+Startpoint: state[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: pc_out[2] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ state[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     8    5.8  101.8  118.0  118.0 ^ state[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.0   40.8   48.8  166.8 ^ _892_/Y (XNOR2x1_ASAP7_75t_R)
+     4    2.8   49.1   57.2  224.0 ^ _460_/Y (AND3x1_ASAP7_75t_R)
+     6    2.8   38.3   32.4  256.5 v _548_/Y (NAND2x1_ASAP7_75t_R)
+     4    1.8   18.0   42.9  299.4 v _851_/Y (AND2x2_ASAP7_75t_R)
+     2    1.1   19.7   36.8  336.2 v _764_/Y (AO21x1_ASAP7_75t_R)
+     1    0.0   12.0   34.9  371.0 v _841_/Y (OA21x2_ASAP7_75t_R)
+                12.0    0.0  371.0 v pc_out[2] (out)
+                             371.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                     -100.0  360.0   output external delay
+                             360.0   data required time
+-------------------------------------------------------------------------
+                             360.0   data required time
+                            -371.0   data arrival time
+-------------------------------------------------------------------------
+                             -11.0   slack (VIOLATED)
+
+
+Startpoint: state[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: pc_out[3] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ state[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     8    5.8  101.8  118.0  118.0 ^ state[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.0   40.8   48.8  166.8 ^ _892_/Y (XNOR2x1_ASAP7_75t_R)
+     4    2.8   49.1   57.2  224.0 ^ _460_/Y (AND3x1_ASAP7_75t_R)
+     6    2.8   38.3   32.4  256.5 v _548_/Y (NAND2x1_ASAP7_75t_R)
+     4    1.8   18.0   42.9  299.4 v _851_/Y (AND2x2_ASAP7_75t_R)
+     2    1.1   19.0   36.8  336.2 v _768_/Y (AO21x1_ASAP7_75t_R)
+     1    0.0   11.8   34.7  370.8 v _842_/Y (OA21x2_ASAP7_75t_R)
+                11.8    0.0  370.8 v pc_out[3] (out)
+                             370.8   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                     -100.0  360.0   output external delay
+                             360.0   data required time
+-------------------------------------------------------------------------
+                             360.0   data required time
+                            -370.8   data arrival time
+-------------------------------------------------------------------------
+                             -10.8   slack (VIOLATED)
+
+
+Startpoint: tiles_freed[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: state[2]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ tiles_freed[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.1   35.8   77.7   77.7 ^ tiles_freed[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     3    2.2   29.5   26.4  104.1 v _899_/Y (INVx1_ASAP7_75t_R)
+     3    2.0   56.1   83.6  187.7 v _906_/SN (HAxp5_ASAP7_75t_R)
+     1    0.5   14.4   47.2  234.9 v _874_/Y (OA21x2_ASAP7_75t_R)
+     1    0.4   18.9   55.6  290.5 v _875_/Y (OR4x1_ASAP7_75t_R)
+     1    0.5   19.7   55.8  346.3 v _876_/Y (OA211x2_ASAP7_75t_R)
+     4    2.2   32.2   73.8  420.1 v _888_/Y (OR4x2_ASAP7_75t_R)
+     1    0.5   13.6   34.9  455.1 v _785_/Y (AO21x1_ASAP7_75t_R)
+                13.6    0.0  455.1 v state[2]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             455.1   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ state[2]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -12.0  448.0   library setup time
+                             448.0   data required time
+-------------------------------------------------------------------------
+                             448.0   data required time
+                            -455.1   data arrival time
+-------------------------------------------------------------------------
+                              -7.0   slack (VIOLATED)
+
+
+Startpoint: state[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: tiles_ready[13]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ state[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     8    5.8   87.3  122.8  122.8 v state[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     9    4.5   44.6   36.7  159.5 ^ _570_/Y (INVx3_ASAP7_75t_R)
+     1    0.6   21.7   49.1  208.6 ^ _846_/Y (AND4x1_ASAP7_75t_R)
+     4    1.5   14.3   28.0  236.5 ^ _847_/Y (BUFx3_ASAP7_75t_R)
+     6    3.4   31.7   39.1  275.6 ^ _468_/Y (AO21x2_ASAP7_75t_R)
+    10    6.5   22.1   34.6  310.2 ^ _479_/Y (BUFx6f_ASAP7_75t_R)
+     1    1.4   32.5   51.2  361.5 ^ _543_/Y (AND4x1_ASAP7_75t_R)
+     1    0.5   31.4   33.7  395.2 ^ _544_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.5   12.8   32.9  428.0 ^ _545_/Y (AND2x2_ASAP7_75t_R)
+                12.8    0.0  428.0 ^ tiles_ready[13]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             428.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ tiles_ready[13]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -33.9  426.1   library setup time
+                             426.1   data required time
+-------------------------------------------------------------------------
+                             426.1   data required time
+                            -428.0   data arrival time
+-------------------------------------------------------------------------
+                              -1.9   slack (VIOLATED)
+
+
+Startpoint: state[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: tiles_ready[11]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ state[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     8    5.8   87.3  122.8  122.8 v state[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     9    4.5   44.6   36.7  159.5 ^ _570_/Y (INVx3_ASAP7_75t_R)
+     1    0.6   21.7   49.1  208.6 ^ _846_/Y (AND4x1_ASAP7_75t_R)
+     4    1.5   14.3   28.0  236.5 ^ _847_/Y (BUFx3_ASAP7_75t_R)
+     6    3.4   31.7   39.1  275.6 ^ _468_/Y (AO21x2_ASAP7_75t_R)
+    10    6.5   22.1   34.6  310.2 ^ _479_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.9   25.1   47.6  357.8 ^ _532_/Y (AND4x1_ASAP7_75t_R)
+     1    0.9   16.8   36.6  394.4 ^ _533_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.5   10.9   26.0  420.4 ^ _534_/Y (AND2x4_ASAP7_75t_R)
+                10.9    0.0  420.4 ^ tiles_ready[11]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             420.4   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ tiles_ready[11]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -33.3  426.7   library setup time
+                             426.7   data required time
+-------------------------------------------------------------------------
+                             426.7   data required time
+                            -420.4   data arrival time
+-------------------------------------------------------------------------
+                               6.2   slack (MET)
+
+

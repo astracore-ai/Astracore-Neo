@@ -1,0 +1,360 @@
+Startpoint: g_lut[0].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[0].u_ip.ra[15]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[0].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[0].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.4    0.0    0.1    0.5 ^ _074217_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _100557_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _100558_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _108217_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _109183_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _109801_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110859_/S (FA_X1)
+                 0.0    0.0    1.1 ^ g_lane[0].u_ip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[0].u_ip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: g_lut[1].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[1].u_ip.ra[15]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[1].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[1].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.4    0.0    0.1    0.5 ^ _077116_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _101259_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _101260_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _108172_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _109068_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _109882_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110842_/S (FA_X1)
+                 0.0    0.0    1.1 ^ g_lane[1].u_ip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[1].u_ip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: g_lut[2].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[2].u_ip.ra[15]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[2].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[2].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.4    0.0    0.1    0.5 ^ _077961_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _101388_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _101389_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _108127_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _108953_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _109963_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110825_/S (FA_X1)
+                 0.0    0.0    1.1 ^ g_lane[2].u_ip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[2].u_ip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: g_lut[4].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[4].u_ip.ra[15]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[4].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[4].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.4    0.0    0.1    0.5 ^ _076038_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _102663_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _102664_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _108037_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _108723_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _110125_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110791_/S (FA_X1)
+                 0.0    0.0    1.1 ^ g_lane[4].u_ip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[4].u_ip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: g_lut[5].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[5].u_ip.ra[15]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[5].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[5].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.4    0.0    0.1    0.5 ^ _074750_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _103528_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _103529_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _107992_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _108608_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _110206_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110774_/S (FA_X1)
+                 0.0    0.0    1.1 ^ g_lane[5].u_ip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[5].u_ip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: g_lut[6].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[6].u_ip.ra[15]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[6].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[6].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.4    0.0    0.1    0.5 ^ _075506_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _105078_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _105079_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _107947_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _108493_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _110287_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110757_/S (FA_X1)
+                 0.0    0.0    1.1 ^ g_lane[6].u_ip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[6].u_ip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: g_lut[7].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[7].u_ip.ra[15]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[7].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[7].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.4    0.0    0.1    0.5 ^ _076583_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _105624_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _105625_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _107902_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _108378_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _110368_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110740_/S (FA_X1)
+                 0.0    0.0    1.1 ^ g_lane[7].u_ip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[7].u_ip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: g_lut[3].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[3].u_ip.ra[15]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[3].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[3].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.0    0.0    0.1    0.5 ^ _077594_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _101706_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _101707_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _108082_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _108838_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _110044_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110808_/S (FA_X1)
+                 0.0    0.0    1.1 ^ g_lane[3].u_ip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[3].u_ip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_luts (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_sip.ra[15]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_luts/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ u_luts/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.0    0.0    0.1    0.5 ^ _074061_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _102356_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _102358_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.7 v _107857_/S (FA_X1)
+     2    6.2    0.0    0.1    0.8 ^ _108263_/S (FA_X1)
+     2    6.5    0.0    0.1    0.9 v _110434_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 ^ _110723_/S (FA_X1)
+                 0.0    0.0    1.1 ^ u_sip.ra[15]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_sip.ra[15]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: g_lut[0].u_lutv (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_lane[0].u_ip.ra[16]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ g_lut[0].u_lutv/clk (neo_mem_rf_w33_d256_g1_rb1)
+     1    1.0    0.0    0.4    0.4 ^ g_lut[0].u_lutv/rb_data[31] (neo_mem_rf_w33_d256_g1_rb1)
+     9   15.4    0.0    0.1    0.5 ^ _074217_/Z (BUF_X1)
+     7   20.4    0.0    0.1    0.6 v _100557_/ZN (NAND2_X1)
+     4   12.4    0.0    0.1    0.6 ^ _100558_/ZN (INV_X1)
+     1    1.5    0.0    0.1    0.7 v _111328_/S (FA_X1)
+     2    6.2    0.0    0.0    0.7 ^ _071953_/ZN (INV_X1)
+     2    6.0    0.0    0.1    0.8 v _109182_/S (FA_X1)
+     2    6.7    0.0    0.1    1.0 ^ _109800_/S (FA_X1)
+     1    1.1    0.0    0.1    1.1 v _110858_/S (FA_X1)
+                 0.0    0.0    1.1 v g_lane[0].u_ip.ra[16]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ g_lane[0].u_ip.ra[16]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+

@@ -1,0 +1,84 @@
+Startpoint: u_first_dl.pipe[1]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: first_d_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_first_dl.pipe[1]_reg/CK (DFFR_X1)
+   0.1    0.1 v u_first_dl.pipe[1]_reg/Q (DFFR_X1)
+   0.0    0.1 v first_d_reg/D (DFFR_X1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ first_d_reg/CK (DFFR_X1)
+   0.0    0.0   library hold time
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.1   slack (MET)
+
+
+Startpoint: u_idx_dl.pipe[6]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: idx_d[0]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_idx_dl.pipe[6]_reg/CK (DFFR_X1)
+   0.1    0.1 v u_idx_dl.pipe[6]_reg/Q (DFFR_X1)
+   0.0    0.1 v idx_d[0]_reg/D (DFFR_X1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ idx_d[0]_reg/CK (DFFR_X1)
+   0.0    0.0   library hold time
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.1   slack (MET)
+
+
+Startpoint: u_idx_dl.pipe[7]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: idx_d[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_idx_dl.pipe[7]_reg/CK (DFFR_X1)
+   0.1    0.1 v u_idx_dl.pipe[7]_reg/Q (DFFR_X1)
+   0.0    0.1 v idx_d[1]_reg/D (DFFR_X1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ idx_d[1]_reg/CK (DFFR_X1)
+   0.0    0.0   library hold time
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.1   slack (MET)
+
+

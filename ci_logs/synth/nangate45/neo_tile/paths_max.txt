@@ -1,0 +1,284 @@
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.8    0.0    1.0    1.0 v u_bank/rdata[377] (bank_bist_wrap)
+                 0.0    0.0    1.0 v u_nic/b_rdata[377] (tile_nic)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_nic/clk (tile_nic)
+                       -0.4    0.0   library setup time
+                               0.0   data required time
+-------------------------------------------------------------------------
+                               0.0   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_pack (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.8    0.0    1.0    1.0 v u_bank/rdata[377] (bank_bist_wrap)
+     1    2.8    0.0    0.3    1.3 v u_nic/tx_flit[249] (tile_nic)
+                 0.0    0.0    1.3 v u_pack/core_flit[249] (link_packer)
+                               1.3   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_pack/clk (link_packer)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.3   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.8    0.0    0.9    0.9 v u_bank/rdata[276] (bank_bist_wrap)
+                 0.0    0.0    0.9 v u_nic/b_rdata[276] (tile_nic)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_nic/clk (tile_nic)
+                       -0.4    0.1   library setup time
+                               0.1   data required time
+-------------------------------------------------------------------------
+                               0.1   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.8    0.0    1.0    1.0 v u_bank/rdata[440] (bank_bist_wrap)
+                 0.0    0.0    1.0 v u_nic/b_rdata[440] (tile_nic)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_nic/clk (tile_nic)
+                       -0.4    0.1   library setup time
+                               0.1   data required time
+-------------------------------------------------------------------------
+                               0.1   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.5    0.0    0.9    0.9 v u_bank/rdata[436] (bank_bist_wrap)
+                 0.0    0.0    0.9 v u_nic/b_rdata[436] (tile_nic)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_nic/clk (tile_nic)
+                       -0.4    0.1   library setup time
+                               0.1   data required time
+-------------------------------------------------------------------------
+                               0.1   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_pack (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.8    0.0    0.9    0.9 v u_bank/rdata[276] (bank_bist_wrap)
+     1    2.8    0.0    0.3    1.2 v u_nic/tx_flit[244] (tile_nic)
+                 0.0    0.0    1.2 v u_pack/core_flit[244] (link_packer)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_pack/clk (link_packer)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_pack (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.8    0.0    1.0    1.0 v u_bank/rdata[440] (bank_bist_wrap)
+     1    2.8    0.0    0.3    1.2 v u_nic/tx_flit[56] (tile_nic)
+                 0.0    0.0    1.2 v u_pack/core_flit[56] (link_packer)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_pack/clk (link_packer)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_pack (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.5    0.0    0.9    0.9 v u_bank/rdata[436] (bank_bist_wrap)
+     1    2.8    0.0    0.3    1.2 v u_nic/tx_flit[52] (tile_nic)
+                 0.0    0.0    1.2 v u_pack/core_flit[52] (link_packer)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_pack/clk (link_packer)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.6    0.0    1.0    1.0 v u_bank/rdata[371] (bank_bist_wrap)
+                 0.0    0.0    1.0 v u_nic/b_rdata[371] (tile_nic)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_nic/clk (tile_nic)
+                       -0.4    0.1   library setup time
+                               0.1   data required time
+-------------------------------------------------------------------------
+                               0.1   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/clk (bank_bist_wrap)
+     1    6.4    0.0    1.0    1.0 v u_bank/rdata[373] (bank_bist_wrap)
+                 0.0    0.0    1.0 v u_nic/b_rdata[373] (tile_nic)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_nic/clk (tile_nic)
+                       -0.4    0.1   library setup time
+                               0.1   data required time
+-------------------------------------------------------------------------
+                               0.1   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+

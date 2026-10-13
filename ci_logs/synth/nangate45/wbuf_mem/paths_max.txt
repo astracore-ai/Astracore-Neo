@@ -1,0 +1,380 @@
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[42] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     2    3.3    0.0    0.4    0.4 v u_mem/rb_data[702] (neo_mem_rf_w936_d512_g2_rb1)
+     1    0.9    0.0    0.1    0.5 v _9121_/Z (XOR2_X1)
+     2    4.3    0.0    0.1    0.6 v _9122_/Z (MUX2_X1)
+     1    2.1    0.0    0.0    0.6 v _9127_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    0.6 v _9135_/ZN (XNOR2_X1)
+     2    4.5    0.0    0.0    0.7 ^ _9137_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.7 ^ _9253_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    0.8 ^ _9254_/ZN (XNOR2_X1)
+     5   12.4    0.1    0.1    0.9 ^ _9255_/Z (XOR2_X1)
+     6    9.9    0.0    0.1    0.9 ^ _4888_/ZN (OR2_X1)
+     1    2.4    0.0    0.0    0.9 v _4890_/ZN (NOR2_X1)
+     1    0.0    0.0    0.1    1.0 v _4891_/Z (XOR2_X1)
+                 0.0    0.0    1.0 v rdata[42] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[35] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     2    3.3    0.0    0.4    0.4 v u_mem/rb_data[761] (neo_mem_rf_w936_d512_g2_rb1)
+     1    0.9    0.0    0.1    0.5 v _7188_/Z (XOR2_X1)
+     2    6.4    0.0    0.1    0.6 v _7200_/Z (MUX2_X1)
+     2    4.3    0.0    0.1    0.6 v _7222_/Z (XOR2_X2)
+     1    4.8    0.0    0.0    0.7 ^ _7510_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.0    0.7 ^ _7521_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.8 ^ _7744_/ZN (XNOR2_X1)
+     6   12.5    0.0    0.1    0.8 ^ _8011_/ZN (XNOR2_X2)
+     4    6.3    0.0    0.0    0.8 v _7315_/ZN (NAND3_X2)
+     3    4.7    0.0    0.1    0.9 v _7316_/ZN (OR3_X2)
+     1    2.2    0.0    0.0    1.0 ^ _7320_/ZN (NOR2_X1)
+     1    0.0    0.0    0.0    1.0 ^ _7323_/Z (XOR2_X1)
+                 0.0    0.0    1.0 ^ rdata[35] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[34] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     2    3.3    0.0    0.4    0.4 v u_mem/rb_data[761] (neo_mem_rf_w936_d512_g2_rb1)
+     1    0.9    0.0    0.1    0.5 v _7188_/Z (XOR2_X1)
+     2    6.4    0.0    0.1    0.6 v _7200_/Z (MUX2_X1)
+     2    4.3    0.0    0.1    0.6 v _7222_/Z (XOR2_X2)
+     1    4.8    0.0    0.0    0.7 ^ _7510_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.0    0.7 ^ _7521_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.8 ^ _7744_/ZN (XNOR2_X1)
+     6   12.5    0.0    0.1    0.8 ^ _8011_/ZN (XNOR2_X2)
+     4    6.3    0.0    0.0    0.8 v _7315_/ZN (NAND3_X2)
+     3    4.7    0.0    0.1    0.9 v _7316_/ZN (OR3_X2)
+     1    2.2    0.0    0.0    1.0 ^ _7317_/ZN (NOR2_X1)
+     1    0.0    0.0    0.0    1.0 ^ _7319_/Z (XOR2_X1)
+                 0.0    0.0    1.0 ^ rdata[34] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[36] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     2    3.3    0.0    0.4    0.4 v u_mem/rb_data[761] (neo_mem_rf_w936_d512_g2_rb1)
+     1    0.9    0.0    0.1    0.5 v _7188_/Z (XOR2_X1)
+     2    6.4    0.0    0.1    0.6 v _7200_/Z (MUX2_X1)
+     2    4.3    0.0    0.1    0.6 v _7222_/Z (XOR2_X2)
+     1    4.8    0.0    0.0    0.7 ^ _7510_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.0    0.7 ^ _7521_/ZN (XNOR2_X2)
+     1    4.0    0.0    0.0    0.8 ^ _7744_/ZN (XNOR2_X1)
+     6   12.5    0.0    0.1    0.8 ^ _8011_/ZN (XNOR2_X2)
+     4    6.3    0.0    0.0    0.8 v _7315_/ZN (NAND3_X2)
+     3    4.7    0.0    0.1    0.9 v _7316_/ZN (OR3_X2)
+     1    2.2    0.0    0.0    1.0 ^ _7541_/ZN (NOR2_X1)
+     1    0.0    0.0    0.0    1.0 ^ _7543_/Z (XOR2_X1)
+                 0.0    0.0    1.0 ^ rdata[36] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[174] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     3    5.6    0.0    0.4    0.4 v u_mem/rb_data[616] (neo_mem_rf_w936_d512_g2_rb1)
+     1    2.4    0.0    0.0    0.5 v _5722_/ZN (XNOR2_X1)
+     2    3.3    0.0    0.0    0.5 v _5733_/ZN (XNOR2_X1)
+     1    0.9    0.0    0.1    0.6 v _5744_/Z (XOR2_X1)
+     2    4.5    0.0    0.1    0.7 v _5756_/Z (MUX2_X1)
+     1    2.4    0.0    0.0    0.7 v _5767_/ZN (XNOR2_X1)
+     1    3.8    0.0    0.0    0.7 v _5778_/ZN (XNOR2_X1)
+     8   12.1    0.0    0.0    0.8 v _6211_/ZN (XNOR2_X2)
+     5    9.2    0.0    0.0    0.8 v _5273_/ZN (OR2_X4)
+     4    6.2    0.0    0.1    0.9 v _5481_/ZN (OR3_X4)
+     1    2.2    0.0    0.1    1.0 ^ _5486_/ZN (NOR3_X1)
+     1    0.0    0.0    0.0    1.0 ^ _5488_/Z (XOR2_X1)
+                 0.0    0.0    1.0 ^ rdata[174] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[175] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     3    5.6    0.0    0.4    0.4 v u_mem/rb_data[616] (neo_mem_rf_w936_d512_g2_rb1)
+     1    2.4    0.0    0.0    0.5 v _5722_/ZN (XNOR2_X1)
+     2    3.3    0.0    0.0    0.5 v _5733_/ZN (XNOR2_X1)
+     1    0.9    0.0    0.1    0.6 v _5744_/Z (XOR2_X1)
+     2    4.5    0.0    0.1    0.7 v _5756_/Z (MUX2_X1)
+     1    2.4    0.0    0.0    0.7 v _5767_/ZN (XNOR2_X1)
+     1    3.8    0.0    0.0    0.7 v _5778_/ZN (XNOR2_X1)
+     8   12.1    0.0    0.0    0.8 v _6211_/ZN (XNOR2_X2)
+     5    9.2    0.0    0.0    0.8 v _5273_/ZN (OR2_X4)
+     4    6.2    0.0    0.1    0.9 v _5481_/ZN (OR3_X4)
+     1    2.2    0.0    0.1    1.0 ^ _5482_/ZN (NOR3_X1)
+     1    0.0    0.0    0.0    1.0 ^ _5485_/Z (XOR2_X1)
+                 0.0    0.0    1.0 ^ rdata[175] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[173] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     3    5.6    0.0    0.4    0.4 v u_mem/rb_data[616] (neo_mem_rf_w936_d512_g2_rb1)
+     1    2.4    0.0    0.0    0.5 v _5722_/ZN (XNOR2_X1)
+     2    3.3    0.0    0.0    0.5 v _5733_/ZN (XNOR2_X1)
+     1    0.9    0.0    0.1    0.6 v _5744_/Z (XOR2_X1)
+     2    4.5    0.0    0.1    0.7 v _5756_/Z (MUX2_X1)
+     1    2.4    0.0    0.0    0.7 v _5767_/ZN (XNOR2_X1)
+     1    3.8    0.0    0.0    0.7 v _5778_/ZN (XNOR2_X1)
+     8   12.1    0.0    0.0    0.8 v _6211_/ZN (XNOR2_X2)
+     5    9.2    0.0    0.0    0.8 v _5273_/ZN (OR2_X4)
+     4    6.2    0.0    0.1    0.9 v _5481_/ZN (OR3_X4)
+     1    2.2    0.0    0.1    1.0 ^ _5490_/ZN (NOR3_X1)
+     1    0.0    0.0    0.0    1.0 ^ _5492_/Z (XOR2_X1)
+                 0.0    0.0    1.0 ^ rdata[173] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[43] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     2    3.3    0.0    0.4    0.4 v u_mem/rb_data[702] (neo_mem_rf_w936_d512_g2_rb1)
+     1    0.9    0.0    0.1    0.5 v _9121_/Z (XOR2_X1)
+     2    4.3    0.0    0.1    0.6 v _9122_/Z (MUX2_X1)
+     1    2.1    0.0    0.0    0.6 v _9127_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    0.6 v _9135_/ZN (XNOR2_X1)
+     2    4.5    0.0    0.0    0.7 ^ _9137_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.7 ^ _9253_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    0.8 ^ _9254_/ZN (XNOR2_X1)
+     5   12.4    0.1    0.1    0.9 ^ _9255_/Z (XOR2_X1)
+     6    9.9    0.0    0.1    0.9 ^ _4888_/ZN (OR2_X1)
+     1    2.2    0.0    0.0    0.9 v _4893_/ZN (NOR2_X1)
+     1    0.0    0.0    0.0    1.0 v _4895_/Z (XOR2_X1)
+                 0.0    0.0    1.0 v rdata[43] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[44] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     2    3.3    0.0    0.4    0.4 v u_mem/rb_data[702] (neo_mem_rf_w936_d512_g2_rb1)
+     1    0.9    0.0    0.1    0.5 v _9121_/Z (XOR2_X1)
+     2    4.3    0.0    0.1    0.6 v _9122_/Z (MUX2_X1)
+     1    2.1    0.0    0.0    0.6 v _9127_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    0.6 v _9135_/ZN (XNOR2_X1)
+     2    4.5    0.0    0.0    0.7 ^ _9137_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.7 ^ _9253_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    0.8 ^ _9254_/ZN (XNOR2_X1)
+     5   12.4    0.1    0.1    0.9 ^ _9255_/Z (XOR2_X1)
+     6    9.9    0.0    0.1    0.9 ^ _4888_/ZN (OR2_X1)
+     1    2.2    0.0    0.0    0.9 v _5472_/ZN (NOR2_X1)
+     1    0.0    0.0    0.0    1.0 v _5474_/Z (XOR2_X1)
+                 0.0    0.0    1.0 v rdata[44] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[45] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w936_d512_g2_rb1)
+     2    3.3    0.0    0.4    0.4 v u_mem/rb_data[702] (neo_mem_rf_w936_d512_g2_rb1)
+     1    0.9    0.0    0.1    0.5 v _9121_/Z (XOR2_X1)
+     2    4.3    0.0    0.1    0.6 v _9122_/Z (MUX2_X1)
+     1    2.1    0.0    0.0    0.6 v _9127_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    0.6 v _9135_/ZN (XNOR2_X1)
+     2    4.5    0.0    0.0    0.7 ^ _9137_/ZN (XNOR2_X1)
+     1    2.6    0.0    0.0    0.7 ^ _9253_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    0.8 ^ _9254_/ZN (XNOR2_X1)
+     5   12.4    0.1    0.1    0.9 ^ _9255_/Z (XOR2_X1)
+     6    9.9    0.0    0.1    0.9 ^ _4888_/ZN (OR2_X1)
+     1    2.2    0.0    0.0    0.9 v _5281_/ZN (NOR2_X1)
+     1    0.0    0.0    0.0    1.0 v _5283_/Z (XOR2_X1)
+                 0.0    0.0    1.0 v rdata[45] (out)
+                               1.0   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.0   data arrival time
+-------------------------------------------------------------------------
+                              -0.6   slack (VIOLATED)
+
+

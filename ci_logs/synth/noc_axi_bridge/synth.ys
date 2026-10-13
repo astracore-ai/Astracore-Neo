@@ -1,0 +1,33 @@
+# unit noc_axi_bridge: noc_axi_bridge {'XW': 4, 'YW': 3, 'NX': 8, 'NY': 8, 'BAW': 19, 'AXI_DW': 512, 'AXI_IDW': 4, 'HOST_TIMEOUT': 1048575, 'MEM': 1, 'HOST': 1}
+plugin -i slang
+read_slang --ignore-timing --blackboxed-module neo_mem_rf --blackboxed-module neo_icg --top noc_axi_bridge -G XW=4 -G YW=3 -G NX=8 -G NY=8 -G BAW=19 -G AXI_DW=512 -G AXI_IDW=4 -G HOST_TIMEOUT=1048575 -G MEM=1 -G HOST=1 /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_icg.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_iso.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/tile_telem.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/delay_line.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/mac_pe.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/skew_in.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/deskew_out.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/systolic_array.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/abft_checker.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_mem.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_mac_core.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/act_feeder.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/acc_bank.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_mac_core_v02.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/core_seq.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/ecc39.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/wbuf_mem.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/requant.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/vec_unit.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_core.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/host_if.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/noc_router.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/sram_bank.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/mbist.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/bank_bist_wrap.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/crc16_word.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/crc16_beat.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/tile_nic.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/tile_dma.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/prog_mem.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/esm.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/link_pack.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_tile.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/cdc_bits.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/cdc_fifo.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/cdc_sync.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/noc_axi_bridge.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/top_ctrl.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/mesh_ctrl.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_top.sv
+read_verilog -lib stubs.v
+chtype -set neo_mem_rf_w528_d64_g1_rb0 t:neo_mem_rf 
+setparam -unset AW -unset D -unset DV_HOOKS -unset G -unset GW -unset RB -unset RBQ -unset W t:neo_mem_rf_w528_d64_g1_rb0
+# generic synthesis (the children and the leaves stay black boxes); the arithmetic as the ORFS flow maps it: Booth
+# multipliers, Kogge-Stone carry lookahead, the full adders on the library's FA / HA cells
+synth -top noc_axi_bridge -booth -noabc -extra-map /home/runner/neo-synth/pdk/lib/common/lcu_kogge_stone.v
+tee -q -o generic_stat.json stat -json
+tee -q -o check.txt check
+extract_fa
+techmap -map /home/runner/neo-synth/pdk/lib/asap7/cells_adders.v
+techmap
+opt -fast -purge
+# the flops named after the registers they hold (the paths read in RTL terms), then the library: flops, then ABC's
+# speed script at the clock period with the driver / load of the platform
+rename -wire -suffix _reg t:$_DFF* t:$_DFFE* t:$_SDFF* t:$_SDFFE* t:$_DFFSR* t:$_DFFSRE* t:$_ALDFF* t:$_DLATCH*
+dfflibmap -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib -dont_use *x1p*_ASAP7* -dont_use *xp*_ASAP7* -dont_use SDF* -dont_use ICG*
+opt
+setundef -zero
+abc -script /home/runner/work/Astracore-Neo/Astracore-Neo/synth/abc_speed.script -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib -dont_use *x1p*_ASAP7* -dont_use *xp*_ASAP7* -dont_use SDF* -dont_use ICG* -D 500 -constr abc.constr
+opt_clean -purge
+# the library cells as black boxes, so the JSON carries every pin's direction (the repeater trees need it)
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+tee -q -o stat.json stat -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib -json
+tee -q -o stat.txt stat -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+write_verilog -noattr -noexpr -nohex -nodec netlist.v
+write_json netlist.json

@@ -1,0 +1,81 @@
+Startpoint: t1[0]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: b2i[0]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ t1[0]_reg/CK (DFFR_X1)
+   0.1    0.1 v t1[0]_reg/Q (DFFR_X1)
+   0.0    0.1 v b2i[0]_reg/D (DFFR_X1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ b2i[0]_reg/CK (DFFR_X1)
+   0.0    0.0   library hold time
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.1   slack (MET)
+
+
+Startpoint: t1[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ t1[1]_reg/CK (DFFR_X1)
+   0.1    0.1 v t1[1]_reg/Q (DFFR_X1)
+   0.0    0.1 v b2i[1]_reg/D (DFFR_X1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+   0.0    0.0   library hold time
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.1   slack (MET)
+
+
+Startpoint: t1[2]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: b2i[2]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ t1[2]_reg/CK (DFFR_X1)
+   0.1    0.1 v t1[2]_reg/Q (DFFR_X1)
+   0.0    0.1 v b2i[2]_reg/D (DFFR_X1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ b2i[2]_reg/CK (DFFR_X1)
+   0.0    0.0   library hold time
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.1   slack (MET)
+
+

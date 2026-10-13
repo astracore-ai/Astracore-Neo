@@ -1,0 +1,1580 @@
+library (neo_macros) {
+  delay_model : table_lookup;
+  time_unit : "1ps";
+  capacitive_load_unit (1,ff);
+  voltage_unit : "1V"; current_unit : "1mA"; leakage_power_unit : "1pW"; pulling_resistance_unit : "1kohm";
+  nom_process : 1; nom_temperature : 25; nom_voltage : 0.7;
+  slew_lower_threshold_pct_rise : 20; slew_upper_threshold_pct_rise : 80; slew_lower_threshold_pct_fall : 20; slew_upper_threshold_pct_fall : 80;
+  input_threshold_pct_rise : 50; input_threshold_pct_fall : 50; output_threshold_pct_rise : 50; output_threshold_pct_fall : 50;
+  default_max_transition : 1000;
+  type (bus_2) { base_type : array; data_type : bit; bit_width : 2; bit_from : 1; bit_to : 0; downto : true; }
+  type (bus_5) { base_type : array; data_type : bit; bit_width : 5; bit_from : 4; bit_to : 0; downto : true; }
+  type (bus_6) { base_type : array; data_type : bit; bit_width : 6; bit_from : 5; bit_to : 0; downto : true; }
+  type (bus_7) { base_type : array; data_type : bit; bit_width : 7; bit_from : 6; bit_to : 0; downto : true; }
+  type (bus_8) { base_type : array; data_type : bit; bit_width : 8; bit_from : 7; bit_to : 0; downto : true; }
+  type (bus_9) { base_type : array; data_type : bit; bit_width : 9; bit_from : 8; bit_to : 0; downto : true; }
+  type (bus_10) { base_type : array; data_type : bit; bit_width : 10; bit_from : 9; bit_to : 0; downto : true; }
+  type (bus_15) { base_type : array; data_type : bit; bit_width : 15; bit_from : 14; bit_to : 0; downto : true; }
+  type (bus_16) { base_type : array; data_type : bit; bit_width : 16; bit_from : 15; bit_to : 0; downto : true; }
+  type (bus_32) { base_type : array; data_type : bit; bit_width : 32; bit_from : 31; bit_to : 0; downto : true; }
+  type (bus_33) { base_type : array; data_type : bit; bit_width : 33; bit_from : 32; bit_to : 0; downto : true; }
+  type (bus_64) { base_type : array; data_type : bit; bit_width : 64; bit_from : 63; bit_to : 0; downto : true; }
+  type (bus_256) { base_type : array; data_type : bit; bit_width : 256; bit_from : 255; bit_to : 0; downto : true; }
+  type (bus_288) { base_type : array; data_type : bit; bit_width : 288; bit_from : 287; bit_to : 0; downto : true; }
+  type (bus_390) { base_type : array; data_type : bit; bit_width : 390; bit_from : 389; bit_to : 0; downto : true; }
+  type (bus_512) { base_type : array; data_type : bit; bit_width : 512; bit_from : 511; bit_to : 0; downto : true; }
+  type (bus_528) { base_type : array; data_type : bit; bit_width : 528; bit_from : 527; bit_to : 0; downto : true; }
+  type (bus_624) { base_type : array; data_type : bit; bit_width : 624; bit_from : 623; bit_to : 0; downto : true; }
+  type (bus_936) { base_type : array; data_type : bit; bit_width : 936; bit_from : 935; bit_to : 0; downto : true; }
+  type (bus_1024) { base_type : array; data_type : bit; bit_width : 1024; bit_from : 1023; bit_to : 0; downto : true; }
+  type (bus_1056) { base_type : array; data_type : bit; bit_width : 1056; bit_from : 1055; bit_to : 0; downto : true; }
+  type (bus_1068) { base_type : array; data_type : bit; bit_width : 1068; bit_from : 1067; bit_to : 0; downto : true; }
+  cell (neo_mem_rf_w1068_d512_g1_rb1) {
+    area : 22992.519;
+    dont_use : true;
+    memory() { type : ram; address_width : 9; word_width : 1068; }
+    bus (bd_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_1068;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_1068;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (bd_we) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_1068;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_1068;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7] ra_addr[8]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_9;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_1068;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_1068;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    pin (we) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w1024_d64_g32_rb0) {
+    area : 4133.487;
+    dont_use : true;
+    memory() { type : ram; address_width : 6; word_width : 1024; }
+    bus (bd_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_1024;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_1024;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_32;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_1024;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_1024;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_6;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_1024;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_1024;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_32;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w512_d1024_g2_rb1) {
+    area : 22045.262;
+    dont_use : true;
+    memory() { type : ram; address_width : 10; word_width : 512; }
+    bus (bd_addr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_512;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_512;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_512;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_512;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7] ra_addr[8] ra_addr[9]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_10;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_512;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_512;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w1056_d512_g1_rb1) {
+    area : 22734.176;
+    dont_use : true;
+    memory() { type : ram; address_width : 9; word_width : 1056; }
+    bus (bd_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_1056;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_1056;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (bd_we) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_1056;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_1056;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7] ra_addr[8]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_9;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_1056;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_1056;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    pin (we) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w936_d512_g2_rb1) {
+    area : 20150.747;
+    dont_use : true;
+    memory() { type : ram; address_width : 9; word_width : 936; }
+    bus (bd_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_936;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_936;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_936;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_936;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7] ra_addr[8]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_9;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_936;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_936;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_sp_w624_d32768_g16) {
+    area : 859765.211;
+    dont_use : true;
+    memory() { type : ram; address_width : 15; word_width : 624; }
+    bus (bd_addr) { bus_type : bus_15;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_624;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_624;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_16;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_15;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_624;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (raddr) { bus_type : bus_15;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rdata) { bus_type : bus_624;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (re) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_15;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_624;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_16;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w256_d128_g2_rb1) {
+    area : 1377.829;
+    dont_use : true;
+    memory() { type : ram; address_width : 7; word_width : 256; }
+    bus (bd_addr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_256;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_256;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_256;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_256;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_7;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_256;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_256;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w288_d64_g1_rb1) {
+    area : 775.029;
+    dont_use : true;
+    memory() { type : ram; address_width : 6; word_width : 288; }
+    bus (bd_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_288;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_288;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (bd_we) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_288;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_288;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_6;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_288;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_288;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    pin (we) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w390_d256_g2_rb1) {
+    area : 4198.072;
+    dont_use : true;
+    memory() { type : ram; address_width : 8; word_width : 390; }
+    bus (bd_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_390;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_390;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_390;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_390;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_8;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_390;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_390;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w33_d256_g1_rb1) {
+    area : 355.222;
+    dont_use : true;
+    memory() { type : ram; address_width : 8; word_width : 33; }
+    bus (bd_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_33;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_33;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (bd_we) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_33;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_33;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_8;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_33;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_33;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    pin (we) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w256_d32_g2_rb1) {
+    area : 344.457;
+    dont_use : true;
+    memory() { type : ram; address_width : 5; word_width : 256; }
+    bus (bd_addr) { bus_type : bus_5;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_256;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_256;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_5;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_256;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_5;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_256;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_5;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_5;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_256;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_5;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_256;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w64_d64_g2_rb1) {
+    area : 172.229;
+    dont_use : true;
+    memory() { type : ram; address_width : 6; word_width : 64; }
+    bus (bd_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_64;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_64;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_64;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_64;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_6;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_64;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_64;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w512_d256_g2_rb1) {
+    area : 5511.315;
+    dont_use : true;
+    memory() { type : ram; address_width : 8; word_width : 512; }
+    bus (bd_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_512;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_512;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_512;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_512;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_8;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_512;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_8;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_512;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w64_d512_g2_rb1) {
+    area : 1377.829;
+    dont_use : true;
+    memory() { type : ram; address_width : 9; word_width : 64; }
+    bus (bd_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_64;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_64;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_64;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_64;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7] ra_addr[8]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_9;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_64;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_9;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_64;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_2;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w1024_d72_g32_rb0) {
+    area : 4650.172;
+    dont_use : true;
+    memory() { type : ram; address_width : 7; word_width : 1024; }
+    bus (bd_addr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_1024;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_1024;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_we) { bus_type : bus_32;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_1024;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_1024;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_7;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_1024;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_7;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_1024;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (we) { bus_type : bus_32;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w528_d64_g1_rb0) {
+    area : 2131.329;
+    dont_use : true;
+    memory() { type : ram; address_width : 6; word_width : 528; }
+    bus (bd_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_528;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_528;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (bd_we) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_528;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_528;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_6;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_528;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_6;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_528;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    pin (we) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+  cell (neo_mem_rf_w32_d1024_g1_rb0) {
+    area : 2066.743;
+    dont_use : true;
+    memory() { type : ram; address_width : 10; word_width : 32; }
+    bus (bd_addr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (bd_rdata) { bus_type : bus_32;
+      direction : output;
+      max_capacitance : 500.0;
+    }
+    bus (bd_wdata) { bus_type : bus_32;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (bd_we) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (clk) {
+      direction : input;
+      clock : true; capacitance : 20.000; min_period : 157.0;
+    }
+    bus (fi_addr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_en) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (fi_mask) { bus_type : bus_32;
+      direction : input;
+      capacitance : 5.000;
+    }
+    pin (fi_or) {
+      direction : input;
+      capacitance : 5.000;
+    }
+    bus (ra_addr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (ra_data) { bus_type : bus_32;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "ra_addr[0] ra_addr[1] ra_addr[2] ra_addr[3] ra_addr[4] ra_addr[5] ra_addr[6] ra_addr[7] ra_addr[8] ra_addr[9]";  timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_addr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (rb_addr_q) { bus_type : bus_10;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    bus (rb_data) { bus_type : bus_32;
+      direction : output;
+      max_capacitance : 500.0;
+      timing() { related_pin : "clk"; timing_type : rising_edge; timing_sense : non_unate; cell_rise(scalar) { values("218.0"); } cell_fall(scalar) { values("218.0"); } rise_transition(scalar) { values("21.8"); } fall_transition(scalar) { values("21.8"); } }
+    }
+    pin (rb_en) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (waddr) { bus_type : bus_10;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    bus (wdata) { bus_type : bus_32;
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+    pin (we) {
+      direction : input;
+      capacitance : 5.000;
+      timing() { related_pin : "clk"; timing_type : setup_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+      timing() { related_pin : "clk"; timing_type : hold_rising; rise_constraint(scalar) { values("50.0"); } fall_constraint(scalar) { values("50.0"); } }
+    }
+  }
+}

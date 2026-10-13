@@ -1,0 +1,374 @@
+Startpoint: shft[18][1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: ra1[667]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ shft[18][1]_reg/CK (DFF_X1)
+     2    2.1    0.0    0.1    0.1 ^ shft[18][1]_reg/Q (DFF_X1)
+     5    9.1    0.0    0.0    0.1 ^ _088375_/Z (BUF_X1)
+    10   16.2    0.0    0.1    0.2 ^ _046144_/Z (BUF_X1)
+     2    1.8    0.0    0.1    0.3 v _046145_/Z (MUX2_X1)
+     4    5.4    0.0    0.1    0.3 v _046147_/Z (MUX2_X1)
+     1    1.7    0.0    0.0    0.3 ^ _046149_/ZN (INV_X1)
+     1    1.5    0.0    0.0    0.3 v _046150_/ZN (NOR2_X1)
+     4    6.6    0.0    0.1    0.4 ^ _046156_/ZN (AOI21_X1)
+     1    0.9    0.0    0.0    0.4 v _046157_/ZN (INV_X1)
+     1    3.6    0.0    0.1    0.5 v _046163_/Z (MUX2_X1)
+     1    2.7    0.0    0.1    0.6 v _095991_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _100972_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _103534_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099104_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[667]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[667]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1534]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051453_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051472_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094038_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098531_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098583_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099871_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102847_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099803_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1534]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1534]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1535]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051453_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051473_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094037_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098530_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098582_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099870_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102846_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099802_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1535]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1535]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1536]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051453_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051476_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094036_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098529_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098581_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099869_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102845_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099801_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1536]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1536]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1537]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051453_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051479_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094035_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098528_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098580_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099868_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102844_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099800_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1537]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1537]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1538]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051483_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051484_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094034_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098527_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098579_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099867_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102843_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099799_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1538]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1538]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1539]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051483_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051487_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094033_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098526_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098578_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099866_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102842_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099798_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1539]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1539]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1540]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051483_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051488_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094032_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098525_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098577_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099865_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102841_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099797_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1540]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1540]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1541]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051483_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051491_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094031_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098524_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098576_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099864_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102840_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099796_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1541]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1541]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: tbl_fault_inject (input port clocked by clk)
+Endpoint: ra1[1542]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    2.4    0.0    0.0    0.1 ^ tbl_fault_inject (in)
+     6    7.8    0.1    0.1    0.2 ^ _078460_/Z (XOR2_X1)
+    10    9.7    0.0    0.1    0.2 ^ _051483_/Z (BUF_X1)
+     1    2.8    0.0    0.0    0.3 ^ _051495_/ZN (AND2_X1)
+     1    3.4    0.0    0.1    0.4 v _094030_/S (FA_X1)
+     1    2.8    0.0    0.1    0.5 ^ _098523_/S (FA_X1)
+     1    3.6    0.0    0.1    0.6 v _098575_/S (FA_X1)
+     1    2.8    0.0    0.1    0.7 ^ _099863_/S (FA_X1)
+     1    3.4    0.0    0.1    0.8 v _102839_/S (FA_X1)
+     1    1.1    0.0    0.1    0.9 ^ _099795_/S (FA_X1)
+                 0.0    0.0    0.9 ^ ra1[1542]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ ra1[1542]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+

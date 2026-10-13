@@ -1,0 +1,449 @@
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[51]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   32.8    0.0    0.0    0.2 ^ _11284_/Z (BUF_X8)
+    10   20.7    0.0    0.0    0.2 ^ _14283_/Z (BUF_X4)
+    10   20.7    0.0    0.0    0.2 ^ _14395_/Z (BUF_X4)
+    10   19.1    0.0    0.0    0.3 ^ _14506_/Z (BUF_X4)
+    10   19.2    0.0    0.0    0.3 ^ _09817_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.4 v _09846_/Z (MUX2_X1)
+     1    1.6    0.0    0.1    0.4 v _09847_/Z (MUX2_X1)
+     1    1.6    0.0    0.0    0.5 ^ _09849_/ZN (AOI22_X1)
+     1    1.6    0.0    0.0    0.5 v _09860_/ZN (AOI21_X1)
+     2    4.7    0.0    0.0    0.5 ^ _09861_/ZN (NOR2_X1)
+     1    2.6    0.0    0.1    0.6 ^ _09863_/Z (XOR2_X1)
+     1    4.8    0.0    0.1    0.6 ^ _09864_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.0    0.7 ^ _09865_/ZN (XNOR2_X2)
+     2    4.9    0.0    0.1    0.7 ^ _10975_/Z (XOR2_X2)
+     2    6.6    0.0    0.0    0.8 v _11019_/ZN (NAND2_X1)
+     4    6.6    0.0    0.1    0.8 ^ _11110_/ZN (NOR3_X2)
+     1    2.4    0.0    0.0    0.8 v _11113_/ZN (NAND3_X1)
+     1    1.1    0.0    0.1    0.9 v _11114_/Z (XOR2_X1)
+                 0.0    0.0    0.9 v rdata[51]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[51]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[53]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   32.8    0.0    0.0    0.2 ^ _11284_/Z (BUF_X8)
+    10   20.7    0.0    0.0    0.2 ^ _14283_/Z (BUF_X4)
+    10   20.7    0.0    0.0    0.2 ^ _14395_/Z (BUF_X4)
+    10   19.1    0.0    0.0    0.3 ^ _14506_/Z (BUF_X4)
+    10   19.2    0.0    0.0    0.3 ^ _09817_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.4 v _09846_/Z (MUX2_X1)
+     1    1.6    0.0    0.1    0.4 v _09847_/Z (MUX2_X1)
+     1    1.6    0.0    0.0    0.5 ^ _09849_/ZN (AOI22_X1)
+     1    1.6    0.0    0.0    0.5 v _09860_/ZN (AOI21_X1)
+     2    4.7    0.0    0.0    0.5 ^ _09861_/ZN (NOR2_X1)
+     1    2.6    0.0    0.1    0.6 ^ _09863_/Z (XOR2_X1)
+     1    4.8    0.0    0.1    0.6 ^ _09864_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.0    0.7 ^ _09865_/ZN (XNOR2_X2)
+     2    4.9    0.0    0.1    0.7 ^ _10975_/Z (XOR2_X2)
+     2    6.6    0.0    0.0    0.8 v _11019_/ZN (NAND2_X1)
+     4    6.6    0.0    0.1    0.8 ^ _11110_/ZN (NOR3_X2)
+     1    2.4    0.0    0.0    0.8 v _11117_/ZN (NAND3_X1)
+     1    1.1    0.0    0.1    0.9 v _11119_/Z (XOR2_X1)
+                 0.0    0.0    0.9 v rdata[53]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[53]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[50]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   32.8    0.0    0.0    0.2 ^ _11284_/Z (BUF_X8)
+    10   20.7    0.0    0.0    0.2 ^ _14283_/Z (BUF_X4)
+    10   20.7    0.0    0.0    0.2 ^ _14395_/Z (BUF_X4)
+    10   19.1    0.0    0.0    0.3 ^ _14506_/Z (BUF_X4)
+    10   19.2    0.0    0.0    0.3 ^ _09817_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.4 v _09846_/Z (MUX2_X1)
+     1    1.6    0.0    0.1    0.4 v _09847_/Z (MUX2_X1)
+     1    1.6    0.0    0.0    0.5 ^ _09849_/ZN (AOI22_X1)
+     1    1.6    0.0    0.0    0.5 v _09860_/ZN (AOI21_X1)
+     2    4.7    0.0    0.0    0.5 ^ _09861_/ZN (NOR2_X1)
+     1    2.6    0.0    0.1    0.6 ^ _09863_/Z (XOR2_X1)
+     1    4.8    0.0    0.1    0.6 ^ _09864_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.0    0.7 ^ _09865_/ZN (XNOR2_X2)
+     2    4.9    0.0    0.1    0.7 ^ _10975_/Z (XOR2_X2)
+     2    6.6    0.0    0.0    0.8 v _11019_/ZN (NAND2_X1)
+     4    6.6    0.0    0.1    0.8 ^ _11110_/ZN (NOR3_X2)
+     1    2.4    0.0    0.0    0.8 v _11111_/ZN (NAND3_X1)
+     1    1.1    0.0    0.1    0.9 v _11112_/Z (XOR2_X1)
+                 0.0    0.0    0.9 v rdata[50]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[50]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[34]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   31.2    0.0    0.0    0.2 ^ _08839_/Z (BUF_X8)
+    10   19.2    0.0    0.0    0.2 ^ _09388_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.3 v _10809_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.3 v _10810_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10811_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10812_/Z (MUX2_X1)
+     2    4.6    0.0    0.1    0.5 v _10813_/Z (MUX2_X1)
+     1    2.1    0.0    0.1    0.6 v _10814_/Z (XOR2_X1)
+     2    4.3    0.0    0.0    0.6 v _10820_/ZN (XNOR2_X1)
+     3    8.5    0.1    0.1    0.7 ^ _10860_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.1    0.7 ^ _10901_/ZN (XNOR2_X2)
+    10   19.0    0.1    0.1    0.8 ^ _10952_/Z (XOR2_X2)
+    10   17.4    0.0    0.0    0.8 ^ _10967_/Z (BUF_X4)
+     1    2.4    0.0    0.0    0.8 v _10982_/ZN (NOR3_X1)
+     1    1.1    0.0    0.1    0.9 v _10983_/Z (XOR2_X1)
+                 0.0    0.0    0.9 v rdata[34]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[34]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[46]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   31.2    0.0    0.0    0.2 ^ _08839_/Z (BUF_X8)
+    10   19.2    0.0    0.0    0.2 ^ _09388_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.3 v _10809_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.3 v _10810_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10811_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10812_/Z (MUX2_X1)
+     2    4.6    0.0    0.1    0.5 v _10813_/Z (MUX2_X1)
+     1    2.1    0.0    0.1    0.6 v _10814_/Z (XOR2_X1)
+     2    4.3    0.0    0.0    0.6 v _10820_/ZN (XNOR2_X1)
+     3    8.5    0.1    0.1    0.7 ^ _10860_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.1    0.7 ^ _10901_/ZN (XNOR2_X2)
+    10   19.0    0.1    0.1    0.8 ^ _10952_/Z (XOR2_X2)
+    10   17.4    0.0    0.0    0.8 ^ _10967_/Z (BUF_X4)
+     1    2.4    0.0    0.0    0.8 v _11070_/ZN (NOR3_X1)
+     1    1.1    0.0    0.1    0.9 v _11071_/Z (XOR2_X1)
+                 0.0    0.0    0.9 v rdata[46]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[46]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[43]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   31.2    0.0    0.0    0.2 ^ _08839_/Z (BUF_X8)
+    10   19.2    0.0    0.0    0.2 ^ _09388_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.3 v _10809_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.3 v _10810_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10811_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10812_/Z (MUX2_X1)
+     2    4.6    0.0    0.1    0.5 v _10813_/Z (MUX2_X1)
+     1    2.1    0.0    0.1    0.6 v _10814_/Z (XOR2_X1)
+     2    4.3    0.0    0.0    0.6 v _10820_/ZN (XNOR2_X1)
+     3    8.5    0.1    0.1    0.7 ^ _10860_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.1    0.7 ^ _10901_/ZN (XNOR2_X2)
+    10   19.0    0.1    0.1    0.8 ^ _10952_/Z (XOR2_X2)
+    10   17.4    0.0    0.0    0.8 ^ _10967_/Z (BUF_X4)
+     1    2.4    0.0    0.0    0.8 v _11059_/ZN (NOR3_X1)
+     1    1.1    0.0    0.1    0.9 v _11060_/Z (XOR2_X1)
+                 0.0    0.0    0.9 v rdata[43]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[43]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[33]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   31.2    0.0    0.0    0.2 ^ _08839_/Z (BUF_X8)
+    10   19.2    0.0    0.0    0.2 ^ _09388_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.3 v _10809_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.3 v _10810_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10811_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10812_/Z (MUX2_X1)
+     2    4.6    0.0    0.1    0.5 v _10813_/Z (MUX2_X1)
+     1    2.1    0.0    0.1    0.6 v _10814_/Z (XOR2_X1)
+     2    4.3    0.0    0.0    0.6 v _10820_/ZN (XNOR2_X1)
+     3    8.5    0.1    0.1    0.7 ^ _10860_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.1    0.7 ^ _10901_/ZN (XNOR2_X2)
+    10   19.0    0.1    0.1    0.8 ^ _10952_/Z (XOR2_X2)
+    10   17.4    0.0    0.0    0.8 ^ _10967_/Z (BUF_X4)
+     1    2.4    0.0    0.0    0.8 v _10978_/ZN (NOR3_X1)
+     1    1.1    0.0    0.1    0.9 v _10979_/Z (XOR2_X1)
+                 0.0    0.0    0.9 v rdata[33]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[33]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[35]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   31.2    0.0    0.0    0.2 ^ _08839_/Z (BUF_X8)
+    10   19.2    0.0    0.0    0.2 ^ _09388_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.3 v _10809_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.3 v _10810_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10811_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _10812_/Z (MUX2_X1)
+     2    4.6    0.0    0.1    0.5 v _10813_/Z (MUX2_X1)
+     1    2.1    0.0    0.1    0.6 v _10814_/Z (XOR2_X1)
+     2    4.3    0.0    0.0    0.6 v _10820_/ZN (XNOR2_X1)
+     3    8.5    0.1    0.1    0.7 ^ _10860_/ZN (XNOR2_X1)
+     2    6.6    0.0    0.1    0.7 ^ _10901_/ZN (XNOR2_X2)
+    10   19.0    0.1    0.1    0.8 ^ _10952_/Z (XOR2_X2)
+    10   17.4    0.0    0.0    0.8 ^ _10967_/Z (BUF_X4)
+     1    2.4    0.0    0.0    0.8 v _10985_/ZN (NOR3_X1)
+     1    1.1    0.0    0.1    0.9 v _10986_/Z (XOR2_X1)
+                 0.0    0.0    0.9 v rdata[35]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[35]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[30]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   34.2    0.0    0.0    0.2 ^ _12284_/Z (BUF_X8)
+    10   19.2    0.0    0.0    0.2 ^ _08903_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.3 v _08922_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.3 v _08923_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _08924_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _08925_/Z (MUX2_X1)
+     3    6.5    0.0    0.1    0.5 v _08926_/Z (MUX2_X1)
+     1    2.1    0.0    0.1    0.6 v _08964_/Z (XOR2_X1)
+     1    4.4    0.0    0.0    0.6 v _09075_/ZN (XNOR2_X1)
+     3   10.6    0.0    0.1    0.7 ^ _09076_/ZN (XNOR2_X2)
+     2    9.2    0.0    0.1    0.7 ^ _09441_/Z (XOR2_X2)
+     6    9.5    0.0    0.1    0.8 ^ _09442_/Z (XOR2_X2)
+    10   15.6    0.0    0.0    0.8 ^ _09443_/Z (BUF_X2)
+     1    2.4    0.0    0.0    0.9 v _09487_/ZN (NAND4_X1)
+     1    1.1    0.0    0.0    0.9 v _09488_/ZN (XNOR2_X1)
+                 0.0    0.0    0.9 v rdata[30]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[30]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+
+Startpoint: raddr[0] (input port clocked by clk)
+Endpoint: rdata[26]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.1    0.1 ^ input external delay
+     1    6.6    0.0    0.0    0.1 ^ raddr[0] (in)
+    10   57.9    0.0    0.0    0.1 ^ _08838_/Z (BUF_X8)
+    10   34.2    0.0    0.0    0.2 ^ _12284_/Z (BUF_X8)
+    10   19.2    0.0    0.0    0.2 ^ _08903_/Z (BUF_X2)
+     1    0.9    0.0    0.1    0.3 v _08922_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.3 v _08923_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _08924_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _08925_/Z (MUX2_X1)
+     3    6.5    0.0    0.1    0.5 v _08926_/Z (MUX2_X1)
+     1    2.1    0.0    0.1    0.6 v _08964_/Z (XOR2_X1)
+     1    4.4    0.0    0.0    0.6 v _09075_/ZN (XNOR2_X1)
+     3   10.6    0.0    0.1    0.7 ^ _09076_/ZN (XNOR2_X2)
+     2    9.2    0.0    0.1    0.7 ^ _09441_/Z (XOR2_X2)
+     6    9.5    0.0    0.1    0.8 ^ _09442_/Z (XOR2_X2)
+    10   15.6    0.0    0.0    0.8 ^ _09443_/Z (BUF_X2)
+     1    2.4    0.0    0.0    0.9 v _11005_/ZN (NAND4_X1)
+     1    1.1    0.0    0.0    0.9 v _11007_/ZN (XNOR2_X1)
+                 0.0    0.0    0.9 v rdata[26]_reg/D (DFFR_X1)
+                               0.9   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ rdata[26]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.9   data arrival time
+-------------------------------------------------------------------------
+                              -0.5   slack (VIOLATED)
+
+

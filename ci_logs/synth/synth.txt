@@ -1,0 +1,215 @@
+python3 synth/synth.py --rtl rtl --out synth_out --pdk asap7 --corner SS --blocks all --jobs 2 --sweep default ; rc=$?; \
+python3 synth/report.py synth_out --out ci_logs/synth ; exit $rc
+19:22:03 tools: {'yosys': 'Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)', 'sta': '3.1.0'}
+19:22:03 library asap7 SS, period 500.0 ps, output /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out; macro model: FakeRAM2.0 7 nm (ORFS asap7/fakeram.cfg): 0.042 um2/bit, 218 ps access, 50 ps setup/hold
+19:22:03 period sweep: ['500', '750', '1000', '1250', '1500'] ps
+19:22:03 units: ['mac_pe', 'mac_pe_chk', 'systolic_array', 'neo_mac_core', 'act_feeder', 'acc_bank', 'neo_mac_core_v02', 'wbuf_mem', 'requant', 'core_seq', 'vec_unit', 'neo_core', 'sram_bank', 'mbist', 'bank_bist_wrap', 'crc16_beat', 'ecc39_enc', 'ecc39_dec', 'link_packer', 'link_unpacker', 'tile_nic', 'noc_router', 'tile_dma', 'tile_telem', 'prog_mem', 'host_if', 'esm', 'neo_tile', 'c16_mac_pe', 'c16_mac_pe_chk', 'c16_systolic_array', 'c16_neo_mac_core', 'c16_act_feeder', 'c16_acc_bank', 'c16_neo_mac_core_v02', 'c16_wbuf_mem', 'c16_requant', 'c16_core_seq', 'c16_vec_unit', 'c16_neo_core', 'top_link_packer', 'top_link_unpacker', 'top_tile_nic', 'top_noc_router', 'top_tile_dma', 'top_neo_tile', 'noc_axi_bridge', 'noc_axi_bridge_mem', 'top_ctrl', 'mesh_ctrl', 'neo_top']
+19:22:04 neo_core: yosys (neo_core {'ROWS': 32, 'COLS': 32, 'PW': 32, 'ACC_ROWS': 512, 'ABUF_DEPTH': 2048, 'WBUF_DEPTH': 1024, 'NCHK': 4, 'DV_HOOKS': 0})
+19:22:07 neo_core: yosys done in 3 s: 2,794 cells, 274 um2
+19:22:08 tile_nic: yosys (tile_nic {'XW': 3, 'YW': 3, 'NX': 8, 'NSRC': 64, 'BW': 16, 'ROWS': 32, 'COLS': 32, 'WCW': 14, 'IDXW': 9, 'AW': 11, 'WAW': 10, 'BAW': 19, 'PW': 32, 'NCHK': 4, 'DFD': 512, 'FETCH_TIMEOUT': 1048575, 'DV_HOOKS': 0})
+19:22:21 requant: yosys (requant {'COLS': 32, 'PW': 32, 'MW': 16})
+19:24:30 requant: yosys done in 145 s: 111,546 cells, 12,245 um2
+19:24:31 noc_router: yosys (noc_router {'XW': 3, 'YW': 3, 'DW': 1056, 'DV_HOOKS': 0})
+19:25:36 tile_nic: yosys done in 205 s: 146,377 cells, 19,873 um2
+19:25:37 neo_tile: yosys (neo_tile {'XW': 3, 'YW': 3, 'NX': 8, 'NY': 8, 'WPF': 32, 'ROWS': 32, 'COLS': 32, 'ACC_ROWS': 512, 'ABUF_DEPTH': 2048, 'WBUF_DEPTH': 1024, 'BANK_DEPTH': 524288, 'FETCH_TIMEOUT': 1048575, 'NCHK': 4, 'DV_HOOKS': 0})
+19:25:39 neo_tile: yosys done in 3 s: 1,458 cells, 131 um2
+19:25:39 mac_pe: yosys (mac_pe {'XW': 8, 'WW': 8, 'PW': 32, 'NB': 4})
+19:25:40 mac_pe: yosys done in 1 s: 1,253 cells, 159 um2
+19:25:40 mac_pe_chk: yosys (mac_pe {'XW': 8, 'WW': 14, 'PW': 32})
+19:25:42 mac_pe_chk: yosys done in 1 s: 1,694 cells, 199 um2
+19:25:43 systolic_array: yosys (systolic_array {'ROWS': 32, 'COLS': 32, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 14, 'NCHK': 4})
+19:25:48 systolic_array: yosys done in 5 s: 38 cells, 3 um2
+19:25:49 neo_mac_core: yosys (neo_mac_core {'ROWS': 32, 'COLS': 32, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 14, 'NCHK': 4})
+19:26:01 neo_mac_core: yosys done in 12 s: 73,840 cells, 14,983 um2
+19:26:01 act_feeder: yosys (act_feeder {'ROWS': 32, 'XW': 8, 'ABUF_DEPTH': 2048, 'AW': 11, 'IDXW': 9, 'NCHK': 4})
+19:26:09 act_feeder: yosys done in 8 s: 8,761 cells, 987 um2
+19:26:09 acc_bank: yosys (acc_bank {'COLS': 32, 'PW': 32, 'ACC_ROWS': 512, 'IDXW': 9})
+19:26:19 noc_router: yosys done in 105 s: 95,582 cells, 13,841 um2
+19:26:19 neo_mac_core_v02: yosys (neo_mac_core_v02 {'ROWS': 32, 'COLS': 32, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 14, 'ACC_ROWS': 512, 'ABUF_DEPTH': 2048, 'IDXW': 9, 'AW': 11, 'NCHK': 4})
+19:26:20 neo_mac_core_v02: yosys done in 2 s: 1,920 cells, 406 um2
+19:26:20 wbuf_mem: yosys (wbuf_mem {'COLS': 32, 'WW': 8, 'WCW': 14, 'DEPTH': 1024, 'WAW': 10, 'NCHK': 4, 'DV_HOOKS': 0})
+19:26:23 acc_bank: yosys done in 14 s: 18,242 cells, 2,475 um2
+19:26:23 core_seq: yosys (core_seq {'ROWS': 32, 'COLS': 32, 'IDXW': 9, 'WBUF_DEPTH': 1024, 'WAW': 10, 'PE_LAT': 2})
+19:26:28 core_seq: yosys done in 5 s: 2,993 cells, 355 um2
+19:26:30 vec_unit: yosys (vec_unit {'COLS': 32, 'ROWS': 32, 'PW': 32, 'ACC_ROWS': 512, 'IDXW': 9})
+19:26:33 wbuf_mem: yosys done in 13 s: 6,541 cells, 810 um2
+19:26:34 sram_bank: yosys (sram_bank {'DEPTH': 524288, 'LANES': 16, 'DV_HOOKS': 0})
+19:26:44 sram_bank: yosys done in 11 s: 3,745 cells, 534 um2
+19:26:44 mbist: yosys (mbist {'AW': 19, 'WORDS': 524288, 'LANES': 16})
+19:26:55 mbist: yosys done in 10 s: 1,025 cells, 120 um2
+19:26:55 bank_bist_wrap: yosys (bank_bist_wrap {'DEPTH': 524288, 'AW': 19, 'BIST_WORDS': 524288, 'LANES': 16, 'DV_HOOKS': 0})
+19:26:56 bank_bist_wrap: yosys done in 1 s: 1,245 cells, 114 um2
+19:26:56 crc16_beat: yosys (crc16_beat {'BW': 16})
+19:27:06 crc16_beat: yosys done in 10 s: 3,430 cells, 502 um2
+19:27:06 ecc39_enc: yosys (ecc39_enc {})
+19:27:06 ecc39_enc: yosys done in 1 s: 66 cells, 11 um2
+19:27:06 ecc39_dec: yosys (ecc39_dec {})
+19:27:07 ecc39_dec: yosys done in 1 s: 163 cells, 24 um2
+19:27:08 link_packer: yosys (link_packer {'XW': 3, 'YW': 3, 'BW': 16, 'WPF': 32})
+19:27:27 link_packer: yosys done in 19 s: 24,029 cells, 3,286 um2
+19:27:27 link_unpacker: yosys (link_unpacker {'XW': 3, 'YW': 3, 'BW': 16, 'WPF': 32})
+19:27:30 link_unpacker: yosys done in 3 s: 2,876 cells, 336 um2
+19:27:30 tile_dma: yosys (tile_dma {'XW': 3, 'YW': 3, 'PDEPTH': 32, 'DV_HOOKS': 0})
+19:27:32 tile_dma: yosys done in 2 s: 558 cells, 80 um2
+19:27:32 tile_telem: yosys (tile_telem {'NCNT': 12})
+19:27:38 tile_telem: yosys done in 6 s: 4,331 cells, 629 um2
+19:27:38 prog_mem: yosys (prog_mem {'DEPTH': 32, 'DV_HOOKS': 0})
+19:27:48 prog_mem: yosys done in 10 s: 14,082 cells, 1,960 um2
+19:27:48 host_if: yosys (host_if {'IDXW': 9, 'PAW': 5, 'DV_HOOKS': 0})
+19:27:51 host_if: yosys done in 3 s: 3,495 cells, 479 um2
+19:27:51 esm: yosys (esm {'NFLAGS': 18})
+19:27:52 esm: yosys done in 1 s: 305 cells, 43 um2
+19:27:52 c16_mac_pe: yosys (mac_pe {'XW': 8, 'WW': 8, 'PW': 32, 'NB': 4})
+19:27:53 c16_mac_pe: yosys done in 1 s: 1,253 cells, 159 um2
+19:27:53 c16_mac_pe_chk: yosys (mac_pe {'XW': 8, 'WW': 13, 'PW': 32})
+19:27:55 c16_mac_pe_chk: yosys done in 1 s: 1,634 cells, 193 um2
+19:27:55 c16_systolic_array: yosys (systolic_array {'ROWS': 16, 'COLS': 8, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 13, 'NCHK': 4})
+19:27:56 c16_systolic_array: yosys done in 1 s: 6 cells, 0 um2
+19:27:57 c16_neo_mac_core: yosys (neo_mac_core {'ROWS': 16, 'COLS': 8, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 13, 'NCHK': 4})
+19:28:00 c16_neo_mac_core: yosys done in 3 s: 13,448 cells, 2,619 um2
+19:28:00 c16_act_feeder: yosys (act_feeder {'ROWS': 16, 'XW': 8, 'ABUF_DEPTH': 256, 'AW': 8, 'IDXW': 6, 'NCHK': 4})
+19:28:06 c16_act_feeder: yosys done in 7 s: 6,594 cells, 761 um2
+19:28:06 c16_acc_bank: yosys (acc_bank {'COLS': 8, 'PW': 32, 'ACC_ROWS': 64, 'IDXW': 6})
+19:28:10 c16_acc_bank: yosys done in 4 s: 5,187 cells, 729 um2
+19:28:11 c16_neo_mac_core_v02: yosys (neo_mac_core_v02 {'ROWS': 16, 'COLS': 8, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 13, 'ACC_ROWS': 64, 'ABUF_DEPTH': 256, 'IDXW': 6, 'AW': 8, 'NCHK': 4})
+19:28:11 c16_neo_mac_core_v02: yosys done in 1 s: 560 cells, 127 um2
+19:28:11 c16_wbuf_mem: yosys (wbuf_mem {'COLS': 8, 'WW': 8, 'WCW': 13, 'DEPTH': 512, 'WAW': 9, 'NCHK': 4, 'DV_HOOKS': 0})
+19:28:16 c16_wbuf_mem: yosys done in 5 s: 2,466 cells, 308 um2
+19:28:17 c16_requant: yosys (requant {'COLS': 8, 'PW': 32, 'MW': 16})
+19:28:42 c16_requant: yosys done in 25 s: 27,929 cells, 3,072 um2
+19:28:42 c16_core_seq: yosys (core_seq {'ROWS': 16, 'COLS': 8, 'IDXW': 6, 'WBUF_DEPTH': 512, 'WAW': 9, 'PE_LAT': 2})
+19:28:46 c16_core_seq: yosys done in 5 s: 2,687 cells, 324 um2
+19:28:47 c16_vec_unit: yosys (vec_unit {'COLS': 8, 'ROWS': 16, 'PW': 32, 'ACC_ROWS': 64, 'IDXW': 6})
+19:30:11 c16_vec_unit: yosys done in 83 s: 82,601 cells, 9,995 um2
+19:30:11 c16_neo_core: yosys (neo_core {'ROWS': 16, 'COLS': 8, 'PW': 32, 'ACC_ROWS': 64, 'ABUF_DEPTH': 256, 'WBUF_DEPTH': 512, 'NCHK': 4, 'DV_HOOKS': 0})
+19:30:12 c16_neo_core: yosys done in 1 s: 840 cells, 89 um2
+19:30:13 top_link_packer: yosys (link_packer {'XW': 4, 'YW': 3, 'BW': 16, 'WPF': 32})
+19:30:30 top_link_packer: yosys done in 18 s: 24,085 cells, 3,291 um2
+19:30:31 top_link_unpacker: yosys (link_unpacker {'XW': 4, 'YW': 3, 'BW': 16, 'WPF': 32})
+19:30:34 top_link_unpacker: yosys done in 3 s: 2,880 cells, 337 um2
+19:30:35 top_tile_nic: yosys (tile_nic {'XW': 4, 'YW': 3, 'NX': 9, 'NSRC': 72, 'BW': 16, 'ROWS': 32, 'COLS': 32, 'WCW': 14, 'IDXW': 9, 'AW': 11, 'WAW': 10, 'BAW': 19, 'PW': 32, 'NCHK': 4, 'DFD': 512, 'FETCH_TIMEOUT': 1048575, 'DV_HOOKS': 0})
+19:32:12 vec_unit: yosys done in 324 s: 288,843 cells, 34,811 um2
+19:32:13 top_noc_router: yosys (noc_router {'XW': 4, 'YW': 3, 'DW': 1056, 'DV_HOOKS': 0})
+19:33:55 top_noc_router: yosys done in 101 s: 92,649 cells, 13,488 um2
+19:33:55 top_tile_dma: yosys (tile_dma {'XW': 4, 'YW': 3, 'PDEPTH': 32, 'DV_HOOKS': 0})
+19:33:56 top_tile_dma: yosys done in 1 s: 566 cells, 81 um2
+19:33:57 top_neo_tile: yosys (neo_tile {'XW': 4, 'YW': 3, 'NX': 9, 'NY': 8, 'WPF': 32, 'ROWS': 32, 'COLS': 32, 'ACC_ROWS': 512, 'ABUF_DEPTH': 2048, 'WBUF_DEPTH': 1024, 'BANK_DEPTH': 524288, 'FETCH_TIMEOUT': 1048575, 'NCHK': 4, 'DV_HOOKS': 0})
+19:34:00 top_neo_tile: yosys done in 3 s: 1,459 cells, 132 um2
+19:34:00 noc_axi_bridge: yosys (noc_axi_bridge {'XW': 4, 'YW': 3, 'NX': 8, 'NY': 8, 'BAW': 19, 'AXI_DW': 512, 'AXI_IDW': 4, 'HOST_TIMEOUT': 1048575, 'MEM': 1, 'HOST': 1})
+19:34:02 top_tile_nic: yosys done in 205 s: 147,513 cells, 20,098 um2
+19:34:03 noc_axi_bridge_mem: yosys (noc_axi_bridge {'XW': 4, 'YW': 3, 'NX': 8, 'NY': 8, 'BAW': 19, 'AXI_DW': 512, 'AXI_IDW': 4, 'HOST_TIMEOUT': 1048575, 'MEM': 1, 'HOST': 0})
+19:36:10 noc_axi_bridge_mem: yosys done in 123 s: 59,320 cells, 7,916 um2
+19:36:11 top_ctrl: yosys (top_ctrl {'NX': 8, 'NY': 8, 'ROWS': 32, 'COLS': 32, 'BAW': 19, 'WPF': 32, 'AXI_DW': 512, 'N_MEM': 8, 'N_HOST': 1, 'CTRL_AW': 18})
+19:36:31 top_ctrl: yosys done in 20 s: 13,516 cells, 1,944 um2
+19:36:31 mesh_ctrl: yosys (mesh_ctrl {'NX': 8, 'NY': 8})
+19:36:32 noc_axi_bridge: yosys done in 147 s: 73,284 cells, 9,626 um2
+19:37:07 neo_top: yosys (neo_top {'NX': 8, 'NY': 8, 'ROWS': 32, 'COLS': 32, 'NCHK': 4, 'ACC_ROWS': 512, 'ABUF_DEPTH': 2048, 'WBUF_DEPTH': 1024, 'BANK_DEPTH': 524288, 'WPF': 32, 'FETCH_TIMEOUT': 1048575, 'AXI_DW': 512, 'AXI_IDW': 4, 'N_MEM_BRIDGES': 8, 'N_HOST_BRIDGES': 1, 'CTRL_AW': 18, 'CDC_DEPTH': 8})
+19:37:07 mesh_ctrl: yosys done in 35 s: 45,575 cells, 4,685 um2
+19:42:03 neo_top: yosys done in 303 s: 397,210 cells, 54,498 um2
+19:42:03 macros: ['neo_mem_rf_w1068_d512_g1_rb1', 'neo_mem_rf_w1024_d64_g32_rb0', 'neo_mem_rf_w512_d1024_g2_rb1', 'neo_mem_rf_w1056_d512_g1_rb1', 'neo_mem_rf_w936_d512_g2_rb1', 'neo_mem_sp_w624_d32768_g16', 'neo_mem_rf_w256_d128_g2_rb1', 'neo_mem_rf_w288_d64_g1_rb1', 'neo_mem_rf_w390_d256_g2_rb1', 'neo_mem_rf_w33_d256_g1_rb1', 'neo_mem_rf_w256_d32_g2_rb1', 'neo_mem_rf_w64_d64_g2_rb1', 'neo_mem_rf_w512_d256_g2_rb1', 'neo_mem_rf_w64_d512_g2_rb1', 'neo_mem_rf_w1024_d72_g32_rb0', 'neo_mem_rf_w528_d64_g1_rb0', 'neo_mem_rf_w32_d1024_g1_rb0']
+19:42:05 mac_pe_chk: sta done in 2 s (exit 0; wns -557.2053951635042 ps, min period 1057.2053832898118 ps)
+19:42:05 mac_pe: sta done in 2 s (exit 0; wns -595.3269012677792 ps, min period 1095.3262429214542 ps)
+19:42:08 acc_bank: sta done in 4 s (exit 0; wns -629.2452695174824 ps, min period 1129.2417141889223 ps)
+19:42:09 act_feeder: sta done in 5 s (exit 0; wns -407.77165140905083 ps, min period 848.7163165711861 ps)
+19:42:11 wbuf_mem: sta done in 2 s (exit 0; wns -419.9111630757168 ps, min period 810.2217576950811 ps)
+19:42:14 core_seq: sta done in 3 s (exit 0; wns -421.6410570884488 ps, min period 921.6419973825367 ps)
+19:42:37 requant: sta done in 27 s (exit 0; wns -392.53589424778704 ps, min period 892.5383791503034 ps)
+19:42:39 sram_bank: sta done in 2 s (exit 0; wns -334.1977818958186 ps, min period 763.5919364691509 ps)
+19:42:40 mbist: sta done in 2 s (exit 0; wns -551.2200717915314 ps, min period 1051.215204776722 ps)
+19:42:45 vec_unit: sta done in 29 s (exit 0; wns -581.8785476721529 ps, min period 1081.8764064393283 ps)
+19:42:46 ecc39_enc: sta done in 1 s (exit 0; wns 202.4475595259521 ps, min period None ps)
+19:42:46 crc16_beat: sta done in 6 s (exit 0; wns -233.00256262026514 ps, min period None ps)
+19:42:48 ecc39_dec: sta done in 1 s (exit 0; wns 105.2492819328983 ps, min period None ps)
+19:42:50 link_unpacker: sta done in 2 s (exit 0; wns -237.06203761487663 ps, min period 482.0322479573883 ps)
+19:42:51 link_packer: sta done in 4 s (exit 0; wns -294.79574454982406 ps, min period 794.7988364145034 ps)
+19:43:10 noc_router: sta done in 19 s (exit 0; wns -339.4577965629056 ps, min period 839.4543546694648 ps)
+19:43:12 tile_dma: sta done in 1 s (exit 0; wns -47.083698239645976 ps, min period 547.0848583323759 ps)
+19:43:13 tile_telem: sta done in 2 s (exit 0; wns -111.01061780875801 ps, min period 611.0116519922035 ps)
+19:43:15 tile_nic: sta done in 24 s (exit 0; wns -692.0444245336738 ps, min period 1192.0514012564222 ps)
+19:43:17 prog_mem: sta done in 4 s (exit 0; wns -438.0167912559528 ps, min period None ps)
+19:43:17 host_if: sta done in 2 s (exit 0; wns -78.55671700111412 ps, min period 504.48232546172744 ps)
+19:43:19 esm: sta done in 1 s (exit 0; wns -40.05729097774653 ps, min period 540.0559497963989 ps)
+19:43:19 c16_mac_pe: sta done in 2 s (exit 0; wns -595.3269012677792 ps, min period 1095.3262429214542 ps)
+19:43:20 c16_mac_pe_chk: sta done in 2 s (exit 0; wns -557.222159531243 ps, min period 1057.2165602401997 ps)
+19:43:22 c16_acc_bank: sta done in 2 s (exit 0; wns -596.0821304832983 ps, min period 1096.0826007847952 ps)
+19:43:23 c16_act_feeder: sta done in 4 s (exit 0; wns -452.16253144728415 ps, min period 789.2846713023986 ps)
+19:43:24 c16_wbuf_mem: sta done in 2 s (exit 0; wns -399.56266233217093 ps, min period 811.1286855659652 ps)
+19:43:27 c16_core_seq: sta done in 3 s (exit 0; wns -445.2187247787469 ps, min period 945.2153200499073 ps)
+19:43:31 c16_requant: sta done in 8 s (exit 0; wns -368.7267728115054 ps, min period 845.0870862242355 ps)
+19:43:35 top_link_packer: sta done in 4 s (exit 0; wns -365.69214469502043 ps, min period 865.6884387309007 ps)
+19:43:37 top_link_unpacker: sta done in 2 s (exit 0; wns -237.21064096731652 ps, min period 487.2463273808074 ps)
+19:43:38 c16_vec_unit: sta done in 10 s (exit 0; wns -584.5558505067344 ps, min period 1084.551646349399 ps)
+19:43:57 top_noc_router: sta done in 19 s (exit 0; wns -369.28613092912224 ps, min period 869.2855342194251 ps)
+19:43:59 top_tile_dma: sta done in 1 s (exit 0; wns -47.07281805396118 ps, min period 547.0728865206711 ps)
+19:44:02 top_tile_nic: sta done in 24 s (exit 0; wns -739.7980035934797 ps, min period 1239.8026234223512 ps)
+19:45:09 noc_axi_bridge_mem: sta done in 67 s (exit 0; wns -900.1261438875066 ps, min period 1290.5057492031128 ps)
+19:45:13 top_ctrl: sta done in 4 s (exit 0; wns -273.7403648036748 ps, min period 773.7422819207378 ps)
+19:45:17 noc_axi_bridge: sta done in 78 s (exit 0; wns -959.1100174643286 ps, min period 1359.3051232210096 ps)
+19:45:24 mesh_ctrl: sta done in 10 s (exit 0; wns -195.9380998619594 ps, min period 695.9378109972092 ps)
+19:45:26 bank_bist_wrap: sta done in 2 s (exit 0; wns -688.2640596085683 ps, min period 1188.2694044393745 ps)
+19:45:28 c16_systolic_array: sta done in 2 s (exit 0; wns -561.1604536822325 ps, min period 1061.1655842777707 ps)
+19:45:30 systolic_array: sta done in 6 s (exit 0; wns -561.1604536822325 ps, min period 1061.1655842777707 ps)
+19:45:33 c16_neo_mac_core: sta done in 3 s (exit 0; wns -549.9656863021463 ps, min period 1049.945927784719 ps)
+19:45:40 neo_mac_core: sta done in 10 s (exit 0; wns -549.9656863021463 ps, min period 1049.945927784719 ps)
+19:45:42 c16_neo_mac_core_v02: sta done in 2 s (exit 0; wns -761.5102467947731 ps, min period 1261.51129052605 ps)
+19:45:43 neo_mac_core_v02: sta done in 3 s (exit 0; wns -761.5210714693064 ps, min period 1261.5272048341722 ps)
+19:45:45 c16_neo_core: sta done in 2 s (exit 0; wns -668.7971314612487 ps, min period 1168.797774609037 ps)
+19:45:46 neo_core: sta done in 4 s (exit 0; wns -680.2504142736518 ps, min period 1180.2473798508167 ps)
+19:45:56 neo_tile: sta done in 10 s (exit 0; wns -868.729092136802 ps, min period 1368.738023542294 ps)
+19:45:57 top_neo_tile: sta done in 10 s (exit 0; wns -1829.1230825342402 ps, min period 2329.10213112845 ps)
+19:47:26 neo_top: sta done in 87 s (exit 0; wns -681.4079883149026 ps, min period 1181.4046901766199 ps)
+19:47:27 mac_pe: sweep done in 1 s (exit 0; violating endpoints [42, 16, 10, 2, 0])
+19:47:27 mac_pe_chk: sweep done in 2 s (exit 0; violating endpoints [57, 40, 15, 0, 0])
+19:47:42 systolic_array: sweep done in 14 s (exit 0; violating endpoints [35024, 33792, 33408, 192, 0])
+19:47:44 act_feeder: sweep done in 3 s (exit 0; violating endpoints [284, 73, 2, 0, 0])
+19:47:45 neo_mac_core: sweep done in 17 s (exit 0; violating endpoints [1208, 1127, 1035, 6, 0])
+19:47:49 neo_mac_core_v02: sweep done in 4 s (exit 0; violating endpoints [120, 73, 34, 28, 0])
+19:47:49 acc_bank: sweep done in 5 s (exit 0; violating endpoints [2238, 1912, 619, 0, 0])
+19:47:51 wbuf_mem: sweep done in 2 s (exit 0; violating endpoints [446, 382, 282, 0, 0])
+19:47:53 core_seq: sweep done in 2 s (exit 0; violating endpoints [191, 11, 1, 0, 0])
+19:48:03 requant: sweep done in 13 s (exit 0; violating endpoints [4365, 2829, 30, 0, 0])
+19:48:08 neo_core: sweep done in 5 s (exit 0; violating endpoints [3423, 2528, 1992, 0, 0])
+19:48:10 sram_bank: sweep done in 2 s (exit 0; violating endpoints [546, 525, 0, 0, 0])
+19:48:12 mbist: sweep done in 2 s (exit 0; violating endpoints [608, 301, 2, 0, 0])
+19:48:14 bank_bist_wrap: sweep done in 2 s (exit 0; violating endpoints [1583, 1566, 909, 0, 0])
+19:48:16 crc16_beat: sweep done in 2 s (exit 0; violating endpoints [16, 0, 0, 0, 0])
+19:48:17 ecc39_enc: sweep done in 1 s (exit 0; violating endpoints [0, 0, 0, 0, 0])
+19:48:18 ecc39_dec: sweep done in 1 s (exit 0; violating endpoints [0, 0, 0, 0, 0])
+19:48:23 link_packer: sweep done in 4 s (exit 0; violating endpoints [2710, 58, 0, 0, 0])
+19:48:25 link_unpacker: sweep done in 2 s (exit 0; violating endpoints [1, 1, 0, 0, 0])
+19:48:34 vec_unit: sweep done in 40 s (exit 0; violating endpoints [22212, 12572, 377, 0, 0])
+19:48:54 tile_nic: sweep done in 28 s (exit 0; violating endpoints [19228, 15659, 843, 1, 0])
+19:48:55 tile_dma: sweep done in 1 s (exit 0; violating endpoints [9, 0, 0, 0, 0])
+19:48:57 tile_telem: sweep done in 2 s (exit 0; violating endpoints [381, 0, 0, 0, 0])
+19:48:58 noc_router: sweep done in 23 s (exit 0; violating endpoints [5494, 5415, 0, 0, 0])
+19:48:59 host_if: sweep done in 2 s (exit 0; violating endpoints [522, 0, 0, 0, 0])
+19:49:00 prog_mem: sweep done in 3 s (exit 0; violating endpoints [370, 96, 66, 0, 0])
+19:49:01 esm: sweep done in 1 s (exit 0; violating endpoints [15, 0, 0, 0, 0])
+19:49:02 c16_mac_pe: sweep done in 1 s (exit 0; violating endpoints [42, 16, 10, 2, 0])
+19:49:04 c16_mac_pe_chk: sweep done in 2 s (exit 0; violating endpoints [56, 41, 14, 0, 0])
+19:49:07 c16_systolic_array: sweep done in 3 s (exit 0; violating endpoints [4784, 4608, 4352, 96, 0])
+19:49:10 neo_tile: sweep done in 10 s (exit 0; violating endpoints [10369, 9011, 6004, 575, 0])
+19:49:11 c16_neo_mac_core: sweep done in 4 s (exit 0; violating endpoints [573, 556, 525, 6, 0])
+19:49:13 c16_act_feeder: sweep done in 2 s (exit 0; violating endpoints [242, 53, 3, 0, 0])
+19:49:14 c16_acc_bank: sweep done in 2 s (exit 0; violating endpoints [576, 463, 118, 0, 0])
+19:49:15 c16_neo_mac_core_v02: sweep done in 2 s (exit 0; violating endpoints [98, 66, 36, 27, 0])
+19:49:15 c16_wbuf_mem: sweep done in 2 s (exit 0; violating endpoints [159, 134, 118, 0, 0])
+19:49:17 c16_core_seq: sweep done in 2 s (exit 0; violating endpoints [187, 9, 1, 0, 0])
+19:49:19 c16_requant: sweep done in 4 s (exit 0; violating endpoints [1093, 695, 7, 0, 0])
+19:49:22 c16_neo_core: sweep done in 2 s (exit 0; violating endpoints [1034, 704, 514, 0, 0])
+19:49:26 top_link_packer: sweep done in 4 s (exit 0; violating endpoints [2698, 59, 0, 0, 0])
+19:49:28 top_link_unpacker: sweep done in 2 s (exit 0; violating endpoints [1, 1, 0, 0, 0])
+19:49:30 c16_vec_unit: sweep done in 12 s (exit 0; violating endpoints [5913, 3488, 114, 0, 0])
+19:49:52 top_noc_router: sweep done in 22 s (exit 0; violating endpoints [5509, 5426, 0, 0, 0])
+19:49:54 top_tile_dma: sweep done in 1 s (exit 0; violating endpoints [10, 0, 0, 0, 0])
+19:49:57 top_tile_nic: sweep done in 28 s (exit 0; violating endpoints [20781, 15263, 1208, 130, 0])
+19:50:06 top_neo_tile: sweep done in 12 s (exit 0; violating endpoints [10589, 7832, 3279, 721, 57])
+19:50:12 noc_axi_bridge: sweep done in 14 s (exit 0; violating endpoints [8919, 6726, 6012, 4225, 1339])
+19:50:16 top_ctrl: sweep done in 4 s (exit 0; violating endpoints [2242, 65, 0, 0, 0])
+19:50:19 noc_axi_bridge_mem: sweep done in 12 s (exit 0; violating endpoints [7243, 4547, 3712, 2618, 1157])
+19:50:26 mesh_ctrl: sweep done in 9 s (exit 0; violating endpoints [566, 55, 0, 0, 0])
+19:52:20 neo_top: sweep done in 119 s (exit 0; violating endpoints [291669, 1006, 256, 0, 0])
+19:52:20 sweep done in 294 s; verdict: every unit outside the PE-limited ones clean from 1500.0 ps, the PE's stage 1095.3262429214542 ps, the tile at 1500.0 ps
+19:52:20 done in 1817 s: /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/synth_results.json
+19:52:20 GATES: all passed (every unit synthesized, no latch, no multiply-driven net, the hierarchy consistent, the PE counts, DV_HOOKS = 0 clean, every clock gate mapped onto the library's ICG cell as declared, every timing run complete)
+/home/runner/work/Astracore-Neo/Astracore-Neo/ci_logs/synth/synth_report.md

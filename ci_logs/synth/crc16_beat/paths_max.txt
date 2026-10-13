@@ -1,0 +1,420 @@
+Startpoint: words[409] (input port clocked by vclk)
+Endpoint: crc_out[11] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 ^ input external delay
+     3    2.5    0.0    0.0    0.0 ^ words[409] (in)
+     3    2.6   24.6   54.0   54.0 v _4239_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   19.7   54.6  108.7 ^ _4350_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   33.3   34.6  143.3 ^ _4351_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.8   40.8   40.6  183.9 ^ _4355_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.8   15.7   59.0  242.9 v _4358_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.2   15.7   37.9  280.9 v _4361_/Y (AO211x2_ASAP7_75t_R)
+     2    1.4   24.2   58.6  339.4 v _4386_/Y (OA211x2_ASAP7_75t_R)
+     2    1.7   26.1   55.0  394.4 v _4433_/Y (OA211x2_ASAP7_75t_R)
+     2    1.5   18.9   41.6  436.0 v _4469_/Y (OA21x2_ASAP7_75t_R)
+     7    4.2   37.2   67.1  503.1 v _4472_/Y (OR3x2_ASAP7_75t_R)
+    10    5.5   17.0   37.8  540.9 v _4473_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.9   17.2   34.2  575.1 v _5665_/Y (AO21x1_ASAP7_75t_R)
+     1    1.4   19.6   52.0  627.1 ^ _5666_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   33.2   34.9  662.0 ^ _5675_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.9   39.2  701.2 ^ _5697_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   15.2   31.8  733.0 ^ _5698_/Y (XNOR2x1_ASAP7_75t_R)
+                15.2    0.0  733.0 ^ crc_out[11] (out)
+                             733.0   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -733.0   data arrival time
+-------------------------------------------------------------------------
+                            -233.0   slack (VIOLATED)
+
+
+Startpoint: words[409] (input port clocked by vclk)
+Endpoint: crc_out[9] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 ^ input external delay
+     3    2.5    0.0    0.0    0.0 ^ words[409] (in)
+     3    2.6   24.6   54.0   54.0 v _4239_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   19.7   54.6  108.7 ^ _4350_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   33.3   34.6  143.3 ^ _4351_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.8   40.8   40.6  183.9 ^ _4355_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.8   15.7   59.0  242.9 v _4358_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.2   15.7   37.9  280.9 v _4361_/Y (AO211x2_ASAP7_75t_R)
+     2    1.4   24.2   58.6  339.4 v _4386_/Y (OA211x2_ASAP7_75t_R)
+     2    1.7   26.1   55.0  394.4 v _4433_/Y (OA211x2_ASAP7_75t_R)
+     2    1.5   18.9   41.6  436.0 v _4469_/Y (OA21x2_ASAP7_75t_R)
+     7    4.2   37.2   67.1  503.1 v _4472_/Y (OR3x2_ASAP7_75t_R)
+    10    5.5   17.0   37.8  540.9 v _4473_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.8   16.6   33.9  574.8 v _5745_/Y (AO21x1_ASAP7_75t_R)
+     1    1.4   19.6   51.1  625.9 ^ _5747_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   32.4   34.9  660.8 ^ _5753_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.4   38.9  699.7 ^ _5764_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   16.5   33.1  732.7 ^ _5786_/Y (XNOR2x1_ASAP7_75t_R)
+                16.5    0.0  732.7 ^ crc_out[9] (out)
+                             732.7   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -732.7   data arrival time
+-------------------------------------------------------------------------
+                            -232.7   slack (VIOLATED)
+
+
+Startpoint: words[510] (input port clocked by vclk)
+Endpoint: crc_out[3] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     4    3.5    0.0    0.0    0.0 v words[510] (in)
+     4    4.1   37.8   56.6   56.6 ^ _6268_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   35.6   40.6   97.2 ^ _6270_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.3   44.9   42.0  139.2 ^ _6271_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.9   29.3   40.1  179.3 ^ _5392_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.7   20.1   59.4  238.7 v _5394_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.6   25.2   53.0  291.7 v _5398_/Y (OA211x2_ASAP7_75t_R)
+     2    1.1   22.9   47.7  339.5 v _5406_/Y (OR3x1_ASAP7_75t_R)
+     2    1.7   26.1   59.9  399.4 v _5408_/Y (OA211x2_ASAP7_75t_R)
+     2    1.6   19.2   41.8  441.2 v _5422_/Y (OA21x2_ASAP7_75t_R)
+     7    4.3   53.3   65.3  506.5 v _5477_/Y (OR3x1_ASAP7_75t_R)
+    10    5.4   17.9   42.2  548.7 v _5478_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.8   14.7   26.6  575.3 v _5993_/Y (AND3x1_ASAP7_75t_R)
+     1    1.4   19.6   50.5  625.8 ^ _5996_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   33.2   34.9  660.7 ^ _6000_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.1   37.8  698.6 ^ _6001_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   16.5   33.0  731.6 ^ _6019_/Y (XNOR2x1_ASAP7_75t_R)
+                16.5    0.0  731.6 ^ crc_out[3] (out)
+                             731.6   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -731.6   data arrival time
+-------------------------------------------------------------------------
+                            -231.6   slack (VIOLATED)
+
+
+Startpoint: words[409] (input port clocked by vclk)
+Endpoint: crc_out[15] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 ^ input external delay
+     3    2.5    0.0    0.0    0.0 ^ words[409] (in)
+     3    2.6   24.6   54.0   54.0 v _4239_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   19.7   54.6  108.7 ^ _4350_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   33.3   34.6  143.3 ^ _4351_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.8   40.8   40.6  183.9 ^ _4355_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.8   15.7   59.0  242.9 v _4358_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.2   15.7   37.9  280.9 v _4361_/Y (AO211x2_ASAP7_75t_R)
+     2    1.4   24.2   58.6  339.4 v _4386_/Y (OA211x2_ASAP7_75t_R)
+     2    1.7   26.1   55.0  394.4 v _4433_/Y (OA211x2_ASAP7_75t_R)
+     2    1.5   18.9   41.6  436.0 v _4469_/Y (OA21x2_ASAP7_75t_R)
+     7    4.2   37.2   67.1  503.1 v _4472_/Y (OR3x2_ASAP7_75t_R)
+    10    5.5   17.0   37.8  540.9 v _4473_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.8   16.6   33.9  574.8 v _4484_/Y (AO21x1_ASAP7_75t_R)
+     1    1.4   19.6   51.2  625.9 ^ _4668_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   32.4   34.9  660.8 ^ _5100_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.6   38.9  699.7 ^ _5484_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   16.1   31.8  731.5 ^ _5485_/Y (XNOR2x1_ASAP7_75t_R)
+                16.1    0.0  731.5 ^ crc_out[15] (out)
+                             731.5   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -731.5   data arrival time
+-------------------------------------------------------------------------
+                            -231.5   slack (VIOLATED)
+
+
+Startpoint: crc_in[2] (input port clocked by vclk)
+Endpoint: crc_out[1] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 ^ input external delay
+     3    3.2    0.0    0.0    0.0 ^ crc_in[2] (in)
+     2    2.8   50.4   34.9   34.9 ^ _6734_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   36.6   43.9   78.8 ^ _3644_/Y (XNOR2x1_ASAP7_75t_R)
+     4    4.0   68.3   48.5  127.2 ^ _3645_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.6   19.8   67.4  194.7 v _4570_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.6   14.7   31.9  226.6 v _4573_/Y (AND3x2_ASAP7_75t_R)
+     1    0.4   19.9   56.0  282.6 v _4575_/Y (OR4x1_ASAP7_75t_R)
+     2    1.2   24.1   51.9  334.5 v _4578_/Y (AO221x1_ASAP7_75t_R)
+     2    1.7   26.1   63.1  397.6 v _4579_/Y (OA211x2_ASAP7_75t_R)
+     2    1.6   19.2   41.8  439.4 v _4603_/Y (OA21x2_ASAP7_75t_R)
+     6    3.7   34.7   63.1  502.4 v _4659_/Y (OR3x2_ASAP7_75t_R)
+    10    5.5   17.0   36.9  539.3 v _4660_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.8   16.6   33.9  573.2 v _6055_/Y (AO21x1_ASAP7_75t_R)
+     1    1.4   19.7   51.2  624.4 ^ _6057_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   32.4   34.6  659.0 ^ _6058_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.4   38.9  697.9 ^ _6067_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   16.1   33.1  731.0 ^ _6084_/Y (XNOR2x1_ASAP7_75t_R)
+                16.1    0.0  731.0 ^ crc_out[1] (out)
+                             731.0   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -731.0   data arrival time
+-------------------------------------------------------------------------
+                            -231.0   slack (VIOLATED)
+
+
+Startpoint: crc_in[2] (input port clocked by vclk)
+Endpoint: crc_out[10] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 ^ input external delay
+     3    3.2    0.0    0.0    0.0 ^ crc_in[2] (in)
+     2    2.8   50.4   34.9   34.9 ^ _6734_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   36.6   43.9   78.8 ^ _3644_/Y (XNOR2x1_ASAP7_75t_R)
+     4    4.0   68.3   48.5  127.2 ^ _3645_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.6   19.8   67.4  194.7 v _4570_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.6   14.7   31.9  226.6 v _4573_/Y (AND3x2_ASAP7_75t_R)
+     1    0.4   19.9   56.0  282.6 v _4575_/Y (OR4x1_ASAP7_75t_R)
+     2    1.2   24.1   51.9  334.5 v _4578_/Y (AO221x1_ASAP7_75t_R)
+     2    1.7   26.1   63.1  397.6 v _4579_/Y (OA211x2_ASAP7_75t_R)
+     2    1.6   19.2   41.8  439.4 v _4603_/Y (OA21x2_ASAP7_75t_R)
+     6    3.7   34.7   63.1  502.4 v _4659_/Y (OR3x2_ASAP7_75t_R)
+    10    5.5   17.0   36.9  539.3 v _4660_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.9   17.0   34.2  573.5 v _5719_/Y (AO21x1_ASAP7_75t_R)
+     1    1.4   19.7   52.1  625.6 ^ _5720_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   32.6   34.7  660.2 ^ _5721_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   32.9   37.7  697.9 ^ _5722_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   16.4   32.9  730.9 ^ _5743_/Y (XNOR2x1_ASAP7_75t_R)
+                16.4    0.0  730.9 ^ crc_out[10] (out)
+                             730.9   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -730.9   data arrival time
+-------------------------------------------------------------------------
+                            -230.9   slack (VIOLATED)
+
+
+Startpoint: words[409] (input port clocked by vclk)
+Endpoint: crc_out[12] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 ^ input external delay
+     3    2.5    0.0    0.0    0.0 ^ words[409] (in)
+     3    2.6   24.6   54.0   54.0 v _4239_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   19.7   54.6  108.7 ^ _4350_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   33.3   34.6  143.3 ^ _4351_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.8   40.8   40.6  183.9 ^ _4355_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.8   15.7   59.0  242.9 v _4358_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.2   15.7   37.9  280.9 v _4361_/Y (AO211x2_ASAP7_75t_R)
+     2    1.4   24.2   58.6  339.4 v _4386_/Y (OA211x2_ASAP7_75t_R)
+     2    1.7   26.1   55.0  394.4 v _4433_/Y (OA211x2_ASAP7_75t_R)
+     2    1.5   18.9   41.6  436.0 v _4469_/Y (OA21x2_ASAP7_75t_R)
+     7    4.2   37.2   67.1  503.1 v _4472_/Y (OR3x2_ASAP7_75t_R)
+    10    5.5   17.0   37.8  540.9 v _4473_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.8   16.5   33.9  574.8 v _5603_/Y (AO21x1_ASAP7_75t_R)
+     1    1.4   19.6   51.1  625.9 ^ _5607_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   33.3   34.9  660.8 ^ _5611_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.3   37.9  698.8 ^ _5612_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   15.5   31.7  730.5 ^ _5613_/Y (XNOR2x1_ASAP7_75t_R)
+                15.5    0.0  730.5 ^ crc_out[12] (out)
+                             730.5   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -730.5   data arrival time
+-------------------------------------------------------------------------
+                            -230.5   slack (VIOLATED)
+
+
+Startpoint: words[510] (input port clocked by vclk)
+Endpoint: crc_out[14] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     4    3.5    0.0    0.0    0.0 v words[510] (in)
+     4    4.1   37.8   56.6   56.6 ^ _6268_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   35.6   40.6   97.2 ^ _6270_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.3   44.9   42.0  139.2 ^ _6271_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.9   29.3   40.1  179.3 ^ _5392_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.7   20.1   59.4  238.7 v _5394_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.6   25.2   53.0  291.7 v _5398_/Y (OA211x2_ASAP7_75t_R)
+     2    1.1   22.9   47.7  339.5 v _5406_/Y (OR3x1_ASAP7_75t_R)
+     2    1.7   26.1   59.9  399.4 v _5408_/Y (OA211x2_ASAP7_75t_R)
+     2    1.6   19.2   41.8  441.2 v _5422_/Y (OA21x2_ASAP7_75t_R)
+     7    4.3   53.3   65.3  506.5 v _5477_/Y (OR3x1_ASAP7_75t_R)
+    10    5.4   17.9   42.2  548.7 v _5478_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.8   14.3   26.6  575.3 v _5519_/Y (AND3x1_ASAP7_75t_R)
+     1    1.4   19.6   50.4  625.7 ^ _5522_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   32.5   34.9  660.6 ^ _5531_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.9   37.7  698.4 ^ _5532_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   15.4   31.8  730.2 ^ _5533_/Y (XNOR2x1_ASAP7_75t_R)
+                15.4    0.0  730.2 ^ crc_out[14] (out)
+                             730.2   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -730.2   data arrival time
+-------------------------------------------------------------------------
+                            -230.2   slack (VIOLATED)
+
+
+Startpoint: crc_in[2] (input port clocked by vclk)
+Endpoint: crc_out[8] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 ^ input external delay
+     3    3.2    0.0    0.0    0.0 ^ crc_in[2] (in)
+     2    2.8   50.4   34.9   34.9 ^ _6734_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   36.6   43.9   78.8 ^ _3644_/Y (XNOR2x1_ASAP7_75t_R)
+     4    4.0   68.3   48.5  127.2 ^ _3645_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.6   19.8   67.4  194.7 v _4570_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.6   14.7   31.9  226.6 v _4573_/Y (AND3x2_ASAP7_75t_R)
+     1    0.4   19.9   56.0  282.6 v _4575_/Y (OR4x1_ASAP7_75t_R)
+     2    1.2   24.1   51.9  334.5 v _4578_/Y (AO221x1_ASAP7_75t_R)
+     2    1.7   26.1   63.1  397.6 v _4579_/Y (OA211x2_ASAP7_75t_R)
+     2    1.6   19.2   41.8  439.4 v _4603_/Y (OA21x2_ASAP7_75t_R)
+     6    3.7   34.7   63.1  502.4 v _4659_/Y (OR3x2_ASAP7_75t_R)
+    10    5.5   17.0   36.9  539.3 v _4660_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.8   16.6   33.9  573.2 v _5795_/Y (AO21x1_ASAP7_75t_R)
+     1    1.4   19.6   51.2  624.4 ^ _5798_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   32.5   34.9  659.3 ^ _5802_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   32.9   37.7  697.0 ^ _5803_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   16.4   32.9  729.9 ^ _5823_/Y (XNOR2x1_ASAP7_75t_R)
+                16.4    0.0  729.9 ^ crc_out[8] (out)
+                             729.9   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -729.9   data arrival time
+-------------------------------------------------------------------------
+                            -229.9   slack (VIOLATED)
+
+
+Startpoint: words[510] (input port clocked by vclk)
+Endpoint: crc_out[7] (output port clocked by vclk)
+Path Group: vclk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock vclk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                        0.0    0.0 v input external delay
+     4    3.5    0.0    0.0    0.0 v words[510] (in)
+     4    4.1   37.8   56.6   56.6 ^ _6268_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   35.6   40.6   97.2 ^ _6270_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.3   44.9   42.0  139.2 ^ _6271_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.9   29.3   40.1  179.3 ^ _5392_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.7   20.1   59.4  238.7 v _5394_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.6   25.2   53.0  291.7 v _5398_/Y (OA211x2_ASAP7_75t_R)
+     2    1.1   22.9   47.7  339.5 v _5406_/Y (OR3x1_ASAP7_75t_R)
+     2    1.7   26.1   59.9  399.4 v _5408_/Y (OA211x2_ASAP7_75t_R)
+     2    1.6   19.2   41.8  441.2 v _5422_/Y (OA21x2_ASAP7_75t_R)
+     7    4.3   53.3   65.3  506.5 v _5477_/Y (OR3x1_ASAP7_75t_R)
+    10    5.4   17.9   42.2  548.7 v _5478_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.8   14.1   25.5  574.2 v _5847_/Y (AND3x1_ASAP7_75t_R)
+     1    1.4   19.7   50.4  624.6 ^ _5851_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   32.4   34.6  659.2 ^ _5852_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.6   38.9  698.1 ^ _5862_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.0   15.4   31.8  729.9 ^ _5863_/Y (XNOR2x1_ASAP7_75t_R)
+                15.4    0.0  729.9 ^ crc_out[7] (out)
+                             729.9   data arrival time
+
+                 0.0  500.0  500.0   clock vclk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                        0.0  500.0   clock reconvergence pessimism
+                        0.0  500.0   output external delay
+                             500.0   data required time
+-------------------------------------------------------------------------
+                             500.0   data required time
+                            -729.9   data arrival time
+-------------------------------------------------------------------------
+                            -229.9   slack (VIOLATED)
+
+
