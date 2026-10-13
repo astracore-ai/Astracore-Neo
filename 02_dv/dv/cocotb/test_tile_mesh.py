@@ -38,13 +38,15 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
       entries, V as weight entries, Q and P as padded activations, the softmax's two rounds on the vector unit, the 1 / sum
       on P V's drain), bit-exact against the compiler's mesh model and the independent integer chain, the error against
       the float attention and the cycles against the perf model reported
-  M23 a ViT block (drop 0.43): T = 32 tokens, model / head dim 32, MLP hidden 64, INT8 weights -- layer norm (an identity
-      GEMM's statistics and apply rounds on the vector unit, the gain folded into the next layer), attention, Wo + the
-      residual (the residual buffer filled by the DMA), layer norm, W1 + GELU, W2 + the residual: bit-exact against the
-      compiler's mesh model, the error against the float block reported
-  M24 an LLM layer (drop 0.43): the same shape with RMS norm, causal attention (the diagonal key tile masked through the
-      residual buffer, the later key tiles skipped), a SiLU MLP and INT4 weights with per-output-channel scales (FETCH_W
-      arg 1: the NIC expands the nibbles; the scales in the requantizer's and the unit's per-column tables)
+  M23 a ViT block (drop 0.43): T = 32 tokens, model / head dim 32, MLP hidden 32, INT8 weights (two copies of each
+      matrix: no tile reads its own bank) -- layer norm (an identity GEMM's statistics and apply rounds on the vector
+      unit, the gain folded into the next layer), attention, Wo + the residual (the residual buffer filled by the DMA),
+      layer norm, W1 + GELU, W2 + the residual: bit-exact against the compiler's mesh model, the error against the float
+      block reported
+  M24 an LLM layer (drop 0.43): the same with RMS norm, causal attention (the diagonal key tile masked through the
+      residual buffer, the later key tiles skipped), a SiLU MLP of hidden 64 and INT4 weights with per-output-channel
+      scales (FETCH_W arg 1: the NIC expands the nibbles, the entry's check weight the compiler's; the scales in the
+      requantizer's and the unit's per-column tables)
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
      make -C dv/cocotb tile_sp (drop 0.42: the same mesh of 16x8 sparse-capable cores, NCHK = 4: M20, and M1 / M6 dense on
                               the five-word weight entries of that core)
@@ -1126,9 +1128,10 @@ async def compare_regions(mesh, mm, regions, tag):
 @cocotb.test(skip=not XFMR_GEO)
 async def m21_attention_head(dut):
     """M21 (drop 0.43): one attention head on the 2x2 mesh of 16x8 cores -- T = 64 tokens, model dim 32, head dim 32,
-    INT8 -- compiled by compiler/neo_xfmr.py's attention_plan: the projections (tile t: output tile t of Q, K and V; Q
-    drained padded into Q's activation layout, K drained transposed as S's weight entries, V drained as P V's weight
-    entries, one DMA program of three GO / WAIT_DONE pairs on one descriptor), the scores of query block t (16 queries) per
+    INT8 -- compiled by compiler/neo_xfmr.py's attention_plan: the projections (two output tiles of Q, K or V on each
+    producer tile, every output tile drained into two copies by a second GO on the same weights: Q padded into Q's
+    activation layout, K transposed as S's weight entries, V as P V's weight entries; no tile addresses its own bank -- the
+    self-serve deadlock stream B2 fixes), the scores of query block t (16 queries) per
     key tile with the softmax's max round and exp round on the vector unit (RS0 / RS1 across the eight key tiles; P
     drained padded as P V's activations), P V with V's entries as the weights and the 1 / sum (reciprocal table and a
     Newton step) on the drain. The output rows equal the compiler's mesh model bit for bit and the model equals the
@@ -1146,8 +1149,7 @@ async def m21_attention_head(dut):
     got = nx.read_attention_out(lambda node, base, n: words[(node, base)][:n], plan)
     exp = nx.read_attention_out(mm.read, plan)
     if not np.array_equal(got, exp):
-        bad = await compare_regions(mesh, mm, [("Q", 1, 0, 1024), ("K^T entries", 2, 0, 1536), ("V entries", 3, 0, 1536)]
-                                    + [(f"P tile {t}", t, 2048, 512) for t in range(4)], "M21")
+        bad = await compare_regions(mesh, mm, plan.meta["regions"], "M21")
         c = await mesh.causes()
         raise AssertionError(f"M21: {int((got != exp).sum())}/{got.size} output values differ from the mesh model; "
                              f"intermediates: {bad or 'all equal'}; causes {causes_str(c)}")

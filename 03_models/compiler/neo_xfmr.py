@@ -19,15 +19,18 @@ The hardware this compiles for (drop 0.43):
     transpose (DR_T: blocks of COLS rows drained transposed -- tokens x channels into channels x tokens), and a group
     stride (every COLS rows start stride words after the group before) that scatters the entries into the weight tiles of
     the layer that fetches them.
-  - INT4 weights: FETCH_W with arg 1 reads entries of COLS nibbles (WP4 = COLS / 8 words) and the NIC writes the 8-bit
-    entry (sign-extended nibbles, the check weight their sum); the per-output-channel scale is the requantizer's (folded
-    into mult / shift). Per-group scales along K are not supported.
+  - INT4 weights: FETCH_W with arg 1 reads entries of COLS nibbles and the row's check weight (their sum, WCW bits above
+    them: WP4 = (4 COLS + WCW + 31) / 32 words, 2 at 16x8 and 5 at 32x32) and the NIC writes the 8-bit entry (sign-extended
+    nibbles, that check weight); the per-output-channel scale is the requantizer's (folded into mult / shift) or the
+    vector unit's per-column SC. Per-group scales along K are not supported.
 
 Attention (one head, T tokens, head dim d, the 2 x 2 mesh of 16x8 cores; attention_plan):
-  1. projections: tile t computes output tile t (COLS channels) of Q, K and V over all T tokens (M = T, the input's
-     channel tiles fetched once, three runs): Q drained padded (DR_P) into Q's activation layout, K drained transposed as
-     weight entries (DR_T | DR_E, stride = one key tile's weight block) -- K^T for Q K^T, a transpose by the DMA's
-     addressing -- and V drained as weight entries (DR_E, stride = one key tile's rows in P V's padded channel tiles).
+  1. projections: each output tile (COLS channels) of Q, K and V over all T tokens (M = T, the input's channel tiles
+     fetched once) on a producer tile, two output tiles each (Q on tiles 0 / 1, K on 1 / 3, V on 0 / 2: no tile drains into
+     its own bank -- see Banks), every output tile drained into two copies (a second GO on the same weights): Q padded
+     (DR_P) into Q's activation layout, K transposed as weight entries (DR_T | DR_E, stride = one key tile's weight block)
+     -- K^T for Q K^T, a transpose by the DMA's addressing -- and V as weight entries (DR_E, stride = one key tile's rows
+     in P V's padded channel tiles).
   2. S = Q K^T per query block (tile t: queries 16t .. 16t + 15) and key tile (COLS keys a run): the softmax over all T
      keys in two rounds of the key tiles (neo_vec: RED max into RS0 (store, then max), then exp((s - RS0) * scale) EMIT ->
      P (INT8, padded), RS1 (+)= the sum); P's key tiles land as channel tiles of P V's activations.
@@ -77,7 +80,7 @@ class Geo:
 
     @property
     def wp4(self):
-        return (self.cols * 4 + 31) // 32
+        return (self.cols * 4 + self.wcw + 31) // 32
 
     @property
     def ni8(self):
@@ -127,14 +130,17 @@ def w_entry(wrow, geo):
 
 
 def w4_entry(wrow, geo):
-    """One INT4 weight entry: COLS nibbles (two's complement, -8..7), nibble j at bits [4j +: 4], WP4 words."""
-    words = [0] * geo.wp4
-    for j, v in enumerate(wrow):
-        v = int(v)
-        if not -8 <= v <= 7:
-            raise ValueError(f"INT4 weight {v} out of range (column {j})")
-        words[j // 8] |= (v & 0xF) << (4 * (j % 8))
-    return words
+    """One INT4 weight entry: COLS nibbles (two's complement, -8..7), nibble j at bits [4j +: 4], the row's check weight
+    (the sum, WCW bits two's complement) at [4 COLS +: WCW]; WP4 words."""
+    v, tot = 0, 0
+    for j, w in enumerate(wrow):
+        w = int(w)
+        if not -8 <= w <= 7:
+            raise ValueError(f"INT4 weight {w} out of range (column {j})")
+        v |= (w & 0xF) << (4 * j)
+        tot += w
+    v |= (tot & ((1 << geo.wcw) - 1)) << (4 * geo.cols)
+    return [(v >> (32 * i)) & 0xFFFFFFFF for i in range(geo.wp4)]
 
 
 def weight_tile_words(Wt, geo, int4=False, ct_n=None, rows_per_ct=None):
@@ -226,6 +232,7 @@ class MeshModel:
         self.banks = [[0] * geo.bank for _ in range(geo.nx * geo.ny)]
         self.tiles = [TileModel(geo) for _ in range(geo.nx * geo.ny)]
         self.log = []                                    # (phase, node, stats)
+        self.no_self = True                              # plans never address the executing tile's own bank (see Banks)
 
     def load(self, node, base, words):
         self.banks[node][base:base + len(words)] = [int(w) & 0xFFFFFFFF for w in words]
@@ -247,6 +254,9 @@ class MeshModel:
             op, x, y = (w >> 60) & 15, (w >> 56) & 15, (w >> 52) & 15
             addr, ln, base, arg = (w >> 32) & 0xFFFFF, (w >> 20) & 0xFFF, (w >> 4) & 0xFFFF, w & 15
             src = y * g.nx + x
+            if op in (OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR):
+                assert src != st.node or not self.no_self, (f"tile {st.node} addresses its own bank (op {op}): the self-serve "
+                                                            f"deadlock -- a tile that serves its bank while it fetches from it")
             if op == OP_FETCH_A:
                 words = self.banks[src][addr:addr + ln]
                 assert ln % g.wpa == 0, f"FETCH_A of {ln} words: not whole entries"
@@ -265,7 +275,12 @@ class MeshModel:
                 for i in range(ln // nwe):
                     ew = words[i * nwe:(i + 1) * nwe]
                     if arg & 1:
-                        wr = [sext(ew[j // 8] >> (4 * (j % 8)), 4) for j in range(g.cols)]
+                        v = 0
+                        for k, wd in enumerate(ew):
+                            v |= wd << (32 * k)
+                        wr = [sext(v >> (4 * j), 4) for j in range(g.cols)]
+                        wc = sext(v >> (4 * g.cols), g.wcw)
+                        assert wc == sext(sum(wr), g.wcw), f"INT4 entry {base + i}: check weight {wc} != sum {sum(wr)}"
                     else:
                         v = 0
                         for k, wd in enumerate(ew):
@@ -378,6 +393,47 @@ def phase_prediction(model, phase_name, geo, pm=PERF):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# placement: no tile addresses its own bank. A tile that fetches from its own bank while serving another tile's fetch can
+# deadlock (tile_nic holds the other RDREQ at its input while its server is busy, and its own response must return through
+# that router port -- test_neo_top.py's note; stream B2 adds the NIC's loopback). Until then the plans keep every tile's
+# private tensors in its neighbour's bank (home(t) = t + 1 mod 4), hold the tensors every tile reads (weights, K and V
+# entries) twice, in two banks, each tile reading the copy outside its own bank, and give each tensor a producer that
+# drains outside its own bank. MeshModel asserts the rule.
+# ---------------------------------------------------------------------------------------------------------------------
+class Banks:
+    """A bump allocator per bank: alloc(node, words) -> base; copies(words, avoid) places two copies in the two banks with
+    the most room outside `avoid` and returns {bank: base}."""
+
+    def __init__(self, geo, start=0):
+        self.geo = geo
+        self.top = [start] * (geo.nx * geo.ny)
+
+    def alloc(self, node, n):
+        base = self.top[node]
+        self.top[node] += n
+        assert self.top[node] <= self.geo.bank, f"bank {node}: {self.top[node]} words past the bank's {self.geo.bank}"
+        return base
+
+    def copies(self, n, avoid=(), banks=None):
+        cand = [b for b in (banks or range(len(self.top))) if b not in avoid]
+        pick = sorted(cand, key=lambda b: (self.top[b], b))[:2]
+        assert len(pick) == 2, "two banks for a shared tensor"
+        return {b: self.alloc(b, n) for b in sorted(pick)}
+
+
+def other(cp, t):
+    """The copy a tile reads: the first bank of the copies that is not its own."""
+    for b in sorted(cp):
+        if b != t:
+            return b, cp[b]
+    raise AssertionError("no copy outside the tile's bank")
+
+
+def home(t, nt=4):
+    return (t + 1) % nt
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 # attention: one head on the 2 x 2 mesh of 16x8 cores
 # ---------------------------------------------------------------------------------------------------------------------
 @dataclass
@@ -424,23 +480,31 @@ def attention_plan(X8, Wq8, Wk8, Wv8, s_x, s_w, geo=None, seed_note=""):
     KT = T // C                                       # key tiles
     ctp = KT                                          # P's channel tiles (half-filled)
     s_qkv, s_o, Of = attention_scales(X8, s_x, Wq8, Wk8, Wv8, s_w, d)
-    # bank layout (words): node 0 X / Wq / Wk / Wv; node 1 Q; node 2 K^T entries; node 3 V entries; P and O per tile
-    n0, n1, n2, n3 = 0, 1, 2, 3
-    X0 = 0
+    # placement (no tile addresses its own bank): X and the three weight matrices twice (banks 0 and 1); Q produced by tiles
+    # 0 / 1 into banks 2 and 3, K by tiles 1 / 3 into banks 0 and 2, V by tiles 0 / 2 into banks 1 and 3 (two output tiles a
+    # producer, each drained into both copies); P and O of query block t in bank home(t)
     WT = ctx * R * WPW                                # words of one output tile's weights (32 entries)
-    WQ0, WK0, WV0 = 512, 512 + ctq * WT, 512 + 2 * ctq * WT
-    Q0 = 0                                            # Q: ctq channel tiles x T pixels x WPA
     KTB = ctq * R * WPW                               # one key tile's weight block in S = Q K^T: ctq channel tiles x R rows
-    K0 = 0
     VTB = ctp * R * WPW                               # one output tile's weight block in P V: ctp channel tiles x R rows
-    V0 = 0
-    P0, O0 = 2048, 2560
-    loads = [(n0, X0, [w for ct in range(ctx) for m in range(T) for w in act_words([X8[m, ct * R:(ct + 1) * R]], geo)])]
-    for base, Wm in ((WQ0, Wq8), (WK0, Wk8), (WV0, Wv8)):
-        words = []
-        for nt in range(ctq):
-            words += weight_tile_words(Wm[:, nt * C:(nt + 1) * C], geo)
-        loads.append((n0, base, words))
+    QW = ctq * T * WPA                                # Q in the padded activation layout
+    bk = Banks(geo)
+    xw = {b: bk.alloc(b, ctx * T * WPA + 3 * ctq * WT) for b in (0, 1)}
+    kc = {b: bk.alloc(b, KT * KTB) for b in (0, 2)}
+    vc = {b: bk.alloc(b, ctq * VTB) for b in (1, 3)}
+    qc = {b: bk.alloc(b, QW) for b in (2, 3)}
+    pb = {t: bk.alloc(home(t), ctp * QB * WPA) for t in range(NT)}
+    ob = {t: bk.alloc(home(t), ctq * QB * geo.ni8) for t in range(NT)}
+    prod = {"q": {0: [0, 1], 1: [2, 3]}, "k": {1: [0, 1], 3: [2, 3]}, "v": {0: [0, 1], 2: [2, 3]}}
+    X0, WQ0, WK0, WV0 = 0, ctx * T * WPA, ctx * T * WPA + ctq * WT, ctx * T * WPA + 2 * ctq * WT    # offsets in a copy
+    loads = []
+    xwords = [w for ct in range(ctx) for m in range(T) for w in act_words([X8[m, ct * R:(ct + 1) * R]], geo)]
+    for b, base in xw.items():
+        loads.append((b, base + X0, xwords))
+        for off, Wm in ((WQ0, Wq8), (WK0, Wk8), (WV0, Wv8)):
+            words = []
+            for nt in range(ctq):
+                words += weight_tile_words(Wm[:, nt * C:(nt + 1) * C], geo)
+            loads.append((b, base + off, words))
     # requantizer tables
     m_qkv, sh_qkv, _ = nv.requant_for(s_x * s_w / s_qkv)
     k_exp, sh_exp = nv.fixed_mult(s_qkv * s_qkv / math.sqrt(d) / nv.EXP_S_IN)
@@ -452,38 +516,52 @@ def attention_plan(X8, Wq8, Wk8, Wv8, s_x, s_w, geo=None, seed_note=""):
     rq_o = flat_rq(m_o, sh_o, 0, C)
     lut_e, lut_r = nv.lut_exp(), nv.lut_recip()
     phases = []
-    # 1. projections: tile t -> output tile t of Q (padded activations), K (transposed weight entries), V (weight entries)
+
+    # 1. projections: each output tile of Q / K / V on its producer, drained into both copies (two GOs on one weight tile)
+    def drains(kk, nt):
+        out = []
+        for b in sorted({"q": qc, "k": kc, "v": vc}[kk]):
+            base = {"q": qc, "k": kc, "v": vc}[kk][b]
+            if kk == "q":                              # padded activation entries: channel tile nt of Q
+                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * T * WPA, T, DR_P, 1))
+            elif kk == "k":                            # transposed, as S's weight entries: channel tile nt of key tile kt
+                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * R * WPW, T, DR_T | DR_E | KTB, 1))
+            else:                                      # weight entries of P V's output tile nt: key tile kt = channel tile kt
+                out.append(ins(OP_DRAIN_WR, *geo.xy(b), base + nt * VTB, T, DR_E | (R * WPW), 1))
+        return out
+
     steps = []
     for t in range(NT):
-        x0, y0 = geo.xy(n0)
-        prog = [ins(OP_FETCH_A, x0, y0, X0 + ct * T * WPA, T * WPA, ct * T) for ct in range(ctx)]
-        prog += [ins(OP_FETCH_W, x0, y0, WQ0 + t * WT, WT, 0),
-                 ins(OP_DRAIN_WR, *geo.xy(n1), Q0 + t * T * WPA, T, DR_P, 1), ins(OP_GO), ins(OP_WAIT_DONE)]
-        prog += [ins(OP_FETCH_W, x0, y0, WK0 + t * WT, WT, 0),
-                 ins(OP_DRAIN_WR, *geo.xy(n2), K0 + t * R * WPW, T, DR_T | DR_E | KTB, 1), ins(OP_GO), ins(OP_WAIT_DONE)]
-        prog += [ins(OP_FETCH_W, x0, y0, WV0 + t * WT, WT, 0),
-                 ins(OP_DRAIN_WR, *geo.xy(n3), V0 + t * VTB, T, DR_E | (R * WPW), 1), ins(OP_GO), ins(OP_WAIT_DONE),
-                 ins(OP_END)]
-        steps.append(Step(t, gemm_desc(T, ctx), prog, nv.PASS, rq_qkv, note=f"Q/K/V output tile {t}"))
+        b, base = other(xw, t)
+        prog = [ins(OP_FETCH_A, *geo.xy(b), base + X0 + ct * T * WPA, T * WPA, ct * T) for ct in range(ctx)]
+        for kk, off in (("q", WQ0), ("k", WK0), ("v", WV0)):
+            for nt in prod[kk].get(t, []):
+                prog.append(ins(OP_FETCH_W, *geo.xy(b), base + off + nt * WT, WT, 0))
+                for dr in drains(kk, nt):
+                    prog += [dr, ins(OP_GO), ins(OP_WAIT_DONE)]
+        prog.append(ins(OP_END))
+        steps.append(Step(t, gemm_desc(T, ctx), prog, nv.PASS, rq_qkv, note=f"projections on tile {t}"))
     phases.append(Phase("projections", steps))
 
     def q_fetch(t):
-        return [ins(OP_FETCH_A, *geo.xy(n1), Q0 + ct * T * WPA + t * QB * WPA, QB * WPA, ct * QB) for ct in range(ctq)]
+        b, base = other(qc, t)
+        return [ins(OP_FETCH_A, *geo.xy(b), base + ct * T * WPA + t * QB * WPA, QB * WPA, ct * QB) for ct in range(ctq)]
 
-    def kw(kt):
-        return ins(OP_FETCH_W, *geo.xy(n2), K0 + kt * KTB, KTB, 0)
+    def kw(t, kt):
+        b, base = other(kc, t)
+        return ins(OP_FETCH_W, *geo.xy(b), base + kt * KTB, KTB, 0)
 
     dS = gemm_desc(QB, ctq, h=4)
     # 2. the softmax's max round over the key tiles: the first key tile stores RS0, the others take the max
-    phases.append(Phase("max kt0", [Step(t, dS, q_fetch(t) + [kw(0), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)],
+    phases.append(Phase("max kt0", [Step(t, dS, q_fetch(t) + [kw(t, 0), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)],
                                          nv.VecConfig(nv.prog_softmax_max(True), name="max first"), rq_p) for t in range(NT)]))
-    phases.append(Phase("max kt1-7", [Step(t, dS, q_fetch(t) + [x for kt in range(1, KT) for x in (kw(kt), ins(OP_GO), ins(OP_WAIT_DONE))]
+    phases.append(Phase("max kt1-7", [Step(t, dS, q_fetch(t) + [x for kt in range(1, KT) for x in (kw(t, kt), ins(OP_GO), ins(OP_WAIT_DONE))]
                                            + [ins(OP_END)], nv.VecConfig(nv.prog_softmax_max(False), name="max"), rq_p)
                                       for t in range(NT)]))
 
     # 3. the exp round: e = exp((s - max) * scale) EMIT -> P (INT8, padded) at P's channel tile kt; RS1 (+)= sum e
     def p_drain(t, kt):
-        return ins(OP_DRAIN_WR, *geo.xy(t), P0 + kt * QB * WPA, QB, DR_P, 1)
+        return ins(OP_DRAIN_WR, *geo.xy(home(t)), pb[t] + kt * QB * WPA, QB, DR_P, 1)
 
     kexp = [k_exp, 0, 0, 0]
     for name, kts, first in (("exp kt0", [0], True), ("exp kt1-6", range(1, KT - 1), False), ("exp kt7", [KT - 1], False)):
@@ -491,29 +569,32 @@ def attention_plan(X8, Wq8, Wk8, Wv8, s_x, s_w, geo=None, seed_note=""):
         for t in range(NT):
             prog = q_fetch(t)
             for kt in kts:
-                prog += [kw(kt), p_drain(t, kt), ins(OP_GO), ins(OP_WAIT_DONE)]
+                prog += [kw(t, kt), p_drain(t, kt), ins(OP_GO), ins(OP_WAIT_DONE)]
             prog.append(ins(OP_END))
-            vc = nv.VecConfig(nv.prog_softmax_exp(first, sh_exp), lutv=lut_e, k=kexp, name="exp")
-            steps.append(Step(t, dS, prog, vc, rq_p))
+            vcfg = nv.VecConfig(nv.prog_softmax_exp(first, sh_exp), lutv=lut_e, k=kexp, name="exp")
+            steps.append(Step(t, dS, prog, vcfg, rq_p))
         phases.append(Phase(name, steps))
     # 4. P V per output tile, normalised by 1 / RS1 on the drain
     dO = gemm_desc(QB, ctp, h=4)
     steps = []
     for t in range(NT):
-        prog = [ins(OP_FETCH_A, *geo.xy(t), P0 + ct * QB * WPA, QB * WPA, ct * QB) for ct in range(ctp)]
+        prog = [ins(OP_FETCH_A, *geo.xy(home(t)), pb[t] + ct * QB * WPA, QB * WPA, ct * QB) for ct in range(ctp)]
+        vb, vbase = other(vc, t)
         for nt in range(ctq):
-            prog += [ins(OP_FETCH_W, *geo.xy(n3), V0 + nt * VTB, VTB, 0),
-                     ins(OP_DRAIN_WR, *geo.xy(t), O0 + nt * QB * geo.ni8, QB, 0, 1), ins(OP_GO), ins(OP_WAIT_DONE)]
+            prog += [ins(OP_FETCH_W, *geo.xy(vb), vbase + nt * VTB, VTB, 0),
+                     ins(OP_DRAIN_WR, *geo.xy(home(t)), ob[t] + nt * QB * geo.ni8, QB, 0, 1), ins(OP_GO), ins(OP_WAIT_DONE)]
         prog.append(ins(OP_END))
-        vc = nv.VecConfig(nv.prog_softmax_norm(15), luts=lut_r, k=[nv.RCP_K_OFF, nv.RCP_K_TWO, 0, 0], name="norm")
-        steps.append(Step(t, dO, prog, vc, rq_o))
+        vcfg = nv.VecConfig(nv.prog_softmax_norm(15), luts=lut_r, k=[nv.RCP_K_OFF, nv.RCP_K_TWO, 0, 0], name="norm")
+        steps.append(Step(t, dO, prog, vcfg, rq_o))
     phases.append(Phase("PV", steps))
     for ph in phases:
         for st in ph.steps:
             assert len(st.prog) <= nb.PROG_DEPTH, f"{ph.name}: program of {len(st.prog)} instructions"
-    out = {t: (t, O0) for t in range(NT)}
+    out = {t: (home(t), ob[t]) for t in range(NT)}
     meta = dict(s_qkv=s_qkv, s_o=s_o, Of=Of, k_exp=k_exp, sh_exp=sh_exp, rq_qkv=(m_qkv, sh_qkv), rq_p=(m_p, sh_p),
-                rq_o=(m_o, sh_o), QB=QB, ctq=ctq, KT=KT)
+                rq_o=(m_o, sh_o), QB=QB, ctq=ctq, KT=KT,
+                regions=[("Q copy", b, qc[b], QW) for b in qc] + [("K^T entries", b, kc[b], KT * KTB) for b in kc]
+                + [("V entries", b, vc[b], ctq * VTB) for b in vc] + [(f"P of block {t}", home(t), pb[t], ctp * QB * WPA) for t in range(NT)])
     return AttnPlan(geo, phases, loads, out, T, d, meta)
 
 
@@ -735,8 +816,11 @@ class BlockPlan:
 def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
     """M23 (ViT block: layer norm, GELU, INT8 weights) / M24 (LLM layer: RMS norm, causal attention, SiLU MLP, INT4
     weights with per-output-channel scales) on the 2 x 2 mesh of 16x8 cores, T = 32 tokens (tile t: tokens 8t .. 8t + 7,
-    a key tile), model / head dim 32, MLP hidden 64. Every activation is INT8 in the padded layout (channel tile c holds
-    channels 8c .. 8c + 7: what the 16x8 core's drain writes, and what the residual buffer reads back as lanes 0 .. 7).
+    a key tile), model / head dim 32, MLP hidden H (32 for M23's INT8 weights -- two copies of every matrix fit the four
+    4,096-word banks --, 64 for M24's INT4). Every activation is INT8 in the padded layout (channel tile c holds channels
+    8c .. 8c + 7: what the 16x8 core's drain writes, and what the residual buffer reads back as lanes 0 .. 7). Placement
+    as Banks says: tile t's tensors in bank home(t), every weight matrix twice, the K and V entries of key tile kt (from
+    tile kt) in banks home(kt) and kt + 2; the identity GEMM's weights as INT4 entries (0 / 1: exact).
       norm (identity GEMM per output tile; the norm's gain folded into the next layer's weights): statistics round (first
         output tile stores RS0 / RS1, the others add), apply round (the statistics finalised per row, rsqrt table)
       Q / K / V of the tile's tokens (K drained transposed as S's weight entries, V as P V's), the softmax's rounds over
@@ -749,7 +833,7 @@ def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
     R, C, WPA, WPW = geo.rows, geo.cols, geo.wpa, geo.wpw
     T, D, d, H = cfg.T, cfg.D, cfg.d, cfg.H
     NT = geo.nx * geo.ny
-    assert (R, C) == (16, 8) and NT == 4 and T == 4 * C and D == 32 and d == 32 and H == 64
+    assert (R, C) == (16, 8) and NT == 4 and T == 4 * C and D == 32 and d == 32 and H in (32, 64)
     QB = T // NT                                       # tokens a tile (one key tile)
     cd, cdd, ch = D // C, d // C, H // C               # padded channel tiles of x / q / z
     KT = T // C
@@ -778,77 +862,84 @@ def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
         V = (v8 * v8).sum(axis=1) if cfg.rms else D * (v8 * v8).sum(axis=1) - v8.sum(axis=1) ** 2
         return float(np.median(V))
 
-    # ---- bank layout: private regions in the tile's own bank, weights and the K / V entries shared
-    XB, NB, QA, HB, PZ, OB, MB = 0, 128, 256, 384, 512, 768, 832
-    WQ0 = 1024
-    WT = cd * R * nwe                                  # one output tile's weights (input: 4 padded channel tiles)
-    WK0, WV0, WO0 = WQ0 + cdd * WT, WQ0 + 2 * cdd * WT, WQ0 + 3 * cdd * WT
-    W10, I0 = 1024, 1024 + ch * WT
-    WT2 = ch * R * nwe                                 # W2's input: 8 padded channel tiles
-    K0, W20 = 1024, 2048
-    V0 = 1024
-    KTB, VTB = cdd * R * WPW, KT * R * WPW
-    nW, n1b, nK, nV = 0, 1, 2, 3
+    # ---- placement: tile t's tensors in bank home(t); the weights twice; the K / V entries of key tile kt twice
+    WTQ = cd * R * nwe                                 # one output tile's weights, input D (4 padded channel tiles)
+    WT2 = ch * R * nwe                                 # W2's: input H (H / 8 padded channel tiles)
+    WTI = R * geo.wp4                                  # the identity block: one channel tile's 16 INT4 entries (8 real rows)
+    KTB = cdd * R * WPW                                # key tile kt's weight block in S (4 channel tiles of Q)
+    VNB = R * WPW                                      # key tile kt's entries in P V's output tile nt (channel tile kt)
+    PRIV = dict(x=cd * QB * WPA, n=cd * QB * WPA, qa=cdd * QB * WPA, h=cd * QB * WPA,
+                pz=max(KT, ch) * QB * WPA, out=cd * QB * geo.ni8, mask=(2 * QB * WPA if cfg.causal else 0))
+    bk = Banks(geo)
+    pv = {t: {k: bk.alloc(home(t), n) for k, n in PRIV.items()} for t in range(NT)}
+    kcp = {kt: {b: bk.alloc(b, KTB) for b in sorted({home(kt), (kt + 2) % NT})} for kt in range(KT)}
+    vcp = {kt: {b: bk.alloc(b, cdd * VNB) for b in sorted({home(kt), (kt + 2) % NT})} for kt in range(KT)}
+    wcp = {}
+    for kk, n in (("w1", (H // C) * WTQ), ("w2", cd * WT2), ("q", cdd * WTQ), ("k", cdd * WTQ), ("v", cdd * WTQ),
+                  ("o", cd * cdd * R * nwe), ("i", WTI)):
+        wcp[kk] = bk.copies(n)
     loads = []
     for t in range(NT):                                # x: the tile's tokens, padded channel tiles
-        loads.append((t, XB, act_words([x8[t * QB + m, ct * C:(ct + 1) * C] for ct in range(cd) for m in range(QB)], geo)))
+        loads.append((home(t), pv[t]["x"], act_words([x8[t * QB + m, ct * C:(ct + 1) * C] for ct in range(cd) for m in range(QB)], geo)))
         if cfg.causal:                                 # the masks: zeros, and the diagonal key tile's
             diag = [[-128 if j > i else 0 for j in range(C)] for i in range(QB)]
-            loads.append((t, MB, act_words([[0] * C] * QB + diag, geo)))
+            loads.append((home(t), pv[t]["mask"], act_words([[0] * C] * QB + diag, geo)))
 
-    def wwords(Wm, ncts):                              # one matrix's output tiles, the input padded (8 real rows a tile)
+    def wwords(Wm, ncts, int4):                        # one matrix's output tiles, the input padded (8 real rows a tile)
         out = []
         for nt in range(Wm.shape[1] // C):
-            out += weight_tile_words(Wm[:, nt * C:(nt + 1) * C], geo, int4=cfg.int4, ct_n=ncts, rows_per_ct=C)
+            out += weight_tile_words(Wm[:, nt * C:(nt + 1) * C], geo, int4=int4, ct_n=ncts, rows_per_ct=C)
         return out
 
-    for base, kk in ((WQ0, "q"), (WK0, "k"), (WV0, "v"), (WO0, "o")):
-        loads.append((nW, base, wwords(q8[kk], cd)))
-    loads.append((n1b, W10, wwords(q8["w1"], cd)))
-    ident = np.eye(D, dtype=np.int64)
-    WI = weight_tile_words  # identity: INT8 entries
-    iwords = []
-    for nt in range(cd):
-        iwords += WI(ident[:, nt * C:(nt + 1) * C], geo, ct_n=cd, rows_per_ct=C)
-    loads.append((n1b, I0, iwords))
-    loads.append((nK, W20, wwords(q8["w2"], ch)))
+    mats = dict(q=(q8["q"], cd), k=(q8["k"], cd), v=(q8["v"], cd), o=(q8["o"], cdd), w1=(q8["w1"], cd), w2=(q8["w2"], ch))
+    for kk, (Wm, ncts) in mats.items():
+        words = wwords(Wm, ncts, cfg.int4)
+        for b, base in wcp[kk].items():
+            loads.append((b, base, words))
+    iwords = weight_tile_words(np.eye(C, dtype=np.int64), geo, int4=True, ct_n=1, rows_per_ct=C)
+    for b, base in wcp["i"].items():
+        loads.append((b, base, iwords))
     for node, base, words in loads:
         assert base + len(words) <= geo.bank, f"bank {node}: {base} + {len(words)} words past the bank"
 
     phases = []
-    me = lambda t: geo.xy(t)  # noqa: E731
+    hm = lambda t: geo.xy(home(t))  # noqa: E731
     dT = gemm_desc(QB, cd, h=2)
 
-    def afetch(t, base, ncts):
-        return [ins(OP_FETCH_A, *me(t), base + ct * QB * WPA, QB * WPA, ct * QB) for ct in range(ncts)]
+    def afetch(t, region, ncts):                       # a private tensor's padded channel tiles from home(t)
+        return [ins(OP_FETCH_A, *hm(t), pv[t][region] + ct * QB * WPA, QB * WPA, ct * QB) for ct in range(ncts)]
 
-    def gw(node, base, nt, wt, nent=None):
-        n = nent if nent is not None else wt // nwe
-        return ins(OP_FETCH_W, *geo.xy(node), base + nt * wt, n * nwe, 0, wfl)
+    def gw(t, kk, nt, wt, int4=None):                  # output tile nt of matrix kk, from the copy outside t's bank
+        b, base = other(wcp[kk], t)
+        i4 = cfg.int4 if int4 is None else int4
+        return ins(OP_FETCH_W, *geo.xy(b), base + nt * wt, wt, 0, 1 if i4 else 0)
 
-    def iw(nt):                                        # identity weights (INT8 entries)
-        return ins(OP_FETCH_W, *geo.xy(n1b), I0 + nt * cd * R * WPW, cd * R * WPW, 0)
+    def iw(t):                                         # the identity block (the same for every output tile)
+        return gw(t, "i", 0, WTI, int4=True)
+
+    dI = gemm_desc(QB, 1, h=2)                         # the identity GEMM: one channel tile a run
 
     def norm_phases(tag, src, dst, v_cal):
         vca, (m, sh) = norm_config(cfg.rms, D, v_cal, s_n)
         rqn = flat_rq(m, sh, 0, C)
         st0 = nv.VecConfig(prog_norm_stats(True, cfg.rms), name="stats first")
         st1 = nv.VecConfig(prog_norm_stats(False, cfg.rms), name="stats")
-        phases.append(Phase(f"{tag} stats nt0", [Step(t, dT, afetch(t, src, cd) + [iw(0), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)],
+        def ct(t, nt):                                 # output tile nt of the identity GEMM = the input's channel tile nt
+            return ins(OP_FETCH_A, *hm(t), pv[t][src] + nt * QB * WPA, QB * WPA, 0)
+        phases.append(Phase(f"{tag} stats nt0", [Step(t, dI, [iw(t), ct(t, 0), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)],
                                                        st0, rqn) for t in range(NT)]))
-        phases.append(Phase(f"{tag} stats", [Step(t, dT, afetch(t, src, cd) + [x for nt in range(1, cd) for x in (iw(nt), ins(OP_GO), ins(OP_WAIT_DONE))]
+        phases.append(Phase(f"{tag} stats", [Step(t, dI, [iw(t)] + [x for nt in range(1, cd) for x in (ct(t, nt), ins(OP_GO), ins(OP_WAIT_DONE))]
                                                    + [ins(OP_END)], st1, rqn) for t in range(NT)]))
-        phases.append(Phase(f"{tag} apply", [Step(t, dT, afetch(t, src, cd) + [x for nt in range(cd) for x in (
-            iw(nt), ins(OP_DRAIN_WR, *me(t), dst + nt * QB * WPA, QB, DR_P, 1), ins(OP_GO), ins(OP_WAIT_DONE))] + [ins(OP_END)], vca, rqn)
+        phases.append(Phase(f"{tag} apply", [Step(t, dI, [iw(t)] + [x for nt in range(cd) for x in (
+            ct(t, nt), ins(OP_DRAIN_WR, *hm(t), pv[t][dst] + nt * QB * WPA, QB, DR_P, 1), ins(OP_GO), ins(OP_WAIT_DONE))] + [ins(OP_END)], vca, rqn)
             for t in range(NT)]))
 
-    # 1. norm1(x) -> n1
-    norm_phases("norm1", XB, NB, v_cal_of(x8))
     # a linear layer over output tiles nts: one program per run of output tiles with the same epilogue (all of them
     # for per-tensor INT8 scales; one per output tile for INT4's per-output-channel scales, whose requantizer / SC tables
-    # change with the tile), as many GO / WAIT_DONE pairs as the program memory holds
-    def layer(tag, nts, src, ncts, wfetch, drain, s_acc, s_out, kind=None, s_res=None, res_src=None):
-        per = (nb.PROG_DEPTH - 1 - ncts) // (5 if res_src is not None else 4)
+    # change with the tile), as many output tiles as the program memory holds; drains(t, nt) = the output tile's drains
+    # (two for K and V: both copies, a GO each)
+    def layer(tag, nts, src, ncts, kk, wt, drains, s_acc, s_out, kind=None, s_res=None, res_src=None, ndr=1):
+        per = (nb.PROG_DEPTH - 1 - ncts) // (1 + 3 * ndr + (1 if res_src is not None else 0))
         groups = []
         for nt in nts:
             vc, rq = epilogue(list(s_acc[nt * C:(nt + 1) * C]), s_out, C, kind=kind, s_res=s_res)
@@ -864,21 +955,27 @@ def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
                 prog = afetch(t, src, ncts)
                 for nt in g:
                     if res_src is not None:            # the residual's rows of output tile nt into the residual buffer
-                        prog.append(ins(OP_FETCH_A, *me(t), res_src + nt * QB * WPA, QB * WPA, 0, 1))
-                    prog += [wfetch(nt), drain(t, nt), ins(OP_GO), ins(OP_WAIT_DONE)]
+                        prog.append(ins(OP_FETCH_A, *hm(t), pv[t][res_src] + nt * QB * WPA, QB * WPA, 0, 1))
+                    prog.append(gw(t, kk, nt, wt))
+                    for dr in drains(t, nt):
+                        prog += [dr, ins(OP_GO), ins(OP_WAIT_DONE)]
                 steps.append(Step(t, gemm_desc(QB, ncts, h=2), prog + [ins(OP_END)], vc, rq))
             phases.append(Phase(f"{tag} nt{g[0]}" + (f"-{g[-1]}" if len(g) > 1 else ""), steps))
 
-    def pad_to(base):
-        return lambda t, nt: ins(OP_DRAIN_WR, *me(t), base + nt * QB * WPA, QB, DR_P, 1)
+    def pad_to(region):
+        return lambda t, nt: [ins(OP_DRAIN_WR, *hm(t), pv[t][region] + nt * QB * WPA, QB, DR_P, 1)]
 
-    # 2. Q / K / V of the tile's tokens (input n1 at s_n): Q padded into the tile's bank, K transposed as S's weight entries
-    #    (channels 8nt .. of key tile t -> S's entries of channel tile nt), V as P V's entries (key tile t = P's channel tile t)
-    layer("Q", range(cdd), NB, cd, lambda nt: gw(nW, WQ0, nt, WT), pad_to(QA), s_n * sw["q"], sc["q"])
-    layer("K", range(cdd), NB, cd, lambda nt: gw(nW, WK0, nt, WT),
-          lambda t, nt: ins(OP_DRAIN_WR, *geo.xy(nK), K0 + t * KTB + nt * R * WPW, QB, DR_T | DR_E, 1), s_n * sw["k"], sc["k"])
-    layer("V", range(cdd), NB, cd, lambda nt: gw(nW, WV0, nt, WT),
-          lambda t, nt: ins(OP_DRAIN_WR, *geo.xy(nV), V0 + nt * VTB + t * R * WPW, QB, DR_E, 1), s_n * sw["v"], sc["v"])
+    # 1. norm1(x) -> n
+    norm_phases("norm1", "x", "n", v_cal_of(x8))
+    # 2. Q / K / V of the tile's tokens (input n at s_n): Q padded into qa; K transposed as S's weight entries of key tile t
+    #    (channels 8nt .. = S's channel tile nt), V as P V's entries of key tile t (= P's channel tile t), both copies
+    layer("Q", range(cdd), "n", cd, "q", WTQ, pad_to("qa"), s_n * sw["q"], sc["q"])
+    layer("K", range(cdd), "n", cd, "k", WTQ,
+          lambda t, nt: [ins(OP_DRAIN_WR, *geo.xy(b), base + nt * R * WPW, QB, DR_T | DR_E, 1) for b, base in sorted(kcp[t].items())],
+          s_n * sw["k"], sc["k"], ndr=2)
+    layer("V", range(cdd), "n", cd, "v", WTQ,
+          lambda t, nt: [ins(OP_DRAIN_WR, *geo.xy(b), base + nt * VNB, QB, DR_E, 1) for b, base in sorted(vcp[t].items())],
+          s_n * sw["v"], sc["v"], ndr=2)
     # 3. the softmax rounds over the visible key tiles
     k_exp, sh_exp = nv.fixed_mult(sc["q"] * sc["k"] / math.sqrt(d) / nv.EXP_S_IN)
     m_p, sh_p, _ = nv.requant_for(127.0 / 32768.0)
@@ -888,24 +985,23 @@ def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
     mask = [vr.vop(vr.OP_ADD_ROW, sh=MASK_SH)] if cfg.causal else []
     last = (lambda t: t) if cfg.causal else (lambda t: KT - 1)
 
-    def kw(kt):
-        return ins(OP_FETCH_W, *geo.xy(nK), K0 + kt * KTB, KTB, 0)
+    def kw(t, kt):
+        b, base = other(kcp[kt], t)
+        return ins(OP_FETCH_W, *geo.xy(b), base, KTB, 0)
 
     def mfetch(t, kt):                                 # the mask rows for key tile kt (causal)
-        if not cfg.causal:
-            return []
-        return [ins(OP_FETCH_A, *me(t), MB + (QB * WPA if kt == t else 0), QB * WPA, 0, 1)]
+        return [ins(OP_FETCH_A, *hm(t), pv[t]["mask"] + (QB * WPA if kt == t else 0), QB * WPA, 0, 1)]
 
     def round_prog(t, kts, drain):
-        prog, held = afetch(t, QA, cdd), None
+        prog, held = afetch(t, "qa", cdd), None
         for kt in kts:
-            want = "diag" if (cfg.causal and kt == t) else "zero"
+            want = "diag" if kt == t else "zero"
             if cfg.causal and want != held:
                 prog += mfetch(t, kt)
                 held = want
-            prog.append(kw(kt))
+            prog.append(kw(t, kt))
             if drain:
-                prog.append(ins(OP_DRAIN_WR, *me(t), PZ + kt * QB * WPA, QB, DR_P, 1))
+                prog.append(ins(OP_DRAIN_WR, *hm(t), pv[t]["pz"] + kt * QB * WPA, QB, DR_P, 1))
             prog += [ins(OP_GO), ins(OP_WAIT_DONE)]
         return prog + [ins(OP_END)]
 
@@ -922,36 +1018,38 @@ def block_plan(cfg, x8, s_x, W, g1, g2, geo=None):
                     vc = nv.VecConfig(mask + nv.prog_softmax_exp(first, sh_exp), lutv=lut_e, k=[k_exp, 0, 0, 0], name="exp")
                 steps.append(Step(t, gemm_desc(QB, cdd, h=2), round_prog(t, kts, rnd == "exp"), vc, rq_p))
             phases.append(Phase(f"{rnd} {'kt0' if first else 'rest'}", steps))
-    # 4. P V -> a (padded, over Q's region), normalised by 1 / RS1
+    # 4. P V -> a (padded, over Q's region), normalised by 1 / RS1; V's entries fetched per visible key tile from its copy
     m_a, sh_a, _ = nv.requant_for(sc["v"] / (alpha * 32768.0) / sc["a"])
     vcn = nv.VecConfig(nv.prog_softmax_norm(15), luts=nv.lut_recip(), k=[nv.RCP_K_OFF, nv.RCP_K_TWO, 0, 0], name="norm")
-    steps = []
-    for t in range(NT):
-        nk = last(t) + 1
-        prog = afetch(t, PZ, nk)
-        for nt in range(cdd):
-            prog += [ins(OP_FETCH_W, *geo.xy(nV), V0 + nt * VTB, nk * R * WPW, 0),
-                     ins(OP_DRAIN_WR, *me(t), QA + nt * QB * WPA, QB, DR_P, 1), ins(OP_GO), ins(OP_WAIT_DONE)]
-        steps.append(Step(t, gemm_desc(QB, nk, h=2), prog + [ins(OP_END)], vcn, flat_rq(m_a, sh_a, 0, C)))
-    phases.append(Phase("PV", steps))
-
+    for grp in ([0, 1], [2, 3]):
+        steps = []
+        for t in range(NT):
+            nk = last(t) + 1
+            prog = afetch(t, "pz", nk)
+            for nt in grp:
+                for kt in range(nk):
+                    b, base = other(vcp[kt], t)
+                    prog.append(ins(OP_FETCH_W, *geo.xy(b), base + nt * VNB, VNB, kt * R))
+                prog += [ins(OP_DRAIN_WR, *hm(t), pv[t]["qa"] + nt * QB * WPA, QB, DR_P, 1), ins(OP_GO), ins(OP_WAIT_DONE)]
+            steps.append(Step(t, gemm_desc(QB, nk, h=2), prog + [ins(OP_END)], vcn, flat_rq(m_a, sh_a, 0, C)))
+        phases.append(Phase(f"PV nt{grp[0]}-{grp[-1]}", steps))
     # 5. h = x + a Wo (the residual x through the residual buffer, refilled per output tile)
-    layer("Wo+x", range(D // C), QA, cdd, lambda nt: gw(nW, WO0, nt, WT), pad_to(HB), sc["a"] * sw["o"], sc["h"],
-          s_res=s_x, res_src=XB)
-    # 6. norm2(h) -> n2 (over n1's region)
+    layer("Wo+x", range(D // C), "qa", cdd, "o", cdd * R * nwe, pad_to("h"), sc["a"] * sw["o"], sc["h"], s_res=s_x, res_src="x")
+    # 6. norm2(h) -> n
     v2 = v_cal_of(np.clip(np.round(ref_q["h"] / sc["h"]), -128, 127))
-    norm_phases("norm2", HB, NB, v2)
-    # 7. z = act(n2 W1) (z over P's region)
-    layer("W1", range(ch), NB, cd, lambda nt: gw(n1b, W10, nt, WT), pad_to(PZ), s_n * sw["w1"], sc["z"], kind=cfg.act)
+    norm_phases("norm2", "h", "n", v2)
+    # 7. z = act(n W1) (z over P's region)
+    layer("W1", range(ch), "n", cd, "w1", WTQ, pad_to("pz"), s_n * sw["w1"], sc["z"], kind=cfg.act)
     # 8. out = h + z W2 (rows)
-    layer("W2+h", range(D // C), PZ, ch, lambda nt: gw(nK, W20, nt, WT2),
-          lambda t, nt: ins(OP_DRAIN_WR, *me(t), OB + nt * QB * geo.ni8, QB, 0, 1), sc["z"] * sw["w2"], sc["out"],
-          s_res=sc["h"], res_src=HB)
+    layer("W2+h", range(D // C), "pz", ch, "w2", WT2,
+          lambda t, nt: [ins(OP_DRAIN_WR, *hm(t), pv[t]["out"] + nt * QB * geo.ni8, QB, 0, 1)], sc["z"] * sw["w2"], sc["out"],
+          s_res=sc["h"], res_src="h")
     for ph in phases:
         for st in ph.steps:
             assert len(st.prog) <= nb.PROG_DEPTH, f"{ph.name}: program of {len(st.prog)} instructions"
-    meta = dict(sc=sc, s_n=s_n, QB=QB, ref_q=ref_q)
-    return BlockPlan(cfg, geo, phases, loads, OB, sc["out"], ref, meta)
+    meta = dict(sc=sc, s_n=s_n, QB=QB, ref_q=ref_q, out={t: (home(t), pv[t]["out"]) for t in range(NT)},
+                priv=pv, top=list(bk.top))
+    return BlockPlan(cfg, geo, phases, loads, 0, sc["out"], ref, meta)
 
 
 def read_block_out(read, plan):
@@ -960,7 +1058,8 @@ def read_block_out(read, plan):
     g, QB, cfg = plan.geo, plan.meta["QB"], plan.cfg
     out = np.zeros((cfg.T, cfg.D), dtype=np.int64)
     for t in range(g.nx * g.ny):
-        words = read(t, plan.out_base, (cfg.D // g.cols) * QB * g.ni8)
+        node, base = plan.meta["out"][t]
+        words = read(node, base, (cfg.D // g.cols) * QB * g.ni8)
         for nt in range(cfg.D // g.cols):
             for i in range(QB):
                 w = words[(nt * QB + i) * g.ni8:(nt * QB + i + 1) * g.ni8]
@@ -968,7 +1067,7 @@ def read_block_out(read, plan):
     return out
 
 
-M23_CFG = BlockCfg(name="M23 ViT block", rms=False, act="gelu", int4=False, causal=False)
+M23_CFG = BlockCfg(name="M23 ViT block", H=32, rms=False, act="gelu", int4=False, causal=False)
 M24_CFG = BlockCfg(name="M24 LLM layer", rms=True, act="silu", int4=True, causal=True)
 
 
@@ -1022,10 +1121,9 @@ def self_check(verbose=True):
         plan, mm, got, err = run_block_model(cfg, seed)
         err, err_q = block_errors(plan, got)
         pred = sum(phase_prediction(mm, ph.name, plan.geo) for ph in plan.phases)
-        wwords = sum(len(w) for n, b, w in plan.loads if b >= 1024)
         if verbose:
             print(f"{cfg.name} plan: {len(plan.phases)} phases, {sum(len(p.steps) for p in plan.phases)} programs, weights "
-                  f"{'INT4' if cfg.int4 else 'INT8'} ({wwords} bank words); max |error| {err_q:.2f} LSB of the output (scale "
+                  f"{'INT4' if cfg.int4 else 'INT8'} (bank words used {plan.meta['top']}); max |error| {err_q:.2f} LSB of the output (scale "
                   f"{plan.s_out:.4g}) against the float block with the quantized weights, {err:.2f} against the float block; "
                   f"predicted {pred} cycles")
         ok = ok and err_q < 4.0

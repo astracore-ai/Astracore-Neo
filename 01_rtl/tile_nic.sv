@@ -65,12 +65,14 @@
 //     served beat, the beat's parity stored with the drain FIFO's row at the push for a drained one -- instead of one
 //     XOR tree over the 560 bits behind the words' select.
 //   Drop 0.43 (stream C2, transformer readiness):
-//   - INT4 weights: FETCH_W with arg 1 fetches INT4 entries -- COLS nibbles in WP4 = COLS / 8 words, nibble j at bits
-//     [4j +: 4] of the entry's words -- through the same entry assembly (the entry size WP4 beside WPA / WPW), and each
-//     entry is expanded on its way to the weight buffer: every nibble sign-extended to the ordinary 8-bit weight, index 0,
-//     the check weight of column 0 their sum (an adder per entry), the other check weights 0. wbuf_mem receives the
-//     ordinary entry; the bank holds half (16x8: a third) of the words. The layer's per-output-channel scale is the
-//     requantizer's (the compiler folds it into mult / shift); per-group scales along K are not supported.
+//   - INT4 weights: FETCH_W with arg 1 fetches INT4 entries -- COLS nibbles (nibble j at bits [4j +: 4]) and the row's
+//     check weight above them ([4 COLS +: WCW], the compiler's sum of the nibbles), WP4 = (4 COLS + WCW + 31) / 32 words
+//     (2 at 16x8, 5 at 32x32, against 3 / 9 / 12 of an INT8 entry) -- through the same entry assembly (the entry size WP4
+//     beside WPA / WPW), and each entry is expanded on its way to the weight buffer: every nibble sign-extended to the
+//     ordinary 8-bit weight, index 0, the check weight of column 0 the entry's, the others 0 (wiring, no adder in the
+//     write path; the ABFT checks the expanded weights against the compiler's sum). wbuf_mem receives the ordinary
+//     entry. The layer's per-output-channel scale is the requantizer's (the compiler folds it into mult / shift);
+//     per-group scales along K are not supported.
 //   - FETCH_A with arg 1 fetches activation-format entries (ROWS bytes, WPA words) into the vector unit's residual buffer
 //     (rbuf_* -- the data on abuf_wdata / abuf_wdata2, the pair rule of the activation buffer).
 //   - DRAIN_WR's base field, unused before, is the drain's format for INT8 rows (arg 1): [14] entry -- each row followed
@@ -216,7 +218,8 @@ module tile_nic #(
   // one-hot (the select of the lane rotation below), and for the fetch, t of the beat's first cycle (q_tt: the staged
   // words of the cycle the beat is taken plus its words, a thermometer code; the fetch receive below)
   localparam int EW  = (WPA > WPW) ? WPA : WPW;           // words of the largest entry (4 at 16x8, 9 at 32x32; drop 0.21)
-  localparam int WP4 = (COLS * 4 + 31) / 32;              // words of an INT4 weight entry (drop 0.43): 1 at 16x8, 4 at 32x32
+  localparam int WP4 = (COLS * 4 + WCW + 31) / 32;        // words of an INT4 weight entry with its check weight (drop 0.43):
+                                                          // 2 at 16x8, 5 at 32x32
   localparam int TW  = BW + EW;                           // the fetch's t <= BW + EW - 1: thermometer bits t > 0 .. t > BW + EW - 1
   logic [CW-1:0]   q_nw;
   logic [CW-1:0]   q_nwc_n;                               // ~q_nw, the CRC's copy
@@ -585,7 +588,8 @@ module tile_nic #(
       assign wev[32*w +: 32]  = ent[w];
       assign wev2[32*w +: 32] = ent2[w];
     end
-    // drop 0.43: an INT4 entry's nibbles, sign-extended (w4s), are the 8-bit weights of the entry written (index 0)
+    // drop 0.43: an INT4 entry's nibbles, sign-extended (w4s), are the 8-bit weights of the entry written (index 0); the
+    // check weight above them is column 0's
     logic [32*WP4-1:0]    w4v, w4v2;
     logic signed [7:0]    w4s [COLS];
     logic signed [7:0]    w4s2 [COLS];
@@ -604,26 +608,23 @@ module tile_nic #(
         assign wbuf_wdata2[j] = fetch_is_w4 ? w4s2[j] : wev2[8 * j +: 8];
       end
     end
-    if (32 * WP4 > 4 * COLS) begin : g_w4pad
+    if (32 * WP4 > 4 * COLS + WCW) begin : g_w4pad
       logic unused_w4pad;
-      assign unused_w4pad = ^{w4v[32*WP4-1:4*COLS], w4v2[32*WP4-1:4*COLS]};
+      assign unused_w4pad = ^{w4v[32*WP4-1:4*COLS+WCW], w4v2[32*WP4-1:4*COLS+WCW]};
     end
     if (32 * WPW > COLS * (8 + IW) + NCHK * WCW) begin : g_wpad   // the entry's last word above its fields
       logic unused_wpad;
       assign unused_wpad = ^{wev[32*WPW-1:COLS*(8+IW)+NCHK*WCW], wev2[32*WPW-1:COLS*(8+IW)+NCHK*WCW]};
     end
   endgenerate
-  // the INT4 entry's check weight (drop 0.43): the sum of its sign-extended nibbles, column 0's check weight
-  logic signed [WCW-1:0] w4c, w4c2;
+  // the INT4 entry's check weights (drop 0.43): column 0's from the entry, the others 0
+  logic [NCHK*WCW-1:0]   w4c_x, w4c2_x;
   always_comb begin
-    w4c = '0; w4c2 = '0;
-    for (int j = 0; j < COLS; j++) begin
-      w4c  = w4c + WCW'(w4s[j]);
-      w4c2 = w4c2 + WCW'(w4s2[j]);
-    end
+    w4c_x = '0; w4c2_x = '0;
+    w4c_x[WCW-1:0] = w4v[4 * COLS +: WCW]; w4c2_x[WCW-1:0] = w4v2[4 * COLS +: WCW];
   end
-  assign wcbuf_wdata  = fetch_is_w4 ? (NCHK*WCW)'($unsigned(w4c)) : wev[COLS * 8 +: NCHK * WCW];
-  assign wcbuf_wdata2 = fetch_is_w4 ? (NCHK*WCW)'($unsigned(w4c2)) : wev2[COLS * 8 +: NCHK * WCW];
+  assign wcbuf_wdata  = fetch_is_w4 ? w4c_x : wev[COLS * 8 +: NCHK * WCW];
+  assign wcbuf_wdata2 = fetch_is_w4 ? w4c2_x : wev2[COLS * 8 +: NCHK * WCW];
   assign abuf_we    = fx_entry && !fetch_is_w && !fetch_is_r;
   assign abuf_we2   = fx_two && !fetch_is_w && !fetch_is_r;
   assign rbuf_we    = fx_entry && fetch_is_r;
@@ -917,16 +918,42 @@ module tile_nic #(
   logic [31:0]    dfifo_head_w [NDB * BW];                // the head row's words (INT8 rows packed at the push), zero above COLS
   logic        drain_int8;
   logic        drain_push;
-  // the INT8 row pushed (drop 0.43): the requantized row, or with the transpose format the row the block buffer reads out
+  // the INT8 row pushed (drop 0.43): the requantized row as before for the plain format; a formatted drain (transpose,
+  // entry, pad) takes one register stage more -- its row (the requantized one, or the block buffer's row, registered as it
+  // is read out) and its check weight (the sum of its bytes) beside it -- so neither the block buffer's read select nor
+  // the check weight's adder sits in the drain FIFO's write path (the plain INT8 / INT32 / PSUM pushes as before)
+  logic              dfmt;                                // a formatted INT8 drain
   logic signed [7:0] drow [COLS];
   logic signed [7:0] tr_row [COLS];
+  logic signed [7:0] trq [COLS];                          // the block buffer's row, registered
+  logic signed [7:0] fsrc [COLS];                         // the formatted path's source row
+  logic signed [7:0] fa_row [COLS];                       // the formatted path's register stage
+  logic signed [WCW-1:0] fsum, fa_chk;
   logic              tr_out_v;                            // a block is being read out (one row per cycle)
-  assign drain_push = drain_int8 ? (drain_tr ? tr_out_v : rq_valid) : rd_valid;
+  logic              trq_v, fa_v;
+  assign dfmt = drain_tr || drain_ent || drain_pad;
+  assign drain_push = drain_int8 ? (dfmt ? fa_v : rq_valid) : rd_valid;
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_drow
-      assign drow[j] = drain_tr ? tr_row[j] : rq_q[j];
+      assign fsrc[j] = drain_tr ? trq[j] : rq_q[j];
+      assign drow[j] = dfmt ? fa_row[j] : rq_q[j];
     end
   endgenerate
+  always_comb begin                                       // the entry format's check weight (WCW bits)
+    fsum = '0;
+    for (int j = 0; j < COLS; j++) fsum = fsum + WCW'(fsrc[j]);
+  end
+  always_ff @(posedge clk) begin                          // the formatted path's data (no reset: the valids qualify it)
+    for (int j = 0; j < COLS; j++) begin trq[j] <= tr_row[j]; fa_row[j] <= fsrc[j]; end
+    fa_chk <= fsum;
+  end
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin trq_v <= 1'b0; fa_v <= 1'b0; end
+    else begin
+      trq_v <= drain_int8 && drain_tr && tr_out_v;
+      fa_v  <= drain_int8 && dfmt && (drain_tr ? trq_v : rq_valid);
+    end
+  end
   // the transpose (drop 0.43): block k of COLS INT8 rows is written into tb by rows (k even) or by columns (k odd) and read
   // out in the other orientation, row c of the output = column c of the block, from the cycle after its last row, one row
   // per cycle -- the slot output row c reads is the one row c of block k + 1 writes, which arrives no earlier than that
@@ -945,12 +972,7 @@ module tile_nic #(
       end
     end
   end
-  // the entry format's check weight: the sum of the row's bytes (WCW bits), and the words of an INT8 row by format
-  logic signed [WCW-1:0] dchk;
-  always_comb begin
-    dchk = '0;
-    for (int j = 0; j < COLS; j++) dchk = dchk + WCW'(drow[j]);
-  end
+  // the words of an INT8 row by format
   localparam int NI8  = COLS / 4;                         // words of an INT8 row
   localparam int NI8P = (WPA > NI8) ? WPA : NI8;          // padded to an activation entry
   logic [CW-1:0]  ni8;                                    // this drain's words per INT8 row
@@ -996,12 +1018,12 @@ module tile_nic #(
     dfifo_wrow = '0;
     for (int j = 0; j < COLS; j++) dfifo_wrow[j * PW +: PW] = rd_data[j];
     dfifo_wrow[COLS * PW +: PW] = rd_chk;
-    if (drain_int8) begin                                 // (drop 0.43: drow -- rq_q, or the transposed row; the entry's check weight)
+    if (drain_int8) begin                                 // (drop 0.43: drow -- rq_q, or the formatted stage's row; the entry's check weight)
       for (int k = 0; k < COLS / 4; k++)
         dfifo_wrow[k * PW +: PW] = PW'({drow[4 * k + 3], drow[4 * k + 2], drow[4 * k + 1], drow[4 * k]});
       for (int k = COLS / 4; k <= COLS; k++)
         dfifo_wrow[k * PW +: PW] = '0;
-      if (drain_ent) dfifo_wrow[(COLS / 4) * PW +: PW] = PW'($unsigned(dchk));
+      if (drain_ent) dfifo_wrow[(COLS / 4) * PW +: WCW] = fa_chk;
     end
     dfifo_wrow[(COLS + 1) * PW +: IDXW] = IDXW'(drain_sent) + IDXW'(dfifo_np - dfifo_nq);   // rows sent + rows in the FIFO: rows arrive in order 0..M-1 (the index wraps)
     for (int w = 0; w <= COLS; w++)

@@ -49,7 +49,9 @@
 //   executes, a LUT entry when an op reads it, SC / BI by MUL_SCALE, K by SLD): perr_sticky (R10-style, the requant
 //   tables' mechanism). LUTV is a leaf per lane (COLS copies written together, each read by its lane), LUTS one leaf; the
 //   program, SC, BI and K are flops, reset to zero with their parity. The control -- state, program counter, op cycle,
-//   row index and the op decode -- is two vec_ctrl copies with a comparator (R7-style): ctrl_err_sticky. The datapath is
+//   row index and the op decode -- is two vec_ctrl copies with a comparator (R7-style): ctrl_err_sticky. Each copy's op
+//   word is registered from the program at the next cycle's pc (vec_ctrl's pc_nx) with its parity bit, so the program's
+//   16:1 select is not on the datapath's control paths (ASAP7 SS: 3,185 -> 2,667 ps at 8 lanes). The datapath is
 //   covered by the drain CRC and the next layer's checks (the brief's FMEDA split).
 module vec_ctrl #(
   parameter int IDXW = 9
@@ -63,6 +65,7 @@ module vec_ctrl #(
   input  logic [30:0]      op_word,      // the op word at this copy's pc (the unit reads the program for each copy)
   input  logic             fault_inject, // DV: flips bit 0 of the row index this copy presents
   output logic [3:0]       pc,
+  output logic [3:0]       pc_nx,        // the pc of the next cycle: the unit registers the op word a cycle ahead
   output logic [IDXW+33:0] ctl,          // everything the comparator compares: state, pc, cycle, row, decode, strobes
   output logic             exec,         // an op executes this cycle
   output logic             cyc,          // its second cycle (two-cycle ops)
@@ -96,6 +99,14 @@ module vec_ctrl #(
   assign done     = (state == S_DONE);
   assign busy     = (state != S_IDLE);
   assign ctl      = {state, pc, cq, m, op_word[21:0], rd_issue, done, ld, exec};
+  always_comb begin                      // the pc update below, a cycle early
+    pc_nx = pc;
+    if (state == S_LD) pc_nx = '0;
+    else if (exec) begin
+      if (row_end)             pc_nx = '0;
+      else if (!(two && !cq))  pc_nx = pc + 4'd1;
+    end
+  end
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -209,22 +220,31 @@ module vec_unit #(
   assign active = (prog[0][3:0] != OP_END);
 
   // ----------------------------------------------------------------------------------------------- control, twice (R7)
-  logic [3:0]           pc_p, pc_d;
-  logic [30:0]          ow_p, ow_d;                      // each copy's op word
+  logic [3:0]           pc_p, pc_d, pcn_p, pcn_d;
+  logic [30:0]          ow_p, ow_d;                      // each copy's op word: registered from the next pc (timing: the
+  logic                 owpar_p;                         // program's 16:1 select is off the datapath's control paths)
   logic [IDXW+33:0]     ctl_p, ctl_d;
   logic                 exec, cyc, ld, rd_issue, done_d, busy_d;
   logic [IDXW-1:0]      rd_idx, m;
   logic                 unused_d_exec, unused_d_cyc, unused_d_ld, unused_d_rd;
   logic [IDXW-1:0]      unused_d_idx, unused_d_m;
-  assign ow_p = prog[pc_p] ^ {tbl_fault_inject && (pc_p == 4'd0), 30'd0};
-  assign ow_d = prog[pc_d];
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin ow_p <= '0; ow_d <= '0; owpar_p <= 1'b1; end
+    else begin
+      ow_p    <= prog[pcn_p] ^ {tbl_fault_inject && (pcn_p == 4'd0), 30'd0};
+      ow_d    <= prog[pcn_d];
+      owpar_p <= ppar[pcn_p];
+    end
+  end
+  logic unused_pc;
+  assign unused_pc = ^{pc_p, pc_d};
   vec_ctrl #(.IDXW(IDXW)) u_ctl (
     .clk(clk), .rst_n(rst_n), .go(go), .active(active), .seq_done(seq_done), .cfg_m(cfg_m), .op_word(ow_p),
-    .fault_inject(ctrl_fault_inject), .pc(pc_p), .ctl(ctl_p), .exec(exec), .cyc(cyc), .ld(ld), .rd_issue(rd_issue),
+    .fault_inject(ctrl_fault_inject), .pc(pc_p), .pc_nx(pcn_p), .ctl(ctl_p), .exec(exec), .cyc(cyc), .ld(ld), .rd_issue(rd_issue),
     .rd_idx(rd_idx), .m(m), .done(done), .busy(busy));
   vec_ctrl #(.IDXW(IDXW)) u_ctl_dup (
     .clk(clk), .rst_n(rst_n), .go(go), .active(active), .seq_done(seq_done), .cfg_m(cfg_m), .op_word(ow_d),
-    .fault_inject(1'b0), .pc(pc_d), .ctl(ctl_d), .exec(unused_d_exec), .cyc(unused_d_cyc), .ld(unused_d_ld),
+    .fault_inject(1'b0), .pc(pc_d), .pc_nx(pcn_d), .ctl(ctl_d), .exec(unused_d_exec), .cyc(unused_d_cyc), .ld(unused_d_ld),
     .rd_issue(unused_d_rd), .rd_idx(unused_d_idx), .m(unused_d_m), .done(done_d), .busy(busy_d));
   logic ctrl_err;
   assign ctrl_err = (ctl_p != ctl_d);
@@ -542,7 +562,7 @@ module vec_unit #(
   logic perr;
   always_comb begin
     perr = 1'b0;
-    if (exec && ((^{ow_p, ppar[pc_p]}) != 1'b1)) perr = 1'b1;
+    if (exec && ((^{ow_p, owpar_p}) != 1'b1)) perr = 1'b1;
     if (exec && (op == OP_SLD) && (fm == 2'd1) && ((^{kreg[fk], kpar[fk]}) != 1'b1)) perr = 1'b1;
     if (exec && fka && ((^{kreg[fa], kpar[fa]}) != 1'b1)) perr = 1'b1;      // a constant operand
     if (exec && fkb && ((^{kreg[fb], kpar[fb]}) != 1'b1)) perr = 1'b1;
