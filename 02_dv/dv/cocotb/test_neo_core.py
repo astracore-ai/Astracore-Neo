@@ -419,8 +419,8 @@ async def c6_comparator_storage(dut):
     core's w_load_q, the weight buffer's address latch and entry select, the accumulator's stage-0 control (v1, first1, idx1,
     fwd1) and its address latch -- flipped through the model's VPI in a cycle the register is used. Each raises its
     comparator's flag (ctrl_err for the feeder, seq_err for the rest) through the copies drop 0.43 added; before them each of
-    these runs finished silently, with wrong rows or none (a consistent wrong row passes the ABFT check and the SECDED lanes).
-    Every run finishes with its rows drained."""
+    these runs finished silently, seven of the twelve with wrong rows (a consistent wrong row passes the ABFT check and the
+    SECDED lanes), five with exact rows. Every run finishes with its rows drained."""
     cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
     rng = np.random.default_rng(15)
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)

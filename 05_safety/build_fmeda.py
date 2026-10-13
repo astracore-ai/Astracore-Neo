@@ -1168,8 +1168,10 @@ def write_v2_md(path, rows, faults, meta, run, formal, formal_title, core, core_
     L.append("The registers drop 0.41's synchronous reads put behind the R7 / R10 comparators, compared since drop 0.43 "
              "(the port-B address latches through neo_mem_rf's RBQ = 1 readback, the others against copies), and the copies "
              "themselves; their faults are part of the rows named (both builds counted here, the rows use the core build). "
-             "Without the copies the C6 test saw every one of them, upset in use, give wrong rows or a wrong drain with no "
-             "flag: a consistent wrong row passes the ABFT check and the SECDED lanes.")
+             "Without the copies none of them raises a flag when upset: in the C6 test (each of the twelve flipped once while "
+             "in use) seven runs end with wrong rows -- inb_q, first_oq, w_load_q, the weight buffer's latch and ra0_q, idx1, "
+             "the accumulator's latch: a consistent wrong row passes the ABFT check and the SECDED lanes -- and five with "
+             "exact rows; with the copies all twelve raise their comparator's flag.")
     L.append("")
     L.append("| Register | FMEDA row | Faults | Detected | Masked | Dangerous | Latency median / max (cycles) |")
     L.append("| --- | --- | ---: | ---: | ---: | ---: | --- |")
