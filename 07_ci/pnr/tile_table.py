@@ -33,6 +33,8 @@ from report import power_groups  # noqa: E402  (report.py's parser of report_pow
 # neo_tile's children (synth.py tile_units) and their instance counts in the tile
 TILE_UNITS = [("neo_core", 1), ("tile_nic", 1), ("noc_router", 1), ("bank_bist_wrap", 1), ("tile_dma", 2), ("prog_mem", 1),
               ("host_if", 1), ("esm", 1), ("link_packer", 1), ("link_unpacker", 1)]
+# a unit without routed figures takes the routed / synthesized cell-area ratio of its 16 x 8 counterpart
+PROXY = {"neo_core": "c16_neo_core"}
 # blocks routed for their ratio inside the core / the bank (not counted again in the tile)
 INNER = ["requant", "acc_bank", "act_feeder", "wbuf_mem", "mbist", "mac_pe", "c16_systolic_array", "c16_neo_core"]
 BANK_CHANNEL_UM = 20.0         # the pin channel in front of each lane macro (designs/bank_bist_wrap/macro_place.tcl)
@@ -59,8 +61,13 @@ def block(logs, b):
     stages = [s for s in (run.get("orfs_stages") or run.get("stages_requested") or "").split(",") if s]
     grt = bool(stages) and stages[-1] == "grt"
 
+    # the newest stage with figures: the final one, global routing, or -- for a run the job's time stopped earlier --
+    # CTS, detailed placement or the floorplan
+    order = ["finish", "globalroute", "cts", "detailedplace", "floorplan"]
+    have = next((p for p in order if isinstance(m.get(f"{p}__design__instance__area__stdcell"), (int, float))), None)
+
     def g(name, pre=None):
-        for p in ([pre] if pre else (["globalroute"] if grt else ["finish", "globalroute"])):
+        for p in ([pre] if pre else ([have] if have else [])):
             v = m.get(f"{p}__{name}")
             if isinstance(v, (int, float)):
                 return float(v)
@@ -77,11 +84,21 @@ def block(logs, b):
     def dims(k):
         v = phys.get(k)
         return [float(v[0]), float(v[1])] if v and len(v) >= 2 else None
-    routed = g("design__instance__area__stdcell")
-    stage = ("global route" if grt else "routed") if routed else f"not routed ({run.get('status') or 'no run'})"
+    routed_all = g("design__instance__area__stdcell")
+    # the tap cells follow the core area a block happened to get, not its logic (65,000 of the bank block's 76,204 cells
+    # in its 1.2 mm core of macros): the cell area compared here is the routed standard cells without them (neo_report's
+    # physical.txt counts them)
+    taps = float(phys["tap_area_um2"][0]) if phys.get("tap_area_um2") else None
+    routed = (routed_all - taps) if (routed_all is not None and taps is not None) else routed_all
+    # the stage the figures come from: the final one, or global routing (a block that stops there, or one whose detailed
+    # routing did not finish within the job: run.py then reports on the newest database there is)
+    label = {"finish": "routed", "globalroute": "global route", "cts": "CTS", "detailedplace": "placed",
+             "floorplan": "floorplan"}
+    stage = ((label[have] + ("" if have == "finish" or (grt and have == "globalroute") else f" ({run.get('status')})"))
+             if routed else f"not routed ({run.get('status') or 'no run'})")
     return dict(block=b, status=run.get("status"), stage=stage, period=prep.get("period_ps"),
                 synth_cell=ys.get("stdcell_area_um2"), synth_cells=ys.get("stdcells"),
-                routed_cell=routed, routed_cells=g("design__instance__count__stdcell"),
+                routed_cell=routed, routed_cells=g("design__instance__count__stdcell"), taps_um2=taps,
                 macro_lef=sum(x["lef_area_um2"] for x in mac), macro_model=sum(x["synth_model_um2"] for x in mac),
                 macros=[(x["macro"], x.get("lanes", 1), x.get("lef_width_um"), x.get("lef_height_um")) for x in mac],
                 die_um2=g("design__die__area"), core_um2=g("design__core__area"), die_um=dims("die_um"),
@@ -110,7 +127,7 @@ def main():
     med = statistics.median(ratios) if ratios else 1.0
     utils = [r["util"] for b, r in rows.items() if r["util"] and not r["macros"] and r["util"] <= 1]
     med_util = statistics.median(utils) if utils else 0.6
-    md = ["| block | stage | cells synthesized / routed | cell area synthesized / routed (um2) | routed / synthesized | "
+    md = ["| block | stage | cells synthesized / routed | cell area synthesized / routed without taps (um2) | routed / synthesized | "
           "macros: LEF / model (um2) | die (um), utilization |", "| --- | --- | --- | --- | --- | --- | --- |"]
     for b in [u for u, _ in TILE_UNITS] + INNER:
         r = rows.get(b)
@@ -125,20 +142,30 @@ def main():
                + ", ".join(f"{n} x {k}" if k > 1 else n for n, k, _, _ in r["macros"]) + ")") if r["macros"] else "--"
         util = f"{r['util'] * 100:.1f} %" if (r["util"] is not None and r["util"] <= 1) else fmt(r["util"], 1)
         die = f"{r['die_um'][0]:,.1f} x {r['die_um'][1]:,.1f}" if r["die_um"] else fmt(r["die_um2"])
+        tp = f" (+ {fmt(r['taps_um2'], 0)} taps)" if r.get("taps_um2") else ""
         md.append(f"| `{b}` | {r['stage']} | {fmt(r['synth_cells'])} / {fmt(r['routed_cells'])} | {fmt(r['synth_cell'], 1)} / "
-                  f"{fmt(r['routed_cell'], 1)} | {fmt(rat, 3)} | {mac} | {die}, {util} |")
+                  f"{fmt(r['routed_cell'], 1)}{tp} | {fmt(rat, 3)} | {mac} | {die}, {util} |")
     # the tile: cells + macros (the spec's comparison) and as placed (the floorplan's tile)
     tile_rows, tot_cell, tot_mac, syn_cell, syn_mac, placed = [], 0.0, 0.0, 0.0, 0.0, {}
     for u, k in TILE_UNITS:
         s = S.get(u, {})
         sc, sm = float(s.get("cell_area_um2") or 0.0), float(s.get("macro_area_um2") or 0.0)
         r = rows.get(u)
-        if r and r["routed_cell"]:
+        if r and r["routed_cell"] and not r["stage"].startswith("floorplan"):
             rc, rm, how = r["routed_cell"], r["macro_lef"], r["stage"]
             pa = r["core_um2"] if r["core_um2"] else (rc / med_util + rm)
         else:
-            rc, rm, how = sc * med, sm, f"synthesized x {med:.3f} (median ratio)"
-            pa = rc / med_util + rm
+            # no routed figures: the cells at the routed / synthesized ratio of the block's 16 x 8 counterpart when it
+            # was routed (PROXY), else the median; the macros at their LEF sizes when the block's run made them; the
+            # core area the floorplan gave the block when its run got that far
+            px = rows.get(PROXY.get(u, ""))
+            if px and px["routed_cell"] and px["synth_cell"] and not px["stage"].startswith("floorplan"):
+                ratio, src = px["routed_cell"] / px["synth_cell"], f"{PROXY[u]}'s ratio"
+            else:
+                ratio, src = med, "the median ratio"
+            rc, rm = sc * ratio, ((r or {}).get("macro_lef") or sm)
+            how = f"synthesized x {ratio:.3f} ({src}" + ("; the block's run ended before placement)" if r else ")")
+            pa = r["core_um2"] if (r and r["core_um2"]) else (rc / med_util + rm)
         tile_rows.append((u, k, sc, sm, rc, rm, how))
         placed[u] = k * pa
         tot_cell += k * rc
@@ -224,8 +251,8 @@ def power_table(logs, blocks, rows, out):
                                                              else "no array")) if act else "--"
         fl = f"{fk.get('exact', 0) + fk.get('folded', 0):,} / {act.get('flops', 0):,}" if act else "--"
 
-        def tot(v):
-            return "--" if not v else f"{(v[0] + v[1]) * 1e3:.3f} + {v[2] * 1e3:.4f} = **{v[3] * 1e3:.3f}**"
+        def tot(v):                # the sum of the parts (report_power prints each column to three significant digits)
+            return "--" if not v else f"{(v[0] + v[1]) * 1e3:.3f} + {v[2] * 1e3:.4f} = **{(v[0] + v[1] + v[2]) * 1e3:.3f}**"
         rat = f"{(p_act[0] + p_act[1]) / (p_def[0] + p_def[1]):.3f}" if (p_def and p_act and (p_def[0] + p_def[1]) > 0) else "--"
         md.append(f"| `{b}` | {r.get('stage', 'n/a')}, {fmt(r.get('period'))} ps | {rec} | {fl} | {tot(p_def)} | {tot(p_act)} | {rat} |")
     with open(out, "w") as f:
