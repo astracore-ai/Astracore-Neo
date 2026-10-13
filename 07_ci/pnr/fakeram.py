@@ -58,9 +58,10 @@ PROCESS = {"tech_nm": 7, "voltage": 0.7, "metal_prefix": "M", "metal_layer": "M4
 # a macro narrower than one M5 strap pitch of the platform's grid (5.4 um) plus a strap and the rails' inset can fall
 # between two straps of a net and leave its macro grid empty (PDN-0233); every leaf here is far wider, the floor is a guard
 MIN_WIDTH_UM = 5.4 + 0.12 + 2 * 0.048
-# the synthesis model's area factors (synth.py MACRO_AREA_FACTOR), for the comparison in macros.json
+# the synthesis model's area factors (synth.py MACRO_AREA_FACTOR), for the comparison in macros.json; the class is the
+# synthesis results' own (by the read ports an instance uses, drop 0.42: a port-B-only neo_mem_rf is neo_mem_rf_b, 1.0)
 SYNTH_AREA_PER_BIT = 0.0292 * 1.44
-SYNTH_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_rb": 2.0}
+SYNTH_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_b": 1.0, "neo_mem_rf_rb": 2.0}
 # drop 0.43: a single-port leaf this deep with several write groups becomes one macro per group (lane_plan)
 LANE_SPLIT_DEPTH = 8192
 HOOK_INPUTS = ("bd_we", "bd_addr", "bd_wdata", "fi_en", "fi_or", "fi_addr", "fi_mask")
@@ -409,7 +410,7 @@ def main():
             leaf_fn = fn
             wrappers.append(wrapper_verilog(rec, mname, fn, tied, dropped))
         phys = mem.get_physical_data()
-        kind = rec["base"] if not (rec["base"] == "neo_mem_rf" and rec.get("RB", 0)) else "neo_mem_rf_rb"
+        kind = rec.get("kind") or (rec["base"] if not (rec["base"] == "neo_mem_rf" and rec.get("RB", 0)) else "neo_mem_rf_rb")
         bits = rec["W"] * rec["D"]
         bitcell_h = rec["D"] / cm * PROCESS["fin_pitch_nm"] * 10 * 1.2 / 1000.0
         table.append(dict(leaf=rec["name"], macro=mname, W=rec["W"], D=rec["D"], G=rec.get("G", 1), RB=rec.get("RB", 0),

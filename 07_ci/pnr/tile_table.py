@@ -118,7 +118,10 @@ def main():
             md.append(f"| `{b}` | not run | | | | | |")
             continue
         rat = (r["routed_cell"] / r["synth_cell"]) if (r["routed_cell"] and r["synth_cell"]) else None
-        mac = (f"{fmt(r['macro_lef'])} / {fmt(r['macro_model'])} ("
+        # the synthesis model as the synthesis job prices the block's leaves (synth_results.json; fakeram.py's macros.json
+        # before drop 0.43's fix priced a port-B-only neo_mem_rf at x2.0)
+        model = float(S.get(b, {}).get("macro_area_um2") or 0.0) or r["macro_model"]
+        mac = (f"{fmt(r['macro_lef'])} / {fmt(model)} ("
                + ", ".join(f"{n} x {k}" if k > 1 else n for n, k, _, _ in r["macros"]) + ")") if r["macros"] else "--"
         util = f"{r['util'] * 100:.1f} %" if (r["util"] is not None and r["util"] <= 1) else fmt(r["util"], 1)
         die = f"{r['die_um'][0]:,.1f} x {r['die_um'][1]:,.1f}" if r["die_um"] else fmt(r["die_um2"])
