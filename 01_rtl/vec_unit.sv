@@ -74,8 +74,9 @@
 //     operand drives all COLS lanes (run 196: sh's buffer chain into the 32 lanes' shifters, 0.7 ns of the 3.2 ns). A copy's
 //     D is formed through its own output (q ^ (q ^ d) = d), so the synthesis keeps the copies apart instead of merging
 //     identical flops (noc_router's rd_a); S[a] / S[b] are copied the cycle the op starts, so BSUB and CLAMP read them
-//     from their second cycle. X itself is held twice the same way: the multiplier's partial products read their own
-//     copy, so X's fanout in front of the adders and comparators is the rest.
+//     from their second cycle. X itself is held three times the same way: the multiplier's partial products read their
+//     own copy, the requantizers another (out_row: in neo_core the requantizer's carry-save stage follows it in the same
+//     cycle), so X's fanout in front of the adders and comparators is the rest.
 //
 //   Tables, written through the host bus (host_if's VEC_ADDR / VEC_DATA; vh_addr[11:8] the table, [7:0] the entry):
 //   0 PROG (16 op words), 1 LUTV (256 x {D[31:16], V[15:0]}), 2 LUTS (the same), 3 SC (COLS x INT16), 4 BI (COLS x INT32),
@@ -518,6 +519,7 @@ module vec_unit #(
   // ---------------------------------------------------------------------------------------------------- registers
   logic signed [PW-1:0] xr [COLS];                       // the row
   logic signed [PW-1:0] xm [COLS];                       // its copy for the multipliers' partial products
+  logic signed [PW-1:0] xo [COLS];                       // its copy for the requantizers (out_row: a flop's output alone)
   logic signed [31:0]   sr [4];                          // the scalars
   logic signed [31:0]   sa, sb;                          // S[a], S[b] (K[a], K[b] with ka, kb)
   logic signed [31:0]   sa_q, sb_q;                      // registered (the scalar ops' second cycle on)
@@ -741,11 +743,13 @@ module vec_unit #(
   end
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      for (int j = 0; j < COLS; j++) begin xr[j] <= '0; xm[j] <= '0; end
+      for (int j = 0; j < COLS; j++) begin xr[j] <= '0; xm[j] <= '0; xo[j] <= '0; end
       for (int i = 0; i < 4; i++) sr[i] <= '0;
       rsh[0] <= '0; rsh[1] <= '0; rbe <= '0; rb_sel_q <= 1'b0;
     end else begin
-      for (int j = 0; j < COLS; j++) begin xr[j] <= xn[j]; xm[j] <= xm[j] ^ (xm[j] ^ xn[j]); end
+      for (int j = 0; j < COLS; j++) begin
+        xr[j] <= xn[j]; xm[j] <= xm[j] ^ (xm[j] ^ xn[j]); xo[j] <= xo[j] ^ (xo[j] ^ xn[j]);
+      end
       rb_sel_q <= rd_idx[0];
       if (ld) begin
         rsh[0] <= rs_rd[31:0];
@@ -771,7 +775,7 @@ module vec_unit #(
   assign out_valid = exec && (op == OP_EMIT);
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_out
-      assign out_row[j] = xr[j];
+      assign out_row[j] = xo[j];
     end
   endgenerate
 
