@@ -83,6 +83,7 @@ module acc_bank #(
   logic [IDXW-1:0]      rb_addr_q;                  // drop 0.43: the leaf's latched port-B address (the row on row_rd)
   logic                 v1_n, first1_n, fwd1_n;     // drop 0.43: the complemented copies of the stage-0 control and the latch
   logic [IDXW-1:0]      idx1_n, rbq_n;
+  logic [IDXW-1:0]      idx1_c, rbq_c;              // the two multi-bit copies inverted back, at their own width (compared below)
 
   assign ext_ready = !wr_valid;
   assign acc_idx   = wr_valid ? wr_idx : ext_idx;   // the local write has priority
@@ -112,12 +113,14 @@ module acc_bank #(
       v1_n     <= !acc_we;
       first1_n <= !(wr_valid && wr_first);
       idx1_n   <= ~acc_idx;
-      fwd1_n   <= !(!v1_n && (~idx1_n == acc_idx));
+      fwd1_n   <= !(!v1_n && (idx1_c == acc_idx));
       if (rd_en || acc_we) rbq_n <= ~rb_addr;
     end
   end
-  assign ctrl_err = (v1 == v1_n) || (first1 == first1_n) || (idx1 != ~idx1_n) || (fwd1 == fwd1_n) ||
-                    ((v1 || rd_valid) && (rb_addr_q != ~rbq_n));
+  assign idx1_c   = ~idx1_n;
+  assign rbq_c    = ~rbq_n;
+  assign ctrl_err = (v1 == v1_n) || (first1 == first1_n) || (idx1 != idx1_c) || (fwd1 == fwd1_n) ||
+                    ((v1 || rd_valid) && (rb_addr_q != rbq_c));
   // the data registers of the pipeline (2 x RW bits) carry no reset: add1 is read only under v1, new_q only under fwd1
   always_ff @(posedge clk) begin
     add1  <= add_in;
