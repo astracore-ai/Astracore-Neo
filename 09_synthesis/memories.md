@@ -45,3 +45,7 @@ at the single-port bit cell (0.042 µm²/bit), half the 2 × the model gives eve
 | `c16_wbuf_mem.u_mem` `neo_mem_rf_w234_d256_g2_rb1` | `fakeram7_256x234_g2_1w1r` (488 pins) | 30.40 × 84.00 µm | 2,553.6 µm² | 0.0426 | 5,037.7 µm² (2 ×) |
 | `c16_act_feeder.u_mem` `neo_mem_rf_w256_d128_g2_rb1` | `fakeram7_128x256_g2_1w1r` (530 pins) | 33.25 × 42.00 µm | 1,396.5 µm² | 0.0426 | 2,755.7 µm² (2 ×) |
 | `c16_acc_bank.u_mem` `neo_mem_rf_w288_d64_g1_rb1` | `fakeram7_64x288_g1_1w1r` (591 pins, pin-limited) | 37.43 × 29.40 µm | 1,100.4 µm² | 0.0597 | 1,550.1 µm² (2 ×) |
+
+The pnr job placed and routed these three in `c16_neo_core` (run 168) and the NIC's two in `tile_nic` (run 174), ORFS's
+macro placer putting them on the core's edges, 0 DRC after detailed routing: OpenROAD reads the LEF / LIB as written
+(`pnr_c16_neo_core.md`, `pnr_tile_nic.md`).
