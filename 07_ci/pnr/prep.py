@@ -59,7 +59,10 @@ def subtree(results, unit):
 
 
 def check_macro_boundary(synth_dir, results, units, macros):
-    """The leaf pins the wrappers do not connect: constants in, no loads out. Returns findings (empty = clean)."""
+    """The leaf pins the wrappers do not connect: constants in, no loads out. Returns findings (empty = clean).
+    Drop 0.43: an input pin may also be fed straight from one of the unit's input ports when that port bit feeds nothing
+    else but such pins (sram_bank passes its hook ports dv_bd_* to the leaf's bd_* as they are; the parent ties them off
+    at DV_HOOKS = 0): dropping the connection leaves the port bit unread and cuts no logic."""
     by_leaf = {m["leaf"]: m for m in macros}
     problems, checked = [], 0
     for u in units:
@@ -83,6 +86,17 @@ def check_macro_boundary(synth_dir, results, units, macros):
                 for b in p["bits"]:
                     if isinstance(b, int):
                         loads[b] = loads.get(b, 0) + 1
+        port_in = {b for p in mod["ports"].values() if p["direction"] == "input" for b in p["bits"] if isinstance(b, int)}
+        dropped_loads = {}                      # bit -> loads on leaf pins the wrappers drop
+        for cn, c in mod["cells"].items():
+            if c["type"] not in mine:
+                continue
+            fn = {p[0] for p in by_leaf[c["type"]]["functional_pins"]}
+            for pn, bits in c["connections"].items():
+                if pn not in fn and c.get("port_directions", {}).get(pn, "input") == "input":
+                    for b in bits:
+                        if isinstance(b, int):
+                            dropped_loads[b] = dropped_loads.get(b, 0) + 1
         for cn, c in mod["cells"].items():
             if c["type"] not in mine:
                 continue
@@ -92,7 +106,8 @@ def check_macro_boundary(synth_dir, results, units, macros):
                 if pn in fn:
                     continue
                 d = c.get("port_directions", {}).get(pn, "input")
-                if d == "input" and any(isinstance(b, int) for b in bits):
+                if d == "input" and any(isinstance(b, int) and not (b in port_in and loads.get(b, 0) == dropped_loads.get(b, 0))
+                                        for b in bits):
                     problems.append(f"{u}.{cn}.{pn}: driven by logic, the macro {m['macro']} has no such pin")
                 if d == "output" and any(isinstance(b, int) and loads.get(b, 0) for b in bits):
                     problems.append(f"{u}.{cn}.{pn}: read by logic, the macro {m['macro']} has no such pin")

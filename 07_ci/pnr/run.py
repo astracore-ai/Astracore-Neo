@@ -18,6 +18,13 @@ From synth.py's output for the unit (the job runs `synth.py --blocks <unit> --pe
      arguments) and the inputs' records into --logs (ci_logs/pnr/<block>/), then report.py -> pnr_<block>.md there
 Exit status 0 when every stage and the report ran, 1 otherwise.
 
+Drop 0.43 (stream A3): a design directory may hold `stages` -- the ORFS targets to run when --stages is not given
+(neo_core: synth,floorplan,place,cts,grt -- placed and globally routed; the flat synthesized STA is skipped for a block
+that is not routed, there is no routed figure to divide by it); the report then reads the last database there is,
+5_1_grt.odb included. And power from recorded activity: power.py maps 07_ci/pnr/activity/<block>.json.gz (the cocotb
+runs' switching activity, activity.py) onto the block's flops and input ports as set_power_activity commands
+(in/activity.tcl), which neo_report.tcl applies after the report at the flow's default activity.
+
 --runner docker (CI), local (ORFS installed: FLOW_HOME or --flow-home) or dry (print the commands: the sandbox).
 """
 import argparse
@@ -33,8 +40,8 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 STAGES = ["synth", "floorplan", "place", "cts", "route", "do-finish"]
 # the database a stage leaves, newest first: neo_report.tcl reads the last one there is
-STAGE_DB = [("6_final.odb", "6_final.sdc"), ("5_route.odb", "5_route.sdc"), ("4_cts.odb", "4_cts.sdc"),
-            ("3_place.odb", "3_place.sdc"), ("2_floorplan.odb", "2_floorplan.sdc")]
+STAGE_DB = [("6_final.odb", "6_final.sdc"), ("5_route.odb", "5_route.sdc"), ("5_1_grt.odb", "5_1_grt.sdc"),
+            ("4_cts.odb", "4_cts.sdc"), ("3_place.odb", "3_place.sdc"), ("2_floorplan.odb", "2_floorplan.sdc")]
 ASAP7_SS = ["asap7sc7p5t_AO_RVT_SS_nldm_211120.lib", "asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib",
             "asap7sc7p5t_OA_RVT_SS_nldm_211120.lib", "asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib",
             "asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib"]
@@ -150,7 +157,7 @@ def collect(work, block, logs, in_dir):
         if os.path.isfile(p):
             os.makedirs(os.path.join(logs, "orfs", "results"), exist_ok=True)
             shutil.copy(p, os.path.join(logs, "orfs", "results", fn))
-    for p in ["prep.json", "prep.log", "prep.ys", "check.txt", "stat.txt", "1_block.sdc"]:
+    for p in ["prep.json", "prep.log", "prep.ys", "check.txt", "stat.txt", "1_block.sdc", "activity.json", "power.log"]:
         if os.path.isfile(os.path.join(in_dir, p)):
             os.makedirs(os.path.join(logs, "in"), exist_ok=True)
             shutil.copy(os.path.join(in_dir, p), os.path.join(logs, "in", p))
@@ -189,12 +196,18 @@ def main():
     ap.add_argument("--sta", default="")
     ap.add_argument("--flow-args", default="", help="extra make variables for ORFS, e.g. 'TNS_END_PERCENT=5'")
     ap.add_argument("--budget-min", type=float, default=300.0, help="minutes for the whole block (the job's limit is 350)")
-    ap.add_argument("--stages", default=",".join(STAGES), help="the ORFS targets to run, in order")
+    ap.add_argument("--stages", default="", help="the ORFS targets to run, in order (default: designs/<block>/stages, "
+                    "else " + ",".join(STAGES) + ")")
+    ap.add_argument("--activity", default=os.path.join(HERE, "activity"), help="the recorded activity, <dir>/<block>.json.gz")
     args = ap.parse_args()
     t_start = time.time()
     block = args.block
     if not os.path.isfile(os.path.join(HERE, "designs", block, "config.mk")):
         sys.exit(f"run.py: no design {block} (designs: {sorted(os.listdir(os.path.join(HERE, 'designs')))})")
+    if not args.stages:
+        sf = os.path.join(HERE, "designs", block, "stages")
+        args.stages = open(sf).read().strip() if os.path.isfile(sf) else ",".join(STAGES)
+    routed = any(st in args.stages.split(",") for st in ("route", "do-route", "do-finish"))
     if args.runner == "docker" and not args.image:
         sys.exit("run.py: --image (or NEO_ORFS_IMAGE) is required with --runner docker")
     out = os.path.abspath(args.out)
@@ -208,7 +221,8 @@ def main():
         if os.path.commonpath([args.mount, p]) != args.mount and args.runner == "docker":
             sys.exit(f"run.py: {p} is outside the mounted directory {args.mount}")
     record = dict(block=block, runner=args.runner, image=args.image, flow_args=args.flow_args, budget_min=args.budget_min,
-                  start=time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()), stages=[], status="started")
+                  start=time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()), stages=[], status="started",
+                  orfs_stages=args.stages)
 
     def save():
         record["seconds"] = round(time.time() - t_start, 1)
@@ -234,8 +248,17 @@ def main():
         collect(work, block, logs, in_dir)
         save()
         return 1
-    rc = synth_sta(args, block, in_dir, macros_dir)
-    record["stages"].append(dict(stage="synth_sta", exit=rc))
+    if routed:
+        rc = synth_sta(args, block, in_dir, macros_dir)
+        record["stages"].append(dict(stage="synth_sta", exit=rc))
+    else:
+        record["stages"].append(dict(stage="synth_sta", exit=None, note="skipped: the block is not routed"))
+    # drop 0.43: the recorded activity onto the block's flops and inputs (in/activity.tcl), when there is one
+    act = os.path.join(args.activity, f"{block}.json.gz")
+    if os.path.isfile(act):
+        rc, secs = sh([py, os.path.join(HERE, "power.py"), "--synth", args.synth, "--unit", block, "--activity", act,
+                       "--libs"] + libs + ["--out", in_dir], os.path.join(in_dir, "power.log"))
+        record["stages"].append(dict(stage="activity", exit=rc, seconds=round(secs, 1), file=os.path.relpath(act, HERE)))
     save()
 
     orfs = Orfs(args, block, work, in_dir)
@@ -262,9 +285,11 @@ def main():
         db = STAGE_DB[0]
     if db:
         left = max(600.0, budget + 15 * 60 - (time.time() - t_start))     # the report gets up to 15 min past the budget
+        act_tcl = os.path.join(in_dir, "activity.tcl")
         rc, secs = orfs.run("run", os.path.join(logs, "orfs_neo_report.txt"), timeout=left,
                             extra_vars=[f"RUN_SCRIPT={os.path.join(HERE, 'neo_report.tcl')}", "RUN_LOG_NAME_STEM=7_neo_report",
-                                        f"NEO_REPORT_ODB={db[0]}", f"NEO_REPORT_SDC={db[1]}"])
+                                        f"NEO_REPORT_ODB={db[0]}", f"NEO_REPORT_SDC={db[1]}"]
+                            + ([f"NEO_ACTIVITY_TCL={act_tcl}"] if os.path.isfile(act_tcl) else []))
         record["stages"].append(dict(stage="neo_report", exit=rc, seconds=round(secs, 1), db=db[0],
                                      note="" if rc == 0 else "not fatal: the report falls back on ORFS's own"))
     record["status"] = failed or "complete"

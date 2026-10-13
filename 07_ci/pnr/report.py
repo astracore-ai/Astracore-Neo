@@ -7,6 +7,9 @@ synthesized estimate on the very netlist ORFS placed), orfs/logs/ (every ORFS st
 elapsed time and peak memory -- and metrics JSON), orfs/reports/6_finish.rpt (ORFS's final report: OpenRCX
 parasitics, propagated clock), and orfs/reports/neo/ when neo_report.tcl ran (the ten worst endpoints). Writes
 pnr_<block>.md and metrics.json (every ORFS metric merged) beside them. Partial runs are reported as far as they got.
+Drop 0.43 (stream A3): a block whose design stops at global routing (designs/<block>/stages: neo_core) is reported from
+the global-route stage's metrics; and the power at the flow's default activity beside the power from the cocotb runs'
+recorded activity (neo_report.tcl's power_default.txt / power_activity.txt, power.py's in/activity.json).
 
 Usage: report.py --logs ci_logs/pnr/<block> --block <block> [--out <file.md>]
 """
@@ -213,6 +216,16 @@ def power(text):
     return dict(internal=float(m.group(1)), switching=float(m.group(2)), leakage=float(m.group(3)), total=float(m.group(4)))
 
 
+def power_groups(text):
+    """report_power's group rows (Sequential, Combinational, Clock, Macro, Pad, Total): {group: (internal, switching,
+    leakage, total)} in W."""
+    out = {}
+    for g, a, b, c, d in re.findall(r"\n(Sequential|Combinational|Clock|Macro|Pad|Total)\s+([-0-9.eE+]+)\s+([-0-9.eE+]+)"
+                                    r"\s+([-0-9.eE+]+)\s+([-0-9.eE+]+)", text):
+        out[g] = (float(a), float(b), float(c), float(d))
+    return out
+
+
 def first_num(text, pat):
     m = re.search(pat, text or "")
     return float(m.group(1)) if m else None
@@ -246,6 +259,12 @@ def main():
 
     def m(*pats):
         return metric(metrics, *pats)
+    stages = (run.get("orfs_stages") or "").split(",")
+    grt_only = bool(stages) and stages[-1] == "grt"           # drop 0.43: placed and globally routed (neo_core)
+
+    def fm(name):
+        """A final-stage metric: finish__<name>, else the global route's (a block that stops there)."""
+        return m(rf"finish__{name}", rf"globalroute__{name}") if grt_only else m(rf"finish__{name}")
 
     # routed: ORFS's final report (OpenRCX, propagated clock) and metrics
     fin = orfs_sections(os.path.join(L, "orfs", "reports", "6_finish.rpt"))
@@ -255,19 +274,21 @@ def main():
     r_tns = first_num(fin.get("report_tns"), r"tns max\s+([-0-9.eE+]+)")
     if r_tns is None:
         r_tns = num(m(r"finish__timing__setup__tns"))
-    r_hws, r_htns = num(m(r"finish__timing__hold__ws")), num(m(r"finish__timing__hold__tns"))
-    r_sviol = m(r"finish__timing__drv__setup_violation_count")
-    r_hviol = m(r"finish__timing__drv__hold_violation_count")
+    if grt_only and r_wns is None:
+        r_wns, r_tns = num(m(r"globalroute__timing__setup__ws")), num(m(r"globalroute__timing__setup__tns"))
+    r_hws, r_htns = num(fm(r"timing__hold__ws")), num(fm(r"timing__hold__tns"))
+    r_sviol = fm(r"timing__drv__setup_violation_count")
+    r_hviol = fm(r"timing__drv__hold_violation_count")
     r_mpp, r_fmax = min_period(fin.get("report_clock_min_period", ""))
     r_path = worst_path(fin.get("report_checks -path_delay max", ""))
     r_r2r = worst_path(fin.get("report_checks -path_delay max reg to reg", ""))
     r_hold = worst_path(fin.get("report_checks -path_delay min", ""))
     r_mp = (period - r_r2r["slack"]) if (period and r_r2r and r_r2r.get("slack") is not None) else None
     pw = power(fin.get("report_power", ""))
-    if pw is None and m(r"finish__power__total") is not None:
-        pw = dict(internal=num(m(r"finish__power__internal__total")) or 0.0, switching=num(m(r"finish__power__switching__total")) or 0.0,
-                  leakage=num(m(r"finish__power__leakage__total")) or 0.0, total=num(m(r"finish__power__total")))
-    skew_s, skew_h = num(m(r"finish__clock__skew__setup")), num(m(r"finish__clock__skew__hold"))
+    if pw is None and fm(r"power__total") is not None:
+        pw = dict(internal=num(fm(r"power__internal__total")) or 0.0, switching=num(fm(r"power__switching__total")) or 0.0,
+                  leakage=num(fm(r"power__leakage__total")) or 0.0, total=num(fm(r"power__total")))
+    skew_s, skew_h = num(fm(r"clock__skew__setup")), num(fm(r"clock__skew__hold"))
     # synthesized: the same netlist flat in OpenSTA, ideal clock, no wires
     sdir = os.path.join(L, "in", "synth_sta")
     s_summ = kv(os.path.join(sdir, "summary.txt"))
@@ -293,13 +314,17 @@ def main():
     synth_cells = (prep.get("yosys_stat") or {}).get("design", {})
     neo_paths = read(os.path.join(L, "orfs", "reports", "neo", "paths_max.txt"))
 
-    md = [f"# pnr_{block} -- `{block}` placed and routed on ASAP7 through OpenROAD-flow-scripts",
+    what = "placed and globally routed (no detailed routing)" if grt_only else "placed and routed"
+    timing_src = ("Timing is the global-route stage's: its parasitic estimates, the propagated clock tree."
+                  if grt_only else "Timing is the final stage's: OpenRCX parasitics, the propagated clock tree.")
+    md = [f"# pnr_{block} -- `{block}` {what} on ASAP7 through OpenROAD-flow-scripts",
           "",
           f"Generated by `07_ci/pnr/report.py` from the `pnr` job's logs ({where}, started {run.get('start', '?')}; image "
-          f"`{run.get('image') or '?'}`; make arguments `{run.get('flow_args') or 'none'}`). Status: **{status}**. The netlist is `synth.py`'s for the unit's "
+          f"`{run.get('image') or '?'}`; make arguments `{run.get('flow_args') or 'none'}`; ORFS targets "
+          f"`{run.get('orfs_stages') or 'synth,floorplan,place,cts,route,do-finish'}`). Status: **{status}**. The netlist is `synth.py`'s for the unit's "
           f"subtree ({', '.join(prep.get('units', [])) or '?'}) at {fmt(period)} ps on ASAP7 {prep.get('corner', 'SS')} "
           f"(ORFS CORNER = WC, the same NLDM files), the memory leaves as FakeRAM2.0 macros; ORFS's defaults otherwise "
-          "(`07_ci/pnr/designs/neo_common.mk`). Timing is the final stage's: OpenRCX parasitics, the propagated clock tree. "
+          f"(`07_ci/pnr/designs/neo_common.mk`, the block's `config.mk`). {timing_src} "
           "ASAP7 is a predictive academic PDK: the picoseconds and square microns are the library's, the ratios and the paths "
           "the design's.",
           "",
@@ -309,14 +334,15 @@ def main():
           + (f"{core[0]:.2f} x {core[1]:.2f} um" if core else "n/a")
           + f" ({fmt(m(r'finish__design__die__area', r'floorplan__design__die__area'), 1)} / "
             f"{fmt(m(r'finish__design__core__area', r'floorplan__design__core__area'), 1)} um2) |",
-          f"| utilization (cells and macros over the core, after routing; the floorplan's target 55 %) | {fmt(util, 1)} % |",
-          f"| standard cells: synthesized (prep.py) / after placement / after routing | {fmt(synth_cells.get('stdcells', synth_cells.get('num_cells')))} / "
-          f"{fmt(m(r'detailedplace__design__instance__count__stdcell'))} / {fmt(m(r'finish__design__instance__count__stdcell'))} "
+          f"| utilization (cells and macros over the core, after {'global routing' if grt_only else 'routing'}) | {fmt(util, 1)} % |",
+          f"| standard cells: synthesized (prep.py) / after placement / after {'global routing' if grt_only else 'routing'} | "
+          f"{fmt(synth_cells.get('stdcells', synth_cells.get('num_cells')))} / "
+          f"{fmt(m(r'detailedplace__design__instance__count__stdcell'))} / {fmt(fm(r'design__instance__count__stdcell'))} "
           f"(of these {fmt(cls.get('timing_repair_buffer'))} timing-repair buffers, {fmt(cls.get('tie_cell'))} tie cells, "
           f"{fmt(cls.get('tap_cell'))} taps; {fmt(cls.get('fill_cell'))} fill cells beside them) |",
-          f"| macros | {fmt(m(r'finish__design__instance__count__macros'))} ({fmt(m(r'finish__design__instance__area__macros'), 1)} um2) |",
-          f"| cell area: synthesized / routed | {fmt(synth_cells.get('stdcell_area_um2'), 1)} / "
-          f"{fmt(m(r'finish__design__instance__area__stdcell'), 1)} um2 |",
+          f"| macros | {fmt(fm(r'design__instance__count__macros'))} ({fmt(fm(r'design__instance__area__macros'), 1)} um2) |",
+          f"| cell area: synthesized / {'placed' if grt_only else 'routed'} | {fmt(synth_cells.get('stdcell_area_um2'), 1)} / "
+          f"{fmt(fm(r'design__instance__area__stdcell'), 1)} um2 |",
           f"| routed wire length / vias | {fmt(m(r'detailedroute__route__wirelength'))} um / {fmt(m(r'detailedroute__route__vias'))} |",
           f"| DRC violations after detailed routing (first iteration) / antenna-violating nets / diodes | "
           f"{fmt(m(r'detailedroute__route__drc_errors'))} ({fmt(m(r'detailedroute__route__drc_errors__iter:0'))}) / "
@@ -338,9 +364,42 @@ def main():
           f"| max slew / cap / fanout violations | {fmt(m(r'finish__timing__drv__max_slew'))} / {fmt(m(r'finish__timing__drv__max_cap'))} / "
           f"{fmt(m(r'finish__timing__drv__max_fanout'))} |",
           "",
-          "Power: OpenSTA's default switching activity (the flow sets none); A3 replaces it with the activity the cocotb runs "
-          "record (VCD / SAIF).",
+          "Power in this table: OpenSTA's default switching activity (0.1 transitions per cycle on the inputs, propagated; "
+          "the flow sets none); the recorded activity's figure is in the section on power below when the block has one.",
           ""]
+    # drop 0.43: power at the default activity and from the recorded activity (neo_report.tcl; power.py)
+    ndir = os.path.join(L, "orfs", "reports", "neo")
+    p_def = power_groups(read(os.path.join(ndir, "power_default.txt")))
+    p_act = power_groups(read(os.path.join(ndir, "power_activity.txt")))
+    applied = kv(os.path.join(ndir, "activity_applied.txt"))
+    act = load_json(os.path.join(L, "in", "activity.json")) or {}
+    if p_def or p_act:
+        md += ["## Power: the default activity and the recorded activity", "",
+               f"OpenSTA's report_power on the {'global-route' if grt_only else 'final'} database "
+               f"({'parasitic estimates' if grt_only else 'OpenRCX parasitics'}, the propagated clock) at {fmt(period)} ps, "
+               "ASAP7 SS 0.63 V / 100 C (the WC corner's NLDM and power tables), in mW."]
+        if act:
+            fk, ik = act.get("flops_by_kind") or {}, act.get("inputs_by_kind") or {}
+            util_s = f"{100.0 * act['mac_util']:.1f} %" if act.get("mac_util") is not None else "n/a"
+            md += ["", f"The recorded activity: `{act.get('activity')}` -- {act.get('source')}, scope `{act.get('scope')}`, a window "
+                   f"of {fmt(act.get('window_cycles'))} cycles at {fmt(act.get('clock_ps'))} ps in simulation (the activity is per "
+                   f"cycle, applied at the period above); MAC utilization in the window {util_s}. Of the block's "
+                   f"{fmt(act.get('flops'))} flops {fmt(fk.get('exact'))} took a recorded bit by name, {fmt(fk.get('folded'))} by "
+                   f"the folded index (a wider unit than the one simulated: the bit of the same signal at the index modulo the "
+                   f"recorded range), {fmt(fk.get('default'))} kept the propagated default; input bits {fmt(ik.get('exact'))} / "
+                   f"{fmt(ik.get('folded'))} / {fmt(ik.get('default'))}. Pins annotated in the database: "
+                   f"{applied.get('pins_found', 'n/a')} of {applied.get('pins_listed', 'n/a')}, input ports {applied.get('input_ports', 'n/a')}."]
+        md += ["", "| activity | group | internal | switching | leakage | total |", "| --- | --- | --- | --- | --- | --- |"]
+        for lab, pg in (("default", p_def), ("recorded", p_act)):
+            for g in ("Sequential", "Combinational", "Clock", "Macro", "Total"):
+                if g in pg and (pg[g][3] > 0 or g == "Total"):
+                    v = pg[g]
+                    md.append(f"| {lab} | {g} | {v[0] * 1e3:.3f} | {v[1] * 1e3:.3f} | {v[2] * 1e3:.4f} | "
+                              f"{'**' if g == 'Total' else ''}{v[3] * 1e3:.3f}{'**' if g == 'Total' else ''} |")
+        if "Total" in p_def and "Total" in p_act and p_def["Total"][3]:
+            md += ["", f"Recorded / default: {p_act['Total'][3] / p_def['Total'][3]:.3f} (total), dynamic "
+                   f"{(p_act['Total'][0] + p_act['Total'][1]) / max(1e-30, p_def['Total'][0] + p_def['Total'][1]):.3f}."]
+        md.append("")
     if r_path:
         md += ["## The worst routed paths", "",
                f"Setup: `{r_path['start']}` -> `{r_path['end']}`, arrival {fmt(r_path['arrival'], 1)} ps (launch clock latency "
