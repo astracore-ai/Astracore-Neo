@@ -69,7 +69,7 @@ module neo_mac_core_v02 #(
   // drain
   input  logic                  rd_en,
   input  logic [IDXW-1:0]       rd_idx,
-  output logic signed [PW-1:0]  rd_data [COLS],
+  output wire  signed [PW-1:0]  rd_data [COLS],     // a net (drop 0.43): Icarus 12 passes no unpacked output port on through a variable
   output logic signed [PW-1:0]  rd_chk,
   output logic                  rd_valid,
   // safety
@@ -82,6 +82,7 @@ module neo_mac_core_v02 #(
   output logic                  acc_abft_sticky,
   output logic                  ctrl_err,             // feeder control duplication comparator (R7)
   output logic                  ctrl_err_sticky,
+  output logic                  acc_ctrl_err,         // drop 0.43: the accumulator's stage-0 control against its copies (neo_core's R10 list)
   // DV only
   input  logic                  fault_inject,
   input  logic                  ctrl_fault_inject
@@ -104,7 +105,7 @@ module neo_mac_core_v02 #(
     .ctrl_clear(abft_clear), .ctrl_err(ctrl_err), .ctrl_err_sticky(ctrl_err_sticky),
     .ctrl_fault_inject(ctrl_fault_inject));
 
-  logic signed [PW-1:0] y     [COLS];
+  wire  signed [PW-1:0] y     [COLS];                // a net, as rd_data
   logic signed [PW-1:0] y_chk;
   logic                 valid_out;
 
@@ -128,5 +129,6 @@ module neo_mac_core_v02 #(
     .wr_valid(valid_out), .wr_idx(idx_d), .wr_first(first_d), .wr_y(y), .wr_chk(y_chk),
     .ext_valid(ext_valid), .ext_idx(ext_idx), .ext_y(ext_y), .ext_chk(ext_chk), .ext_ready(ext_ready),
     .rd_en(rd_en), .rd_idx(rd_idx), .rd_data(rd_data), .rd_chk(rd_chk), .rd_valid(rd_valid),
-    .abft_clear(abft_clear), .abft_err(acc_abft_err), .abft_err_valid(acc_abft_err_valid), .abft_err_sticky(acc_abft_sticky));
+    .abft_clear(abft_clear), .abft_err(acc_abft_err), .abft_err_valid(acc_abft_err_valid), .abft_err_sticky(acc_abft_sticky),
+    .ctrl_err(acc_ctrl_err));
 endmodule

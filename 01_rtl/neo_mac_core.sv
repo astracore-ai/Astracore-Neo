@@ -62,12 +62,15 @@ module neo_mac_core #(
   localparam int LATENCY = PE_LAT * ROWS + CT - 1;   // = PE_LAT*ROWS + COLS
   localparam int NB      = NCHK;                     // bytes per row bus
 
-  logic [NB*XW-1:0]     x_row  [ROWS];
-  logic                 s_row  [ROWS];
+  // drop 0.43: an unpacked array that receives a child's unpacked output port is a net (wire): CI's Icarus 12 does not
+  // propagate such a port into a variable (x_row, s_row, p_arr and p_algn read X there -- the standing T1 / T2 failures of
+  // `make iverilog`); every other simulator treats the two alike
+  wire [NB*XW-1:0]      x_row  [ROWS];
+  wire                  s_row  [ROWS];
   logic                 v_row  [ROWS];                 // valid skewed like the data rows
-  logic signed [PW-1:0] p_arr  [COLS+NCHK];            // the array's bottom outputs: data, then the check columns
+  wire signed [PW-1:0]  p_arr  [COLS+NCHK];            // the array's bottom outputs: data, then the check columns
   logic signed [PW-1:0] p_bot  [CT];
-  logic signed [PW-1:0] p_algn [CT];
+  wire signed [PW-1:0]  p_algn [CT];
 
   skew_in #(.ROWS(ROWS), .XW(XW), .PE_LAT(PE_LAT), .NB(NB)) u_skew (
     .clk(clk), .rst_n(rst_n), .x_vec(x_in), .sparse(sparse), .s_in(swap_in), .x_row(x_row), .s_row(s_row));

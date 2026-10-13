@@ -27,6 +27,15 @@
 //   would read that row before the accumulate's write (the write lands at the end of stage 1); the sequencer's waits
 //   cover it (core_seq's header: the wait state ends after the last local row is written, and the drain follows the
 //   reduce state two cycles after the last partial-sum row is accepted, not one).
+//   Drop 0.43 (D2): the stage-0 control (v1, first1, idx1, fwd1) and the leaf's port-B address latch (neo_mem_rf RBQ = 1:
+//   rb_addr_q, the row row_rd shows) are compared with copies kept complemented (v1_n .. fwd1_n, rbq_n: each loads the
+//   inverse of what its primary loads, the copy's fwd1_n from the copies' own v1_n / idx1_n, so synthesis keeps two
+//   registers where one D input would merge them). A fault in either side of a pair raises ctrl_err (to neo_core's R10
+//   list, seq_err): the control in every cycle, the latch in the cycles its row is used (stage 1 of an accumulate or a
+//   drained row). Every one of these, corrupted, writes or drains a whole consistent row -- a sum added to the wrong row,
+//   overwritten instead of accumulated, forwarded from the wrong operation, another row drained -- whose check word
+//   matches its columns, so the ABFT check at drain does not see it. The data registers (add1, new_q) need no copy: a
+//   fault there changes one column of a row and not its check word, which the drain check sees.
 module acc_bank #(
   parameter int COLS     = 32,
   parameter int PW       = 32,
@@ -53,7 +62,8 @@ module acc_bank #(
   input  logic                 abft_clear,
   output logic                 abft_err,
   output logic                 abft_err_valid,   // drop 0.41: abft_err is the verdict of the row rd_valid showed two cycles before
-  output logic                 abft_err_sticky
+  output logic                 abft_err_sticky,
+  output logic                 ctrl_err          // drop 0.43: the stage-0 control or the port-B latch differs from its copy
 );
   localparam int RW = (COLS + 1) * PW;              // a row: COLS partial sums and the check sum
   logic [RW-1:0]        row_rd;                     // port B: the row read last cycle (the accumulate's operand or the drained row)
@@ -69,6 +79,11 @@ module acc_bank #(
   logic [RW-1:0]        row_new;                    // what the write stores
   logic [RW-1:0]        unused_ra, unused_bd_rd;    // the leaf's unused read ports (port A tied off, no backdoor here)
   logic                 unused_bd;
+  logic [IDXW-1:0]      rb_addr;                    // port B's address: the drain's row or the arriving operation's
+  logic [IDXW-1:0]      rb_addr_q;                  // drop 0.43: the leaf's latched port-B address (the row on row_rd)
+  logic                 v1_n, first1_n, fwd1_n;     // drop 0.43: the complemented copies of the stage-0 control and the latch
+  logic [IDXW-1:0]      idx1_n, rbq_n;
+  logic [IDXW-1:0]      idx1_c, rbq_c;              // the two multi-bit copies inverted back, at their own width (compared below)
 
   assign ext_ready = !wr_valid;
   assign acc_idx   = wr_valid ? wr_idx : ext_idx;   // the local write has priority
@@ -90,6 +105,22 @@ module acc_bank #(
       fwd1   <= v1 && (idx1 == acc_idx);          // the operation in stage 1 writes row idx1 at the edge the arriving one reads
     end
   end
+  // drop 0.43: the copies, complemented (the header); reset to the inverse of the primaries' reset values
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      v1_n <= 1'b1; first1_n <= 1'b1; idx1_n <= '1; fwd1_n <= 1'b1; rbq_n <= '1;
+    end else begin
+      v1_n     <= !acc_we;
+      first1_n <= !(wr_valid && wr_first);
+      idx1_n   <= ~acc_idx;
+      fwd1_n   <= !(!v1_n && (idx1_c == acc_idx));
+      if (rd_en || acc_we) rbq_n <= ~rb_addr;
+    end
+  end
+  assign idx1_c   = ~idx1_n;
+  assign rbq_c    = ~rbq_n;
+  assign ctrl_err = (v1 == v1_n) || (first1 == first1_n) || (idx1 != idx1_c) || (fwd1 == fwd1_n) ||
+                    ((v1 || rd_valid) && (rb_addr_q != rbq_c));
   // the data registers of the pipeline (2 x RW bits) carry no reset: add1 is read only under v1, new_q only under fwd1
   always_ff @(posedge clk) begin
     add1  <= add_in;
@@ -106,11 +137,12 @@ module acc_bank #(
     end
   end
 
-  neo_mem_rf #(.W(RW), .D(ACC_ROWS), .G(1), .RB(1), .DV_HOOKS(0)) u_mem (
+  assign rb_addr = rd_en ? rd_idx : acc_idx;
+  neo_mem_rf #(.W(RW), .D(ACC_ROWS), .G(1), .RB(1), .RBQ(1), .DV_HOOKS(0)) u_mem (
     .clk(clk),
     .we(v1), .waddr(idx1), .wdata(row_new),
     .ra_addr('0), .ra_data(unused_ra),
-    .rb_en(rd_en || acc_we), .rb_addr(rd_en ? rd_idx : acc_idx), .rb_data(row_rd),
+    .rb_en(rd_en || acc_we), .rb_addr(rb_addr), .rb_data(row_rd), .rb_addr_q(rb_addr_q),
     .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_bd_rd),
     .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
   assign unused_bd = ^unused_bd_rd;

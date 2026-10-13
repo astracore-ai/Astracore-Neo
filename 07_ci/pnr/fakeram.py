@@ -81,6 +81,10 @@ def macro_kind(rec):
     elif rec.get("RB", 0):
         name = f"fakeram7_{D}x{W}_g{G}_1w1r"
         fn = write + [("rb_en", 1, "input"), ("rb_addr", AW, "input"), ("rb_data", W, "output")]
+        # drop 0.43: a leaf with RBQ = 1 (the core's three arrays) reads its port-B address latch back -- rb_addr_q, a
+        # clocked output of the macro (the safety-memory address readback neo_mem.sv describes); the parent compares it
+        if any(p[0] == "rb_addr_q" for p in (rec.get("pins") or [])):
+            fn.append(("rb_addr_q", AW, "output"))
         tied, dropped = HOOK_INPUTS + ("ra_addr",), HOOK_OUTPUTS + ("ra_data",)
     else:
         name = f"fakeram7_{D}x{W}_g{G}_1w1a"
@@ -182,12 +186,14 @@ def build(rec, fakeram_dir):
                 wr.add_related_pin("we")
             rd = RWPortGroup()
             for pn, w, d in fn:
-                if d == "output":
+                if d == "output" and pn != "rb_addr_q":   # the address readback is no data port (drop 0.43)
                     rd.set_data_output_bus_name(pn)
                 elif pn in ("raddr", "rb_addr", "ra_addr"):
                     rd.set_address_bus_name(pn)
                 elif pn in ("re", "rb_en"):
                     rd.add_related_pin(pn)
+                if pn == "rb_addr_q":                     # in no port group: the LEF exporter writes it as a misc bus
+                    self.add_misc_bus(dict(name=pn, lsb=0, msb=w - 1))
             self.add_rw_port_group(wr)
             self.add_rw_port_group(rd)
             LeafPortCreator(self).create_ports()
@@ -239,6 +245,24 @@ def liberty(mem, fn, fakeram_dir):
             f.write("        }\n")
             f.write("    }\n")
 
+        def write_latch_output(self, f, n, pin):
+            # drop 0.43: the port-B address readback -- its own bus type, clock-to-Q at the access time, no memory_read
+            t = self.get_memory().get_timing_data()
+            f.write("    bus(%s)   {\n" % pin)
+            f.write("        bus_type : %s_%s;\n" % (n, pin))
+            f.write("        direction : output;\n")
+            f.write("        max_capacitance : %.6f;\n" % t.max_load)
+            f.write("        timing() {\n")
+            f.write('            related_pin : "clk" ;\n')
+            f.write("            timing_type : rising_edge;\n")
+            f.write("            timing_sense : non_unate;\n")
+            for rf in ("rise", "fall"):
+                self.write_cell_delay(f, rf, n + "_mem_out_delay_template", t.slew_indices, t.load_indices, t.access_time_ns)
+            for rf in ("rise", "fall"):
+                self.write_cell_transition(f, rf, n + "_mem_out_slew_template", t.load_indices, t.min_slew, t.max_slew)
+            f.write("        }\n")
+            f.write("    }\n")
+
         def write_input_bus(self, f, n, pin, bus_type, constrained):
             t = self.get_memory().get_timing_data()
             f.write("    bus(%s)   {\n" % pin)
@@ -265,6 +289,8 @@ def liberty(mem, fn, fakeram_dir):
                 if d == "output":
                     if pn == "ra_data":
                         self.write_async_output(f, n, pn, "ra_addr", aw)
+                    elif pn == "rb_addr_q":
+                        self.write_latch_output(f, n, pn)
                     else:
                         addr = "raddr" if pn == "rdata" else "rb_addr"
                         self.write_output_bus(f, n, pn, "clk", True, addr)
@@ -351,7 +377,8 @@ def leaf_record(name):
                  ("raddr", AW, "input"), ("rdata", W, "output")]
     else:
         ports = [("clk", 1, "input"), ("we", G, "input"), ("waddr", AW, "input"), ("wdata", W, "input"), ("ra_addr", AW, "input"),
-                 ("ra_data", W, "output"), ("rb_en", 1, "input"), ("rb_addr", AW, "input"), ("rb_data", W, "output")]
+                 ("ra_data", W, "output"), ("rb_en", 1, "input"), ("rb_addr", AW, "input"), ("rb_data", W, "output"),
+                 ("rb_addr_q", AW, "output")]                     # drop 0.43: the port-B address readback (RBQ = 1)
     ports += [("bd_we", G, "input"), ("bd_addr", AW, "input"), ("bd_wdata", W, "input"), ("bd_rdata", W, "output"),
               ("fi_en", 1, "input"), ("fi_or", 1, "input"), ("fi_addr", AW, "input"), ("fi_mask", W, "input")]
     return dict(name=name, base=base, W=W, D=D, G=G, RB=RB, AW=AW, bits=W * D, instances=None, pins=ports)

@@ -68,6 +68,17 @@
 //   0..31), bytes ROWS..2*ROWS-1 the pair's upper entry in sparse mode (channels 32..63) and zero in dense mode -- the
 //   whole pair word per cycle; skew_in regroups it into four-byte row buses (channels 4g .. 4g + 3 to rows 2g and
 //   2g + 1). The duplicate generator doubles its own addresses, so the comparator still checks every address.
+//
+//   Drop 0.43 (D2) -- the storage drop 0.41's synchronous read put behind the comparator, compared now. The registers
+//   between the generation cycle and the row presented -- inb_q (the row is inside the tile), a0_q (the entry of the pair)
+//   and first_oq / first_q (the run's acc_first) -- had no copy, and the leaf's port-B address latch (which word of the
+//   buffer is read) none either: a fault in any of them presents a consistently wrong row (a zeroed row, the other entry
+//   of the pair, another pixel, an overwrite instead of an accumulate), which the ABFT check column sees exactly as the
+//   data columns do, so it was undetected. The duplicate now has its own inb_dq, a0_dq, first_dq / first_doq and addr_dq
+//   (its generated pair address, registered with its valid), and the comparator adds first_oq against first_doq every
+//   cycle and, in the cycle a row is presented (valid_q), inb_q / a0_q against inb_dq / a0_dq and the leaf's latched
+//   address (neo_mem_rf RBQ = 1: rb_addr_q, the word rb_data shows) against addr_dq. A flip in any of them raises ctrl_err
+//   in the cycle the row is presented.
 module act_feeder #(
   parameter int ROWS       = 32,
   parameter int XW         = 8,
@@ -125,6 +136,7 @@ module act_feeder #(
   logic [1:0]     pair_we;
   logic [EWB-1:0] ent_rd;                           // the entry read (the delayed addr[0] selects it inside the pair)
   logic [BWD-1:0] unused_ra, unused_bd;             // the leaf's unused read ports (port A tied off, no hooks here)
+  logic [AW-2:0]  rb_addr_q;                        // drop 0.43: the leaf's latched port-B address (the pair now on pair_rdata)
   logic           sp;                               // drop 0.42: a sparse layer (NCHK = 4 only): addresses doubled, the pair presented
   generate
     if (NCHK > 1) begin : g_sp
@@ -227,11 +239,11 @@ module act_feeder #(
   endgenerate
   assign pair_wdata = {abuf_we2 ? ent_w2 : ent_w, ent_w};
   assign pair_we    = {abuf_we2 || (abuf_we && abuf_waddr[0]), abuf_we && !abuf_waddr[0]};
-  neo_mem_rf #(.W(BWD), .D(ABUF_DEPTH/2), .G(2), .RB(1), .DV_HOOKS(0)) u_mem (
+  neo_mem_rf #(.W(BWD), .D(ABUF_DEPTH/2), .G(2), .RB(1), .RBQ(1), .DV_HOOKS(0)) u_mem (
     .clk(clk),
     .we(pair_we), .waddr(abuf_waddr[AW-1:1]), .wdata(pair_wdata),
     .ra_addr('0), .ra_data(unused_ra),
-    .rb_en(valid_g), .rb_addr(addr[AW-1:1]), .rb_data(pair_rdata),
+    .rb_en(valid_g), .rb_addr(addr[AW-1:1]), .rb_data(pair_rdata), .rb_addr_q(rb_addr_q),
     .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_bd),
     .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
   assign ent_rd = a0_q ? pair_rdata[BWD-1:EWB] : pair_rdata[EWB-1:0];
@@ -366,6 +378,12 @@ module act_feeder #(
   logic                 valid_dq;
   logic                 swap_dq;
   logic [IDXW-1:0]      idx_dq;
+  // drop 0.43: the duplicate's copies of the registers behind the generation cycle (the header's D2 paragraph)
+  logic                 first_dq;                   // acc_first of the run (the primary's first_q)
+  logic                 first_doq;                  // and its output register (first_oq)
+  logic                 inb_dq;                     // inb_q
+  logic                 a0_dq;                      // a0_q
+  logic [AW-2:0]        addr_dq;                    // the generated pair address, registered with the duplicate's valid: the leaf's rb_addr_q
 
   assign valid_gd  = running_d && !tok_d;
   assign row_end_d = (ox_d == cfg_wo - 1);
@@ -426,10 +444,12 @@ module act_feeder #(
       ix_d   <= '0;
       arow_d <= '0;
       a_d    <= '0;
+      first_dq <= 1'b0;
     end else if (tok_d) begin
       oy_d   <= cfg_oy0;
       ox_d   <= '0;
       m_d    <= '0;
+      first_dq <= acc_first;
       iy_d   <= iyb_d + 18'(cfg_ky);
       ix_d   <= 18'(cfg_kx) - 18'(cfg_p);
       arow_d <= (s1_d + c1_d + s2_d + c2_d) << sp;
@@ -456,15 +476,26 @@ module act_feeder #(
       valid_dq <= 1'b0;
       swap_dq  <= 1'b0;
       idx_dq   <= '0;
+      first_doq <= 1'b0;
+      inb_dq    <= 1'b0;
+      a0_dq     <= 1'b0;
+      addr_dq   <= '0;
     end else begin
       valid_dq <= valid_gd;
       swap_dq  <= tok_d;
       idx_dq   <= m_d;
+      first_doq <= first_dq;
+      inb_dq    <= inb_d;
+      a0_dq     <= addr_d[0];
+      if (valid_gd) addr_dq <= addr_d[AW-1:1];
     end
   end
 
+  // drop 0.43: first_oq every cycle; inb_q, a0_q and the leaf's latched address in the cycle the row is presented
   assign ctrl_err = (valid_q != valid_dq) || (swap_q != swap_dq) || (idx_q != idx_dq) ||
-                    (valid_g && ((addr != addr_d) || (inb != inb_d)));
+                    (valid_g && ((addr != addr_d) || (inb != inb_d))) ||
+                    (first_oq != first_doq) ||
+                    (valid_q && ((inb_q != inb_dq) || (a0_q != a0_dq) || (rb_addr_q != addr_dq)));
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)          ctrl_err_sticky <= 1'b0;

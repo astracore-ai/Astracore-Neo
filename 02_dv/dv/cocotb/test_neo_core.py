@@ -9,11 +9,13 @@ ABUF 2048, WBUF 1024); the geometry comes from NEO_ROWS/NEO_COLS, exported by th
 The convolution keeps three channel tiles at any core size (CIN = 3*ROWS - 8, the last tile partly filled).
 Drop 0.42: both builds are the 2:4 sparse-capable core (NEO_NCHK = 4): C1-C4 write the dense entry (index 0, the check
 weight in column 0) and run as before; C5 is a 2:4 sparse convolution through the compiler (neo_backend's validator,
-compressor, layouts and descriptor), bit-exact against the dense convolution on the pruned weights."""
+compressor, layouts and descriptor), bit-exact against the dense convolution on the pruned weights.
+Drop 0.43: C6, the storage behind the R7 / R10 comparators -- a single-cycle upset of each register drop 0.41's synchronous
+reads added, injected through the model's VPI, raises its comparator's flag."""
 import os
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ReadOnly
+from cocotb.triggers import RisingEdge, ReadOnly, ReadWrite
 import numpy as np
 from neo_golden import direct_conv, bits, sbits
 import neo_funcov as fc
@@ -103,8 +105,14 @@ async def write_wbuf_words(dut, words):
 S_DRAIN = 5                                          # core_seq state while the accumulator rows are read out
 
 
+def handle(dut, path):
+    """A signal of the core by its hierarchical path below the toplevel (C6's paths cross no generate index; an unpacked
+    array below one needs the fault campaign's two-step lookup, faults/common.py Injector.resolve)."""
+    return dut._id(path, extended=False)
+
+
 async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False, rq_fault=False, tbl_fault=False, wbuf_flips=(),
-                   desc=None, psums=(), words=None):
+                   desc=None, psums=(), words=None, vpi_flip=None):
     """C1's run as a helper: reset, load the buffers, descriptor, go, collect the drained rows until done. The fault
     hooks (drop 0.36) mirror sim/run_conv_core.py: the feeder-control fault held for the first 40 cycles of the run
     (it hits valid rows), the sequencer fault while the drain runs, the requant-input fault while rows drain, the
@@ -113,7 +121,10 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     [(idx, ys, chk)] are partial-sum rows offered on the reduce port in that order, one per cycle, each until the core
     accepts it (ext_ready; drop 0.41). words = (activation words, weight words): the compiler's bank layouts written into
     the buffers instead of the dense packing (drop 0.42, C5); desc may then carry cfg_flags (the sparse mode).
-    Returns (rows, cycles, M, wo)."""
+    vpi_flip = (path, bit, cond): bit `bit` of the register at `path` is flipped once, through the model's VPI (cocotb's
+    Verilator builds are --public-flat-rw), right after the first rising edge of the run at which the 1-bit signal
+    `cond` (a path, or None for the first cycle) reads 1 -- a single-cycle upset in a cycle the register is used (drop
+    0.43, C6; the fault campaign's injection, 02_dv/dv/cocotb/faults/). Returns (rows, cycles, M, wo)."""
     cin = x.shape[0]
     cin_tiles = (cin + ROWS - 1) // ROWS
     h, w = x.shape[1], x.shape[2]
@@ -164,8 +175,18 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     dut.go.value = 0
     rows, cycles, in_drain, rd_valid = [], 0, False, 0
     queue = list(psums)
+    flip_h = handle(dut, vpi_flip[0]) if vpi_flip else None
+    flip_c = handle(dut, vpi_flip[2]) if (vpi_flip and vpi_flip[2]) else None
     for cycles in range(1, 20000):
         await RisingEdge(dut.clk)
+        if flip_h is not None:
+            # the read-modify-write in the ReadWrite phase: right after RisingEdge the model has not evaluated the edge yet
+            # (a read returns the value before it); the write lands after the edge, and the logic behind the register
+            # re-evaluates before the next edge samples it
+            await ReadWrite()
+            if flip_c is None or int(flip_c.value) == 1:
+                flip_h.value = int(flip_h.value) ^ (1 << vpi_flip[1])      # this cycle's value: the upset
+                flip_h = None
         # the hooks for the coming edge, from what the last read-only phase saw (one cycle behind the state: the sequencer
         # fault is held through the drain and the requant fault through the row burst, so the lag changes nothing)
         dut.ctrl_fault_inject.value = 1 if (ctrl_fault and cycles < 40) else 0
@@ -192,6 +213,7 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     for name in ("ctrl_fault_inject", "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "ext_valid"):
         getattr(dut, name).value = 0
     assert not queue, f"{len(queue)} partial-sum rows not accepted"
+    assert flip_h is None, f"vpi_flip {vpi_flip}: its condition never held, nothing was injected"
     for _ in range(4):                                               # the requant pipeline and the sticky flags settle
         await RisingEdge(dut.clk)
     return rows, cycles, M, wo
@@ -370,3 +392,51 @@ async def c5_sparse_conv(dut):
                   f"2 sparse channel tiles of {2 * ROWS}, 18 runs (36 dense), {len(wts) // wpw} entries of {wpw} words, index values "
                   f"{sorted(seen)}; {M} rows bit-exact, flags clean ({cycles} cycles)")
     fc.report("funcov_neo_core.yml")
+
+
+# C6 (drop 0.43): each register drop 0.41's synchronous reads put behind the comparators, its path below neo_core, the bit
+# flipped, the 1-bit signal that says the register is in use (None: every cycle), and the flag its copy raises
+C6_TARGETS = [
+    ("u_dp.u_feeder.inb_q", 0, "u_dp.u_feeder.valid_q", "ctrl_err"),             # the row is inside the tile (a zero row)
+    ("u_dp.u_feeder.a0_q", 0, "u_dp.u_feeder.valid_q", "ctrl_err"),              # the entry of the pair (the other entry)
+    ("u_dp.u_feeder.first_oq", 0, "u_dp.u_feeder.valid_q", "ctrl_err"),          # overwrite instead of accumulate
+    ("u_dp.u_feeder.u_mem.rb_addr_q", 0, "u_dp.u_feeder.valid_q", "ctrl_err"),   # the activation buffer's address latch
+    ("w_load_q", 0, "w_load_q", "seq_err"),                                     # the shadow chain's load strobe
+    ("u_wbuf.u_mem.rb_addr_q", 0, "w_load_q", "seq_err"),                       # the weight buffer's address latch
+    ("u_wbuf.ra0_q", 0, "w_load_q", "seq_err"),                                 # the entry of the pair
+    ("u_dp.u_acc.v1", 0, None, "seq_err"),                                      # the accumulate's stage-0 control
+    ("u_dp.u_acc.first1", 0, None, "seq_err"),
+    ("u_dp.u_acc.idx1", 0, "u_dp.u_acc.v1", "seq_err"),
+    ("u_dp.u_acc.fwd1", 0, None, "seq_err"),
+    ("u_dp.u_acc.u_mem.rb_addr_q", 0, "u_dp.u_acc.rd_valid", "seq_err"),        # the accumulator's address latch (a drained row)
+]
+
+
+@cocotb.test()
+async def c6_comparator_storage(dut):
+    """The storage behind the R7 / R10 comparators (drop 0.43, D2): a single-cycle upset of each register the synchronous
+    reads of drop 0.41 added -- the feeder's inb_q, a0_q, first_oq and the activation buffer's port-B address latch, the
+    core's w_load_q, the weight buffer's address latch and entry select, the accumulator's stage-0 control (v1, first1, idx1,
+    fwd1) and its address latch -- flipped through the model's VPI in a cycle the register is used. Each raises its
+    comparator's flag (ctrl_err for the feeder, seq_err for the rest) through the copies drop 0.43 added; before them each of
+    these runs finished silently, seven of the twelve with wrong rows (a consistent wrong row passes the ABFT check and the
+    SECDED lanes), five with exact rows. Every run finishes with its rows drained."""
+    cocotb.start_soon(Clock(dut.clk, 500, units="ps").start())
+    rng = np.random.default_rng(15)
+    x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
+    ref = direct_conv(x, wgt, 1, 1)
+    seen = []
+    for path, bit, cond, flag in C6_TARGETS:
+        rows, cycles, M, wo = await run_conv(dut, x, wgt, vpi_flip=(path, bit, cond))
+        f = flags(dut)
+        assert f[flag] == 1, f"C6 {path}[{bit}]: {flag} not raised ({f})"
+        assert len(rows) == M, f"C6 {path}: {len(rows)} rows drained, expected {M}"
+        got = np.zeros_like(ref)
+        for m in range(M):
+            for c in range(7):
+                got[c, m // wo, m % wo] = rows[m][c]
+        seen.append((path, "rows wrong" if not np.array_equal(got, ref) else "rows exact",
+                     ", ".join(n for n, v in f.items() if v)))
+    dut._log.info("C6: every register behind the comparators flagged when upset in use -- "
+                  + "; ".join(f"{p}: {r}, flags {fl}" for p, r, fl in seen))

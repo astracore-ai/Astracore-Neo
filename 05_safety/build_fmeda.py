@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
-build_fmeda.py -- AstraCore Neo FMEDA skeleton (ISO 26262-5 / -11 style), drop 0.3.
+build_fmeda.py -- AstraCore Neo FMEDA skeleton (ISO 26262-5 / -11 style), drop 0.3; v2 from the fault campaign, drop 0.43.
+
+  build_fmeda.py                       the v1 workbook (neo_fmeda_skeleton.xlsx; neo_fmeda_v1.xlsx is this content)
+  build_fmeda.py --v2 --faults DIR [--formal formal_report.md] [--out DIR]
+      FMEDA v2: every row's diagnostic coverage measured by the fault campaign (DIR = the faults job's output:
+      faults.csv, faults_summary.json, RUN.txt -- the ci-logs-faults branch's ci_logs/faults), the formal job's proofs
+      cited per row (formal_report.md from ci-logs-formal), SPFM / LFM / PMHF recomputed with v1's base failure rates
+      (plus the weight buffer's storage, which v1 had no row for); writes neo_fmeda_v2.xlsx and fmeda_v2.md. The v2
+      rows, their campaign selections and the reasons a row keeps v1's value are V2_ROWS / CHIP_SEL below.
 
 Sheets
   Assumptions  base failure rates and areas (blue = inputs, yellow = assumptions to replace
@@ -19,7 +27,12 @@ Formulas (ISO 26262-5 Annex C simplified; the assessor's workbook replaces them 
   LFM              = 1 - sum(lambda_MPF,L) / (sum(lambda_SR) - sum(lambda_SPF/RF))
   PMHF (1st order) = sum(lambda_SPF/RF) + sum(lambda_MPF,L) x sum(lambda_SR) x T_life x 1e-9
 """
+import argparse
+import csv
+import json
+import math
 import os
+import re
 
 from openpyxl import Workbook
 from openpyxl.comments import Comment
@@ -38,6 +51,123 @@ THIN = Side(style="thin", color="999999")
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 WRAP = Alignment(wrap_text=True, vertical="top")
 
+
+ASSUMPTIONS = [
+    ("Die permanent base failure rate (whole 210 mm² die)", 200, "FIT",
+     "Assumption, order of magnitude for a large N5-class automotive die; replace with foundry data"),
+    ("Die area", 210, "mm²", "Spec v2.0 physical estimate"),
+    ("MAC core area incl. buffers (one core)", 0.47, "mm²", "30 mm² for 64 cores from the die estimate"),
+    ("SRAM soft-error rate", 600, "FIT/Mbit", "Assumption; replace with foundry SER at ground level, Grade 2 mission profile"),
+    ("Flip-flop soft-error rate", 100, "FIT/Mbit", "Assumption; replace with foundry SER"),
+    ("Accumulator SRAM per core", 0.5, "Mbit", "512 rows × 32 columns × 32 bit = 64 KB"),
+    ("Activation buffer SRAM per core", 0.25, "Mbit", "4096 pixels × 32 channels × 8 bit = 32 KB"),
+    ("Weight registers per core (active + shadow)", 0.0176, "Mbit", "2 × 1056 PEs × 8.3 bit average incl. check column"),
+    ("Pipeline and control flops per core", 0.04, "Mbit", "x/psum/token registers, skew and deskew, feeder, accumulator read registers"),
+    ("Mission lifetime", 131400, "h", "15 years × 8,760 h; vehicle operating hours are lower, kept conservative"),
+    ("ASIL-B(D) target SPFM", 0.90, "", "ISO 26262-5 Table 4"),
+    ("ASIL-B(D) target LFM", 0.60, "", "ISO 26262-5 Table 5"),
+    ("ASIL-B(D) target PMHF", 100, "FIT", "ISO 26262-5 Table 6"),
+    ("ASIL-D target SPFM", 0.99, "", "ISO 26262-5 Table 4"),
+    ("ASIL-D target LFM", 0.90, "", "ISO 26262-5 Table 5"),
+    ("ASIL-D target PMHF", 10, "FIT", "ISO 26262-5 Table 6"),
+]
+
+# (block, failure mode, type, lambda_formula, SR, FMD, SPF, SM, DC_RF, MPF, latent SM, DC_L, status)
+A = "Assumptions!"
+V1_ROWS = [
+    ("PE array datapath (1,056 MACs)", "Wrong product or sum, single-point", "permanent", f"={A}$B$22*0.55", 1, 0.90, 1,
+     "ABFT check column: any single-point error in a row flips the row equality", 0.99, 0,
+     "n/a (detected faults lead to safe state)", 0, "v1: proven on RTL (T2, T3, C1-C10, K2, M-tests); self-test of the checker proven through registers (M8)"),
+    ("PE array datapath (1,056 MACs)", "Dual faults that cancel in the checksum", "permanent", f"={A}$B$22*0.55", 1, 0.10, 1,
+     "Periodic in-field LBIST of the core", 0.90, 0, "n/a", 0, "v1: LBIST is tool-inserted (Modus) and remains the one item with no RTL proof; the island carries the hooks and the FTTI-windowed schedule (M8 watchdog/self-test)"),
+    ("Weight registers (active + shadow)", "Bit flip in a stored weight", "transient", f"={A}$B$25", 1, 1.00, 1,
+     "ABFT (corrupted weight flags every row) and reload per tile", 0.99, 0, "n/a", 0, "today: proven (T4 weight bit-flip)"),
+    ("Weight registers (active + shadow)", "Stuck bit in a weight register", "permanent", f"={A}$B$22*0.05", 1, 1.00, 1,
+     "ABFT", 0.99, 0, "n/a", 0, "today: proven by construction (same mechanism as T4)"),
+    ("x / psum / token chains, skew, deskew", "Bit flip in a pipeline register", "transient", f"={A}$B$26*0.7", 1, 1.00, 1,
+     "ABFT for data chains; token/valid parity", 0.95, 0, "n/a", 0, "v1: ABFT proven; token/valid rule is an SVA property (dv/sva) for formal; parity on valid/token stays a fault-simulation item"),
+    ("x / psum / token chains, skew, deskew", "Stuck pipeline register", "permanent", f"={A}$B$22*0.10", 1, 1.00, 1,
+     "ABFT; LBIST", 0.97, 0, "n/a", 0, "v1: ABFT covers data (T2-T4); control is covered by the sequencer lockstep (C7) and the self-test (M8); LBIST see row 2"),
+    ("ABFT checker (array output)", "Stuck at 'no error' (false negative)", "permanent", f"={A}$B$22*0.02", 1, 0.50, 0,
+     "none needed alone (does not violate SG by itself)", 0, 1,
+     "Periodic self-test: inject one known fault per FTTI via the fault hook, expect a flag", 0.90, "planned: fault hook kept as a test feature, sequenced by the safety island"),
+    ("ABFT checker (array output)", "False positive (spurious error)", "permanent", f"={A}$B$22*0.02", 1, 0.50, 0,
+     "safe failure: leads to safe state", 0, 0, "n/a", 0, "safe failure mode"),
+    ("Accumulator SRAM (64 KB)", "Single-bit upset", "transient", f"={A}$B$23*0.97", 1, 1.00, 1,
+     "SECDED ECC (correct) and ABFT at drain (independent detection)", 0.9999, 0, "n/a", 0,
+     "v1: ABFT at drain proven (C4); accumulator ECC not implemented: ABFT at drain detects any single-row corruption, so ECC would add correction, not detection"),
+    ("Accumulator SRAM (64 KB)", "Multi-bit upset in one word", "transient", f"={A}$B$23*0.03", 1, 1.00, 1,
+     "SECDED detect + ABFT at drain", 0.999, 0, "n/a", 0, "v1: argument only (interleaving is a memory-compiler choice); detection by ABFT at drain is proven (C4)"),
+    ("Accumulator SRAM (64 KB)", "Stuck cell or decoder fault", "permanent", f"={A}$B$22*0.08", 1, 1.00, 1,
+     "ECC, ABFT at drain, MBIST at boot", 0.999, 0, "n/a", 0, "v1: March C- MBIST implemented and proven (B1-B3 standalone, M11 through registers with ESM cause); ECC on banks proven (M5)"),
+    ("Activation buffer SRAM (32 KB)", "Single-bit upset", "transient", f"={A}$B$24*0.97", 1, 1.00, 1,
+     "SECDED ECC; end-to-end CRC from the DMA (ABFT cannot see a wrong input)", 0.999, 0, "n/a", 0,
+     "v1: end-to-end CRC proven (M3); source-bank ECC proven (M5); MBIST proven (M11); the activation buffer itself is covered by the CRC at write and by the duplicated feeder control (C5)"),
+    ("Activation buffer SRAM (32 KB)", "Multi-bit upset or stuck cell", "both", f"={A}$B$24*0.03+{A}$B$22*0.05", 1, 1.00, 1,
+     "SECDED detect, E2E CRC, MBIST", 0.99, 0, "n/a", 0, "v1: proven for the bank path (M5, M9, M11); DC_L by periodic MBIST"),
+    ("Feeder address generator and run FSM", "Wrong address, wrong sequence, early stop", "permanent", f"={A}$B$22*0.06", 1, 1.00, 1,
+     "Duplicated address generator with comparator (DCLS-style)", 0.99, 0, "n/a", 0,
+     "v1: duplicated feeder control proven (C5, drop 0.4)"),
+    ("Feeder address generator and run FSM", "Bit flip in counters", "transient", f"={A}$B$26*0.15", 1, 1.00, 1,
+     "Duplicated address generator with comparator", 0.99, 0, "n/a", 0, "v1: proven (C5)"),
+    ("Accumulator write/read control and index pipeline", "Wrong row index or first flag", "both", f"={A}$B$22*0.03+{A}$B$26*0.15", 1, 1.00, 1,
+     "Parity on index/first delay lines; ABFT at drain catches mixed rows only partially", 0.95, 0, "n/a", 0,
+     "v1: coverage to be measured by fault simulation (Xcelium fault campaign); mechanism in place"),
+    ("Clock and reset distribution in the core", "Clock stuck, glitch, reset glitch", "permanent", f"={A}$B$22*0.02", 1, 1.00, 1,
+     "Clock monitor and watchdog in the safety island", 0.90, 0, "n/a", 0, "v1: windowed watchdog in the ESM proven (M8); clock monitor is a PLL/monitor IP item (RFQ 11)"),
+    ("NoC interface (requests, responses)", "Corrupted packet, lost packet", "both", f"={A}$B$22*0.04+{A}$B$26*0.1", 1, 1.00, 1,
+     "Packet parity/CRC, timeout, sequence numbers", 0.99, 0, "n/a", 0, "v1: router parity drop (N2), per-message end-to-end CRC (M3), word count per message for lost flits (M9a), fetch timeout (M9b); sequence numbers subsumed by the word count"),
+    ("Sequencer FSM, run counters, weight-buffer addressing", "Wrong run order, wrong tile, early drain", "both", f"={A}$B$22*0.03+{A}$B$26*0.05", 1, 1.00, 1,
+     "Duplicated sequencer with comparator (lockstep), weight-buffer ECC", 0.99, 0, "n/a", 0,
+     "v1: lockstep sequencer proven (C7); weight-buffer ECC per lane proven (C9)"),
+    ("Requantization tables and datapath", "Wrong scale, zero point or saturation", "both", f"={A}$B$22*0.02+{A}$B$26*0.03", 1, 1.00, 1,
+     "Table parity and a duplicated requant stage with comparator", 0.99, 0, "n/a", 0,
+     "v1: duplicated stage proven (C8); table parity proven (C10, including the fault the comparator cannot see)"),
+    ("Reduce port and partial-sum transfer (K-split)", "Corrupted or lost partial-sum row", "both", f"={A}$B$22*0.01+{A}$B$26*0.02", 1, 1.00, 1,
+     "Check column travels with the partial sums; drain-time ABFT at the owner; row count in the sequencer", 0.99, 0, "n/a", 0,
+     "today: proven (K2 corrupted row flagged at the owner)"),
+]
+
+# the chip's elements besides the MAC cores: (element, count, λ_SR per instance, DC_RF, λ_SM, DC_L, mechanism)
+CHIP_OTHER = [
+    ("Shared SRAM 128 MB, soft errors", 1, "=Assumptions!B7*1024", 0.99995, 2.0, 0.99,
+     "SECDED (39,32) per word: proven on the tile mesh (M5, drop 0.9); + 4-way interleaving + scrubbing + ABFT credit at the consumer; λ_SM = ECC/scrubber logic; DC_L = periodic ECC error injection"),
+    ("Shared SRAM 128 MB, permanent", 1, "=Assumptions!B4*65/Assumptions!B5", 0.999, 2.0, 0.99,
+     "ECC, MBIST at boot, repair"),
+    ("NoC and DMA engines", 1, "=Assumptions!B4*20/Assumptions!B5", 0.99, 1.0, 0.90,
+     "Packet parity/CRC, timeouts, descriptor CRC; λ_SM = checkers"),
+    ("Safety island (lockstep R52+)", 1, "=Assumptions!B4*5/Assumptions!B5", 0.999, 0.5, 0.95,
+     "Dual-core lockstep, ECC, watchdogs, self-test"),
+    ("LPDDR5X controller and PHY", 1, "=Assumptions!B4*24/Assumptions!B5", 0.99, 1.0, 0.90,
+     "Inline ECC, link ECC, loopback test"),
+    ("PCIe, Ethernet, MIPI, ISP", 1, "=Assumptions!B4*27/Assumptions!B5", 0.98, 1.5, 0.90,
+     "CRC, end-to-end protection, frame counters"),
+    ("Clocks, resets, power management", 1, "=Assumptions!B4*9/Assumptions!B5", 0.90, 0.5, 0.90,
+     "Clock/voltage/temperature monitors"),
+]
+
+
+# the v1 evidence table: (mechanism, fault injected, test, log, drop)
+EVIDENCE_V1 = [
+    ("ABFT check column", "+1 on one product in PE(0,0) for one cycle", "T2 (model and 32x32 RTL), C4", "sim/neosim_mac_core_32x32.log, sim/neosim_conv_core.log", "0.1-0.3"),
+    ("ABFT at drain", "bit flip in accumulator memory; corrupted partial-sum row in flight", "C4, K2", "sim/neosim_conv_core.log, sim/neosim_ksplit.log", "0.3, 0.6"),
+    ("Duplicated feeder control (R7)", "address generator corrupted for one valid cycle", "C5", "sim/neosim_conv_core.log", "0.4"),
+    ("Lockstep sequencer (R10)", "drain index bit 0 flipped", "C7", "sim/neosim_conv_core.log", "0.8"),
+    ("Duplicated requantization (R10)", "bit 12 of column 0 into the primary stage", "C8", "sim/neosim_conv_core.log", "0.8"),
+    ("Weight-buffer ECC", "data and check bits flipped in stored codewords", "C9", "sim/neosim_conv_core_late.log", "0.12"),
+    ("Requant table parity", "multiplier bit 0 flipped", "C10", "sim/neosim_conv_core_late.log", "0.12"),
+    ("Link parity", "flit bit flipped on a link", "N2", "sim/neosim_noc.log", "0.4"),
+    ("End-to-end CRC", "payload bit flipped past the last link check", "M3", "sim/neosim_tiles.log", "0.7"),
+    ("Bank ECC", "data and check bits flipped in the source bank", "M5", "sim/neosim_tiles.log", "0.9"),
+    ("Lost-flit detection", "a fetch-response flit dropped at the owner's port", "M9a", "sim/neosim_tiles.log", "0.12"),
+    ("Fetch timeout", "request against a server held busy", "M9b", "sim/neosim_tiles.log", "0.12"),
+    ("Reduction flow control", "contributor finishing before the owner (deadlock without RDY)", "M2", "sim/neosim_tiles.log", "0.9"),
+    ("ESM, error pin, watchdog, checker self-test", "self-test dummy run; watchdog not kicked", "M8", "sim/neosim_tiles.log", "0.12"),
+    ("Bank MBIST (March C-)", "stuck-at-1 bit; two stuck bits", "B1-B3, M11", "sim/neosim_mbist.log, sim/neosim_tiles.log", "0.13"),
+    ("(39,32) SECDED code", "all 39 single flips x 40 words; 400 double flips", "ecc39", "sim/neosim_ecc39.log", "0.9"),
+    ("INT8 layer-to-layer path", "none (functional)", "M10", "sim/neosim_two_layer.log", "0.13"),
+    ("LBIST", "none: tool-inserted (Modus), hooks and FTTI schedule in the island", "-", "-", "handoff"),
+]
 
 def header(ws, row, labels, widths=None):
     for c, label in enumerate(labels, 1):
@@ -64,25 +194,7 @@ def build(path):
     ws.merge_cells("A1:D1")
     ws.row_dimensions[1].height = 48
     header(ws, 3, ["Parameter", "Value", "Unit", "Source / note"], [46, 14, 12, 70])
-    rows = [
-        ("Die permanent base failure rate (whole 210 mm² die)", 200, "FIT",
-         "Assumption, order of magnitude for a large N5-class automotive die; replace with foundry data"),
-        ("Die area", 210, "mm²", "Spec v2.0 physical estimate"),
-        ("MAC core area incl. buffers (one core)", 0.47, "mm²", "30 mm² for 64 cores from the die estimate"),
-        ("SRAM soft-error rate", 600, "FIT/Mbit", "Assumption; replace with foundry SER at ground level, Grade 2 mission profile"),
-        ("Flip-flop soft-error rate", 100, "FIT/Mbit", "Assumption; replace with foundry SER"),
-        ("Accumulator SRAM per core", 0.5, "Mbit", "512 rows × 32 columns × 32 bit = 64 KB"),
-        ("Activation buffer SRAM per core", 0.25, "Mbit", "4096 pixels × 32 channels × 8 bit = 32 KB"),
-        ("Weight registers per core (active + shadow)", 0.0176, "Mbit", "2 × 1056 PEs × 8.3 bit average incl. check column"),
-        ("Pipeline and control flops per core", 0.04, "Mbit", "x/psum/token registers, skew and deskew, feeder, accumulator read registers"),
-        ("Mission lifetime", 131400, "h", "15 years × 8,760 h; vehicle operating hours are lower, kept conservative"),
-        ("ASIL-B(D) target SPFM", 0.90, "", "ISO 26262-5 Table 4"),
-        ("ASIL-B(D) target LFM", 0.60, "", "ISO 26262-5 Table 5"),
-        ("ASIL-B(D) target PMHF", 100, "FIT", "ISO 26262-5 Table 6"),
-        ("ASIL-D target SPFM", 0.99, "", "ISO 26262-5 Table 4"),
-        ("ASIL-D target LFM", 0.90, "", "ISO 26262-5 Table 5"),
-        ("ASIL-D target PMHF", 10, "FIT", "ISO 26262-5 Table 6"),
-    ]
+    rows = ASSUMPTIONS
     for i, (p, v, u, s) in enumerate(rows, start=4):
         ws.cell(row=i, column=1, value=p).font = BLACK
         c = ws.cell(row=i, column=2, value=v)
@@ -138,60 +250,7 @@ def build(path):
             "λ_MPF,L (FIT)", "Status / evidence"]
     header(fm, 3, cols, [22, 34, 10, 10, 10, 10, 12, 34, 9, 12, 12, 30, 9, 12, 40])
     # (block, failure mode, type, lambda_formula, SR, FMD, SPF, SM, DC_RF, MPF, latent SM, DC_L, status)
-    A = "Assumptions!"
-    rows = [
-        ("PE array datapath (1,056 MACs)", "Wrong product or sum, single-point", "permanent", f"={A}$B$22*0.55", 1, 0.90, 1,
-         "ABFT check column: any single-point error in a row flips the row equality", 0.99, 0,
-         "n/a (detected faults lead to safe state)", 0, "v1: proven on RTL (T2, T3, C1-C10, K2, M-tests); self-test of the checker proven through registers (M8)"),
-        ("PE array datapath (1,056 MACs)", "Dual faults that cancel in the checksum", "permanent", f"={A}$B$22*0.55", 1, 0.10, 1,
-         "Periodic in-field LBIST of the core", 0.90, 0, "n/a", 0, "v1: LBIST is tool-inserted (Modus) and remains the one item with no RTL proof; the island carries the hooks and the FTTI-windowed schedule (M8 watchdog/self-test)"),
-        ("Weight registers (active + shadow)", "Bit flip in a stored weight", "transient", f"={A}$B$25", 1, 1.00, 1,
-         "ABFT (corrupted weight flags every row) and reload per tile", 0.99, 0, "n/a", 0, "today: proven (T4 weight bit-flip)"),
-        ("Weight registers (active + shadow)", "Stuck bit in a weight register", "permanent", f"={A}$B$22*0.05", 1, 1.00, 1,
-         "ABFT", 0.99, 0, "n/a", 0, "today: proven by construction (same mechanism as T4)"),
-        ("x / psum / token chains, skew, deskew", "Bit flip in a pipeline register", "transient", f"={A}$B$26*0.7", 1, 1.00, 1,
-         "ABFT for data chains; token/valid parity", 0.95, 0, "n/a", 0, "v1: ABFT proven; token/valid rule is an SVA property (dv/sva) for formal; parity on valid/token stays a fault-simulation item"),
-        ("x / psum / token chains, skew, deskew", "Stuck pipeline register", "permanent", f"={A}$B$22*0.10", 1, 1.00, 1,
-         "ABFT; LBIST", 0.97, 0, "n/a", 0, "v1: ABFT covers data (T2-T4); control is covered by the sequencer lockstep (C7) and the self-test (M8); LBIST see row 2"),
-        ("ABFT checker (array output)", "Stuck at 'no error' (false negative)", "permanent", f"={A}$B$22*0.02", 1, 0.50, 0,
-         "none needed alone (does not violate SG by itself)", 0, 1,
-         "Periodic self-test: inject one known fault per FTTI via the fault hook, expect a flag", 0.90, "planned: fault hook kept as a test feature, sequenced by the safety island"),
-        ("ABFT checker (array output)", "False positive (spurious error)", "permanent", f"={A}$B$22*0.02", 1, 0.50, 0,
-         "safe failure: leads to safe state", 0, 0, "n/a", 0, "safe failure mode"),
-        ("Accumulator SRAM (64 KB)", "Single-bit upset", "transient", f"={A}$B$23*0.97", 1, 1.00, 1,
-         "SECDED ECC (correct) and ABFT at drain (independent detection)", 0.9999, 0, "n/a", 0,
-         "v1: ABFT at drain proven (C4); accumulator ECC not implemented: ABFT at drain detects any single-row corruption, so ECC would add correction, not detection"),
-        ("Accumulator SRAM (64 KB)", "Multi-bit upset in one word", "transient", f"={A}$B$23*0.03", 1, 1.00, 1,
-         "SECDED detect + ABFT at drain", 0.999, 0, "n/a", 0, "v1: argument only (interleaving is a memory-compiler choice); detection by ABFT at drain is proven (C4)"),
-        ("Accumulator SRAM (64 KB)", "Stuck cell or decoder fault", "permanent", f"={A}$B$22*0.08", 1, 1.00, 1,
-         "ECC, ABFT at drain, MBIST at boot", 0.999, 0, "n/a", 0, "v1: March C- MBIST implemented and proven (B1-B3 standalone, M11 through registers with ESM cause); ECC on banks proven (M5)"),
-        ("Activation buffer SRAM (32 KB)", "Single-bit upset", "transient", f"={A}$B$24*0.97", 1, 1.00, 1,
-         "SECDED ECC; end-to-end CRC from the DMA (ABFT cannot see a wrong input)", 0.999, 0, "n/a", 0,
-         "v1: end-to-end CRC proven (M3); source-bank ECC proven (M5); MBIST proven (M11); the activation buffer itself is covered by the CRC at write and by the duplicated feeder control (C5)"),
-        ("Activation buffer SRAM (32 KB)", "Multi-bit upset or stuck cell", "both", f"={A}$B$24*0.03+{A}$B$22*0.05", 1, 1.00, 1,
-         "SECDED detect, E2E CRC, MBIST", 0.99, 0, "n/a", 0, "v1: proven for the bank path (M5, M9, M11); DC_L by periodic MBIST"),
-        ("Feeder address generator and run FSM", "Wrong address, wrong sequence, early stop", "permanent", f"={A}$B$22*0.06", 1, 1.00, 1,
-         "Duplicated address generator with comparator (DCLS-style)", 0.99, 0, "n/a", 0,
-         "v1: duplicated feeder control proven (C5, drop 0.4)"),
-        ("Feeder address generator and run FSM", "Bit flip in counters", "transient", f"={A}$B$26*0.15", 1, 1.00, 1,
-         "Duplicated address generator with comparator", 0.99, 0, "n/a", 0, "v1: proven (C5)"),
-        ("Accumulator write/read control and index pipeline", "Wrong row index or first flag", "both", f"={A}$B$22*0.03+{A}$B$26*0.15", 1, 1.00, 1,
-         "Parity on index/first delay lines; ABFT at drain catches mixed rows only partially", 0.95, 0, "n/a", 0,
-         "v1: coverage to be measured by fault simulation (Xcelium fault campaign); mechanism in place"),
-        ("Clock and reset distribution in the core", "Clock stuck, glitch, reset glitch", "permanent", f"={A}$B$22*0.02", 1, 1.00, 1,
-         "Clock monitor and watchdog in the safety island", 0.90, 0, "n/a", 0, "v1: windowed watchdog in the ESM proven (M8); clock monitor is a PLL/monitor IP item (RFQ 11)"),
-        ("NoC interface (requests, responses)", "Corrupted packet, lost packet", "both", f"={A}$B$22*0.04+{A}$B$26*0.1", 1, 1.00, 1,
-         "Packet parity/CRC, timeout, sequence numbers", 0.99, 0, "n/a", 0, "v1: router parity drop (N2), per-message end-to-end CRC (M3), word count per message for lost flits (M9a), fetch timeout (M9b); sequence numbers subsumed by the word count"),
-        ("Sequencer FSM, run counters, weight-buffer addressing", "Wrong run order, wrong tile, early drain", "both", f"={A}$B$22*0.03+{A}$B$26*0.05", 1, 1.00, 1,
-         "Duplicated sequencer with comparator (lockstep), weight-buffer ECC", 0.99, 0, "n/a", 0,
-         "v1: lockstep sequencer proven (C7); weight-buffer ECC per lane proven (C9)"),
-        ("Requantization tables and datapath", "Wrong scale, zero point or saturation", "both", f"={A}$B$22*0.02+{A}$B$26*0.03", 1, 1.00, 1,
-         "Table parity and a duplicated requant stage with comparator", 0.99, 0, "n/a", 0,
-         "v1: duplicated stage proven (C8); table parity proven (C10, including the fault the comparator cannot see)"),
-        ("Reduce port and partial-sum transfer (K-split)", "Corrupted or lost partial-sum row", "both", f"={A}$B$22*0.01+{A}$B$26*0.02", 1, 1.00, 1,
-         "Check column travels with the partial sums; drain-time ABFT at the owner; row count in the sequencer", 0.99, 0, "n/a", 0,
-         "today: proven (K2 corrupted row flagged at the owner)"),
-    ]
+    rows = V1_ROWS
     first = 4
     for i, r in enumerate(rows, start=first):
         block, fmode, ftype, lam, sr, fmd, spf, sm, dcrf, mpf, lsm, dcl, status = r
@@ -277,21 +336,7 @@ def build(path):
     elems = [
         ("MAC core (from FMEDA_core)", 64, f"={lam_sr}", None, None, None,
          "ABFT, ECC, LBIST, duplicated feeder control (planned); residual and latent taken from FMEDA_core"),
-        ("Shared SRAM 128 MB, soft errors", 1, "=Assumptions!B7*1024", 0.99995, 2.0, 0.99,
-         "SECDED (39,32) per word: proven on the tile mesh (M5, drop 0.9); + 4-way interleaving + scrubbing + ABFT credit at the consumer; λ_SM = ECC/scrubber logic; DC_L = periodic ECC error injection"),
-        ("Shared SRAM 128 MB, permanent", 1, "=Assumptions!B4*65/Assumptions!B5", 0.999, 2.0, 0.99,
-         "ECC, MBIST at boot, repair"),
-        ("NoC and DMA engines", 1, "=Assumptions!B4*20/Assumptions!B5", 0.99, 1.0, 0.90,
-         "Packet parity/CRC, timeouts, descriptor CRC; λ_SM = checkers"),
-        ("Safety island (lockstep R52+)", 1, "=Assumptions!B4*5/Assumptions!B5", 0.999, 0.5, 0.95,
-         "Dual-core lockstep, ECC, watchdogs, self-test"),
-        ("LPDDR5X controller and PHY", 1, "=Assumptions!B4*24/Assumptions!B5", 0.99, 1.0, 0.90,
-         "Inline ECC, link ECC, loopback test"),
-        ("PCIe, Ethernet, MIPI, ISP", 1, "=Assumptions!B4*27/Assumptions!B5", 0.98, 1.5, 0.90,
-         "CRC, end-to-end protection, frame counters"),
-        ("Clocks, resets, power management", 1, "=Assumptions!B4*9/Assumptions!B5", 0.90, 0.5, 0.90,
-         "Clock/voltage/temperature monitors"),
-    ]
+    ] + CHIP_OTHER
     for i, (name, cnt, sr, dcrf, lsm, dcl, sm) in enumerate(elems, start=4):
         cr.cell(row=i, column=1, value=name).font = BLACK
         cr.cell(row=i, column=2, value=cnt).font = BLUE
@@ -350,26 +395,7 @@ def build(path):
     ev = wb.create_sheet("Evidence")
     ev["A1"] = "Mechanism evidence (v1): every coverage claim above points at the test that exercised the mechanism on the RTL"
     ev.append(["Mechanism", "Fault injected", "Test", "Log", "Drop"])
-    for row in [
-        ("ABFT check column", "+1 on one product in PE(0,0) for one cycle", "T2 (model and 32x32 RTL), C4", "sim/neosim_mac_core_32x32.log, sim/neosim_conv_core.log", "0.1-0.3"),
-        ("ABFT at drain", "bit flip in accumulator memory; corrupted partial-sum row in flight", "C4, K2", "sim/neosim_conv_core.log, sim/neosim_ksplit.log", "0.3, 0.6"),
-        ("Duplicated feeder control (R7)", "address generator corrupted for one valid cycle", "C5", "sim/neosim_conv_core.log", "0.4"),
-        ("Lockstep sequencer (R10)", "drain index bit 0 flipped", "C7", "sim/neosim_conv_core.log", "0.8"),
-        ("Duplicated requantization (R10)", "bit 12 of column 0 into the primary stage", "C8", "sim/neosim_conv_core.log", "0.8"),
-        ("Weight-buffer ECC", "data and check bits flipped in stored codewords", "C9", "sim/neosim_conv_core_late.log", "0.12"),
-        ("Requant table parity", "multiplier bit 0 flipped", "C10", "sim/neosim_conv_core_late.log", "0.12"),
-        ("Link parity", "flit bit flipped on a link", "N2", "sim/neosim_noc.log", "0.4"),
-        ("End-to-end CRC", "payload bit flipped past the last link check", "M3", "sim/neosim_tiles.log", "0.7"),
-        ("Bank ECC", "data and check bits flipped in the source bank", "M5", "sim/neosim_tiles.log", "0.9"),
-        ("Lost-flit detection", "a fetch-response flit dropped at the owner's port", "M9a", "sim/neosim_tiles.log", "0.12"),
-        ("Fetch timeout", "request against a server held busy", "M9b", "sim/neosim_tiles.log", "0.12"),
-        ("Reduction flow control", "contributor finishing before the owner (deadlock without RDY)", "M2", "sim/neosim_tiles.log", "0.9"),
-        ("ESM, error pin, watchdog, checker self-test", "self-test dummy run; watchdog not kicked", "M8", "sim/neosim_tiles.log", "0.12"),
-        ("Bank MBIST (March C-)", "stuck-at-1 bit; two stuck bits", "B1-B3, M11", "sim/neosim_mbist.log, sim/neosim_tiles.log", "0.13"),
-        ("(39,32) SECDED code", "all 39 single flips x 40 words; 400 double flips", "ecc39", "sim/neosim_ecc39.log", "0.9"),
-        ("INT8 layer-to-layer path", "none (functional)", "M10", "sim/neosim_two_layer.log", "0.13"),
-        ("LBIST", "none: tool-inserted (Modus), hooks and FTTI schedule in the island", "-", "-", "handoff"),
-    ]:
+    for row in EVIDENCE_V1:
         ev.append(list(row))
     for col, wdt in (("A", 36), ("B", 50), ("C", 20), ("D", 52), ("E", 10)):
         ev.column_dimensions[col].width = wdt
@@ -377,6 +403,821 @@ def build(path):
     return path
 
 
+# =====================================================================================================================
+# FMEDA v2 (drop 0.43, stream D2): every row's diagnostic coverage measured by the fault campaign
+# =====================================================================================================================
+# The weight buffer's storage has no v1 row (v1's "weight registers" are the PEs' registers); v2 adds it at the silicon
+# size: WBUF_DEPTH 1024 entries of the 2:4 sparse-capable 32x32 core (NCHK = 4): COLS x (8 + 2) + 4 x 14 = 376 bits ->
+# 12 SECDED lanes of 39 bits = 468 bits per entry, 479,232 bits = 0.457 Mbit (2^20 bits, as v1 counts a Mbit).
+WBUF_MBIT = round(1024 * 12 * 39 / 2 ** 20, 4)
+PERM, TRANS = ("sa0", "sa1"), ("flip",)
+WREG = r"\.u_pe\.(w_q|w_sh)$|\.g_idx\.sel_q$"          # the PEs' weight registers: active, shadow, the 2:4 index
+NIC_BLOCKS = ["tile_nic", "tile_nic.sram", "tile_nic.macro", "link_packer", "link_unpacker"]
+SEQ_BLOCKS = ["core_seq", "neo_core", "wbuf_mem", "wbuf_mem.macro"]
+ACC_CTRL = ["acc_bank", "acc_bank.macro", "neo_mac_core_v02"]
+FEEDER = ["act_feeder", "act_feeder.macro"]
+LINK_PROOFS = ["crc16_beat_bw4", "crc16_beat_bw16", "link_pack_stream", "link_pack_parity"]
+
+
+def S(config, blocks, types=None, include=None, exclude=None):
+    """a row's campaign selection: the faults of `config` ('core' = neo_core 16x8 under C1, 'tile' = the 2x2 mesh
+    under M1) in `blocks`, of `types`, whose flop matches `include` and not `exclude`"""
+    return dict(config=config, blocks=blocks, types=types, include=include, exclude=exclude)
+
+
+# v2 rows: v1's rows in order (v1 = its index in V1_ROWS), the 'both' rows split into their permanent part (the
+# stuck-at faults) and their transient part (the flips), then the rows v1 lacks. sel = the faults that measure the row;
+# claim = why the row keeps v1's value; latent = faults shown for a latent-only row; proofs = formal tasks cited.
+V2_ROWS = [
+    dict(v1=0, sel=S("core", ["neo_mac_core"], PERM, exclude=WREG), proofs=["abft_checker"]),
+    dict(v1=1, claim="dual faults: a single-fault campaign does not make them; LBIST (IP) is the mechanism"),
+    dict(v1=2, sel=S("core", ["neo_mac_core"], TRANS, include=WREG), proofs=["abft_checker"]),
+    dict(v1=3, sel=S("core", ["neo_mac_core"], PERM, include=WREG), proofs=["abft_checker"]),
+    dict(v1=4, sel=S("core", ["neo_mac_core"], TRANS, exclude=WREG), proofs=["abft_checker"]),
+    dict(v1=5, sel=S("core", ["neo_mac_core"], PERM, exclude=WREG), proofs=["abft_checker"]),
+    dict(v1=6, latent=S("core", ["neo_mac_core.abft_checker", "acc_bank.abft_checker"]), proofs=["abft_checker"],
+         claim="latent: the island's periodic self-test is the mechanism (not part of a C1 run); the faults show what a "
+               "checker fault alone does (no wrong result expected: SPF 0)"),
+    dict(v1=7, claim="safe failure mode"),
+    dict(v1=8, sel=S("core", ["acc_bank.sram"], TRANS), proofs=["abft_checker"]),
+    dict(v1=9, claim="multi-bit upsets are not injected (single-bit campaign); the single-bit row measures the same "
+                     "mechanism (ABFT at drain)"),
+    dict(v1=10, sel=S("core", ["acc_bank.sram"], PERM), proofs=["abft_checker"]),
+    dict(v1=11, sel=S("core", ["act_feeder.sram"], TRANS)),
+    dict(v1=12, part="transient", lam=[("B24", 0.03)], sel=S("core", ["act_feeder.sram"], TRANS),
+         note="multi-bit upsets measured by the single-bit faults: the array carries no code, so what one flipped bit "
+              "does unseen two do"),
+    dict(v1=12, part="permanent", lam=[("B22", 0.05)], sel=S("core", ["act_feeder.sram"], PERM)),
+    dict(v1=13, sel=S("core", FEEDER, PERM)),
+    dict(v1=14, sel=S("core", FEEDER, TRANS)),
+    dict(v1=15, part="permanent", lam=[("B22", 0.03)], sel=S("core", ACC_CTRL, PERM)),
+    dict(v1=15, part="transient", lam=[("B26", 0.15)], sel=S("core", ACC_CTRL, TRANS)),
+    dict(v1=16, claim="clock and reset are not flops: not injectable at RTL (the watchdog's hang detection is measured "
+                      "on the tile build)"),
+    dict(v1=17, part="permanent", lam=[("B22", 0.04)], sel=S("tile", NIC_BLOCKS, PERM), proofs=LINK_PROOFS),
+    dict(v1=17, part="transient", lam=[("B26", 0.1)], sel=S("tile", NIC_BLOCKS, TRANS), proofs=LINK_PROOFS),
+    dict(v1=18, part="permanent", lam=[("B22", 0.03)], sel=S("core", SEQ_BLOCKS, PERM), proofs=["lockstep_core_seq", "ecc39"]),
+    dict(v1=18, part="transient", lam=[("B26", 0.05)], sel=S("core", SEQ_BLOCKS, TRANS), proofs=["lockstep_core_seq", "ecc39"]),
+    dict(v1=19, part="permanent", lam=[("B22", 0.02)], sel=S("core", ["requant"], PERM), proofs=["lockstep_requant", "requant_parity"]),
+    dict(v1=19, part="transient", lam=[("B26", 0.03)], sel=S("core", ["requant"], TRANS), proofs=["lockstep_requant", "requant_parity"]),
+    dict(v1=20, claim="the reduce port is idle in C1 and M1 (no K-split): an M2-class workload is the follow-up"),
+    dict(block="Weight buffer SRAM (v2 addition)", fmode="Single-bit upset", ftype="transient", lam=[("B33", 0.97)],
+         sm="SECDED (39,32) per lane, corrected on the sequencer's read (wbuf_ce; wbuf_ue for two flips)",
+         sel=S("core", ["wbuf_mem.sram"], TRANS), proofs=["ecc39"], exhaustive="ecc39"),
+    dict(block="Weight buffer SRAM (v2 addition)", fmode="Multi-bit upset in one lane", ftype="transient", lam=[("B33", 0.03)],
+         sm="SECDED detects two flips (wbuf_ue); ABFT for a wrong weight", dc=0.999, proofs=["ecc39"],
+         claim="multi-bit upsets are not injected; v1's value for SECDED-detected multi-bit upsets (the accumulator's row) kept"),
+]
+
+# chip elements v2 measures on the tile build (the others keep v1's values): element name -> (selection, use)
+CHIP_SEL = {
+    "Shared SRAM 128 MB, soft errors": (S("tile", ["sram_bank.sram"], TRANS), "evidence"),
+    "Shared SRAM 128 MB, permanent": (S("tile", ["sram_bank.sram", "sram_bank.macro", "sram_bank", "mbist"], PERM), "measured"),
+    "NoC and DMA engines": (S("tile", ["noc_router", "tile_dma", "prog_mem", "host_if", "neo_tile", "esm"], PERM), "measured"),
+}
+CHIP_PROOFS = {"Shared SRAM 128 MB, soft errors": ["ecc39"], "NoC and DMA engines": ["noc_router"]}
+CORES = 64
+# item 2 (drop 0.43): the comparator storage of drop 0.41 -- (the flop path's ending, the label, the FMEDA row carrying it)
+_FEED, _ACC, _SEQ = "Feeder address generator and run FSM", "Accumulator write/read control", "Sequencer, weight-buffer addressing"
+ITEM2_REGS = [
+    ("u_feeder.u_mem.rb_addr_q", "activation buffer port-B address latch", _FEED),
+    ("u_feeder.inb_q", "feeder inb_q", _FEED), ("u_feeder.a0_q", "feeder a0_q", _FEED),
+    ("u_feeder.first_q", "feeder first_q", _FEED), ("u_feeder.first_oq", "feeder first_oq", _FEED),
+    ("u_feeder.addr_dq", "feeder addr_dq (copy)", _FEED), ("u_feeder.inb_dq", "feeder inb_dq (copy)", _FEED),
+    ("u_feeder.a0_dq", "feeder a0_dq (copy)", _FEED), ("u_feeder.first_dq", "feeder first_dq (copy)", _FEED),
+    ("u_feeder.first_doq", "feeder first_doq (copy)", _FEED),
+    ("u_wbuf.u_mem.rb_addr_q", "weight buffer port-B address latch", _SEQ), ("u_wbuf.ra0_q", "weight buffer ra0_q", _SEQ),
+    ("w_load_q", "core w_load_q", _SEQ), ("d_w_load_q", "core d_w_load_q (copy)", _SEQ),
+    ("d_w_raddr_q", "core d_w_raddr_q (copy)", _SEQ),
+    ("u_acc.u_mem.rb_addr_q", "accumulator port-B address latch", _ACC), ("u_acc.v1", "acc v1", _ACC),
+    ("u_acc.first1", "acc first1", _ACC), ("u_acc.idx1", "acc idx1", _ACC), ("u_acc.fwd1", "acc fwd1", _ACC),
+    ("u_acc.v1_n", "acc v1_n (copy)", _ACC), ("u_acc.first1_n", "acc first1_n (copy)", _ACC),
+    ("u_acc.idx1_n", "acc idx1_n (copy)", _ACC), ("u_acc.fwd1_n", "acc fwd1_n (copy)", _ACC), ("u_acc.rbq_n", "acc rbq_n (copy)", _ACC),
+]
+
+
+def base_values():
+    """v1's Assumptions sheet as numbers (B4..B19 inputs, B22..B26 derived) and v2's weight buffer (B32, B33)"""
+    v = {f"B{i}": row[1] for i, row in enumerate(ASSUMPTIONS, start=4)}
+    v["B22"] = v["B4"] * v["B6"] / v["B5"]
+    v["B23"] = v["B7"] * v["B9"]
+    v["B24"] = v["B7"] * v["B10"]
+    v["B25"] = v["B8"] * v["B11"]
+    v["B26"] = v["B8"] * v["B12"]
+    v["B32"] = WBUF_MBIT
+    v["B33"] = v["B7"] * v["B32"]
+    return v
+
+
+def v1_lam_terms(formula):
+    """v1's λ formula ('=Assumptions!$B$22*0.03+Assumptions!$B$26*0.15') as [(cell, factor)]"""
+    terms = []
+    for t in formula.lstrip("=").split("+"):
+        cell, _, k = t.replace(A, "").replace("$", "").partition("*")
+        terms.append((cell, float(k) if k else 1.0))
+    return terms
+
+
+def wilson(p, n, z=1.96):
+    if not n:
+        return (0.0, 1.0)
+    d = 1 + z * z / n
+    c = p + z * z / (2 * n)
+    h = z * math.sqrt(max(0.0, p * (1 - p) / n + z * z / (4 * n * n)))
+    return (max(0.0, (c - h) / d), min(1.0, (c + h) / d))
+
+
+def select(rows, sel):
+    out = []
+    for r in rows:
+        if r["outcome"] == "unresolved" or r["config"] != sel["config"] or r["block"] not in sel["blocks"]:
+            continue
+        if sel.get("types") and r["type"] not in sel["types"]:
+            continue
+        if sel.get("include") and not re.search(sel["include"], r["flop"]):
+            continue
+        if sel.get("exclude") and re.search(sel["exclude"], r["flop"]):
+            continue
+        out.append(r)
+    return out
+
+
+def stats(rs):
+    """bit-weighted outcome fractions of a row's faults (each fault weighted by its block's bits / its block's sample,
+    the campaign's `weight`): F_safe = masked, DC = detected / (detected + dangerous), the dangerous fraction; Wilson
+    intervals at Kish's effective sample size. A hang without a cause counts as dangerous; a hang the watchdog or the
+    fetch timeout caught as detected."""
+    if not rs:
+        return None
+    w = [float(r.get("weight") or 1.0) for r in rs]
+    det = [x for x, r in zip(w, rs) if r["outcome"] in ("detected", "hang_detected")]
+    dang = [x for x, r in zip(w, rs) if r["outcome"] in ("dangerous", "hang")]
+    sw, sd, sg = sum(w), sum(det), sum(dang)
+    neff = sw * sw / sum(x * x for x in w)
+    ns = det + dang
+    neff_ns = (sum(ns) ** 2 / sum(x * x for x in ns)) if ns else 0
+    dc = sd / (sd + sg) if ns else None
+    fd = sg / sw
+    return dict(n=len(rs), det=sum(1 for r in rs if r["outcome"] in ("detected", "hang_detected")),
+                dang=sum(1 for r in rs if r["outcome"] in ("dangerous", "hang")),
+                masked=sum(1 for r in rs if r["outcome"] == "masked"),
+                hang=sum(1 for r in rs if r["outcome"] in ("hang", "hang_detected")),
+                fsafe=1 - (sd + sg) / sw, dc=dc, dc_ci=wilson(dc, neff_ns) if dc is not None else None, neff_ns=neff_ns,
+                fdang=fd, fdang_hi=wilson(fd, neff)[1], neff=neff)
+
+
+def sel_text(sel):
+    t = f"{sel['config']}: " + ", ".join(sel["blocks"])
+    if sel.get("types"):
+        t += " / " + ("stuck-at" if tuple(sel["types"]) == PERM else "flips" if tuple(sel["types"]) == TRANS else ",".join(sel["types"]))
+    if sel.get("include"):
+        t += " / weight registers only"
+    if sel.get("exclude"):
+        t += " / weight registers excluded"
+    return t
+
+
+def parse_formal(path):
+    """{task: (result, mode, time, what)} from the formal job's formal_report.md, and its title line"""
+    out, title = {}, None
+    if not path or not os.path.exists(path):
+        return out, title
+    for line in open(path):
+        if line.startswith("# "):
+            title = line[2:].strip()
+        m = re.match(r"\| `([^`]+)` \| ([^|]*) \| (\w+) \| [^|]* \| [^|]* \| \**(\w+)\** \| ([^|]*) \| ([^|]*) \|", line)
+        if m:
+            out[m.group(1)] = (m.group(4), m.group(3), m.group(6).strip(), m.group(2).strip())
+    return out, title
+
+
+def proofs_text(proofs, formal):
+    if not proofs:
+        return ""
+    return "; ".join(f"{p} {formal[p][0]} ({formal[p][1]}, {formal[p][2]})" if p in formal else f"{p} (not in the report)"
+                     for p in proofs)
+
+
+def v2_rows(faults, formal):
+    """the v2 rows with their numbers: λ (terms and value), the v1 fields, the campaign's statistics, DC used"""
+    bv = base_values()
+    out = []
+    for spec in V2_ROWS:
+        r = dict(spec)
+        if "v1" in spec:
+            block, fmode, ftype, lam, sr, fmd, spf, sm, dcrf, mpf, lsm, dcl, status = V1_ROWS[spec["v1"]]
+            terms = spec.get("lam") or v1_lam_terms(lam)
+            r.update(block=block, fmode=fmode + (f" ({spec['part']} part)" if spec.get("part") else ""),
+                     ftype=spec.get("part") or ftype, sr=sr, fmd=fmd, spf=spf, sm=sm, mpf=mpf, lsm=lsm, dcl=dcl,
+                     v1dc=dcrf, v1status=status)
+        else:
+            terms = spec["lam"]
+            r.update(sr=1, fmd=1.0, spf=1, mpf=0, lsm="n/a", dcl=0, v1dc=None, v1status="no v1 row")
+        r["terms"] = terms
+        r["lam_formula"] = "=" + "+".join(f"{A}$B${c[1:]}*{k:g}" for c, k in terms)
+        r["lam_value"] = sum(bv[c] * k for c, k in terms)
+        st = stats(select(faults, spec["sel"])) if spec.get("sel") else None
+        r["st"] = st
+        r["lat"] = stats(select(faults, spec["latent"])) if spec.get("latent") else None
+        claim_dc = spec.get("dc", r["v1dc"])
+        if st and st["dc"] is not None:
+            r.update(fsafe=st["fsafe"], dc=st["dc"], basis="measured")
+        elif st:                                     # every fault masked: no residual measured, DC unobserved
+            r.update(fsafe=st["fsafe"], dc=claim_dc if claim_dc is not None else 0.0, basis="measured (all masked)")
+        else:
+            r.update(fsafe=0.0, dc=claim_dc if claim_dc is not None else 0.0,
+                     basis="claim" if spec.get("sel") is None else "claim (no faults drawn)")
+        r["proofs_text"] = proofs_text(spec.get("proofs"), formal)
+        r["exhaustive_pass"] = bool(spec.get("exhaustive")) and formal.get(spec["exhaustive"], ("",))[0] == "PASS"
+        out.append(r)
+    return out
+
+
+def residual(r, mode):
+    """λ_SPF/RF of a row: 'v2' with the measured safe fraction and DC; 'nomask' without the safe fraction; 'upper' with
+    the measured rows at the 95 % upper bound of their dangerous fraction; 'v1' v1's DC (a v1 row's λ is v2's)"""
+    lam = r["lam_value"] * r["sr"] * r["fmd"] * r["spf"]
+    if mode == "v1":
+        return lam * (1 - (r["v1dc"] if r["v1dc"] is not None else 0.0))
+    if mode == "upper" and r["st"] and r["basis"].startswith("measured"):
+        if r.get("exhaustive") and r["st"]["dang"] == 0 and r["exhaustive_pass"]:
+            return 0.0                               # the failure mode is covered for every case by a passing proof
+        return lam * r["st"]["fdang_hi"]
+    if mode == "nomask":
+        dc = r["dc"] if (r["st"] and r["st"]["dc"] is not None) else (r["v1dc"] if r["v1dc"] is not None else r["dc"])
+        return lam * (1 - dc)
+    return lam * (1 - r["fsafe"]) * (1 - r["dc"])
+
+
+def core_metrics(rows, mode, with_new=True):
+    T = ASSUMPTIONS[9][1]
+    sel = [r for r in rows if with_new or "v1" in r]
+    if mode == "v1":                                 # v1's rows as v1 has them (a split row counted once, whole)
+        sel = [r for r in rows if "v1" in r]
+    sr = sum(r["lam_value"] * r["sr"] * r["fmd"] for r in sel)
+    rf = sum(residual(r, mode) for r in sel)
+    lat = sum(r["lam_value"] * r["sr"] * r["fmd"] * r["mpf"] * (1 - r["dcl"]) for r in sel)
+    return dict(sr=sr, rf=rf, lat=lat, spfm=1 - rf / sr, lfm=1 - lat / (sr - rf), pmhf=rf + lat * sr * T * 1e-9)
+
+
+def chip_elements(faults, formal, core, mode):
+    """[(name, count, λ_SR, F_safe, DC_RF, λ_SM, DC_L, mechanism, stats, basis)] -- v1's elements, the MAC core from
+    `core` (core_metrics), the elements CHIP_SEL measures with their measured values in the v2 modes"""
+    bv = base_values()
+    out = [("MAC core (from FMEDA_core_v2)", CORES, core["sr"], 0.0, 1 - core["rf"] / core["sr"], core["lat"], 0.0,
+            "residual and latent from the core sheet", None, "core sheet")]
+    for name, cnt, lam, dcrf, lsm, dcl, sm in CHIP_OTHER:
+        expr = lam.lstrip("=").replace("Assumptions!", "")
+        lam_v = eval(re.sub(r"B(\d+)", lambda m: repr(bv["B" + m.group(1)]), expr))   # noqa: S307 (our own constant formulas)
+        st, basis, fs, dc = None, "v1", 0.0, dcrf
+        if name in CHIP_SEL:
+            sel, use = CHIP_SEL[name]
+            st = stats(select(faults, sel))
+            if st and use == "measured" and mode != "v1":
+                if st["dc"] is not None:
+                    fs, dc, basis = st["fsafe"], st["dc"], "measured"
+                    if mode == "upper":
+                        fs, dc, basis = 0.0, 1 - st["fdang_hi"], "measured, 95 % upper"
+                    elif mode == "nomask":
+                        fs = 0.0
+                else:
+                    fs, basis = st["fsafe"], "measured (all masked)"
+                    if mode == "upper":
+                        fs, dc, basis = 0.0, 1 - st["fdang_hi"], "measured, 95 % upper"
+                    elif mode == "nomask":
+                        fs = 0.0
+            elif st:
+                basis = "v1 (campaign: evidence)"
+        out.append((name, cnt, lam_v, fs, dc, lsm, dcl, sm, st, basis))
+    return out
+
+
+def chip_metrics(elems):
+    T = ASSUMPTIONS[9][1]
+    G = sum(c * l for _, c, l, *_ in elems)
+    H = sum(c * l * (1 - fs) * (1 - dc) for _, c, l, fs, dc, *_ in elems)
+    I_ = sum(c * lsm * (1 - dcl) for _, c, _, _, _, lsm, dcl, *_ in elems)
+    J = sum(c * l * (1 - fs) * (1 - dc) + c * lsm * (1 - dcl) * l * T * 1e-9 for _, c, l, fs, dc, lsm, dcl, *_ in elems)
+    return dict(sr=G, rf=H, lat=I_, spfm=1 - H / G, lfm=1 - I_ / (G - H), pmhf=J)
+
+
+def read_faults(path):
+    """faults.csv rows and the campaign's meta (faults_summary.json beside it, when there)"""
+    d = path if os.path.isdir(path) else os.path.dirname(path)
+    csvp = os.path.join(path, "faults.csv") if os.path.isdir(path) else path
+    with open(csvp) as f:
+        rows = list(csv.DictReader(f))
+    meta = {}
+    sp = os.path.join(d, "faults_summary.json")
+    if os.path.exists(sp):
+        with open(sp) as f:
+            meta = json.load(f).get("meta", {})
+    run = ""
+    rp = os.path.join(d, "RUN.txt")
+    if os.path.exists(rp):
+        run = open(rp).read().strip().splitlines()[0]
+    return rows, meta, run
+
+
+def block_table(faults):
+    """per (config, block): n, outcomes, DC with its interval, latencies"""
+    out = {}
+    for r in faults:
+        if r["outcome"] == "unresolved":
+            continue
+        k = (r["config"], r["block"])
+        s = out.setdefault(k, dict(n=0, det=0, masked=0, dang=0, hangd=0, hang=0, lat=[]))
+        s["n"] += 1
+        o = r["outcome"]
+        s["det"] += o == "detected"
+        s["masked"] += o == "masked"
+        s["dang"] += o == "dangerous"
+        s["hangd"] += o == "hang_detected"
+        s["hang"] += o == "hang"
+        if o in ("detected", "hang_detected") and r["latency"] not in ("", None):
+            s["lat"].append(int(r["latency"]))
+    for s in out.values():
+        d, g = s["det"] + s["hangd"], s["dang"] + s["hang"]
+        s["dc"] = d / (d + g) if d + g else None
+        s["dc_ci"] = wilson(s["dc"], d + g) if d + g else None
+    return out
+
+
+def pc(x, nd=1):
+    return "n/a" if x is None else f"{100 * x:.{nd}f} %"
+
+
+def build_v2(faults_path, formal_path, out_dir):
+    faults, meta, run = read_faults(faults_path)
+    formal, formal_title = parse_formal(formal_path)
+    rows = v2_rows(faults, formal)
+    bv = base_values()
+    modes = [("v1", "v1 (claims)"), ("v2", "v2 measured"), ("nomask", "v2, no credit for masked faults"),
+             ("upper", "v2, 95 % upper bounds")]
+    core = {m: core_metrics(rows, m) for m, _ in modes}
+    core_v1rows = core_metrics(rows, "v2", with_new=False)
+    chips = {m: chip_metrics(chip_elements(faults, formal, core[m], m)) for m, _ in modes}
+    chip_v1rows = chip_metrics(chip_elements(faults, formal, core_v1rows, "v2"))
+    xlsx = os.path.join(out_dir, "neo_fmeda_v2.xlsx")
+    md = os.path.join(out_dir, "fmeda_v2.md")
+    write_v2_xlsx(xlsx, rows, faults, meta, run, formal, formal_title, core, chips, modes, bv)
+    write_v2_md(md, rows, faults, meta, run, formal, formal_title, core, core_v1rows, chips, chip_v1rows, modes, bv)
+    return xlsx, md, core, chips
+
+
+def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chips, modes, bv):
+    wb = Workbook()
+    # ---------------------------------------------------------------- Assumptions (v1's, plus the weight buffer)
+    ws = wb.active
+    ws.title = "Assumptions"
+    ws["A1"] = ("AstraCore Neo FMEDA v2 (drop 0.43): v1's base failure rates unchanged (rows 4-19, the derived rates 22-26); "
+                "row 32 adds the weight buffer's storage, which v1 had no row for. Blue = inputs; yellow = assumptions "
+                "to replace with foundry data (ISO 26262-11).")
+    ws["A1"].font = BOLD
+    ws["A1"].alignment = WRAP
+    ws.merge_cells("A1:D1")
+    ws.row_dimensions[1].height = 48
+    header(ws, 3, ["Parameter", "Value", "Unit", "Source / note"], [46, 14, 12, 70])
+    for i, (p, v, u, s) in enumerate(ASSUMPTIONS, start=4):
+        ws.cell(row=i, column=1, value=p).font = BLACK
+        c = ws.cell(row=i, column=2, value=v)
+        c.font = BLUE
+        c.fill = YELLOW
+        ws.cell(row=i, column=3, value=u).font = BLACK
+        ws.cell(row=i, column=4, value=s).font = BLACK
+        ws.cell(row=i, column=4).alignment = WRAP
+        for col in range(1, 5):
+            ws.cell(row=i, column=col).border = BORDER
+    for a in ("B14", "B15", "B17", "B18"):
+        ws[a].number_format = "0%"
+    ws["A21"] = "Derived (formulas)"
+    ws["A21"].font = BOLD
+    for r, (label, f) in enumerate([("Permanent failure rate of one MAC core", "=B4*B6/B5"),
+                                    ("Transient failure rate, accumulator SRAM", "=B7*B9"),
+                                    ("Transient failure rate, activation buffer SRAM", "=B7*B10"),
+                                    ("Transient failure rate, weight registers", "=B8*B11"),
+                                    ("Transient failure rate, pipeline and control flops", "=B8*B12")], start=22):
+        ws.cell(row=r, column=1, value=label).font = BLACK
+        ws.cell(row=r, column=2, value=f).font = BLACK
+        ws.cell(row=r, column=2).number_format = "0.000"
+        ws.cell(row=r, column=3, value="FIT").font = BLACK
+    ws["A31"] = "v2 addition"
+    ws["A31"].font = BOLD
+    ws["A32"] = "Weight buffer SRAM per core (v2 addition)"
+    ws["B32"] = WBUF_MBIT
+    ws["B32"].font = BLUE
+    ws["B32"].fill = YELLOW
+    ws["C32"] = "Mbit"
+    ws["D32"] = ("WBUF_DEPTH 1024 entries x 468 bits (the 2:4 sparse-capable 32x32 core: 376 bits in 12 SECDED lanes of "
+                 "39 bits) = 479,232 bits; v1 has no row for it")
+    ws["D32"].alignment = WRAP
+    ws["A33"] = "Transient failure rate, weight buffer SRAM"
+    ws["B33"] = "=B7*B32"
+    ws["B33"].number_format = "0.000"
+    ws["C33"] = "FIT"
+    ws["A35"] = ("Observations, not changed here so that v2 compares with v1 like for like: the silicon activation buffer is "
+                 "ABUF_DEPTH 2048 x 32 bytes = 0.5 Mbit (v1: 0.25 Mbit, and its note's 4096 x 32 x 8 bit is 1 Mbit); the "
+                 "accumulator of the NCHK = 4 core is 512 x 36 x 32 bit = 0.5625 Mbit (v1: 0.5).")
+    ws["A35"].alignment = WRAP
+    ws.merge_cells("A35:D35")
+    ws.row_dimensions[35].height = 44
+
+    # ---------------------------------------------------------------- FMEDA_core_v2
+    fm = wb.create_sheet("FMEDA_core_v2")
+    fm["A1"] = ("FMEDA v2 (drop 0.43), one MAC core: v1's rows with the diagnostic coverage the fault campaign measured "
+                "(02_dv/dv/cocotb/faults/, the faults job). Per row: the faults that measure it (campaign selection), "
+                "their outcomes, F_safe = the bit-weighted fraction masked in the workload (no violation, ISO 26262's safe "
+                "faults), DC_RF = detected / (detected + dangerous), bit-weighted, with its 95 % Wilson interval. "
+                "λ_SPF/RF = λ x SR x FMD x SPF x (1 - F_safe) x (1 - DC_RF). Rows marked 'claim' keep v1's value and say why. "
+                + (f"Campaign: {run}." if run else ""))
+    fm["A1"].font = BOLD
+    fm["A1"].alignment = WRAP
+    fm.merge_cells("A1:Z1")
+    fm.row_dimensions[1].height = 62
+    cols = ["Block", "Failure mode", "Fault type", "λ (FIT)", "SR", "FMD", "SPF", "Safety mechanism", "Campaign selection",
+            "Faults", "Detected", "Masked", "Dangerous (incl. hang)", "F_safe (measured)", "DC_RF measured",
+            "DC_RF 95 % CI (n_eff)", "DC_RF used", "λ_SPF/RF (FIT)", "MPF", "Latent-fault mechanism", "DC_L",
+            "λ_MPF,L (FIT)", "Formal proofs (formal job)", "v1 DC_RF", "v1 λ_SPF/RF (FIT)", "Basis / evidence"]
+    header(fm, 3, cols, [24, 30, 10, 10, 5, 7, 5, 30, 30, 7, 8, 8, 9, 9, 9, 16, 9, 11, 5, 26, 7, 10, 34, 8, 10, 46])
+    first = 4
+    for i, r in enumerate(rows, start=first):
+        st = r["st"] or r.get("lat")
+        ci = f"{pc(st['dc_ci'][0])} .. {pc(st['dc_ci'][1])} ({st['neff_ns']:.0f})" if (r["st"] and r["st"]["dc_ci"]) else ""
+        sel = r.get("sel") or r.get("latent")
+        ev = r["basis"] + ("; " + r["claim"] if r.get("claim") else "") + ("; " + r["note"] if r.get("note") else "")
+        if r.get("lat"):
+            lt = r["lat"]
+            ev += f"; checker faults: {lt['n']} run, {lt['det']} detected (safe side), {lt['masked']} masked, {lt['dang']} dangerous"
+        vals = [r["block"], r["fmode"], r["ftype"], r["lam_formula"], r["sr"], r["fmd"], r["spf"], r.get("sm"),
+                sel_text(sel) if sel else "-", st["n"] if st else None, st["det"] if st else None,
+                st["masked"] if st else None, st["dang"] if st else None, r["fsafe"],
+                (r["st"]["dc"] if r["st"] and r["st"]["dc"] is not None else None), ci, r["dc"], None, r["mpf"],
+                r["lsm"], r["dcl"], None, r["proofs_text"], r["v1dc"], residual(r, "v1") if r["v1dc"] is not None else None, ev]
+        for c, v in enumerate(vals, 1):
+            cell = fm.cell(row=i, column=c, value=v)
+            cell.border = BORDER
+            cell.alignment = WRAP
+            cell.font = BLUE if c in (5, 6, 7, 14, 17, 19, 21) else BLACK
+        fm.cell(row=i, column=18, value=f"=D{i}*E{i}*F{i}*G{i}*(1-N{i})*(1-Q{i})").font = BLACK
+        fm.cell(row=i, column=22, value=f"=D{i}*E{i}*F{i}*S{i}*(1-U{i})").font = BLACK
+        for c in (4, 18, 22, 25):
+            fm.cell(row=i, column=c).number_format = "0.0000"
+        for c in (6, 14, 15, 17, 21, 24):
+            fm.cell(row=i, column=c).number_format = "0.0000"
+    last = first + len(rows) - 1
+    tot = last + 2
+    fm.cell(row=tot, column=1, value="Totals").font = BOLD
+    for c, col in ((4, "D"), (18, "R"), (22, "V")):
+        fm.cell(row=tot, column=c, value=f"=SUM({col}{first}:{col}{last})").font = BOLD
+        fm.cell(row=tot, column=c).number_format = "0.0000"
+    fm.cell(row=tot + 1, column=1, value="Safety-related λ_SR (Σ λ × SR × FMD)").font = BLACK
+    fm.cell(row=tot + 1, column=4, value=f"=SUMPRODUCT(D{first}:D{last},E{first}:E{last},F{first}:F{last})").number_format = "0.0000"
+    fm.freeze_panes = "C4"
+
+    # ---------------------------------------------------------------- Metrics_v2
+    mt = wb.create_sheet("Metrics_v2")
+    mt["A1"] = "Hardware architectural metrics, one MAC core, v2 (formulas over FMEDA_core_v2) and the comparison with v1"
+    mt["A1"].font = BOLD
+    mt.merge_cells("A1:F1")
+    header(mt, 3, ["Metric", "Value", "ASIL-B(D) target", "ASIL-D target", "Meets ASIL-B(D)?", "Meets ASIL-D?"], [44, 14, 16, 14, 16, 14])
+    F_ = "FMEDA_core_v2!"
+    mt["A4"], mt["B4"] = "Σ λ_SR (FIT)", f"={F_}$D${tot + 1}"
+    mt["A5"], mt["B5"] = "Σ λ_SPF/RF (FIT)", f"={F_}$R${tot}"
+    mt["A6"], mt["B6"] = "Σ λ_MPF,L (FIT)", f"={F_}$V${tot}"
+    mt["A7"], mt["B7"] = "SPFM", "=IF(B4>0,1-B5/B4,0)"
+    mt["C7"], mt["D7"] = "=Assumptions!B14", "=Assumptions!B17"
+    mt["E7"], mt["F7"] = '=IF(B7>=C7,"PASS","FAIL")', '=IF(B7>=D7,"PASS","FAIL")'
+    mt["A8"], mt["B8"] = "LFM", "=IF(B4-B5>0,1-B6/(B4-B5),0)"
+    mt["C8"], mt["D8"] = "=Assumptions!B15", "=Assumptions!B18"
+    mt["E8"], mt["F8"] = '=IF(B8>=C8,"PASS","FAIL")', '=IF(B8>=D8,"PASS","FAIL")'
+    mt["A9"], mt["B9"] = "PMHF, first order (FIT)", "=B5+B6*B4*Assumptions!B13*0.000000001"
+    mt["C9"], mt["D9"] = "=Assumptions!B16", "=Assumptions!B19"
+    mt["E9"], mt["F9"] = '=IF(B9<=C9,"PASS","FAIL")', '=IF(B9<=D9,"PASS","FAIL")'
+    for r_ in (7, 8):
+        for c in (2, 3, 4):
+            mt.cell(row=r_, column=c).number_format = "0.000%"
+    for r_ in (4, 5, 6, 9):
+        mt.cell(row=r_, column=2).number_format = "0.0000"
+    mt["A12"] = "Comparison (values computed by build_fmeda.py; the formulas above give the 'v2 measured' column)"
+    mt["A12"].font = BOLD
+    header(mt, 13, ["Metric"] + [label for _, label in modes], [44, 18, 18, 22, 20])
+    for j, (key, label) in enumerate([("spfm", "Core SPFM"), ("lfm", "Core LFM"), ("pmhf", "Core PMHF (FIT)"),
+                                      ("rf", "Core Σ λ_SPF/RF (FIT)"), ("spfm_c", "Chip SPFM"), ("lfm_c", "Chip LFM"),
+                                      ("pmhf_c", "Chip PMHF (FIT)")], start=14):
+        mt.cell(row=j, column=1, value=label)
+        for k, (m, _) in enumerate(modes, start=2):
+            src = chips[m] if key.endswith("_c") else core[m]
+            v = src[key.replace("_c", "")]
+            cell = mt.cell(row=j, column=k, value=v)
+            cell.number_format = "0.000%" if key.startswith(("spfm", "lfm")) else "0.000"
+
+    # ---------------------------------------------------------------- Chip_rollup_v2
+    cr = wb.create_sheet("Chip_rollup_v2")
+    cr["A1"] = ("Chip-level roll-up v2: the MAC core from FMEDA_core_v2, the shared SRAM's permanent faults and the NoC / DMA "
+                "engines measured on the tile build (stuck-at faults: their λ is permanent), the shared SRAM's soft errors "
+                "with v1's coverage (its residual is v1's multi-bit assumption; the single-bit faults are the evidence), the "
+                "other elements as v1. λ_RF = λ_SR x (1 - F_safe) x (1 - DC_RF).")
+    cr["A1"].font = BOLD
+    cr["A1"].alignment = WRAP
+    cr.merge_cells("A1:L1")
+    cr.row_dimensions[1].height = 60
+    header(cr, 3, ["Element", "Count", "λ_SR per instance (FIT)", "F_safe", "DC_RF", "λ_SM per instance (FIT)", "DC_L",
+                   "λ_SR total", "λ_SPF/RF total", "λ_MPF,L total", "PMHF contribution (FIT)", "Mechanism / basis"],
+           [34, 7, 14, 9, 10, 14, 8, 12, 12, 12, 14, 60])
+    T = "Assumptions!$B$13"
+    elems = chip_elements(faults, formal, core["v2"], "v2")
+    for i, (name, cnt, lam, fs, dc, lsm, dcl, sm, st, basis) in enumerate(elems, start=4):
+        cr.cell(row=i, column=1, value=name)
+        cr.cell(row=i, column=2, value=cnt).font = BLUE
+        if i == 4:
+            cr.cell(row=i, column=3, value=f"=Metrics_v2!B4")
+            cr.cell(row=i, column=4, value=0)
+            cr.cell(row=i, column=5, value="=1-Metrics_v2!B5/Metrics_v2!B4")
+            cr.cell(row=i, column=6, value="=Metrics_v2!B6")
+            cr.cell(row=i, column=7, value=0)
+        else:
+            cr.cell(row=i, column=3, value=lam)
+            cr.cell(row=i, column=4, value=fs).font = BLUE
+            cr.cell(row=i, column=5, value=dc).font = BLUE
+            cr.cell(row=i, column=6, value=lsm).font = BLUE
+            cr.cell(row=i, column=7, value=dcl).font = BLUE
+        cr.cell(row=i, column=8, value=f"=B{i}*C{i}")
+        cr.cell(row=i, column=9, value=f"=B{i}*C{i}*(1-D{i})*(1-E{i})")
+        cr.cell(row=i, column=10, value=f"=B{i}*F{i}*(1-G{i})")
+        cr.cell(row=i, column=11, value=f"=I{i}+J{i}*C{i}*{T}*0.000000001")
+        txt = f"{basis}: {sm}"
+        if st:
+            txt += (f" | campaign ({sel_text(CHIP_SEL[name][0])}): {st['n']} faults, {st['det']} detected, {st['masked']} masked, "
+                    f"{st['dang']} dangerous; DC {pc(st['dc'])}" + (f" ({pc(st['dc_ci'][0])} .. {pc(st['dc_ci'][1])})" if st['dc_ci'] else ""))
+        if name in CHIP_PROOFS:
+            txt += " | " + proofs_text(CHIP_PROOFS[name], formal)
+        cr.cell(row=i, column=12, value=txt).alignment = WRAP
+        for c in range(1, 13):
+            cr.cell(row=i, column=c).border = BORDER
+        for c in (3, 6, 8, 9, 10, 11):
+            cr.cell(row=i, column=c).number_format = "0.000"
+        for c in (4, 5, 7):
+            cr.cell(row=i, column=c).number_format = "0.00000"
+    e_last = 4 + len(elems) - 1
+    t = e_last + 2
+    cr.cell(row=t, column=1, value="Totals").font = BOLD
+    for c, col in ((8, "H"), (9, "I"), (10, "J"), (11, "K")):
+        cr.cell(row=t, column=c, value=f"=SUM({col}4:{col}{e_last})").font = BOLD
+        cr.cell(row=t, column=c).number_format = "0.000"
+    cr.cell(row=t + 2, column=1, value="Chip SPFM")
+    cr.cell(row=t + 2, column=2, value=f"=IF(H{t}>0,1-I{t}/H{t},0)").number_format = "0.000%"
+    cr.cell(row=t + 3, column=1, value="Chip LFM")
+    cr.cell(row=t + 3, column=2, value=f"=IF(H{t}-I{t}>0,1-J{t}/(H{t}-I{t}),0)").number_format = "0.000%"
+    cr.cell(row=t + 4, column=1, value="Chip PMHF, first order (FIT)")
+    cr.cell(row=t + 4, column=2, value=f"=K{t}").number_format = "0.0"
+    cr.cell(row=t + 5, column=1, value="Meets ASIL-B(D)?")
+    cr.cell(row=t + 5, column=2, value=f'=IF(AND(B{t + 2}>=Assumptions!B14,B{t + 3}>=Assumptions!B15,B{t + 4}<=Assumptions!B16),"PASS","FAIL")')
+
+    # ---------------------------------------------------------------- Campaign, Undetected, Formal, Evidence
+    cs = wb.create_sheet("Campaign")
+    cs["A1"] = "The fault campaign per block (unweighted within a block: every fault of a block has the same weight)"
+    cs["A1"].font = BOLD
+    header(cs, 3, ["Build", "Block", "Faults", "Detected", "Masked", "Dangerous", "Hang detected", "Hang", "DC", "DC 95 % CI",
+                   "Latency median (cycles)", "Latency max (cycles)"], [8, 30, 8, 9, 8, 9, 9, 7, 9, 18, 12, 12])
+    for i, ((cfg, blk), s) in enumerate(sorted(block_table(faults).items()), start=4):
+        lat = sorted(s["lat"])
+        vals = [cfg, blk, s["n"], s["det"], s["masked"], s["dang"], s["hangd"], s["hang"], s["dc"],
+                f"{pc(s['dc_ci'][0])} .. {pc(s['dc_ci'][1])}" if s["dc_ci"] else "", lat[len(lat) // 2] if lat else None,
+                lat[-1] if lat else None]
+        for c, v in enumerate(vals, 1):
+            cs.cell(row=i, column=c, value=v)
+        cs.cell(row=i, column=9).number_format = "0.0%"
+    un = wb.create_sheet("Undetected")
+    un["A1"] = "Dangerous faults (wrong results, no cause) and hangs without a cause"
+    un["A1"].font = BOLD
+    header(un, 3, ["Build", "Node", "Block", "Flop", "Bit", "Type", "Cycle", "Outcome", "Result words wrong"], [8, 6, 26, 70, 6, 6, 8, 10, 10])
+    bad = [r for r in faults if r["outcome"] in ("dangerous", "hang")]
+    for i, r in enumerate(sorted(bad, key=lambda r: (r["config"], r["block"], r["flop"])), start=4):
+        for c, k in enumerate(["config", "node", "block", "flop", "bit", "type", "cycle", "outcome", "diff"], 1):
+            un.cell(row=i, column=c, value=r[k])
+    fs_ = wb.create_sheet("Formal")
+    fs_["A1"] = f"The formal job's proofs ({formal_title or 'no report supplied'}) and the FMEDA rows citing them"
+    fs_["A1"].font = BOLD
+    header(fs_, 3, ["Task", "Result", "Mode", "Time", "What is proven", "Cited by"], [22, 8, 8, 10, 60, 60])
+    cited = {}
+    for r in rows:
+        for p in (r.get("proofs") or []):
+            cited.setdefault(p, []).append(f"{r['block']}: {r['fmode']}")
+    for name, ps in CHIP_PROOFS.items():
+        for p in ps:
+            cited.setdefault(p, []).append(f"chip: {name}")
+    for i, task in enumerate(sorted(set(formal) | set(cited)), start=4):
+        res, mode, tm, what = formal.get(task, ("not in the report", "", "", ""))
+        for c, v in enumerate([task, res, mode, tm, what, "; ".join(dict.fromkeys(cited.get(task, [])))], 1):
+            fs_.cell(row=i, column=c, value=v).alignment = WRAP
+    ev = wb.create_sheet("Evidence")
+    ev["A1"] = "Mechanism evidence: v1's fault-injection tests, and v2's (the campaign, C6)"
+    ev.append(["Mechanism", "Fault injected", "Test", "Log", "Drop"])
+    for row in EVIDENCE_V1:
+        ev.append(list(row))
+    ev.append(["Every mechanism, measured", "random flips and stuck-at faults in every flop and memory cell of the core "
+               "(C1) and the 2x2 tile mesh (M1), classified against the fault-free run", "the faults job",
+               "ci-logs-faults: faults.csv, faults_report.md, undetected.md", "0.43"])
+    ev.append(["The comparator storage of 0.41 (R7 / R10)", "a flip in each of the twelve registers 0.41's synchronous reads "
+               "added behind the comparators (the port-B address latches, inb_q, a0_q, first_oq, w_load_q, ra0_q, the "
+               "accumulate's stage-0 control)", "C6", "dv/cocotb (cocotb core)", "0.43"])
+    for col, wdt in (("A", 36), ("B", 60), ("C", 20), ("D", 52), ("E", 10)):
+        ev.column_dimensions[col].width = wdt
+    for sheet in wb.worksheets:
+        for row in sheet.iter_rows():
+            for cell in row:
+                if cell.font is None or cell.font.name != ARIAL:
+                    f = cell.font
+                    cell.font = Font(name=ARIAL, bold=f.bold, italic=f.italic, color=f.color)
+    wb.save(path)
+
+
+def write_v2_md(path, rows, faults, meta, run, formal, formal_title, core, core_v1rows, chips, chip_v1rows, modes, bv):
+    L = ["# FMEDA v2 -- the diagnostic coverage measured (drop 0.43, stream D2)", ""]
+    L.append("Generated by `05_safety/build_fmeda.py --v2` from the fault campaign's `faults.csv` (the `faults` job, "
+             "`02_dv/dv/cocotb/faults/`) and the formal job's `formal_report.md`; the workbook is `neo_fmeda_v2.xlsx` "
+             "(sheets Assumptions, FMEDA_core_v2, Metrics_v2, Chip_rollup_v2, Campaign, Undetected, Formal, Evidence).")
+    L.append("")
+    L.append("## Inputs")
+    L.append("")
+    if run:
+        L.append(f"- Campaign: {run}.")
+    for cfg in ("core", "tile"):
+        m = meta.get(cfg)
+        n = sum(1 for r in faults if r["config"] == cfg and r["outcome"] != "unresolved")
+        if not n:
+            continue
+        g = (m or {}).get("golden", {})
+        L.append(f"- The {cfg} build ({'neo_core 16x8, NCHK = 4, workload C1' if cfg == 'core' else '2x2 mesh of 16x8 tiles, workload M1'}): "
+                 f"{n} faults classified" + (f" of {m.get('n_total')} drawn" if m and m.get('n_total') and m.get('n_total') != n else "")
+                 + (f" (seed {m.get('seed')}, {m.get('n_flop', m.get('n'))} sampled over the flops and "
+                 f"{m.get('n_mem', 0)} over the memory cells, workers {m.get('workers')}; the fault-free run "
+                 f"{g.get('run_cycles')} cycles)" if m else "") + ".")
+    L.append(f"- Formal: {formal_title or 'no report supplied'}" + (f" -- {sum(1 for v in formal.values() if v[0] == 'PASS')} of "
+             f"{len(formal)} tasks PASS." if formal else "."))
+    L.append("")
+    L.append("## Base failure rates (v1's, unchanged)")
+    L.append("")
+    L.append(f"Die {bv['B4']} FIT over {bv['B5']} mm²; one MAC core {bv['B6']} mm², so λ_core = {bv['B22']:.4f} FIT "
+             f"(permanent); SRAM soft errors {bv['B7']} FIT/Mbit, flip-flops {bv['B8']} FIT/Mbit; per core: accumulator "
+             f"{bv['B9']} Mbit ({bv['B23']:.1f} FIT), activation buffer {bv['B10']} Mbit ({bv['B24']:.1f} FIT), weight registers "
+             f"{bv['B11']} Mbit ({bv['B25']:.2f} FIT), pipeline and control flops {bv['B12']} Mbit ({bv['B26']:.1f} FIT); "
+             f"lifetime {bv['B13']:,} h; targets ASIL-B(D) {bv['B14']:.0%} / {bv['B15']:.0%} / {bv['B16']} FIT, ASIL-D "
+             f"{bv['B17']:.0%} / {bv['B18']:.0%} / {bv['B19']} FIT (SPFM / LFM / PMHF). v2 adds one row v1 lacks: the weight "
+             f"buffer's storage, {bv['B32']} Mbit at the silicon size ({bv['B33']:.1f} FIT; 1024 entries x 12 SECDED lanes of "
+             "the NCHK = 4 32x32 core). Not changed, so that v2 compares like for like (for v3): the silicon activation buffer "
+             "is 2048 x 32 B = 0.5 Mbit (v1 counts 0.25, and its note's 4096 x 32 x 8 bit is 1 Mbit); the NCHK = 4 "
+             "accumulator is 0.5625 Mbit (v1: 0.5).")
+    L.append("")
+    L.append("## How a row is measured")
+    L.append("")
+    L.append("Each row names the faults that measure it (build, blocks, fault type: stuck-at for a permanent λ, flips for a "
+             "transient one -- v1's rows of type 'both' are split into the two parts). Each fault carries the campaign's "
+             "weight (its block's bits / its block's sample), so a row spanning blocks is a bit-weighted estimate. "
+             "F_safe = the weighted fraction masked (results bit-exact, no cause: a safe fault in this workload); DC_RF = "
+             "detected / (detected + dangerous) (a hang without a cause is dangerous, one the watchdog or the fetch timeout "
+             "caught is detected); the interval is Wilson's at Kish's effective sample size. λ_SPF/RF = λ x SR x FMD x SPF "
+             "x (1 - F_safe) x (1 - DC_RF), so the residual is λ x the dangerous fraction. Two sensitivities: no credit for "
+             "masked faults (F_safe = 0: every fault assumed to matter in some workload) and every measured row at the "
+             "95 % upper bound of its dangerous fraction (except a row a passing proof covers for every case -- the "
+             "weight buffer's single flips, ecc39 -- when no fault of it was dangerous). Rows the campaign cannot measure "
+             "keep v1's value and say why. "
+             "Every cause was raised within the FTTI (10 ms = 20,000,000 cycles at 2 GHz; the longest run is a few "
+             "thousand cycles).")
+    L.append("")
+    L.append("## The rows")
+    L.append("")
+    L.append("| Block / failure mode | Type | λ (FIT) | Campaign selection | Faults (det / masked / dang) | F_safe | DC_RF measured (95 % CI) | v1 DC_RF | λ_RF v2 | λ_RF v1 | Proofs |")
+    L.append("| --- | --- | ---: | --- | --- | ---: | --- | ---: | ---: | ---: | --- |")
+    for r in rows:
+        st = r["st"]
+        lam = r["lam_value"] * r["sr"] * r["fmd"]
+        sel = r.get("sel") or r.get("latent")
+        if st:
+            fx = f"{st['n']} ({st['det']} / {st['masked']} / {st['dang']})"
+            dcm = (f"{pc(st['dc'])} ({pc(st['dc_ci'][0])} .. {pc(st['dc_ci'][1])})" if st["dc"] is not None else "n/a (all masked)")
+            fsv = pc(r["fsafe"])
+        elif r.get("lat"):
+            lt = r["lat"]
+            fx = f"{lt['n']} ({lt['det']} / {lt['masked']} / {lt['dang']})"
+            dcm, fsv = "claim (latent row)", "-"
+        else:
+            fx, dcm, fsv = "-", "claim", "-"
+        v1rf = f"{residual(r, 'v1'):.4f}" if r["v1dc"] is not None else "-"
+        L.append(f"| {r['block']}: {r['fmode']} | {r['ftype']} | {lam:.4f} | {sel_text(sel) if sel else r.get('claim', '')} | "
+                 f"{fx} | {fsv} | {dcm} | {pc(r['v1dc'], 2) if r['v1dc'] is not None else '-'} | {residual(r, 'v2'):.4f} | "
+                 f"{v1rf} | {r['proofs_text'] or '-'} |")
+    L.append("")
+    claims = [r for r in rows if r["basis"].startswith("claim")]
+    if claims:
+        L.append("Rows that keep v1's value: " + "; ".join(f"{r['block']}: {r['fmode']} ({r.get('claim', 'no faults drawn')})" for r in claims) + ".")
+        L.append("")
+    L.append("## Metrics")
+    L.append("")
+    L.append("| | " + " | ".join(label for _, label in modes) + " |")
+    L.append("| --- | " + " | ".join("---:" for _ in modes) + " |")
+    for key, label, fmt in (("spfm", "Core SPFM", "p3"), ("lfm", "Core LFM", "p4"), ("pmhf", "Core PMHF (FIT)", "f3"),
+                            ("rf", "Core Σ λ_SPF/RF (FIT)", "f4")):
+        L.append(f"| {label} | " + " | ".join(fmt_v(core[m][key], fmt) for m, _ in modes) + " |")
+    for key, label, fmt in (("spfm", "Chip SPFM", "p3"), ("lfm", "Chip LFM", "p5"), ("pmhf", "Chip PMHF (FIT)", "f1")):
+        L.append(f"| {label} | " + " | ".join(fmt_v(chips[m][key], fmt) for m, _ in modes) + " |")
+    L.append("")
+    L.append(f"v2 measured without the row v1 lacks (the weight buffer's storage): core SPFM {fmt_v(core_v1rows['spfm'], 'p3')}, "
+             f"PMHF {fmt_v(core_v1rows['pmhf'], 'f3')} FIT; chip PMHF {fmt_v(chip_v1rows['pmhf'], 'f1')} FIT. Chip = {CORES} cores "
+             "plus v1's other elements (the shared SRAM's permanent faults and the NoC / DMA engines measured on the tile "
+             "build; the SRAM's soft errors keep v1's 99.995 %: its residual is v1's multi-bit assumption, which a "
+             "single-bit campaign cannot measure, while the single-bit faults show the correction).")
+    L.append("")
+    tgt = [("ASIL-B(D)", bv["B14"], bv["B15"], bv["B16"]), ("ASIL-D", bv["B17"], bv["B18"], bv["B19"])]
+    for name, s, l_, p in tgt:
+        verdict = []
+        for m, label in modes:
+            ok_c = core[m]["spfm"] >= s and core[m]["lfm"] >= l_ and core[m]["pmhf"] <= p
+            ok_x = chips[m]["spfm"] >= s and chips[m]["lfm"] >= l_ and chips[m]["pmhf"] <= p
+            verdict.append(f"{label}: core {'PASS' if ok_c else 'FAIL'}, chip {'PASS' if ok_x else 'FAIL'}")
+        L.append(f"- {name} ({s:.0%} / {l_:.0%} / {p} FIT): " + "; ".join(verdict) + ".")
+    L.append("")
+    # the rows that moved most
+    L.append("## What the measurement changes")
+    L.append("")
+    moved = sorted((r for r in rows if r["st"] and r["v1dc"] is not None),
+                   key=lambda r: -(residual(r, "v2") - residual(r, "v1")))
+    for r in moved[:6]:
+        d = residual(r, "v2") - residual(r, "v1")
+        if abs(d) < 1e-4:
+            continue
+        L.append(f"- **{r['block']}: {r['fmode']}** -- residual {residual(r, 'v1'):.4f} -> {residual(r, 'v2'):.4f} FIT "
+                 f"(v1 claimed DC {pc(r['v1dc'], 2)}; measured {pc(r['st']['dc'])} over {r['st']['n']} faults, "
+                 f"{r['st']['dang']} dangerous, F_safe {pc(r['fsafe'])}).")
+    L.append("")
+    bad = [r for r in faults if r["outcome"] in ("dangerous", "hang")]
+    byb = {}
+    for r in bad:
+        byb.setdefault((r["config"], r["block"]), []).append(r)
+    L.append(f"The undetected faults ({len(bad)} of {sum(1 for r in faults if r['outcome'] != 'unresolved')}), by block -- "
+             "the RTL items they point at (reported, not fixed: the brief limits D2's RTL changes to item 2):")
+    L.append("")
+    for (cfg, blk), rs in sorted(byb.items(), key=lambda kv: -len(kv[1])):
+        kinds = list(dict.fromkeys(re.sub(r"\[\d+\]", "[i]", r["flop"].split(".u_t.")[-1]) for r in rs))
+        top = ", ".join("`" + k + "`" for k in kinds[:4]) + (" ..." if len(kinds) > 4 else "")
+        L.append(f"- {cfg} / {blk}: {len(rs)} -- {top}")
+    L.append("")
+    # item 2: the comparator storage of drop 0.41, register by register, and the row that carries it
+    L.append("## The comparator storage of drop 0.41 (item 2)")
+    L.append("")
+    L.append("The registers drop 0.41's synchronous reads put behind the R7 / R10 comparators, compared since drop 0.43 "
+             "(the port-B address latches through neo_mem_rf's RBQ = 1 readback, the others against copies), and the copies "
+             "themselves; their faults are part of the rows named (both builds counted here, the rows use the core build). "
+             "Without the copies none of them raises a flag when upset: in the C6 test (each of the twelve flipped once while "
+             "in use) seven runs end with wrong rows -- inb_q, first_oq, w_load_q, the weight buffer's latch and ra0_q, idx1, "
+             "the accumulator's latch: a consistent wrong row passes the ABFT check and the SECDED lanes -- and five with "
+             "exact rows; with the copies all twelve raise their comparator's flag.")
+    L.append("")
+    L.append("| Register | FMEDA row | Faults | Detected | Masked | Dangerous | Latency median / max (cycles) |")
+    L.append("| --- | --- | ---: | ---: | ---: | ---: | --- |")
+    for frag, label, row in ITEM2_REGS:
+        pat = re.compile(r"(^|\.)" + re.escape(frag) + r"$")
+        rs = [r for r in faults if r["outcome"] != "unresolved" and pat.search(r["flop"])]
+        if not rs:
+            L.append(f"| {label} | {row} | 0 | | | | |")
+            continue
+        lat = sorted(int(r["latency"]) for r in rs if r["outcome"] in ("detected", "hang_detected") and r["latency"] not in ("", None))
+        L.append(f"| {label} | {row} | {len(rs)} | {sum(r['outcome'] in ('detected', 'hang_detected') for r in rs)} | "
+                 f"{sum(r['outcome'] == 'masked' for r in rs)} | {sum(r['outcome'] in ('dangerous', 'hang') for r in rs)} | "
+                 f"{(str(lat[len(lat) // 2]) + ' / ' + str(lat[-1])) if lat else '-'} |")
+    L.append("")
+    L.append("## Not measured here")
+    L.append("")
+    L.append("- Combinational logic: the campaign injects into flops and memory cells (stuck-at as the permanent-fault proxy); "
+             "the gate-level fault simulation at freeze covers the logic between them.")
+    L.append("- Multi-bit upsets, dual faults and latent faults of the checkers (single-fault campaign): v1's values kept, "
+             "the formal proofs cited where they cover the mechanism (ecc39: every double flip detected).")
+    L.append("- The reduce port (no K-split in C1 / M1), clock and reset; the program memory's words, the router's FIFO "
+             "slots and the NIC's partial-sum FIFO (two-dimensional arrays the VPI cannot index on Verilator 5.020) and, in "
+             "the tile build, the computing core's skew pipes (left out by the probe; measured in the core build).")
+    with open(path, "w") as f:
+        f.write("\n".join(L) + "\n")
+
+
+def fmt_v(x, fmt):
+    if fmt.startswith("p"):
+        return f"{100 * x:.{int(fmt[1:])}f} %"
+    return f"{x:.{int(fmt[1:])}f}"
+
+
 if __name__ == "__main__":
-    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "neo_fmeda_skeleton.xlsx")
-    print(build(out))
+    ap = argparse.ArgumentParser(description="the FMEDA workbook: v1 (no arguments) or v2 from the fault campaign (--v2)")
+    ap.add_argument("--v2", action="store_true", help="FMEDA v2 from the fault campaign and the formal report")
+    ap.add_argument("--faults", help="the faults job's output directory (faults.csv, faults_summary.json) or faults.csv")
+    ap.add_argument("--formal", help="the formal job's formal_report.md")
+    ap.add_argument("--out", default=os.path.dirname(os.path.abspath(__file__)), help="where the v2 outputs go")
+    args = ap.parse_args()
+    if args.v2:
+        if not args.faults:
+            raise SystemExit("build_fmeda.py --v2 needs --faults")
+        xlsx, md, core, chips = build_v2(args.faults, args.formal, args.out)
+        print(f"{xlsx}\n{md}\ncore: SPFM v1 {core['v1']['spfm']:.4%} -> v2 {core['v2']['spfm']:.4%}, PMHF {core['v1']['pmhf']:.3f} -> "
+              f"{core['v2']['pmhf']:.3f} FIT; chip PMHF {chips['v1']['pmhf']:.1f} -> {chips['v2']['pmhf']:.1f} FIT")
+    else:
+        out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "neo_fmeda_skeleton.xlsx")
+        print(build(out))

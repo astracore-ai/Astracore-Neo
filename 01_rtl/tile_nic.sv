@@ -594,6 +594,7 @@ module tile_nic #(
   logic [COLS*PW-1:0] prow_wdata;                         // the beat's words at their column positions
   logic [COLS*PW-1:0] prow_rd;                            // the row of rx_src (port A, combinational)
   logic [COLS*PW-1:0] unused_prow_rb, unused_prow_bd;     // the leaf's unused read ports (RB = 0, no hooks here)
+  logic [SRCW-1:0]    unused_prow_bq;                     // its port-B address readback (RBQ = 0: zero; drop 0.43)
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_prow
       assign prow_we[j] = fire_psum && q_pcm[j];
@@ -604,7 +605,7 @@ module tile_nic #(
     .clk(clk),
     .we(prow_we), .waddr(rx_src), .wdata(prow_wdata),
     .ra_addr(rx_src), .ra_data(prow_rd),
-    .rb_en(1'b0), .rb_addr('0), .rb_data(unused_prow_rb),
+    .rb_en(1'b0), .rb_addr('0), .rb_data(unused_prow_rb), .rb_addr_q(unused_prow_bq),
     .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_prow_bd),
     .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
 
@@ -785,6 +786,7 @@ module tile_nic #(
   logic [IDXW-1:0]      dfifo_head_idx;
   logic [NDB-1:0]       dfifo_head_bpar;                   // the head row's beat parities
   localparam int DFW = $clog2(DFD);                       // pointer width from the depth (drop 0.21)
+  logic [DFW-1:0]       unused_dfifo_bq;                   // the leaf's port-B address readback (RBQ = 0: zero; drop 0.43)
   logic [DFW-1:0]       dfifo_wr;
   logic [DFW-1:0]       dfifo_rd;
   logic [DFW-1:0]       dfifo_rd_nxt;                     // dfifo_rd of the next cycle: the address the registered port reads now
@@ -910,7 +912,7 @@ module tile_nic #(
     .clk(clk),
     .we(drain_push), .waddr(dfifo_wr), .wdata(dfifo_wrow),
     .ra_addr('0), .ra_data(unused_dfifo_ra),
-    .rb_en(1'b1), .rb_addr(dfifo_rd_nxt), .rb_data(dfifo_head),
+    .rb_en(1'b1), .rb_addr(dfifo_rd_nxt), .rb_data(dfifo_head), .rb_addr_q(unused_dfifo_bq),
     .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_dfifo_bd),
     .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
   always_comb begin

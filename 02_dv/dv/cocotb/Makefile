@@ -18,6 +18,7 @@
 #   make -C dv/cocotb top       # test_neo_top.py: the chip top (drop 0.42) -- 2x2 tiles of 16x8 cores + 2 bridge nodes (row 0: memory
 #                               # and host bridge, row 1: an unused position), the AXI4-Lite control plane, clk 1.0 ns and aclk 1.6 ns
 #   make -C dv/cocotb top_sync  # the same build again with aclk == clk (both 1.0 ns, the same edges): the design does not depend on the ratio
+#   make -C dv/cocotb faults_tile / faults_core   # drop 0.43: the fault campaign's drivers (faults/; run by faults/run_faults.py)
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -191,6 +192,16 @@ mesh8s:
 	+$(MESH8S_MAKE)
 mesh8s_build:
 	+$(MESH8S_MAKE) sim_build_mesh8s/Vtop
+# the fault campaign (drop 0.43, stream D2): faults/campaign_tile.py drives the tile build (M1 on the 2x2 mesh of 16x8 tiles),
+# faults/campaign_core.py the core build (C1 on neo_core 16x8, NCHK = 4), each in a build directory of its own; both inject
+# through the VPI that cocotb's --public-flat-rw opens. faults/run_faults.py runs the fault-free run once (the build), then
+# several runs of the same model at once, each with its own fault list and results file (FAULTS_WORKER), FAULTS_LIST /
+# FAULTS_CSV / FAULTS_BUDGET_S in the environment. `make faults` (07_ci/Makefile) is the job's entry.
+FAULTS_WORKER ?=
+faults_tile:
+	$(MAKE) TARGET=tile MODULE=faults.campaign_tile SIM_BUILD=sim_build_faults_tile COCOTB_RESULTS_FILE=results_faults_tile$(FAULTS_WORKER).xml
+faults_core:
+	$(MAKE) TARGET=core NCHK=4 MODULE=faults.campaign_core SIM_BUILD=sim_build_faults_core COCOTB_RESULTS_FILE=results_faults_core$(FAULTS_WORKER).xml
 # coverage builds (drop 0.26, item 5): the same tests with Verilator line/toggle coverage and the functional covergroups on,
 # in their own build directories; each run's coverage.dat is renamed after it so the three merge into one report
 define keep_cov
@@ -218,4 +229,5 @@ coverage: core_cov tile_cov tile8_cov tile32_cov
 	-verilator_coverage --annotate coverage_annotated --annotate-min 1 coverage_*.dat > /dev/null 2>&1
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
+	rm -rf sim_build_faults_tile sim_build_faults_core results_faults_*.xml
 	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_tile_sp sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_tile_sp.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated sim_build_top results_top.xml results_top_sync.xml

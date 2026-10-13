@@ -283,16 +283,35 @@ TOP = dict(NCHK=4, NX=8, NY=8, ROWS=32, COLS=32, ACC_ROWS=512, ABUF_DEPTH=2048, 
 RTL_FILES += ["cdc_bits.sv", "cdc_fifo.sv", "cdc_sync.sv", "noc_axi_bridge.sv", "top_ctrl.sv", "mesh_ctrl.sv", "neo_top.sv"]
 
 
+def top_core_units(TT):
+    """The chip top's core (drop 0.43, D2; the 0.42 merge left the top's units at the silicon tile's NCHK = 4 while neo_top
+    instantiates neo_tile with NCHK at its default 1 -- run 180's synth gates failed on top_neo_tile's PE count and on
+    neo_top's tile): the units whose parameters follow NCHK again at NCHK = 1 with the prefix top_ (the data PE with one
+    byte, the array, the streaming core, the feeder, the datapath, the weight buffer, the core); the check PE, the
+    accumulator, requant and the sequencer are the tile's units (their parameters do not depend on NCHK)."""
+    shared = {"mac_pe_chk", "acc_bank", "requant", "core_seq"}
+    out = []
+    for u in core_units(dict(TT, NCHK=1), "top_", "32x32 dense, the chip top's tile"):
+        base = u["name"][len("top_"):]
+        if base in shared:
+            continue
+        u["children"] = {ty: [n if n[len("top_"):] not in shared else n[len("top_"):] for n in names]
+                         for ty, names in u["children"].items()}
+        out.append(u)
+    return out
+
+
 def top_units(P):
     NX, NY = P["NX"], P["NY"]
     XW, YW = clog2(NX + 1), clog2(NY)
-    TT = dict(TILE, XW=XW, YW=YW, NX=NX + 1, NY=NY)          # the chip top's tile: the source index over NX + 1 columns
+    TT = dict(TILE, XW=XW, YW=YW, NX=NX + 1, NY=NY, NCHK=1)   # the chip top's tile: the source index over NX + 1 columns;
+                                                              # the dense core (neo_top leaves neo_tile's NCHK at 1)
     R, C, PW = TT["ROWS"], TT["COLS"], 32
     WCW = 8 + clog2(R) + 1
     IDXW, AW, WAW, BAW = clog2(TT["ACC_ROWS"]), clog2(TT["ABUF_DEPTH"]), clog2(TT["WBUF_DEPTH"]), clog2(TT["BANK_DEPTH"])
     DWL, BW, NSRC = 32 + 32 * TT["WPF"], 16, (NX + 1) * NY
     br = dict(XW=XW, YW=YW, NX=NX, NY=NY, BAW=BAW, AXI_DW=P["AXI_DW"], AXI_IDW=P["AXI_IDW"], HOST_TIMEOUT=P["FETCH_TIMEOUT"])
-    return [
+    return top_core_units(TT) + [
         U("top_link_packer", "link_packer", dict(XW=XW, YW=YW, BW=BW, WPF=TT["WPF"]), "beats to 32-word link flits at the chip top's 4-bit x"),
         U("top_link_unpacker", "link_unpacker", dict(XW=XW, YW=YW, BW=BW, WPF=TT["WPF"]), "32-word link flits to beats at the chip top's 4-bit x"),
         U("top_tile_nic", "tile_nic", dict(XW=XW, YW=YW, NX=NX + 1, NSRC=NSRC, BW=BW, ROWS=R, COLS=C, WCW=WCW, NCHK=P["NCHK"], IDXW=IDXW, AW=AW, WAW=WAW,
@@ -302,7 +321,7 @@ def top_units(P):
         U("top_noc_router", "noc_router", dict(XW=XW, YW=YW, DW=DWL, DV_HOOKS=0), "5-port router at the chip top's widths (the tiles' and the bridge column's)"),
         U("top_tile_dma", "tile_dma", dict(XW=XW, YW=YW, PDEPTH=32, DV_HOOKS=0), "DMA program engine at the chip top's coordinate width"),
         U("top_neo_tile", "neo_tile", dict(TT), "the chip top's tile: XW 4, the source index over 9 columns; 32x32 core, 2 MB bank, 1024-bit links",
-          children={"neo_core": ["neo_core"], "tile_nic": ["top_tile_nic"], "noc_router": ["top_noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
+          children={"neo_core": ["top_neo_core"], "tile_nic": ["top_tile_nic"], "noc_router": ["top_noc_router"], "bank_bist_wrap": ["bank_bist_wrap"],
                     "tile_dma": ["top_tile_dma"], "prog_mem": ["prog_mem"], "host_if": ["host_if"], "esm": ["esm"],
                     "link_packer": ["top_link_packer"], "link_unpacker": ["top_link_unpacker"]},
           pe=R * (C + P["NCHK"])),
@@ -504,7 +523,7 @@ def write_macro_lib(recs, pdk, path, libname="neo_macros"):
                     body.append(arc_su())
             else:
                 body.append("      max_capacitance : 500.0;")
-                if pn in ("rdata", "rb_data"):
+                if pn in ("rdata", "rb_data", "rb_addr_q"):    # rb_addr_q (drop 0.43): the latched address, clock-to-Q
                     body.append(arc_cq("clk", "timing_type : rising_edge;"))
                 elif pn == "ra_data":           # the asynchronous read: an arc from every address bit (a bus-to-bus arc of
                     aw = r["AW"]                  # different widths is not taken by OpenSTA)

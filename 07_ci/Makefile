@@ -158,10 +158,16 @@ verilator_core: vectors_core
 	verilator --binary --timing -Wno-fatal +incdir+vectors_core --top-module tb_neo_core $(RTL) $(TBC) -o sim_core
 	./obj_dir/sim_core +VECDIR=vectors_core
 
+# drop 0.43: both Icarus targets gate on the testbench's verdict (vvp exits 0 whatever the testbench prints, so the hdl-sim
+# steps passed with the standing Icarus 12 failures until now): the run is kept in build/ and the target fails unless it
+# printed RESULT: ALL PASS. CI runs Ubuntu's Icarus 12; the RTL keeps to what Icarus 12 simulates (an unpacked array that
+# receives a child's unpacked output port is a wire -- Icarus 12 drives no variable from such a port -- and ecc39's masks are
+# constants, not always_comb blocks without inputs)
 iverilog_core: vectors_core
 	mkdir -p build
 	iverilog -g2012 -I vectors_core -o build/sim_core.vvp $(RTL) $(TBC)
-	vvp build/sim_core.vvp +VECDIR=vectors_core
+	vvp build/sim_core.vvp +VECDIR=vectors_core | tee build/tb_core_iverilog.txt
+	grep -q "^RESULT: ALL PASS" build/tb_core_iverilog.txt
 
 regress: vectors vectors_sp
 	python3 model/systolic_ref.py --rows 8 --cols 16 --m 20 --seed 7 --fault-row 2 --fault-col 9 --out build/v816
@@ -198,10 +204,11 @@ regress_ci: vectors vectors_sp
 iverilog: vectors
 	mkdir -p build
 	iverilog -g2012 -I $(VECDIR) -o build/sim.vvp $(RTL) $(TB)
-	vvp build/sim.vvp +VECDIR=$(VECDIR)
+	vvp build/sim.vvp +VECDIR=$(VECDIR) | tee build/tb_iverilog.txt
+	grep -q "^RESULT: ALL PASS" build/tb_iverilog.txt     # gating since drop 0.43 (see iverilog_core)
 
-# drop 0.42: the streaming core on the NCHK = 4 arrays under Icarus (14; CI's Icarus 12 shows its standing always_comb X
-# failures here too, so the target is not part of hdl-sim)
+# drop 0.42: the streaming core on the NCHK = 4 arrays under Icarus (drop 0.43: Icarus 12 runs it too, see iverilog_core;
+# not a step of hdl-sim)
 iverilog_sp: vectors_sp
 	mkdir -p build
 	iverilog -g2012 -I build/v32_4 -o build/sim_v32_4.vvp $(RTL) $(TB)
@@ -379,6 +386,40 @@ synth:
 .PHONY: synth_compare
 synth_compare:
 	python3 synth/report.py --compare synth_out synth_out_nangate45 --out ci_logs/synth
+
+# gate-level simulation (drop 0.43, stream D2; the synth job, after the ASAP7 run): synth/gls.py simulates each unit's
+# netlist (synth_out/<unit>/netlist.v, ASAP7 cells) beside its RTL at the same parameters, the same random inputs every
+# cycle, every output compared every cycle -- Icarus 14 of the OSS CAD Suite with the PDK's behavioural cell models
+# (synth/tools.sh puts them in $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7); gls_report.md, the testbenches and the logs into
+# ci_logs/synth/gls/, the renamed netlists and the compiled simulations into $(SYNTH_OUT)/gls (not published: requant's
+# compiled image is over GitHub's 100 MB file limit); the target fails on a mismatch. neosim (sim/) gives the testbench
+# the RTL ports.
+NEO_SYNTH_TOOLS ?= /opt/neo-synth
+GLS_UNITS ?= mac_pe,mac_pe_chk,requant,crc16_beat,ecc39_enc,ecc39_dec,link_packer
+GLS_CELLS ?= $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7
+GLS_IVERILOG ?= $(NEO_SYNTH_TOOLS)/oss-cad-suite/bin/iverilog
+GLS_CYCLES ?= 3000
+.PHONY: gls
+gls:
+	python3 synth/gls.py --synth $(SYNTH_OUT) --rtl rtl --cells $(GLS_CELLS) --out $(SYNTH_LOGS)/gls --units $(GLS_UNITS) \
+	  --iverilog $(GLS_IVERILOG) --cycles $(GLS_CYCLES)
+
+# the fault campaign (drop 0.43, stream D2; CI's `faults` job, nightly and on demand): dv/cocotb/faults/run_faults.py --
+# FAULTS_N faults on each of the two cocotb builds (C1 on neo_core 16x8, M1 on the 2x2 mesh of 16x8 tiles), seeded, sampled
+# per block (dv/cocotb/faults/weights.json), FAULTS_WORKERS simulator processes per build, the whole campaign within
+# FAULTS_BUDGET_MIN minutes (0: no limit; each worker stops when its share has run out, every finished fault kept);
+# faults.csv, faults_report.md (per-block diagnostic coverage), undetected.md and faults_summary.json into ci_logs/faults/.
+# FMEDA v2 reads them: python3 safety/build_fmeda.py --v2 --faults ci_logs/faults --formal <formal_report.md>.
+FAULTS_N ?= 300
+FAULTS_SEED ?= 1
+FAULTS_WORKERS ?= 2
+FAULTS_BUDGET_MIN ?= 0
+FAULTS_OUT ?= ci_logs/faults
+.PHONY: faults
+faults:
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	python3 dv/cocotb/faults/run_faults.py all --n-tile $(FAULTS_N) --n-core $(FAULTS_N) --seed $(FAULTS_SEED) \
+	  --workers $(FAULTS_WORKERS) --budget-min $(FAULTS_BUDGET_MIN) --out $(FAULTS_OUT)
 
 # the formal job (drop 0.41): formal/run.py runs every task of every formal/*.sby with SymbiYosys (sby -f -d formal_out/<task>),
 # FORMAL_JOBS at a time, each under FORMAL_TIMEOUT seconds (the task's whole session -- sby and its solvers -- is killed at the
