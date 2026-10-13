@@ -79,7 +79,9 @@ setup / hold WNS and TNS from the routed final STA (OpenRCX), the minimum period
 paths, the worst routed paths, power at the flow's default activity (A3 replaces it with the cocotb runs' recorded
 activity), clock skew and the cells driving clock nets, the macros' LEF sizes against the synthesis model, every ORFS
 step's runtime and peak memory; and the **routed / synthesized** ratio: the same netlist flat in OpenSTA with the same
-SDC, ideal clock, no wires (`in/synth_sta/`) against the routed figure, beside synth.py's own per-unit figures.
+SDC, ideal clock, no wires (`in/synth_sta/`) against the routed figure, beside synth.py's own per-unit figures, and the
+setup WNS through the flow from repair_timing's own tables (floorplan -- whose first row is the synthesized estimate --,
+CTS, global route) to split that ratio into sizing, clock tree and wires.
 `orfs/logs`, `orfs/reports` (ORFS's logs, metrics JSON and reports, `reports/neo/` neo_report.tcl's), `in/` (the macros'
 LEF / LIB / wrappers, prep.py's netlist statistics and checks, the SDC), `synth.txt`, `tools.txt`, `run.json`.
 
