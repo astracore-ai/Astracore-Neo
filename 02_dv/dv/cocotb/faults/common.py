@@ -14,7 +14,9 @@ leaves the other copy unchanged), so the comparators between copies see the faul
 Two-dimensional unpacked arrays are not reachable through cocotb's VPI on Verilator 5.020 (the program memory's words,
 the router's FIFO slots, the NIC's partial-sum FIFO: Verilator's vpi_handle_by_index returns a memory word that cannot be
 indexed again): flops.py lists them, the sampler leaves them out and the report says how many bits that is. The arrays
-Injector.resolve cannot reach are probed by the fault-free run (FAULTS_PROBE) and left out the same way.
+Injector.resolve cannot reach, and the unpacked arrays of single bits with no packed dimension (one GPI register on
+Verilator 5.020: requant's wrt / par / n1 / n2, the router's valid bits), are probed by the fault-free run (FAULTS_PROBE,
+the first element of each) and left out the same way.
 
 Outcome of a run against the fault-free run of the same driver:
   detected      a cause was raised (any sticky flag or the watchdog), latency = the first cycle the flag was seen - the
@@ -78,23 +80,24 @@ class Injector:
         if last >= 0:
             for k in range(last + 1, len(parts)):
                 pre = ".".join(parts[:k])
-                raw = self.scopes.get(pre)
+                if pre not in self.scopes:                # a miss is kept too (cocotb warns once per scope it cannot map)
+                    self.scopes[pre] = self.dut._handle.get_handle_by_name(pre)
+                raw = self.scopes[pre]
                 if raw is None:
-                    raw = self.dut._handle.get_handle_by_name(pre)
-                    if raw is None:
-                        continue
-                    self.scopes[pre] = raw
+                    continue
                 leaf = raw.get_handle_by_name(".".join(parts[k:]))
                 if leaf is not None:
                     return SimHandle(leaf, self.dut._path + "." + path)
         return self.dut._id(path, extended=False)
 
-    def unreachable(self, paths):
-        """the paths of `paths` (arrays) that do not resolve to a ranged array of their own"""
+    def unreachable(self, items):
+        """the paths of `items` ([path, first element index]: the population's arrays) whose array does not resolve to a
+        ranged array of its own or whose element cannot be indexed -- an unpacked array of single bits with no packed
+        dimension (`logic wrt [COLS]`) is one GPI register of COLS bits on Verilator 5.020, with no elements to index"""
         bad = []
-        for p in paths:
+        for p, elem in items:
             try:
-                self.handle(p)
+                self.handle(p, elem)
             except Exception:
                 bad.append(p)
         return bad

@@ -148,7 +148,8 @@ async def faults_core(dut):
         t1 = time.time()
         try:
             f.arm(rig.inj)
-        except Exception:
+        except Exception as e:
+            dut._log.warning(f"faults_core: fault {fd['id']} {f.name()}: not resolved ({e!r})")
             out.row(id=fd["id"], config="core", workload="c1", block=fd["block"], flop=f.name(), bit=f.bit, type=f.type,
                     cycle=f.cycle, outcome="unresolved")
             continue

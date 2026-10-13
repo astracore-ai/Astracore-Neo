@@ -178,7 +178,13 @@ def run(config, n, seed, workers, budget_s, out, weights_path):
     os.makedirs(out, exist_ok=True)
     weights = load_weights(weights_path)
     pop, mems, left_out = population(config, weights)
-    g = golden(config, out, sorted({f["path"] for f in pop if f["elem"]} | {m["path"] for m in mems}))
+    first = {}                                        # every array of the population with its first element's index
+    for f in pop:
+        if f["elem"] and f["path"] not in first:
+            first[f["path"]] = f["elem"]
+    for m in mems:
+        first.setdefault(m["path"], [0])
+    g = golden(config, out, [[p, e] for p, e in sorted(first.items())])
     bad = set(g.pop("unreachable", []))
     if bad:                                          # common.Injector.resolve: arrays the VPI layer cannot range here
         d = left_out.setdefault("array not reachable through cocotb 1.9's VPI layer in this build (common.py)", {})

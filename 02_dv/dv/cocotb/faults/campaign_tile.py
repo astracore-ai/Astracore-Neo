@@ -203,7 +203,8 @@ async def faults_tile(dut):
         t1 = time.time()
         try:
             f.arm(rig.inj)
-        except Exception:
+        except Exception as e:
+            dut._log.warning(f"faults_tile: fault {fd['id']} {f.name()}: not resolved ({e!r})")
             out.row(id=fd["id"], config="tile", workload="m1", node=fd.get("node", ""), block=fd["block"], flop=f.name(),
                     bit=f.bit, type=f.type, cycle=f.cycle, outcome="unresolved")
             continue
