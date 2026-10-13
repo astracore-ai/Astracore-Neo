@@ -1,0 +1,59 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2026  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)
+
+-- Executing script file `prep.ys' --
+
+1. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib
+Imported 42 cell types from liberty file.
+
+2. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib
+Imported 37 cell types from liberty file.
+
+3. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib
+Imported 34 cell types from liberty file.
+
+4. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib
+Imported 56 cell types from liberty file.
+
+5. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+Imported 33 cell types from liberty file.
+
+6. Executing Verilog-2005 frontend: /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/mac_pe/netlist.v
+Parsing Verilog input from `/home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/mac_pe/netlist.v' to AST representation.
+Generating RTLIL representation for module `\mac_pe'.
+Successfully finished Verilog frontend.
+
+7. Executing HIERARCHY pass (managing design hierarchy).
+
+7.1. Analyzing design hierarchy..
+Top module:  \mac_pe
+
+7.2. Analyzing design hierarchy..
+Top module:  \mac_pe
+Removed 0 unused modules.
+
+8. Executing SPLITNETS pass (splitting up multi-bit signals).
+
+9. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \mac_pe..
+Removed 71 unused cells and 138 unused wires.
+<suppressed ~93 debug messages>
+
+10. Executing HILOMAP pass (mapping to constant drivers).
+
+11. Executing INSBUF pass (insert buffer cells for connected wires).
+14. Executing CHECK pass (checking for obvious problems).
+Checking module mac_pe...
+Found and reported 0 problems.
+
+15. Executing Verilog backend.
+Dumping module `\mac_pe'.
+
+End of script. Logfile hash: a256480254, time: 0.49s, user: 0.42s, system: 0.07s, MEM: 29.74 MB peak
+Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)
+Time spent: 52% 2x stat (0 sec), 26% 10x read_liberty (0 sec), ...

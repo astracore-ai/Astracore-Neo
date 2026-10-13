@@ -1,0 +1,46 @@
+$ docker run --rm --init --name neo-pnr-mac_pe-synth-3237 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/mac_pe/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in synth
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth_canonicalize.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/logs/asap7/mac_pe/base/1_1_yosys_canonicalize.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.v
+Elapsed time: 0:00.10[h:]min:sec. CPU time: user 0.02 sys 0.02 (39%). Peak memory: 27020KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     0.40       26 N/A
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/logs/asap7/mac_pe/base/1_2_yosys.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.v
+Elapsed time: 0:00.04[h:]min:sec. CPU time: user 0.03 sys 0.01 (99%). Peak memory: 26980KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_2_yosys              .v            0        0     1.00       26 99c544d6be
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_block.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.sdc
+touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_block.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.sdc
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+mkdir -p /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/objects/asap7/mac_pe/base
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 1_synth synth_odb
+Running synth_odb.tcl, stage 1_synth
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+[INFO ODB-0227] LEF file: /OpenROAD-flow-scripts/flow/platforms/asap7/lef/asap7_tech_1x_201209.lef, created 30 layers, 9 vias
+[INFO ODB-0227] LEF file: /OpenROAD-flow-scripts/flow/platforms/asap7/lef/asap7sc7p5t_28_R_1x_220121a.lef, created 212 library cells
+link_design mac_pe
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+eliminate_dead_logic
+Removed 0 unused instances and 0 unused nets.
+Design area 152 um^2 100% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_synth.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_synth.sdc
+Elapsed time: 0:01.49[h:]min:sec. CPU time: user 1.44 sys 0.05 (99%). Peak memory: 183648KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_synth                .odb          1        1     1.00      179 13ab529263
+1_synth                .sdc                                       358206710d

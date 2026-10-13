@@ -1,0 +1,1014 @@
+$ docker run --rm --init --name neo-pnr-mac_pe-route-3237 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/mac_pe/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in route
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth_canonicalize.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/logs/asap7/mac_pe/base/1_1_yosys_canonicalize.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.v
+Elapsed time: 0:00.04[h:]min:sec. CPU time: user 0.03 sys 0.01 (98%). Peak memory: 27056KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     1.00       26 N/A
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/logs/asap7/mac_pe/base/1_2_yosys.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/1_2_yosys.v
+Elapsed time: 0:00.04[h:]min:sec. CPU time: user 0.03 sys 0.01 (98%). Peak memory: 26868KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_2_yosys              .v            0        0     1.00       26 99c544d6be
+1_2_yosys              .sdc                                       41aa9dcd79
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 5_1_grt global_route
+Running global_route.tcl, stage 5_1_grt
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/4_cts.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/4_cts.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+pin_access
+[INFO DRT-0149] Reading tech and libs.
+
+Units:                1000
+Number of layers:     21
+Number of macros:     212
+Number of vias:       14
+Number of viarulegen: 11
+
+[INFO DRT-0150] Reading design.
+
+Design:                   mac_pe
+Die area:                 ( 0 0 ) ( 18625 18625 )
+Number of track patterns: 32
+Number of DEF vias:       0
+Number of components:     1723
+Number of terminals:      158
+Number of snets:          2
+Number of nets:           1749
+
+[INFO DRT-0167] List of default vias:
+  Layer V2
+    default via: VIA23
+  Layer V3
+    default via: VIA34
+  Layer V4
+    default via: VIA45
+  Layer V5
+    default via: VIA56
+  Layer V6
+    default via: VIA67
+  Layer V7
+    default via: VIA78
+  Layer V8
+    default via: VIA89
+  Layer V9
+    default via: VIA9Pad
+[INFO DRT-0162] Library cell analysis.
+[INFO DRT-0163] Instance analysis.
+[INFO DRT-0164] Number of unique instances = 155.
+[INFO DRT-0168] Init region query.
+[INFO DRT-0024]   Complete Active.
+[INFO DRT-0024]   Complete V0.
+[INFO DRT-0024]   Complete M1.
+[INFO DRT-0024]   Complete V1.
+[INFO DRT-0024]   Complete M2.
+[INFO DRT-0024]   Complete V2.
+[INFO DRT-0024]   Complete M3.
+[INFO DRT-0024]   Complete V3.
+[INFO DRT-0024]   Complete M4.
+[INFO DRT-0024]   Complete V4.
+[INFO DRT-0024]   Complete M5.
+[INFO DRT-0024]   Complete V5.
+[INFO DRT-0024]   Complete M6.
+[INFO DRT-0024]   Complete V6.
+[INFO DRT-0024]   Complete M7.
+[INFO DRT-0024]   Complete V7.
+[INFO DRT-0024]   Complete M8.
+[INFO DRT-0024]   Complete V8.
+[INFO DRT-0024]   Complete M9.
+[INFO DRT-0024]   Complete V9.
+[INFO DRT-0024]   Complete Pad.
+[INFO DRT-0033] Active shape region query size = 0.
+[INFO DRT-0033] V0 shape region query size = 0.
+[INFO DRT-0033] M1 shape region query size = 26540.
+[INFO DRT-0033] V1 shape region query size = 31628.
+[INFO DRT-0033] M2 shape region query size = 1521.
+[INFO DRT-0033] V2 shape region query size = 651.
+[INFO DRT-0033] M3 shape region query size = 651.
+[INFO DRT-0033] V3 shape region query size = 434.
+[INFO DRT-0033] M4 shape region query size = 508.
+[INFO DRT-0033] V4 shape region query size = 434.
+[INFO DRT-0033] M5 shape region query size = 327.
+[INFO DRT-0033] V5 shape region query size = 42.
+[INFO DRT-0033] M6 shape region query size = 33.
+[INFO DRT-0033] V6 shape region query size = 0.
+[INFO DRT-0033] M7 shape region query size = 0.
+[INFO DRT-0033] V7 shape region query size = 0.
+[INFO DRT-0033] M8 shape region query size = 0.
+[INFO DRT-0033] V8 shape region query size = 0.
+[INFO DRT-0033] M9 shape region query size = 0.
+[INFO DRT-0033] V9 shape region query size = 0.
+[INFO DRT-0033] Pad shape region query size = 0.
+[INFO DRT-0165] Start pin access.
+[INFO DRT-0078]   Complete 880 pins.
+[INFO DRT-0079]   Complete 100 unique inst patterns.
+[INFO DRT-0081]   Complete 155 unique inst patterns.
+[INFO DRT-0084]   Complete 983 groups.
+#scanned instances     = 1723
+#unique  instances     = 155
+#stdCellGenAp          = 4024
+#stdCellValidPlanarAp  = 66
+#stdCellValidViaAp     = 3346
+#stdCellPinNoAp        = 0
+#stdCellPinCnt         = 4838
+#instTermValidViaApCnt = 0
+#macroGenAp            = 0
+#macroValidPlanarAp    = 0
+#macroValidViaAp       = 0
+#macroNoAp             = 0
+[INFO DRT-0166] Complete pin access.
+[INFO DRT-0267] cpu time = 00:00:37, elapsed time = 00:00:09, memory = 189.66 (MB), peak = 189.42 (MB)
+Took 10 seconds: pin_access
+global_route -congestion_report_file /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/congestion.rpt -congestion_iterations 30 -congestion_report_iter_step 5 -verbose -resistance_aware
+[INFO GRT-0020] Min routing layer: M2
+[INFO GRT-0021] Max routing layer: M7
+[INFO GRT-0022] Global adjustment: 0%
+[INFO GRT-0023] Grid origin: (0, 0)
+[INFO GRT-0088] Layer M1      Track-Pitch = 0.0360  line-2-Via Pitch: 0.0360
+[INFO GRT-0088] Layer M2      Track-Pitch = 0.0390  line-2-Via Pitch: 0.0360
+[INFO GRT-0088] Layer M3      Track-Pitch = 0.0360  line-2-Via Pitch: 0.0360
+[INFO GRT-0088] Layer M4      Track-Pitch = 0.0480  line-2-Via Pitch: 0.0480
+[INFO GRT-0088] Layer M5      Track-Pitch = 0.0480  line-2-Via Pitch: 0.0480
+[INFO GRT-0088] Layer M6      Track-Pitch = 0.0640  line-2-Via Pitch: 0.0640
+[INFO GRT-0088] Layer M7      Track-Pitch = 0.0640  line-2-Via Pitch: 0.0640
+[INFO GRT-0003] Macros: 0
+[INFO GRT-0004] Blockages: 822
+[INFO GRT-0019] Found 18 clock nets.
+[INFO GRT-0001] Minimum degree: 2
+[INFO GRT-0002] Maximum degree: 32
+
+[INFO GRT-0053] Routing resources analysis:
+          Routing      Original      Derated      Resource
+Layer     Direction    Resources     Resources    Reduction (%)
+---------------------------------------------------------------
+M1         Vertical            0             0          0.00%
+M2         Horizontal      13054          9330          28.53%
+M3         Vertical        15464         11461          25.89%
+M4         Horizontal      11867          8829          25.60%
+M5         Vertical        11465          8486          25.98%
+M6         Horizontal       8135          5576          31.46%
+M7         Vertical         9021          6107          32.30%
+---------------------------------------------------------------
+
+[INFO GRT-0197] Via related to pin nodes: 10325
+[INFO GRT-0198] Via related Steiner nodes: 157
+[INFO GRT-0199] Via filling finished.
+[INFO GRT-0111] Final number of vias: 13389
+[INFO GRT-0112] Final usage 3D: 45333
+
+[INFO GRT-0096] Final congestion report:
+Layer         Resource        Demand        Usage (%)    Max H / Max V / Total Congestion
+---------------------------------------------------------------------------------------
+M1                   0             0            0.00%             0 /  0 /  0
+M2                9330          1670           17.90%             0 /  0 /  0
+M3               11461          1848           16.12%             0 /  0 /  0
+M4                8829           259            2.93%             0 /  0 /  0
+M5                8486           361            4.25%             0 /  0 /  0
+M6                5576           453            8.12%             0 /  0 /  0
+M7                6107           575            9.42%             0 /  0 /  0
+---------------------------------------------------------------------------------------
+Total            49789          5166           10.38%             0 /  0 /  0
+
+[INFO GRT-0018] Total wirelength: 4762 um
+[INFO GRT-0014] Routed nets: 1746
+[INFO GRT-0303] Global routing runtime = 00:00:00
+estimate_parasitics -global_routing
+Perform buffer insertion and gate resizing...
+repair_design -verbose
+Iteration |   Area    | Resized | Buffers | Nets repaired | Remaining
+---------------------------------------------------------------------
+        0 |     +0.0% |       0 |       0 |             0 |      1763
+       10 |     +0.0% |       0 |       0 |             0 |      1753
+       20 |     +0.0% |       0 |       0 |             0 |      1743
+       30 |     +0.0% |       0 |       0 |             0 |      1733
+       40 |     +0.0% |       0 |       0 |             0 |      1723
+       50 |     +0.0% |       0 |       0 |             0 |      1713
+       60 |     +0.0% |       0 |       0 |             0 |      1703
+       70 |     +0.0% |       0 |       0 |             0 |      1693
+       80 |     +0.0% |       0 |       0 |             0 |      1683
+       90 |     +0.0% |       0 |       0 |             0 |      1673
+      100 |     +0.0% |       0 |       0 |             0 |      1663
+      110 |     +0.0% |       0 |       0 |             0 |      1653
+      120 |     +0.0% |       0 |       0 |             0 |      1643
+      130 |     +0.0% |       0 |       0 |             0 |      1633
+      140 |     +0.0% |       0 |       0 |             0 |      1623
+      150 |     +0.0% |       0 |       0 |             0 |      1613
+      160 |     +0.0% |       0 |       0 |             0 |      1603
+      170 |     +0.0% |       0 |       0 |             0 |      1593
+      180 |     +0.0% |       0 |       0 |             0 |      1583
+      190 |     +0.0% |       0 |       0 |             0 |      1573
+      200 |     +0.0% |       0 |       0 |             0 |      1563
+      210 |     +0.0% |       0 |       0 |             0 |      1553
+      220 |     +0.0% |       0 |       0 |             0 |      1543
+      230 |     +0.0% |       0 |       0 |             0 |      1533
+      240 |     +0.0% |       0 |       0 |             0 |      1523
+      250 |     +0.0% |       0 |       0 |             0 |      1513
+      260 |     +0.0% |       0 |       0 |             0 |      1503
+      270 |     +0.0% |       0 |       0 |             0 |      1493
+      280 |     +0.0% |       0 |       0 |             0 |      1483
+      290 |     +0.0% |       0 |       0 |             0 |      1473
+      300 |     +0.0% |       0 |       0 |             0 |      1463
+      310 |     +0.0% |       0 |       0 |             0 |      1453
+      320 |     +0.0% |       0 |       0 |             0 |      1443
+      330 |     +0.0% |       0 |       0 |             0 |      1433
+      340 |     +0.0% |       0 |       0 |             0 |      1423
+      350 |     +0.0% |       0 |       0 |             0 |      1413
+      360 |     +0.0% |       0 |       0 |             0 |      1403
+      370 |     +0.0% |       0 |       0 |             0 |      1393
+      380 |     +0.0% |       0 |       0 |             0 |      1383
+      390 |     +0.0% |       0 |       0 |             0 |      1373
+[WARNING RSZ-0104] Net _1246_\[0\] only has one pin. Check if it is intended to be dangling.
+      400 |     +0.0% |       0 |       0 |             0 |      1363
+      410 |     +0.0% |       0 |       0 |             0 |      1353
+      420 |     +0.0% |       0 |       0 |             0 |      1343
+      430 |     +0.0% |       0 |       0 |             0 |      1333
+      440 |     +0.0% |       0 |       0 |             0 |      1323
+      450 |     +0.0% |       0 |       0 |             0 |      1313
+      460 |     +0.0% |       0 |       0 |             0 |      1303
+      470 |     +0.0% |       0 |       0 |             0 |      1293
+      480 |     +0.0% |       0 |       0 |             0 |      1283
+      490 |     +0.0% |       0 |       0 |             0 |      1273
+      500 |     +0.0% |       0 |       0 |             0 |      1263
+      510 |     +0.0% |       0 |       0 |             0 |      1253
+      520 |     +0.0% |       0 |       0 |             0 |      1243
+      530 |     +0.0% |       0 |       0 |             0 |      1233
+      540 |     +0.0% |       0 |       0 |             0 |      1223
+      550 |     +0.0% |       0 |       0 |             0 |      1213
+      560 |     +0.0% |       0 |       0 |             0 |      1203
+      570 |     +0.0% |       0 |       0 |             0 |      1193
+      580 |     +0.0% |       0 |       0 |             0 |      1183
+      590 |     +0.0% |       0 |       0 |             0 |      1173
+      600 |     +0.0% |       0 |       0 |             0 |      1163
+      610 |     +0.0% |       0 |       0 |             0 |      1153
+      620 |     +0.0% |       0 |       0 |             0 |      1143
+      630 |     +0.0% |       0 |       0 |             0 |      1133
+      640 |     +0.0% |       0 |       0 |             0 |      1123
+      650 |     +0.0% |       0 |       0 |             0 |      1113
+      660 |     +0.0% |       0 |       0 |             0 |      1103
+      670 |     +0.0% |       0 |       0 |             0 |      1093
+      680 |     +0.0% |       0 |       0 |             0 |      1083
+      690 |     +0.0% |       0 |       0 |             0 |      1073
+      700 |     +0.0% |       0 |       0 |             0 |      1063
+      710 |     +0.0% |       0 |       0 |             0 |      1053
+      720 |     +0.0% |       0 |       0 |             0 |      1043
+      730 |     +0.0% |       0 |       0 |             0 |      1033
+      740 |     +0.0% |       0 |       0 |             0 |      1023
+      750 |     +0.0% |       0 |       0 |             0 |      1013
+[WARNING RSZ-0104] Net _1252_\[0\] only has one pin. Check if it is intended to be dangling.
+[WARNING RSZ-0104] Net _1250_\[0\] only has one pin. Check if it is intended to be dangling.
+      760 |     +0.1% |       0 |       3 |             2 |      1003
+      770 |     +0.2% |       0 |       5 |             3 |       993
+      780 |     +0.2% |       0 |       6 |             4 |       983
+      790 |     +0.2% |       0 |       6 |             4 |       973
+      800 |     +0.2% |       0 |       6 |             4 |       963
+      810 |     +0.2% |       0 |       6 |             4 |       953
+      820 |     +0.2% |       0 |       6 |             4 |       943
+      830 |     +0.2% |       0 |       6 |             4 |       933
+      840 |     +0.2% |       0 |       6 |             4 |       923
+      850 |     +0.2% |       0 |       6 |             4 |       913
+      860 |     +0.2% |       0 |       6 |             4 |       903
+      870 |     +0.2% |       0 |       6 |             4 |       893
+      880 |     +0.2% |       0 |       6 |             4 |       883
+      890 |     +0.2% |       0 |       6 |             4 |       873
+      900 |     +0.2% |       0 |       6 |             4 |       863
+      910 |     +0.2% |       0 |       6 |             4 |       853
+      920 |     +0.2% |       0 |       6 |             4 |       843
+      930 |     +0.2% |       0 |       6 |             4 |       833
+      940 |     +0.2% |       0 |       6 |             4 |       823
+      950 |     +0.2% |       0 |       6 |             4 |       813
+      960 |     +0.2% |       0 |       6 |             4 |       803
+      970 |     +0.2% |       0 |       6 |             4 |       793
+      980 |     +0.2% |       0 |       6 |             4 |       783
+      990 |     +0.2% |       0 |       6 |             4 |       773
+     1000 |     +0.2% |       0 |       6 |             4 |       763
+     1010 |     +0.2% |       0 |       6 |             4 |       753
+     1020 |     +0.2% |       0 |       6 |             4 |       743
+     1030 |     +0.2% |       0 |       6 |             4 |       733
+     1040 |     +0.2% |       0 |       6 |             4 |       723
+     1050 |     +0.2% |       0 |       6 |             4 |       713
+     1060 |     +0.2% |       0 |       6 |             4 |       703
+     1070 |     +0.2% |       0 |       6 |             4 |       693
+     1080 |     +0.2% |       0 |       6 |             4 |       683
+     1090 |     +0.2% |       0 |       6 |             4 |       673
+     1100 |     +0.2% |       0 |       6 |             4 |       663
+     1110 |     +0.2% |       0 |       6 |             4 |       653
+     1120 |     +0.2% |       0 |       6 |             4 |       643
+     1130 |     +0.2% |       0 |       6 |             4 |       633
+     1140 |     +0.2% |       0 |       6 |             4 |       623
+     1150 |     +0.2% |       0 |       6 |             4 |       613
+     1160 |     +0.2% |       0 |       6 |             4 |       603
+     1170 |     +0.2% |       0 |       6 |             4 |       593
+     1180 |     +0.2% |       0 |       6 |             4 |       583
+     1190 |     +0.2% |       0 |       6 |             4 |       573
+     1200 |     +0.2% |       0 |       6 |             4 |       563
+     1210 |     +0.2% |       0 |       6 |             4 |       553
+     1220 |     +0.2% |       0 |       6 |             4 |       543
+     1230 |     +0.2% |       0 |       6 |             4 |       533
+     1240 |     +0.2% |       0 |       6 |             4 |       523
+     1250 |     +0.2% |       0 |       6 |             4 |       513
+     1260 |     +0.2% |       0 |       6 |             4 |       503
+     1270 |     +0.2% |       0 |       6 |             4 |       493
+     1280 |     +0.2% |       0 |       6 |             4 |       483
+     1290 |     +0.2% |       0 |       6 |             4 |       473
+     1300 |     +0.2% |       0 |       6 |             4 |       463
+     1310 |     +0.2% |       0 |       6 |             4 |       453
+     1320 |     +0.2% |       0 |       6 |             4 |       443
+     1330 |     +0.2% |       0 |       6 |             4 |       433
+     1340 |     +0.2% |       0 |       6 |             4 |       423
+     1350 |     +0.2% |       0 |       6 |             4 |       413
+     1360 |     +0.2% |       0 |       6 |             4 |       403
+     1370 |     +0.2% |       0 |       6 |             4 |       393
+     1380 |     +0.2% |       0 |       6 |             4 |       383
+     1390 |     +0.2% |       0 |       6 |             4 |       373
+     1400 |     +0.2% |       0 |       6 |             4 |       363
+     1410 |     +0.2% |       0 |       6 |             4 |       353
+     1420 |     +0.2% |       0 |       6 |             4 |       343
+     1430 |     +0.2% |       0 |       6 |             4 |       333
+     1440 |     +0.2% |       0 |       6 |             4 |       323
+     1450 |     +0.2% |       0 |       6 |             4 |       313
+     1460 |     +0.2% |       0 |       6 |             4 |       303
+     1470 |     +0.2% |       0 |       6 |             4 |       293
+     1480 |     +0.2% |       0 |       6 |             4 |       283
+     1490 |     +0.2% |       0 |       6 |             4 |       273
+     1500 |     +0.2% |       0 |       6 |             4 |       263
+     1510 |     +0.2% |       0 |       6 |             4 |       253
+     1520 |     +0.2% |       0 |       6 |             4 |       243
+     1530 |     +0.2% |       0 |       6 |             4 |       233
+     1540 |     +0.2% |       0 |       6 |             4 |       223
+     1550 |     +0.2% |       0 |       6 |             4 |       213
+     1560 |     +0.2% |       0 |       6 |             4 |       203
+     1570 |     +0.2% |       0 |       6 |             4 |       193
+     1580 |     +0.2% |       0 |       6 |             4 |       183
+     1590 |     +0.2% |       0 |       6 |             4 |       173
+     1600 |     +0.2% |       0 |       6 |             4 |       163
+     1610 |     +0.2% |       0 |       6 |             4 |       153
+     1620 |     +0.2% |       0 |       6 |             4 |       143
+     1630 |     +0.2% |       0 |       6 |             4 |       133
+     1640 |     +0.2% |       0 |       6 |             4 |       123
+     1650 |     +0.2% |       0 |       6 |             4 |       113
+     1660 |     +0.2% |       0 |       6 |             4 |       103
+     1670 |     +0.2% |       0 |       6 |             4 |        93
+     1680 |     +0.2% |       0 |       6 |             4 |        83
+     1690 |     +0.2% |       0 |       6 |             4 |        73
+     1700 |     +0.2% |       0 |       6 |             4 |        63
+     1710 |     +0.2% |       0 |       6 |             4 |        53
+     1720 |     +0.2% |       0 |       6 |             4 |        43
+     1730 |     +0.2% |       0 |       6 |             4 |        33
+     1740 |     +0.2% |       0 |       6 |             4 |        23
+     1750 |     +0.2% |       0 |       6 |             4 |        13
+     1760 |     +0.2% |       0 |       6 |             4 |         3
+    final |     +0.2% |       0 |       6 |             4 |         0
+---------------------------------------------------------------------
+[INFO RSZ-0034] Found 4 slew violations.
+[INFO RSZ-0038] Inserted 6 buffers in 4 nets.
+[INFO RSZ-0504] Runtime: 0.23s
+global_route -start_incremental
+detailed_placement
+[INFO DPL-0006] Core area: 273.04 um^2
+[INFO DPL-0007] Movable instances area: 183.55 um^2
+[INFO DPL-0008] Fixed instances area within core: 3.56 um^2
+[INFO DPL-0009] Utilization: 68.5%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 1729 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |         15 |         5 |        10
+        1 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 1.
+[INFO DPL-0500] Runtime: 0.01s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                 217
+total displacement          2.5 u
+average displacement        0.0 u
+max displacement            0.6 u
+original HPWL            2558.4 u
+legalized HPWL           2562.2 u
+delta HPWL                    0 %
+
+global_route -end_incremental -resistance_aware -congestion_report_file /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/congestion_post_repair_design.rpt
+Repair setup and hold violations...
+estimate_parasitics -global_routing
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -verbose
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove BufferMove CloneMove SplitLoadMove 
+[INFO RSZ-0094] Found 10 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 10 out of 10 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -133.151 |     -996.9 |     10 | prod_q\[14\]_reg/D
+      10* |       0 |       1 |        2 |      0 |     6 |    +0.1% | -125.728 |     -933.0 |     10 | prod_q\[14\]_reg/D
+      20* |       1 |       3 |        3 |      0 |    12 |    +0.1% | -121.699 |     -880.3 |     10 | prod_q\[14\]_reg/D
+      28* |       1 |       3 |        4 |      0 |    17 |    +0.2% | -115.209 |     -882.9 |     10 | prod_q\[14\]_reg/D
+      30* |       1 |       3 |        4 |      0 |    18 |    +0.2% | -115.209 |     -882.1 |     10 | prod_q\[14\]_reg/D
+      34* |       1 |       3 |        4 |      0 |    18 |    +0.2% | -115.209 |     -882.1 |     10 | prod_q\[14\]_reg/D
+      37* |       1 |       3 |        4 |      0 |    18 |    +0.2% | -115.209 |     -882.1 |     10 | prod_q\[14\]_reg/D
+      40* |       1 |       3 |        4 |      0 |    20 |    +0.2% | -115.209 |     -852.4 |     10 | prod_q\[14\]_reg/D
+      45* |       1 |       3 |        4 |      0 |    25 |    +0.2% | -115.209 |     -856.2 |     10 | prod_q\[14\]_reg/D
+      48* |       1 |       3 |        4 |      0 |    25 |    +0.2% | -115.209 |     -856.2 |     10 | prod_q\[14\]_reg/D
+      50* |       1 |       3 |        4 |      0 |    26 |    +0.2% | -115.858 |     -859.4 |     10 | prod_q\[14\]_reg/D
+      50* |       1 |       3 |        4 |      0 |    25 |    +0.2% | -115.209 |     -856.2 |     10 | prod_q\[14\]_reg/D
+      56* |       1 |       4 |        5 |      0 |    27 |    +0.2% | -115.209 |     -873.9 |     10 | prod_q\[14\]_reg/D
+      60* |       2 |       5 |        5 |      0 |    28 |    +0.2% | -115.209 |     -854.9 |     10 | prod_q\[14\]_reg/D
+      64* |       6 |       5 |        5 |      0 |    28 |    +0.0% | -115.209 |     -777.7 |     10 | prod_q\[14\]_reg/D
+      68* |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |     10 | prod_q\[14\]_reg/D
+      70* |       6 |       8 |        5 |      0 |    29 |    +0.1% | -116.069 |     -776.0 |     10 | prod_q\[14\]_reg/D
+      71* |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |     10 | prod_q\[14\]_reg/D
+      71* |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |     10 | prod_q\[14\]_reg/D
+      72+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      73+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      74+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      75+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      76+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      77+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      78+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      79+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      80+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+      80+ |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+    final |       6 |       7 |        5 |      0 |    29 |    +0.0% | -115.209 |     -775.1 |      9 | prod_q\[14\]_reg/D
+------------------------------------------------------------------------------------------------------------------------------
+[INFO RSZ-0059] Removed 6 buffers.
+[INFO RSZ-0040] Inserted 5 buffers.
+[INFO RSZ-0051] Resized 7 instances: 7 up, 0 up match, 0 down, 0 VT
+[INFO RSZ-0043] Swapped pins on 29 instances.
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 0.84s
+[INFO RSZ-0033] No hold violations found.
+[INFO RSZ-0506] Runtime: 0.01s
+global_route -start_incremental
+detailed_placement
+[INFO DPL-0006] Core area: 273.04 um^2
+[INFO DPL-0007] Movable instances area: 183.64 um^2
+[INFO DPL-0008] Fixed instances area within core: 3.56 um^2
+[INFO DPL-0009] Utilization: 68.6%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 1728 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |         18 |         4 |        14
+        1 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 1.
+[INFO DPL-0500] Runtime: 0.01s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                 272
+total displacement          2.6 u
+average displacement        0.0 u
+max displacement            0.5 u
+original HPWL            2558.2 u
+legalized HPWL           2560.9 u
+delta HPWL                    0 %
+
+check_placement -verbose
+global_route -end_incremental -resistance_aware -congestion_report_file /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/congestion_post_repair_timing.rpt
+estimate_parasitics -global_routing
+repair_timing -setup -sequence "vt_swap reroute" -skip_last_gasp -repair_tns 0 -verbose
+[INFO RSZ-0100] Repair move sequence: RerouteMove 
+[INFO RSZ-0094] Found 9 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 1 out of 9 (0.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -118.781 |     -802.2 |      9 | prod_q\[14\]_reg/D
+       1* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -118.781 |     -802.2 |      9 | prod_q\[14\]_reg/D
+       1* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -118.781 |     -802.2 |      9 | prod_q\[14\]_reg/D
+    final |       0 |       0 |        0 |      0 |     0 |    +0.0% | -118.781 |     -802.2 |      9 | prod_q\[14\]_reg/D
+------------------------------------------------------------------------------------------------------------------------------
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 0.08s
+Repair antennas...
+[WARNING GRT-0246] No diode with LEF class CORE ANTENNACELL found.
+[INFO ANT-0002] Found 0 net violations.
+[INFO ANT-0001] Found 0 pin violations.
+Estimate parasitics...
+estimate_parasitics -global_routing
+Report metrics stage 5, global route...
+
+==========================================================================
+global route report_design_area
+--------------------------------------------------------------------------
+Design area 187 um^2 69% utilization.
+[INFO FLW-0007] clock clk period 1000.000000
+[INFO FLW-0008] Clock clk period 1062.842
+[INFO FLW-0009] Clock clk slack -118.781
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/updated_clks.sdc
+[INFO FLW-0011] Path endpoint path count 366
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_1_grt.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_1_grt.sdc
+Elapsed time: 0:14.08[h:]min:sec. CPU time: user 44.10 sys 0.16 (314%). Peak memory: 362276KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+5_1_grt                .odb         14       44     3.14      353 27869d6876
+5_1_grt                .sdc                                       572dfdf213
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 5_2_route detail_route
+Running detail_route.tcl, stage 5_2_route
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_1_grt.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_1_grt.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+detailed_route -output_drc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/5_route_drc.rpt -output_maze /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/maze.log -droute_end_iter 64 -verbose 1 -drc_report_iter_step 5
+[INFO DRT-0149] Reading tech and libs.
+
+Units:                1000
+Number of layers:     21
+Number of macros:     212
+Number of vias:       14
+Number of viarulegen: 11
+
+[INFO DRT-0150] Reading design.
+
+Design:                   mac_pe
+Die area:                 ( 0 0 ) ( 18625 18625 )
+Number of track patterns: 32
+Number of DEF vias:       0
+Number of components:     1728
+Number of terminals:      158
+Number of snets:          2
+Number of nets:           1754
+
+[INFO DRT-0167] List of default vias:
+  Layer V2
+    default via: VIA23
+  Layer V3
+    default via: VIA34
+  Layer V4
+    default via: VIA45
+  Layer V5
+    default via: VIA56
+  Layer V6
+    default via: VIA67
+  Layer V7
+    default via: VIA78
+  Layer V8
+    default via: VIA89
+  Layer V9
+    default via: VIA9Pad
+[INFO DRT-0162] Library cell analysis.
+[INFO DRT-0163] Instance analysis.
+[INFO DRT-0164] Number of unique instances = 154.
+[INFO DRT-0168] Init region query.
+[INFO DRT-0024]   Complete Active.
+[INFO DRT-0024]   Complete V0.
+[INFO DRT-0024]   Complete M1.
+[INFO DRT-0024]   Complete V1.
+[INFO DRT-0024]   Complete M2.
+[INFO DRT-0024]   Complete V2.
+[INFO DRT-0024]   Complete M3.
+[INFO DRT-0024]   Complete V3.
+[INFO DRT-0024]   Complete M4.
+[INFO DRT-0024]   Complete V4.
+[INFO DRT-0024]   Complete M5.
+[INFO DRT-0024]   Complete V5.
+[INFO DRT-0024]   Complete M6.
+[INFO DRT-0024]   Complete V6.
+[INFO DRT-0024]   Complete M7.
+[INFO DRT-0024]   Complete V7.
+[INFO DRT-0024]   Complete M8.
+[INFO DRT-0024]   Complete V8.
+[INFO DRT-0024]   Complete M9.
+[INFO DRT-0024]   Complete V9.
+[INFO DRT-0024]   Complete Pad.
+[INFO DRT-0033] Active shape region query size = 0.
+[INFO DRT-0033] V0 shape region query size = 0.
+[INFO DRT-0033] M1 shape region query size = 26599.
+[INFO DRT-0033] V1 shape region query size = 31628.
+[INFO DRT-0033] M2 shape region query size = 1521.
+[INFO DRT-0033] V2 shape region query size = 651.
+[INFO DRT-0033] M3 shape region query size = 651.
+[INFO DRT-0033] V3 shape region query size = 434.
+[INFO DRT-0033] M4 shape region query size = 508.
+[INFO DRT-0033] V4 shape region query size = 434.
+[INFO DRT-0033] M5 shape region query size = 327.
+[INFO DRT-0033] V5 shape region query size = 42.
+[INFO DRT-0033] M6 shape region query size = 33.
+[INFO DRT-0033] V6 shape region query size = 0.
+[INFO DRT-0033] M7 shape region query size = 0.
+[INFO DRT-0033] V7 shape region query size = 0.
+[INFO DRT-0033] M8 shape region query size = 0.
+[INFO DRT-0033] V8 shape region query size = 0.
+[INFO DRT-0033] M9 shape region query size = 0.
+[INFO DRT-0033] V9 shape region query size = 0.
+[INFO DRT-0033] Pad shape region query size = 0.
+[INFO DRT-0165] Start pin access.
+[INFO DRT-0078]   Complete 876 pins.
+[INFO DRT-0079]   Complete 100 unique inst patterns.
+[INFO DRT-0081]   Complete 154 unique inst patterns.
+[INFO DRT-0084]   Complete 989 groups.
+#scanned instances     = 1728
+#unique  instances     = 154
+#stdCellGenAp          = 4010
+#stdCellValidPlanarAp  = 66
+#stdCellValidViaAp     = 3334
+#stdCellPinNoAp        = 0
+#stdCellPinCnt         = 4848
+#instTermValidViaApCnt = 0
+#macroGenAp            = 0
+#macroValidPlanarAp    = 0
+#macroValidViaAp       = 0
+#macroNoAp             = 0
+[INFO DRT-0166] Complete pin access.
+[INFO DRT-0267] cpu time = 00:00:37, elapsed time = 00:00:09, memory = 298.30 (MB), peak = 297.93 (MB)
+
+[INFO DRT-0157] Number of guides:     13373
+
+[INFO DRT-0169] Post process guides.
+[INFO DRT-0176] GCELLGRID X 0 DO 32 STEP 570 ;
+[INFO DRT-0177] GCELLGRID Y 0 DO 32 STEP 570 ;
+[INFO DRT-0028]   Complete Active.
+[INFO DRT-0028]   Complete V0.
+[INFO DRT-0028]   Complete M1.
+[INFO DRT-0028]   Complete V1.
+[INFO DRT-0028]   Complete M2.
+[INFO DRT-0028]   Complete V2.
+[INFO DRT-0028]   Complete M3.
+[INFO DRT-0028]   Complete V3.
+[INFO DRT-0028]   Complete M4.
+[INFO DRT-0028]   Complete V4.
+[INFO DRT-0028]   Complete M5.
+[INFO DRT-0028]   Complete V5.
+[INFO DRT-0028]   Complete M6.
+[INFO DRT-0028]   Complete V6.
+[INFO DRT-0028]   Complete M7.
+[INFO DRT-0028]   Complete V7.
+[INFO DRT-0028]   Complete M8.
+[INFO DRT-0028]   Complete V8.
+[INFO DRT-0028]   Complete M9.
+[INFO DRT-0028]   Complete V9.
+[INFO DRT-0028]   Complete Pad.
+[INFO DRT-0178] Init guide query.
+[INFO DRT-0035]   Complete Active (guide).
+[INFO DRT-0035]   Complete V0 (guide).
+[INFO DRT-0035]   Complete M1 (guide).
+[INFO DRT-0035]   Complete V1 (guide).
+[INFO DRT-0035]   Complete M2 (guide).
+[INFO DRT-0035]   Complete V2 (guide).
+[INFO DRT-0035]   Complete M3 (guide).
+[INFO DRT-0035]   Complete V3 (guide).
+[INFO DRT-0035]   Complete M4 (guide).
+[INFO DRT-0035]   Complete V4 (guide).
+[INFO DRT-0035]   Complete M5 (guide).
+[INFO DRT-0035]   Complete V5 (guide).
+[INFO DRT-0035]   Complete M6 (guide).
+[INFO DRT-0035]   Complete V6 (guide).
+[INFO DRT-0035]   Complete M7 (guide).
+[INFO DRT-0035]   Complete V7 (guide).
+[INFO DRT-0035]   Complete M8 (guide).
+[INFO DRT-0035]   Complete V8 (guide).
+[INFO DRT-0035]   Complete M9 (guide).
+[INFO DRT-0035]   Complete V9 (guide).
+[INFO DRT-0035]   Complete Pad (guide).
+[INFO DRT-0036] Active guide region query size = 0.
+[INFO DRT-0036] V0 guide region query size = 0.
+[INFO DRT-0036] M1 guide region query size = 3820.
+[INFO DRT-0036] V1 guide region query size = 0.
+[INFO DRT-0036] M2 guide region query size = 3275.
+[INFO DRT-0036] V2 guide region query size = 0.
+[INFO DRT-0036] M3 guide region query size = 1803.
+[INFO DRT-0036] V3 guide region query size = 0.
+[INFO DRT-0036] M4 guide region query size = 720.
+[INFO DRT-0036] V4 guide region query size = 0.
+[INFO DRT-0036] M5 guide region query size = 564.
+[INFO DRT-0036] V5 guide region query size = 0.
+[INFO DRT-0036] M6 guide region query size = 346.
+[INFO DRT-0036] V6 guide region query size = 0.
+[INFO DRT-0036] M7 guide region query size = 161.
+[INFO DRT-0036] V7 guide region query size = 0.
+[INFO DRT-0036] M8 guide region query size = 0.
+[INFO DRT-0036] V8 guide region query size = 0.
+[INFO DRT-0036] M9 guide region query size = 0.
+[INFO DRT-0036] V9 guide region query size = 0.
+[INFO DRT-0036] Pad guide region query size = 0.
+[INFO DRT-0179] Init gr pin query.
+[INFO DRT-0267] cpu time = 00:00:00, elapsed time = 00:00:00, memory = 304.37 (MB), peak = 304.12 (MB)
+[INFO DRT-0245] skipped writing guide updates to database.
+[INFO DRT-0181] Start track assignment.
+[INFO DRT-0184] Done with 6348 vertical wires in 1 frboxes and 4341 horizontal wires in 1 frboxes.
+[INFO DRT-0186] Done with 411 vertical wires in 1 frboxes and 606 horizontal wires in 1 frboxes.
+[INFO DRT-0182] Complete track assignment.
+[INFO DRT-0267] cpu time = 00:00:00, elapsed time = 00:00:00, memory = 322.55 (MB), peak = 322.25 (MB)
+[INFO DRT-0187] Start routing data preparation.
+[INFO DRT-0267] cpu time = 00:00:00, elapsed time = 00:00:00, memory = 322.55 (MB), peak = 322.25 (MB)
+[INFO DRT-0194] Start detail routing.
+[INFO DRT-0195] Start 0th optimization iteration.
+    Completing 10% with 0 violations.
+    elapsed time = 00:00:00, memory = 469.04 (MB).
+    Completing 20% with 0 violations.
+    elapsed time = 00:00:00, memory = 477.16 (MB).
+    Completing 30% with 0 violations.
+    elapsed time = 00:00:01, memory = 473.16 (MB).
+    Completing 40% with 25 violations.
+    elapsed time = 00:00:01, memory = 525.17 (MB).
+    Completing 50% with 25 violations.
+    elapsed time = 00:00:03, memory = 593.17 (MB).
+    Completing 60% with 25 violations.
+    elapsed time = 00:00:03, memory = 523.17 (MB).
+    Completing 70% with 43 violations.
+    elapsed time = 00:00:04, memory = 615.42 (MB).
+    Completing 80% with 43 violations.
+    elapsed time = 00:00:05, memory = 615.42 (MB).
+    Completing 90% with 87 violations.
+    elapsed time = 00:00:08, memory = 651.42 (MB).
+    Completing 100% with 147 violations.
+    elapsed time = 00:00:09, memory = 553.42 (MB).
+[INFO DRT-0199]   Number of violations = 285.
+Viol/Layer          M1     M2     M3     V3     M4     M5     M6     V6     M7
+CutSpcTbl            0      0      0      2      0      0      0      1      0
+EOL                  0     12      0      0      0      0      0      0      0
+Metal Spacing       17      5     10      0      0      0      1      0      0
+Recheck              0     52     37      0     18     16     12      0      3
+Short                2      3      1      0      0      0      0      0      0
+eolKeepOut           0     93      0      0      0      0      0      0      0
+[INFO DRT-0267] cpu time = 00:00:28, elapsed time = 00:00:09, memory = 599.73 (MB), peak = 843.54 (MB)
+Total wire length = 2906 um.
+Total wire length on LAYER M1 = 0 um.
+Total wire length on LAYER M2 = 914 um.
+Total wire length on LAYER M3 = 1198 um.
+Total wire length on LAYER M4 = 264 um.
+Total wire length on LAYER M5 = 148 um.
+Total wire length on LAYER M6 = 157 um.
+Total wire length on LAYER M7 = 222 um.
+Total wire length on LAYER M8 = 0 um.
+Total wire length on LAYER M9 = 0 um.
+Total wire length on LAYER Pad = 0 um.
+Total number of vias = 12533.
+Up-via summary (total 12533):
+
+----------------
+ Active        0
+     M1     4625
+     M2     5977
+     M3      957
+     M4      477
+     M5      303
+     M6      194
+     M7        0
+     M8        0
+     M9        0
+----------------
+       12533
+
+
+[INFO DRT-0195] Start 1st optimization iteration.
+    Completing 10% with 285 violations.
+    elapsed time = 00:00:00, memory = 599.73 (MB).
+    Completing 20% with 285 violations.
+    elapsed time = 00:00:01, memory = 651.73 (MB).
+    Completing 30% with 285 violations.
+    elapsed time = 00:00:01, memory = 651.73 (MB).
+    Completing 40% with 202 violations.
+    elapsed time = 00:00:03, memory = 641.73 (MB).
+    Completing 50% with 202 violations.
+    elapsed time = 00:00:04, memory = 691.75 (MB).
+    Completing 60% with 202 violations.
+    elapsed time = 00:00:04, memory = 575.75 (MB).
+    Completing 70% with 149 violations.
+    elapsed time = 00:00:05, memory = 668.14 (MB).
+    Completing 80% with 149 violations.
+    elapsed time = 00:00:06, memory = 622.14 (MB).
+    Completing 90% with 72 violations.
+    elapsed time = 00:00:09, memory = 640.18 (MB).
+    Completing 100% with 35 violations.
+    elapsed time = 00:00:11, memory = 506.18 (MB).
+[INFO DRT-0199]   Number of violations = 35.
+Viol/Layer          M1     M2     M3
+EOL                  0      5      0
+Metal Spacing        3      2      2
+Short                1      1      0
+eolKeepOut           0     21      0
+[INFO DRT-0267] cpu time = 00:00:28, elapsed time = 00:00:11, memory = 510.18 (MB), peak = 859.98 (MB)
+Total wire length = 2876 um.
+Total wire length on LAYER M1 = 0 um.
+Total wire length on LAYER M2 = 924 um.
+Total wire length on LAYER M3 = 1228 um.
+Total wire length on LAYER M4 = 255 um.
+Total wire length on LAYER M5 = 135 um.
+Total wire length on LAYER M6 = 141 um.
+Total wire length on LAYER M7 = 191 um.
+Total wire length on LAYER M8 = 0 um.
+Total wire length on LAYER M9 = 0 um.
+Total wire length on LAYER Pad = 0 um.
+Total number of vias = 12111.
+Up-via summary (total 12111):
+
+----------------
+ Active        0
+     M1     4625
+     M2     5817
+     M3      906
+     M4      388
+     M5      235
+     M6      140
+     M7        0
+     M8        0
+     M9        0
+----------------
+       12111
+
+
+[INFO DRT-0195] Start 2nd optimization iteration.
+    Completing 10% with 35 violations.
+    elapsed time = 00:00:00, memory = 510.18 (MB).
+    Completing 20% with 35 violations.
+    elapsed time = 00:00:01, memory = 604.18 (MB).
+    Completing 30% with 40 violations.
+    elapsed time = 00:00:01, memory = 588.22 (MB).
+    Completing 40% with 40 violations.
+    elapsed time = 00:00:01, memory = 588.22 (MB).
+    Completing 50% with 40 violations.
+    elapsed time = 00:00:03, memory = 588.22 (MB).
+    Completing 60% with 33 violations.
+    elapsed time = 00:00:03, memory = 588.22 (MB).
+    Completing 70% with 33 violations.
+    elapsed time = 00:00:05, memory = 588.22 (MB).
+    Completing 80% with 30 violations.
+    elapsed time = 00:00:05, memory = 568.22 (MB).
+    Completing 90% with 30 violations.
+    elapsed time = 00:00:05, memory = 568.22 (MB).
+    Completing 100% with 28 violations.
+    elapsed time = 00:00:07, memory = 568.22 (MB).
+[INFO DRT-0199]   Number of violations = 28.
+Viol/Layer          M1     M2     M3     V6
+CutSpcTbl            0      0      0      1
+EOL                  0      2      0      0
+Metal Spacing        6      0      5      0
+Short                1      1      0      0
+eolKeepOut           0     12      0      0
+[INFO DRT-0267] cpu time = 00:00:11, elapsed time = 00:00:07, memory = 572.22 (MB), peak = 859.98 (MB)
+Total wire length = 2871 um.
+Total wire length on LAYER M1 = 0 um.
+Total wire length on LAYER M2 = 923 um.
+Total wire length on LAYER M3 = 1239 um.
+Total wire length on LAYER M4 = 255 um.
+Total wire length on LAYER M5 = 126 um.
+Total wire length on LAYER M6 = 139 um.
+Total wire length on LAYER M7 = 186 um.
+Total wire length on LAYER M8 = 0 um.
+Total wire length on LAYER M9 = 0 um.
+Total wire length on LAYER Pad = 0 um.
+Total number of vias = 12037.
+Up-via summary (total 12037):
+
+----------------
+ Active        0
+     M1     4625
+     M2     5805
+     M3      886
+     M4      360
+     M5      224
+     M6      137
+     M7        0
+     M8        0
+     M9        0
+----------------
+       12037
+
+
+[INFO DRT-0195] Start 3rd guides tiles iteration.
+    Completing 10% with 28 violations.
+    elapsed time = 00:00:00, memory = 572.25 (MB).
+    Completing 20% with 28 violations.
+    elapsed time = 00:00:00, memory = 572.25 (MB).
+    Completing 30% with 22 violations.
+    elapsed time = 00:00:00, memory = 572.25 (MB).
+    Completing 40% with 22 violations.
+    elapsed time = 00:00:01, memory = 572.25 (MB).
+    Completing 50% with 14 violations.
+    elapsed time = 00:00:01, memory = 572.25 (MB).
+    Completing 60% with 9 violations.
+    elapsed time = 00:00:01, memory = 572.25 (MB).
+    Completing 70% with 9 violations.
+    elapsed time = 00:00:01, memory = 572.25 (MB).
+    Completing 80% with 8 violations.
+    elapsed time = 00:00:01, memory = 572.25 (MB).
+    Completing 90% with 5 violations.
+    elapsed time = 00:00:02, memory = 546.25 (MB).
+    Completing 100% with 0 violations.
+    elapsed time = 00:00:03, memory = 546.25 (MB).
+[INFO DRT-0199]   Number of violations = 0.
+[INFO DRT-0267] cpu time = 00:00:03, elapsed time = 00:00:03, memory = 550.25 (MB), peak = 859.98 (MB)
+Total wire length = 2871 um.
+Total wire length on LAYER M1 = 0 um.
+Total wire length on LAYER M2 = 922 um.
+Total wire length on LAYER M3 = 1240 um.
+Total wire length on LAYER M4 = 258 um.
+Total wire length on LAYER M5 = 125 um.
+Total wire length on LAYER M6 = 138 um.
+Total wire length on LAYER M7 = 185 um.
+Total wire length on LAYER M8 = 0 um.
+Total wire length on LAYER M9 = 0 um.
+Total wire length on LAYER Pad = 0 um.
+Total number of vias = 12055.
+Up-via summary (total 12055):
+
+----------------
+ Active        0
+     M1     4625
+     M2     5806
+     M3      902
+     M4      360
+     M5      225
+     M6      137
+     M7        0
+     M8        0
+     M9        0
+----------------
+       12055
+
+
+[INFO DRT-0198] Complete detail routing.
+Total wire length = 2871 um.
+Total wire length on LAYER M1 = 0 um.
+Total wire length on LAYER M2 = 922 um.
+Total wire length on LAYER M3 = 1240 um.
+Total wire length on LAYER M4 = 258 um.
+Total wire length on LAYER M5 = 125 um.
+Total wire length on LAYER M6 = 138 um.
+Total wire length on LAYER M7 = 185 um.
+Total wire length on LAYER M8 = 0 um.
+Total wire length on LAYER M9 = 0 um.
+Total wire length on LAYER Pad = 0 um.
+Total number of vias = 12055.
+Up-via summary (total 12055):
+
+----------------
+ Active        0
+     M1     4625
+     M2     5806
+     M3      902
+     M4      360
+     M5      225
+     M6      137
+     M7        0
+     M8        0
+     M9        0
+----------------
+       12055
+
+
+[INFO DRT-0267] cpu time = 00:01:12, elapsed time = 00:00:30, memory = 550.31 (MB), peak = 859.98 (MB)
+
+[INFO DRT-0180] Post processing.
+[INFO DRT-0501] Runtime: 41.30s
+Took 42 seconds: detailed_route -output_drc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/5_route_drc.rpt -output_maze /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/maze.log -droute_end_iter 64 -verbose 1 -drc_report_iter_step 5
+[WARNING GRT-0246] No diode with LEF class CORE ANTENNACELL found.
+[INFO ANT-0002] Found 0 net violations.
+[INFO ANT-0001] Found 0 pin violations.
+[INFO ANT-0002] Found 0 net violations.
+[INFO ANT-0001] Found 0 pin violations.
+Design area 187 um^2 69% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_2_route.odb
+Elapsed time: 0:43.39[h:]min:sec. CPU time: user 113.83 sys 0.24 (262%). Peak memory: 880624KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+5_2_route              .odb         43      114     2.63      859 bdc84621d6
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 5_3_fillcell fillcell
+Running fillcell.tcl, stage 5_3_fillcell
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_2_route.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_1_grt.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+filler_placement "FILLERxp5_ASAP7_75t_R FILLER_ASAP7_75t_R DECAPx1_ASAP7_75t_R DECAPx2_ASAP7_75t_R DECAPx4_ASAP7_75t_R DECAPx6_ASAP7_75t_R DECAPx10_ASAP7_75t_R"
+[INFO DPL-0001] Placed 1536 filler instances.
+Design area 187 um^2 69% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_3_fillcell.odb
+Elapsed time: 0:01.49[h:]min:sec. CPU time: user 1.45 sys 0.04 (99%). Peak memory: 187444KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+5_3_fillcell           .odb          1        1     1.00      183 a82ab6d3d5
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_3_fillcell.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_route.odb
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_1_grt.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_route.sdc

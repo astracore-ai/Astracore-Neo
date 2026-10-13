@@ -1,0 +1,106 @@
+$ docker run --rm --init --name neo-pnr-mac_pe-do-finish-3237 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/mac_pe/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/in do-finish
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 6_1_fill density_fill
+Running density_fill.tcl, stage 6_1_fill
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_route.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_route.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_route.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/6_1_fill.odb
+Elapsed time: 0:01.48[h:]min:sec. CPU time: user 1.44 sys 0.04 (99%). Peak memory: 182668KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+6_1_fill               .odb          1        1     1.00      178 a82ab6d3d5
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/5_route.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/6_1_fill.sdc
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 6_report final_report
+Running final_report.tcl, stage 6_report
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/6_1_fill.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/6_1_fill.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/6_final.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/6_final.sdc
+Deleted 0 routing obstructions
+Elapsed time: 0:01.52[h:]min:sec. CPU time: user 1.51 sys 0.02 (100%). Peak memory: 28144KB.
+Global output passed lec test
+[INFO RCX-0431] Defined process_corner X with ext_model_index 0
+[INFO RCX-0029] Defined extraction corner X
+[INFO RCX-0435] Reading extraction model file /OpenROAD-flow-scripts/flow/platforms/asap7/rcx_patterns.rules ...
+[INFO RCX-0436] RC segment generation mac_pe (max_merge_res 50.0) ...
+[INFO RCX-0040] Final 8426 rc segments
+[INFO RCX-0439] Coupling Cap extraction mac_pe ...
+[INFO RCX-0440] Coupling threshhold is 0.1000 fF, coupling capacitance less than 0.1000 fF will be grounded.
+[INFO RCX-0442] 54% of 9159 wires extracted
+[INFO RCX-0442] 100% of 9159 wires extracted
+[INFO RCX-0045] Extract 1754 nets, 10177 rsegs, 10177 caps, 9278 ccs
+[INFO RCX-0443] 1754 nets finished
+IR drop analysis for power nets is skipped because PWR_NETS_VOLTAGES is undefined
+IR drop analysis for ground nets is skipped because GND_NETS_VOLTAGES is undefined
+Cell type report:                       Count       Area
+  Fill cell                              1536      85.85
+  Tap cell                                122       3.56
+  Tie cell                                137       5.99
+  Clock buffer                             23       4.48
+  Timing Repair Buffer                    320      24.71
+  Inverter                                221       9.83
+  Clock inverter                            8       0.90
+  Sequential cell                         137      51.93
+  Multi-Input combinational cell          760      85.79
+  Total                                  3264     273.04
+Report metrics stage 6, finish...
+
+==========================================================================
+finish report_design_area
+--------------------------------------------------------------------------
+Design area 187 um^2 69% utilization.
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/final_all.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/final_routing.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/final_placement.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/final_clocks.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/cts_default_clk.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/cts_default_clk_layout.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/final_resizer.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/final_congestion.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/reports/asap7/mac_pe/base/final_worst_path.webp.png
+Elapsed time: 0:05.23[h:]min:sec. CPU time: user 5.46 sys 0.10 (106%). Peak memory: 251296KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+6_report                             1        2     1.01       27 N/A
+/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/logs/asap7/mac_pe/base
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     1.00       26 N/A
+1_2_yosys              .v            0        0     1.00       26 99c544d6be
+1_2_yosys              .sdc                                       41aa9dcd79
+1_synth                .odb          1        1     1.00      179 13ab529263
+1_synth                .sdc                                       358206710d
+2_1_floorplan          .odb          1        2     1.09      217 ecd145f02e
+2_1_floorplan          .sdc                                       358206710d
+2_2_floorplan_macro    .odb          1        1     0.99      176 ecd145f02e
+2_3_floorplan_tapcell  .odb          1        1     1.00      176 3c14045914
+2_4_floorplan_pdn      .odb          1        2     0.99      177 735e98a8cf
+3_1_place_gp_skip_io   .odb          1        2     1.07      178 095de1938f
+3_2_place_iop          .odb          1        1     0.99      178 14dd161f20
+3_3_place_gp           .odb          3        4     1.16      326 9804edd9a7
+3_4_place_resized      .odb          2        2     1.08      215 9f3caf1162
+3_5_place_dp           .odb          2        2     1.07      189 d1389b2122
+4_1_cts                .odb          2        2     0.99       28 3515c8c759
+4_rsz_lec                            2        2     0.99       28 N/A
+5_1_grt                .odb         14       44     3.14      353 27869d6876
+5_1_grt                .sdc                                       572dfdf213
+5_2_route              .odb         43      114     2.63      859 bdc84621d6
+5_3_fillcell           .odb          1        1     1.00      183 a82ab6d3d5
+6_1_fill               .odb          1        1     1.00      178 a82ab6d3d5
+6_1_fill               .sdc                                       572dfdf213
+6_final_lec            .v            1        2     1.01       27 c0568868aa
+6_report                             1        2     1.01       27 N/A
+Total                               76      185     2.23      859
