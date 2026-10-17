@@ -1,0 +1,70 @@
+{
+ "config": "core",
+ "n": 20000,
+ "n_flop": 20000,
+ "n_mem": 5000,
+ "n_total": 25000,
+ "seed": 215,
+ "workers": 4,
+ "budget_s": 4500.0,
+ "golden": {
+  "workload": "c1",
+  "run_cycles": 1698,
+  "wall_s": 0.265,
+  "build_and_golden_s": 117.5
+ },
+ "population_bits": {
+  "neo_core": 6331,
+  "acc_bank": 601,
+  "acc_bank.abft_checker": 164,
+  "acc_bank.macro": 6,
+  "neo_mac_core": 35240,
+  "neo_mac_core.abft_checker": 164,
+  "act_feeder": 380,
+  "act_feeder.macro": 7,
+  "neo_mac_core_v02": 280,
+  "requant": 3368,
+  "core_seq": 412,
+  "neo_core.macro": 617,
+  "wbuf_mem": 3,
+  "wbuf_mem.macro": 8
+ },
+ "quota": {
+  "neo_core": 2640,
+  "acc_bank": 273,
+  "acc_bank.abft_checker": 93,
+  "acc_bank.macro": 27,
+  "neo_mac_core": 14578,
+  "neo_mac_core.abft_checker": 93,
+  "act_feeder": 182,
+  "act_feeder.macro": 28,
+  "neo_mac_core_v02": 141,
+  "requant": 1416,
+  "core_seq": 195,
+  "neo_core.macro": 280,
+  "wbuf_mem": 26,
+  "wbuf_mem.macro": 28
+ },
+ "memory_bits": {
+  "acc_bank.sram": 18432,
+  "act_feeder.sram": 32768,
+  "neo_core.sram": 88320,
+  "wbuf_mem.sram": 99840
+ },
+ "memory_quota": 1250,
+ "left_out": {
+  "2-D array (not reachable through cocotb on Verilator 5.020)": {
+   "neo_core": 1072
+  },
+  "idle core (tiles other than the computing one)": {},
+  "array not reachable through cocotb 1.9's VPI layer in this build (common.py)": {
+   "requant": 64,
+   "neo_core": 84
+  }
+ },
+ "population_flops": 3403,
+ "started": "2026-10-17 02:58:22 UTC",
+ "workers_s": 3215.4,
+ "n_run": 25000,
+ "mean_wall_ms": 510.3
+}
