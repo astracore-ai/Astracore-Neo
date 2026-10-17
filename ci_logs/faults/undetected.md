@@ -1,0 +1,441 @@
+# Undetected faults (dangerous and hung without a cause), by block
+
+1162 of 49998 faults. Per flop: the number of such faults and their types (flip / sa0 / sa1).
+
+## act_feeder.sram (425)
+
+- `u_dp.u_feeder.u_mem.mem[27]` (core): 11 -- flip@14/b207, flip@668/b61, flip@81/b50, flip@512/b131, sa0@343/b24, flip@583/b147 ...
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[23]` (tile): 11 -- flip@874/b71, flip@246/b19, flip@2681/b71, sa0@1944/b75, flip@2036/b131, flip@2865/b197 ...
+- `u_dp.u_feeder.u_mem.mem[23]` (core): 10 -- flip@621/b34, flip@175/b121, flip@131/b190, flip@947/b241, sa1@682/b171, flip@242/b132 ...
+- `u_dp.u_feeder.u_mem.mem[22]` (core): 10 -- flip@432/b195, flip@35/b205, flip@141/b231, flip@353/b15, flip@1040/b248, flip@157/b136 ...
+- `u_dp.u_feeder.u_mem.mem[34]` (core): 9 -- sa0@437/b87, flip@1022/b24, flip@1032/b136, flip@360/b119, flip@964/b3, flip@290/b82 ...
+- `u_dp.u_feeder.u_mem.mem[51]` (core): 9 -- flip@76/b31, flip@622/b180, flip@582/b169, flip@452/b13, flip@1336/b9, flip@602/b173 ...
+- `u_dp.u_feeder.u_mem.mem[29]` (core): 8 -- flip@185/b236, flip@433/b203, sa0@885/b137, flip@712/b111, flip@976/b26, flip@483/b160 ...
+- `u_dp.u_feeder.u_mem.mem[44]` (core): 8 -- flip@1546/b27, flip@1406/b30, flip@1105/b63, flip@1075/b168, flip@1028/b153, flip@1174/b136 ...
+- `u_dp.u_feeder.u_mem.mem[31]` (core): 7 -- sa1@165/b183, flip@534/b166, sa1@996/b140, flip@436/b132, flip@819/b9, flip@250/b21 ...
+- `u_dp.u_feeder.u_mem.mem[50]` (core): 7 -- flip@226/b60, flip@73/b22, sa0@123/b135, flip@461/b164, sa1@507/b184, flip@819/b58 ...
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[22]` (tile): 7 -- flip@2515/b248, flip@1340/b131, sa1@426/b155, flip@2664/b137, flip@2116/b196, sa1@1649/b91 ...
+- `u_dp.u_feeder.u_mem.mem[39]` (core): 6 -- flip@280/b161, flip@814/b165, flip@570/b185, flip@573/b184, flip@363/b187, flip@226/b137
+- `u_dp.u_feeder.u_mem.mem[17]` (core): 6 -- flip@99/b109, sa1@497/b203, flip@513/b239, sa1@146/b79, flip@366/b134, flip@364/b96
+- `u_dp.u_feeder.u_mem.mem[42]` (core): 6 -- flip@378/b10, flip@1143/b185, flip@1188/b131, flip@1523/b57, flip@354/b137, sa1@5/b171
+- `u_dp.u_feeder.u_mem.mem[41]` (core): 6 -- flip@413/b38, flip@294/b25, flip@1026/b170, flip@1242/b136, flip@1038/b4, flip@1455/b44
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[6]` (tile): 6 -- flip@903/b231, flip@263/b61, flip@1896/b113, sa0@763/b194, flip@81/b75, sa0@979/b133
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[1]` (tile): 6 -- flip@1695/b134, flip@468/b221, flip@1400/b149, flip@798/b162, flip@1196/b71, flip@1563/b218
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[12]` (tile): 6 -- flip@935/b114, flip@294/b42, flip@1118/b116, sa0@1658/b92, flip@1445/b74, sa0@388/b222
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[52]` (tile): 6 -- flip@915/b53, flip@2165/b39, flip@1049/b151, sa1@2688/b44, flip@1203/b132, flip@3222/b35
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[11]` (tile): 6 -- flip@1231/b217, flip@1156/b214, flip@285/b15, flip@2226/b149, flip@1346/b216, sa0@191/b20
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[53]` (tile): 6 -- flip@837/b48, flip@3339/b54, sa1@935/b58, flip@846/b190, flip@1457/b191, flip@2026/b181
+- `u_dp.u_feeder.u_mem.mem[30]` (core): 5 -- sa1@30/b40, flip@534/b200, flip@283/b206, flip@514/b75, flip@949/b166
+- `u_dp.u_feeder.u_mem.mem[32]` (core): 5 -- flip@688/b32, flip@796/b147, flip@471/b250, flip@515/b124, flip@603/b90
+- `u_dp.u_feeder.u_mem.mem[24]` (core): 5 -- flip@766/b114, flip@1005/b220, flip@220/b228, flip@588/b125, sa0@184/b15
+- `u_dp.u_feeder.u_mem.mem[25]` (core): 5 -- sa0@0/b200, flip@240/b42, flip@677/b39, flip@96/b198, flip@901/b100
+- `u_dp.u_feeder.u_mem.mem[49]` (core): 5 -- flip@937/b32, flip@1245/b1, flip@1325/b29, flip@761/b21, flip@1077/b190
+- `u_dp.u_feeder.u_mem.mem[48]` (core): 5 -- flip@1253/b152, flip@715/b53, flip@1459/b179, flip@1308/b136, flip@1057/b57
+- `u_dp.u_feeder.u_mem.mem[10]` (core): 5 -- flip@192/b67, flip@440/b246, flip@25/b168, flip@278/b41, flip@464/b214
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[9]` (tile): 5 -- flip@1442/b171, flip@118/b219, flip@1937/b194, flip@2018/b161, flip@1173/b16
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[33]` (tile): 5 -- flip@2170/b182, flip@1051/b179, sa1@2680/b0, flip@2236/b218, flip@1120/b213
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[18]` (tile): 5 -- sa0@2451/b170, flip@923/b179, sa1@1950/b235, sa0@1361/b221, flip@1413/b43
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[10]` (tile): 5 -- flip@1838/b48, flip@995/b174, flip@931/b9, flip@1688/b91, flip@1548/b23
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[13]` (tile): 5 -- flip@666/b196, flip@1850/b210, flip@651/b231, flip@1140/b2, flip@1782/b65
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[0]` (tile): 5 -- flip@1914/b88, flip@333/b60, flip@681/b38, flip@348/b190, flip@1087/b142
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[32]` (tile): 5 -- sa1@1293/b88, flip@2234/b76, flip@2755/b243, flip@905/b97, flip@935/b135
+- `u_dp.u_feeder.u_mem.mem[18]` (core): 4 -- flip@554/b99, flip@149/b159, flip@61/b92, flip@623/b3
+- `u_dp.u_feeder.u_mem.mem[35]` (core): 4 -- flip@570/b189, flip@59/b239, flip@91/b8, flip@521/b102
+- `u_dp.u_feeder.u_mem.mem[12]` (core): 4 -- flip@180/b24, flip@190/b24, flip@280/b166, flip@10/b164
+- `u_dp.u_feeder.u_mem.mem[4]` (core): 4 -- flip@198/b17, flip@83/b210, flip@9/b48, sa1@297/b4
+- `u_dp.u_feeder.u_mem.mem[7]` (core): 4 -- flip@188/b28, flip@122/b140, flip@496/b58, flip@453/b207
+- `u_dp.u_feeder.u_mem.mem[19]` (core): 4 -- flip@56/b153, flip@475/b213, flip@583/b228, flip@468/b7
+- `u_dp.u_feeder.u_mem.mem[33]` (core): 4 -- flip@664/b164, flip@430/b118, flip@312/b145, flip@155/b127
+- `u_dp.u_feeder.u_mem.mem[53]` (core): 4 -- flip@188/b4, flip@429/b191, flip@1332/b135, flip@858/b161
+- `u_dp.u_feeder.u_mem.mem[37]` (core): 4 -- sa1@472/b53, flip@174/b183, flip@44/b8, flip@44/b47
+- `u_dp.u_feeder.u_mem.mem[46]` (core): 4 -- flip@1246/b17, flip@258/b45, flip@489/b191, flip@1373/b28
+- `u_dp.u_feeder.u_mem.mem[20]` (core): 4 -- sa0@772/b104, flip@224/b250, flip@485/b139, flip@276/b137
+- `u_dp.u_feeder.u_mem.mem[28]` (core): 4 -- flip@606/b155, flip@462/b229, flip@90/b71, flip@445/b58
+- `u_dp.u_feeder.u_mem.mem[36]` (core): 4 -- flip@776/b18, flip@101/b17, flip@782/b130, flip@1009/b27
+- `u_dp.u_feeder.u_mem.mem[21]` (core): 4 -- flip@431/b21, flip@422/b142, flip@447/b3, flip@529/b177
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[17]` (tile): 4 -- flip@1874/b203, flip@1595/b233, flip@417/b158, flip@1311/b168
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[34]` (tile): 4 -- flip@375/b152, flip@1811/b184, flip@2854/b92, flip@1505/b33
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[42]` (tile): 4 -- flip@2528/b43, flip@1021/b162, flip@2575/b34, flip@3215/b56
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[16]` (tile): 4 -- flip@789/b171, flip@1991/b58, flip@2259/b20, flip@1401/b155
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[28]` (tile): 4 -- flip@2749/b214, flip@464/b227, flip@2128/b248, flip@1905/b125
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[4]` (tile): 4 -- flip@2060/b182, flip@1949/b28, flip@1704/b251, flip@122/b71
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[31]` (tile): 4 -- flip@2608/b212, flip@762/b71, flip@2056/b134, flip@1755/b47
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[29]` (tile): 4 -- flip@2248/b158, flip@2444/b118, flip@1715/b192, flip@864/b108
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[43]` (tile): 4 -- sa1@612/b189, sa0@2227/b141, sa0@627/b138, flip@2629/b47
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[26]` (tile): 4 -- flip@2828/b122, flip@1734/b216, flip@1837/b64, flip@2150/b200
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[49]` (tile): 4 -- flip@611/b1, flip@1726/b181, flip@3162/b179, flip@1424/b15
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[24]` (tile): 4 -- flip@753/b227, flip@697/b241, flip@915/b18, flip@2529/b26
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[5]` (tile): 4 -- flip@1006/b85, flip@1666/b21, flip@1632/b96, flip@2367/b134
+- `u_dp.u_feeder.u_mem.mem[14]` (core): 3 -- flip@294/b114, flip@373/b17, flip@371/b183
+- `u_dp.u_feeder.u_mem.mem[26]` (core): 3 -- flip@42/b211, flip@146/b129, flip@849/b162
+- `u_dp.u_feeder.u_mem.mem[47]` (core): 3 -- flip@1059/b38, flip@115/b29, sa0@7/b53
+- `u_dp.u_feeder.u_mem.mem[15]` (core): 3 -- flip@262/b119, flip@42/b88, flip@274/b140
+- `u_dp.u_feeder.u_mem.mem[3]` (core): 3 -- flip@293/b240, flip@92/b81, flip@287/b177
+- `u_dp.u_feeder.u_mem.mem[52]` (core): 3 -- flip@84/b46, flip@373/b162, sa0@363/b6
+- `u_dp.u_feeder.u_mem.mem[5]` (core): 3 -- flip@132/b80, flip@137/b187, sa0@252/b16
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[46]` (tile): 3 -- flip@1999/b30, flip@996/b24, flip@1879/b132
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[50]` (tile): 3 -- flip@1756/b142, flip@1822/b46, flip@3268/b179
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[35]` (tile): 3 -- flip@1186/b184, flip@2309/b249, flip@1819/b232
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[21]` (tile): 3 -- flip@1007/b74, flip@1534/b190, flip@1266/b63
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[19]` (tile): 3 -- flip@1177/b254, flip@1704/b121, flip@802/b28
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[2]` (tile): 3 -- flip@90/b9, flip@1852/b188, flip@1369/b84
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[36]` (tile): 3 -- flip@1475/b138, flip@3132/b168, sa1@260/b159
+- `u_dp.u_feeder.u_mem.mem[40]` (core): 2 -- flip@252/b61, flip@1455/b135
+- `u_dp.u_feeder.u_mem.mem[16]` (core): 2 -- flip@169/b39, flip@360/b176
+- `u_dp.u_feeder.u_mem.mem[45]` (core): 2 -- sa1@10/b33, flip@369/b23
+- `u_dp.u_feeder.u_mem.mem[6]` (core): 2 -- sa1@180/b82, flip@484/b254
+- `u_dp.u_feeder.u_mem.mem[13]` (core): 2 -- flip@301/b206, flip@455/b192
+- `u_dp.u_feeder.u_mem.mem[11]` (core): 2 -- flip@458/b111, flip@202/b184
+- `u_dp.u_feeder.u_mem.mem[43]` (core): 2 -- sa0@206/b141, flip@1283/b60
+- `u_dp.u_feeder.u_mem.mem[2]` (core): 2 -- sa1@211/b94, flip@304/b243
+- `u_dp.u_feeder.u_mem.mem[8]` (core): 2 -- flip@134/b162, flip@142/b53
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[30]` (tile): 2 -- flip@1925/b202, flip@2477/b103
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[51]` (tile): 2 -- flip@1438/b154, flip@1337/b159
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[15]` (tile): 2 -- flip@1569/b210, flip@492/b63
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[20]` (tile): 2 -- flip@1805/b48, flip@595/b45
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[37]` (tile): 2 -- sa1@2222/b190, flip@3114/b37
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[14]` (tile): 2 -- flip@1604/b109, flip@2031/b248
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[27]` (tile): 2 -- flip@2601/b109, flip@363/b241
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[44]` (tile): 2 -- flip@2980/b189, sa1@1975/b61
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[7]` (tile): 2 -- flip@743/b192, flip@1038/b125
+- `u_dp.u_feeder.u_mem.mem[0]` (core): 1 -- flip@37/b209
+- `u_dp.u_feeder.u_mem.mem[1]` (core): 1 -- flip@272/b239
+- `u_dp.u_feeder.u_mem.mem[38]` (core): 1 -- flip@477/b2
+- `u_dp.u_feeder.u_mem.mem[9]` (core): 1 -- flip@427/b233
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[25]` (tile): 1 -- flip@1176/b119
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[45]` (tile): 1 -- flip@610/b181
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[39]` (tile): 1 -- flip@2269/b58
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[38]` (tile): 1 -- flip@2022/b174
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[3]` (tile): 1 -- flip@1450/b203
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[8]` (tile): 1 -- flip@1438/b34
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[48]` (tile): 1 -- flip@1852/b20
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[41]` (tile): 1 -- flip@1018/b23
+
+## link_packer (2)
+
+- `u_mesh.g_y[0].g_x[0].u_t.u_pack.g_split.idx` (tile): 2 -- flip@1124/b4, flip@1119/b0
+
+## mbist (3)
+
+- `u_mesh.g_y[0].g_x[0].u_t.u_bank.u_bist.state` (tile): 1 -- flip@1353/b1
+- `u_mesh.g_y[0].g_x[1].u_t.u_bank.u_bist.state` (tile): 1 -- sa1@3142/b0
+- `u_mesh.g_y[1].g_x[1].u_t.u_bank.u_bist.state` (tile): 1 -- sa1@2766/b0
+
+## neo_mac_core (482)
+
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[8]` (core): 11 -- sa0@1331/b2, flip@1132/b9, sa1@973/b10, flip@1376/b11, flip@407/b9, flip@1199/b6 ...
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[2]` (core): 8 -- sa0@1065/b5, flip@876/b13, sa0@627/b9, sa0@148/b0, sa1@259/b2, sa0@1014/b3 ...
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[13]` (core): 7 -- sa0@512/b15, flip@459/b13, sa0@761/b1, sa0@781/b4, flip@607/b4, sa1@345/b13 ...
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.u_da.pipe[1]` (core): 7 -- flip@534/b11, flip@807/b14, flip@1237/b0, flip@1433/b9, sa1@995/b9, sa0@297/b9 ...
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[6]` (core): 7 -- sa1@172/b14, sa0@1266/b0, flip@1538/b13, sa1@1381/b2, sa1@532/b2, sa1@694/b9 ...
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[0]` (core): 7 -- sa0@724/b2, sa1@317/b15, flip@217/b0, sa1@895/b6, flip@942/b9, flip@262/b14 ...
+- `u_dp.u_core.u_skew.g_pairs.g_pair[1].g_next.u_da.pipe[0]` (core): 7 -- flip@1049/b3, sa0@1596/b2, flip@1053/b5, sa0@571/b1, sa0@1586/b0, sa0@1443/b15 ...
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[0]` (core): 7 -- sa1@445/b7, flip@338/b14, flip@1297/b3, sa1@995/b1, sa0@1075/b3, sa0@197/b0 ...
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[9]` (core): 6 -- sa0@813/b4, sa0@521/b6, sa0@56/b4, sa0@867/b1, flip@816/b1, sa0@296/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[12]` (core): 6 -- sa0@663/b6, sa1@216/b12, sa0@50/b2, sa1@490/b3, sa0@28/b6, sa0@878/b5
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[18]` (core): 6 -- sa0@734/b10, flip@406/b3, sa1@14/b2, sa1@393/b14, sa0@814/b10, flip@230/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[11]` (core): 6 -- flip@174/b0, sa0@971/b1, sa1@1087/b7, sa1@173/b13, flip@1010/b6, flip@456/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[15]` (core): 6 -- sa1@747/b2, flip@547/b10, sa0@874/b14, sa0@329/b11, flip@100/b4, sa0@694/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[12]` (core): 6 -- flip@834/b9, sa0@997/b2, flip@277/b15, flip@178/b9, flip@464/b4, flip@217/b4
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[3]` (core): 6 -- flip@951/b7, flip@353/b8, flip@589/b8, sa0@48/b13, flip@94/b1, flip@336/b8
+- `u_dp.u_core.u_skew.g_pairs.g_pair[1].g_next.u_db.pipe[0]` (core): 5 -- sa0@487/b11, sa0@1237/b14, sa0@45/b9, sa1@624/b10, sa0@306/b8
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[1]` (core): 5 -- sa1@819/b6, sa1@87/b3, sa1@23/b4, sa1@571/b15, flip@352/b10
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[10]` (core): 5 -- sa1@898/b10, sa0@91/b5, sa1@1036/b15, sa1@378/b1, sa1@543/b10
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[7]` (core): 5 -- sa0@1355/b13, flip@1120/b13, flip@883/b7, flip@93/b9, flip@838/b4
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[2]` (core): 5 -- sa1@1063/b3, sa0@1125/b9, flip@807/b10, sa1@1229/b6, sa0@774/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[9]` (core): 5 -- flip@785/b2, flip@514/b6, sa0@984/b10, flip@343/b5, sa0@477/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.u_da.pipe[2]` (core): 5 -- sa1@1278/b6, flip@1119/b0, sa1@592/b3, sa0@1345/b12, flip@888/b10
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[19]` (core): 5 -- flip@170/b12, sa1@423/b12, sa0@799/b4, sa0@611/b9, sa1@1007/b2
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[1]` (core): 5 -- flip@1475/b3, sa0@1151/b2, sa0@1056/b12, sa1@98/b13, sa0@699/b11
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[1]` (core): 5 -- sa0@659/b9, flip@463/b3, sa0@420/b8, sa1@784/b0, flip@525/b14
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[8]` (core): 5 -- sa0@1048/b11, sa0@586/b9, sa0@157/b9, flip@282/b8, sa1@718/b9
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].st1` (core): 5 -- sa0@223/b9, sa0@932/b7, sa0@166/b1, flip@1044/b5, flip@990/b9
+- `u_dp.u_core.valid_pipe` (core): 5 -- sa0@791/b12, flip@393/b39, flip@1464/b33, sa0@907/b21, flip@127/b27
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[3]` (core): 5 -- sa1@233/b10, sa1@109/b13, sa1@697/b5, flip@408/b14, flip@151/b3
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[15]` (core): 5 -- flip@283/b12, flip@594/b4, sa1@106/b0, sa1@113/b4, sa1@378/b15
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[8]` (core): 5 -- flip@62/b4, flip@465/b2, sa0@679/b6, sa0@836/b11, flip@120/b8
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[16]` (core): 4 -- flip@177/b12, flip@115/b5, sa0@330/b13, flip@280/b4
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[14]` (core): 4 -- sa1@738/b11, sa0@926/b6, sa0@236/b13, flip@123/b10
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[7]` (core): 4 -- sa1@946/b14, sa0@199/b10, flip@584/b1, flip@389/b7
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[16]` (core): 4 -- sa0@1040/b13, sa0@1033/b6, sa1@948/b15, sa1@680/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[5]` (core): 4 -- sa0@271/b12, flip@1125/b0, sa0@737/b9, sa1@219/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[13]` (core): 4 -- sa1@1044/b5, flip@363/b11, sa1@667/b4, sa1@350/b11
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[11]` (core): 4 -- flip@818/b5, flip@337/b10, flip@1005/b12, sa1@990/b13
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[10]` (core): 4 -- sa1@977/b9, sa0@555/b0, flip@783/b9, sa1@876/b5
+- `u_dp.u_core.u_skew.g_pairs.g_pair[0].r_odd` (core): 4 -- flip@142/b2, sa1@825/b2, sa0@1415/b6, sa0@1380/b4
+- `u_dp.u_core.u_skew.g_pairs.g_pair[1].g_next.u_db.pipe[1]` (core): 4 -- sa1@169/b14, sa0@1045/b10, flip@1537/b14, sa1@497/b13
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[9]` (core): 4 -- sa1@881/b9, sa0@504/b8, sa1@545/b7, sa1@326/b13
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[6]` (core): 4 -- sa0@35/b9, sa0@908/b14, sa0@1040/b11, sa1@686/b5
+- `u_dp.u_core.u_skew.g_pairs.g_pair[1].g_next.u_da.pipe[1]` (core): 4 -- sa1@1012/b9, sa0@534/b1, sa0@1288/b2, sa0@1575/b5
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[6]` (core): 4 -- sa1@216/b14, sa0@274/b6, sa1@945/b14, flip@1009/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[0]` (core): 4 -- sa1@323/b12, sa1@63/b11, flip@270/b1, sa0@20/b3
+- `u_dp.u_core.u_skew.g_pairs.g_pair[0].st1` (core): 4 -- sa1@428/b14, sa0@1572/b15, sa1@1571/b14, sa0@1157/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[4]` (core): 4 -- sa1@401/b0, flip@1372/b4, sa1@376/b14, flip@657/b15
+- `u_dp.u_core.u_skew.g_pairs.g_pair[1].st1` (core): 4 -- sa0@1541/b11, sa1@944/b12, sa1@202/b9, sa1@1044/b10
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[14]` (core): 4 -- sa0@350/b2, flip@101/b4, sa0@710/b5, flip@460/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.u_da.pipe[0]` (core): 4 -- sa0@57/b1, sa0@1324/b11, flip@29/b4, flip@388/b11
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.u_da.pipe[4]` (core): 4 -- flip@214/b13, sa1@1250/b9, flip@1433/b3, sa1@601/b10
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.valid_pipe` (tile): 4 -- sa0@1009/b7, sa0@1335/b25, flip@3420/b22, flip@3019/b34
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.r_even` (core): 3 -- sa1@1342/b4, sa0@227/b3, sa0@1340/b3
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[10]` (core): 3 -- sa0@22/b8, sa0@353/b3, sa1@599/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_db.pipe[1]` (core): 3 -- sa0@150/b13, sa0@440/b9, sa0@941/b14
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[22]` (core): 3 -- flip@557/b11, flip@163/b14, sa1@722/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[13]` (core): 3 -- flip@214/b14, sa1@595/b1, flip@763/b14
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[5]` (core): 3 -- flip@595/b7, flip@892/b13, sa1@420/b9
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_db.pipe[0]` (core): 3 -- sa0@330/b11, sa1@265/b14, flip@911/b8
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[5]` (core): 3 -- flip@396/b15, sa1@224/b10, flip@529/b14
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[4]` (core): 3 -- flip@280/b5, sa1@110/b1, sa1@1036/b4
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].st1` (core): 3 -- sa0@441/b12, flip@415/b8, flip@680/b6
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[17]` (core): 3 -- sa0@908/b8, sa1@26/b7, sa1@569/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[7]` (core): 3 -- sa0@282/b11, sa0@9/b11, flip@415/b14
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.u_da.pipe[3]` (core): 3 -- sa0@744/b7, flip@836/b4, sa0@1345/b2
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[7]` (core): 3 -- sa1@991/b14, flip@52/b15, sa0@272/b13
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[2]` (core): 3 -- sa1@173/b2, flip@345/b11, flip@399/b2
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[24]` (core): 3 -- flip@969/b6, sa1@383/b1, sa1@445/b11
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[11]` (core): 3 -- flip@575/b0, sa1@627/b0, flip@992/b3
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[20]` (core): 3 -- flip@488/b0, flip@175/b0, flip@889/b9
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[14]` (core): 3 -- sa0@268/b12, sa1@21/b10, sa0@27/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[8]` (core): 3 -- flip@516/b3, flip@936/b2, flip@574/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_db.pipe[1]` (core): 3 -- sa1@476/b12, sa1@1595/b12, sa1@310/b11
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[4]` (core): 3 -- sa0@671/b1, flip@660/b14, flip@475/b9
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.u_da.pipe[5]` (core): 3 -- sa1@152/b12, flip@509/b11, sa0@1499/b8
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[13]` (core): 3 -- flip@488/b1, sa1@810/b14, flip@1018/b6
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].st1` (core): 3 -- flip@631/b8, sa1@544/b14, sa0@910/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[12]` (core): 3 -- sa0@192/b14, flip@843/b1, flip@605/b4
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[17]` (core): 2 -- flip@129/b13, sa1@1011/b5
+- `u_dp.u_core.g_vskew[13].g_vd.u_vd.pipe[1]` (core): 2 -- sa0@1292/b0, flip@326/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[5]` (core): 2 -- flip@825/b11, sa0@117/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[23]` (core): 2 -- sa0@442/b13, sa1@585/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[3]` (core): 2 -- sa0@581/b5, flip@586/b15
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[25]` (core): 2 -- flip@718/b13, sa1@427/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[1].g_next.r_even` (core): 2 -- sa1@497/b7, sa1@342/b2
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[6]` (core): 2 -- flip@120/b4, sa0@846/b7
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].r_odd` (core): 2 -- flip@1004/b7, sa1@1027/b7
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].r_odd` (core): 2 -- sa0@52/b7, sa1@191/b7
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[7]` (core): 2 -- sa1@784/b5, sa1@398/b1
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[1]` (core): 2 -- sa1@241/b13, flip@691/b3
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].st1` (core): 2 -- sa0@1151/b9, sa1@1350/b3
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[9]` (core): 2 -- sa0@324/b3, sa1@374/b4
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.r_even` (core): 2 -- sa0@119/b5, flip@789/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_db.pipe[0]` (core): 2 -- sa0@682/b9, sa0@412/b15
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.r_even` (core): 2 -- sa0@756/b5, sa0@463/b4
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[10]` (core): 2 -- sa1@542/b13, sa0@131/b9
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[12]` (core): 2 -- sa0@979/b0, sa1@57/b9
+- `u_dp.u_core.g_vskew[15].g_vd.u_vd.pipe[26]` (core): 2 -- sa0@792/b0, sa0@109/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[6]` (core): 2 -- sa1@226/b8, sa1@249/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[21]` (core): 2 -- sa0@1027/b15, flip@367/b5
+- `u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_db.pipe[0]` (core): 2 -- flip@580/b9, sa0@1441/b10
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[15]` (core): 2 -- flip@952/b11, sa0@417/b15
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.r_even` (core): 2 -- sa0@1526/b6, sa0@1193/b2
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_db.pipe[1]` (core): 2 -- flip@839/b8, sa0@644/b13
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_db.pipe[0]` (core): 2 -- sa1@171/b12, sa1@360/b14
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[2]` (core): 2 -- sa1@72/b11, sa0@182/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].r_odd` (core): 2 -- sa0@490/b5, sa1@540/b4
+- `u_dp.u_core.g_vskew[5].g_vd.u_vd.pipe[6]` (core): 1 -- sa0@1299/b0
+- `u_dp.u_core.g_vskew[10].g_vd.u_vd.pipe[8]` (core): 1 -- sa0@818/b0
+- `u_dp.u_core.g_vskew[7].g_vd.u_vd.pipe[5]` (core): 1 -- flip@1487/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[4]` (core): 1 -- flip@746/b2
+- `u_dp.u_core.g_vskew[9].g_vd.u_vd.pipe[8]` (core): 1 -- sa0@197/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[20]` (core): 1 -- sa0@341/b12
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[16]` (core): 1 -- sa1@441/b12
+- `u_dp.u_core.g_vskew[15].g_vd.u_vd.pipe[27]` (core): 1 -- flip@1370/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.u_da.pipe[0]` (core): 1 -- sa0@264/b6
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].st1` (core): 1 -- sa0@408/b0
+- `u_dp.u_core.g_vskew[12].g_vd.u_vd.pipe[0]` (core): 1 -- sa0@1380/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[21]` (core): 1 -- sa0@184/b15
+- `u_dp.u_core.g_vskew[9].g_vd.u_vd.pipe[17]` (core): 1 -- flip@1427/b0
+- `u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[4]` (core): 1 -- sa0@1174/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].r_odd` (core): 1 -- sa0@88/b1
+- `u_dp.u_core.u_skew.g_srow[15].g_sn.u_ds.pipe[16]` (core): 1 -- sa0@514/b0
+- `u_dp.u_core.g_vskew[7].g_vd.u_vd.pipe[12]` (core): 1 -- flip@1473/b0
+- `u_dp.u_core.g_vskew[14].g_vd.u_vd.pipe[25]` (core): 1 -- flip@1205/b0
+- `u_dp.u_core.g_vskew[13].g_vd.u_vd.pipe[11]` (core): 1 -- flip@529/b0
+- `u_dp.u_core.g_vskew[4].g_vd.u_vd.pipe[7]` (core): 1 -- sa0@921/b0
+- `u_dp.u_core.u_skew.g_srow[14].g_sn.u_ds.pipe[12]` (core): 1 -- sa0@750/b0
+- `u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[0]` (core): 1 -- sa0@458/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[3]` (core): 1 -- flip@690/b10
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[19]` (core): 1 -- sa0@271/b13
+- `u_dp.u_core.g_vskew[4].g_vd.u_vd.pipe[5]` (core): 1 -- sa0@1087/b0
+- `u_dp.u_core.g_vskew[15].g_vd.u_vd.pipe[28]` (core): 1 -- sa0@1067/b0
+- `u_dp.u_core.g_vskew[15].g_vd.u_vd.pipe[22]` (core): 1 -- sa0@31/b0
+- `u_dp.u_core.g_vskew[9].g_vd.u_vd.pipe[1]` (core): 1 -- sa0@1569/b0
+- `u_dp.u_core.g_vskew[10].g_vd.u_vd.pipe[11]` (core): 1 -- flip@705/b0
+- `u_dp.u_core.u_skew.g_srow[8].g_sn.u_ds.pipe[0]` (core): 1 -- sa0@942/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[0]` (core): 1 -- flip@512/b10
+- `u_dp.u_core.u_skew.g_srow[6].g_sn.u_ds.pipe[10]` (core): 1 -- flip@29/b0
+- `u_dp.u_core.g_vskew[12].g_vd.u_vd.pipe[22]` (core): 1 -- flip@64/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[8]` (core): 1 -- sa0@680/b0
+- `u_dp.u_core.g_vskew[13].g_vd.u_vd.pipe[17]` (core): 1 -- flip@115/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.u_db.pipe[1]` (core): 1 -- sa1@449/b15
+- `u_dp.u_core.g_vskew[11].g_vd.u_vd.pipe[10]` (core): 1 -- sa0@869/b0
+- `u_dp.u_core.g_vskew[15].g_vd.u_vd.pipe[25]` (core): 1 -- flip@541/b0
+- `u_dp.u_core.g_vskew[7].g_vd.u_vd.pipe[13]` (core): 1 -- flip@1316/b0
+- `u_dp.u_core.g_vskew[9].g_vd.u_vd.pipe[7]` (core): 1 -- sa0@628/b0
+- `u_dp.u_core.g_vskew[15].g_vd.u_vd.pipe[3]` (core): 1 -- sa0@550/b0
+- `u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[6]` (core): 1 -- sa0@1059/b0
+- `u_dp.u_core.g_vskew[7].g_vd.u_vd.pipe[11]` (core): 1 -- sa0@699/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[2].g_next.u_db.pipe[0]` (core): 1 -- sa0@1383/b8
+- `u_dp.u_core.g_vskew[1].g_vd.u_vd.pipe[0]` (core): 1 -- sa0@780/b0
+- `u_dp.u_core.u_skew.g_srow[6].g_sn.u_ds.pipe[6]` (core): 1 -- sa0@1181/b0
+- `u_dp.u_core.g_vskew[12].g_vd.u_vd.pipe[11]` (core): 1 -- flip@345/b0
+- `u_dp.u_core.g_vskew[8].g_vd.u_vd.pipe[11]` (core): 1 -- flip@520/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_da.pipe[18]` (core): 1 -- flip@532/b7
+- `u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[11]` (core): 1 -- flip@598/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[7].g_next.u_da.pipe[2]` (core): 1 -- sa0@753/b1
+- `u_dp.u_core.g_vskew[12].g_vd.u_vd.pipe[7]` (core): 1 -- sa0@1420/b0
+- `u_dp.u_core.g_vskew[3].g_vd.u_vd.pipe[2]` (core): 1 -- sa0@1175/b0
+- `u_dp.u_core.u_skew.g_srow[2].g_sn.u_ds.pipe[2]` (core): 1 -- sa0@387/b0
+- `u_dp.u_core.g_vskew[11].g_vd.u_vd.pipe[19]` (core): 1 -- sa0@1214/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].st1` (core): 1 -- sa0@918/b8
+- `u_dp.u_core.u_skew.g_pairs.g_pair[4].g_next.r_even` (core): 1 -- sa0@104/b5
+- `u_dp.u_core.g_vskew[14].g_vd.u_vd.pipe[23]` (core): 1 -- sa0@846/b0
+- `u_dp.u_core.g_vskew[5].g_vd.u_vd.pipe[2]` (core): 1 -- flip@214/b0
+- `u_dp.u_core.g_vskew[12].g_vd.u_vd.pipe[2]` (core): 1 -- sa0@230/b0
+- `u_dp.u_core.g_vskew[15].g_vd.u_vd.pipe[18]` (core): 1 -- sa0@280/b0
+- `u_dp.u_core.g_vskew[8].g_vd.u_vd.pipe[8]` (core): 1 -- flip@755/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[11]` (core): 1 -- sa1@495/b11
+- `u_dp.u_core.u_skew.g_srow[10].g_sn.u_ds.pipe[4]` (core): 1 -- sa0@768/b0
+- `u_dp.u_core.g_vskew[15].g_vd.u_vd.pipe[0]` (core): 1 -- flip@229/b0
+- `u_dp.u_core.g_vskew[13].g_vd.u_vd.pipe[19]` (core): 1 -- sa0@284/b0
+- `u_dp.u_core.u_skew.g_pairs.g_pair[6].g_next.u_db.pipe[1]` (core): 1 -- flip@824/b15
+- `u_dp.u_core.u_skew.g_pairs.g_pair[5].g_next.u_da.pipe[5]` (core): 1 -- flip@43/b14
+- `u_dp.u_core.u_skew.g_srow[3].g_sn.u_ds.pipe[4]` (core): 1 -- sa0@1054/b0
+- `u_dp.u_core.g_vskew[7].g_vd.u_vd.pipe[0]` (core): 1 -- flip@1302/b0
+- `u_dp.u_core.g_vskew[10].g_vd.u_vd.pipe[14]` (core): 1 -- flip@184/b0
+- `u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[10]` (core): 1 -- flip@882/b0
+- `u_dp.u_core.u_skew.g_srow[12].g_sn.u_ds.pipe[2]` (core): 1 -- sa0@751/b0
+- `u_dp.u_core.g_vskew[2].g_vd.u_vd.pipe[3]` (core): 1 -- flip@37/b0
+- `u_dp.u_core.g_vskew[10].g_vd.u_vd.pipe[0]` (core): 1 -- flip@220/b0
+
+## neo_mac_core_v02 (163)
+
+- `u_dp.u_idx_dl.pipe[29]` (core): 6 -- sa0@1219/b3, sa1@10/b2, sa0@666/b2, sa1@110/b4, sa0@1557/b0, sa0@1395/b4
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[3]` (tile): 6 -- sa1@3088/b4, flip@2513/b5, sa1@2294/b5, sa0@1499/b2, flip@3161/b5, sa1@3279/b1
+- `u_dp.u_idx_dl.pipe[14]` (core): 5 -- flip@1004/b3, sa0@590/b1, flip@407/b2, sa0@175/b2, sa0@1530/b2
+- `u_dp.u_idx_dl.pipe[27]` (core): 5 -- sa0@1309/b5, sa0@1220/b0, sa1@251/b2, sa0@1166/b2, sa0@378/b4
+- `u_dp.u_idx_dl.pipe[23]` (core): 4 -- sa0@1512/b4, sa0@1624/b1, sa0@683/b4, flip@849/b2
+- `u_dp.u_idx_dl.pipe[36]` (core): 4 -- sa0@904/b0, sa1@1103/b2, flip@622/b3, flip@424/b4
+- `u_dp.u_idx_dl.pipe[15]` (core): 4 -- sa1@863/b4, sa1@133/b2, flip@583/b4, sa0@589/b5
+- `u_dp.u_idx_dl.pipe[10]` (core): 4 -- sa1@915/b5, sa1@1249/b2, sa0@1103/b2, sa0@32/b5
+- `u_dp.u_idx_dl.pipe[4]` (core): 3 -- flip@700/b4, sa0@1216/b1, flip@894/b0
+- `u_dp.u_idx_dl.pipe[35]` (core): 3 -- sa1@1322/b4, sa1@1190/b1, sa1@1217/b3
+- `u_dp.u_idx_dl.pipe[20]` (core): 3 -- flip@1392/b2, sa0@1031/b3, flip@293/b0
+- `u_dp.u_first_dl.pipe[37]` (core): 3 -- flip@1502/b0, flip@1257/b0, sa1@683/b0
+- `u_dp.u_idx_dl.pipe[5]` (core): 3 -- sa1@675/b3, sa0@1544/b1, flip@1375/b3
+- `u_dp.u_idx_dl.pipe[21]` (core): 3 -- sa1@553/b2, sa1@1546/b4, sa0@493/b0
+- `u_dp.u_idx_dl.pipe[31]` (core): 3 -- sa0@330/b4, sa1@60/b0, sa1@1301/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[5]` (tile): 3 -- sa1@3220/b4, sa1@1484/b5, sa0@2055/b2
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[13]` (tile): 3 -- sa0@242/b4, sa0@798/b0, sa0@1156/b3
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[31]` (tile): 3 -- sa1@657/b4, sa1@2547/b5, sa0@1740/b2
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[22]` (tile): 3 -- sa0@1763/b2, sa0@1072/b1, flip@2357/b0
+- `u_dp.u_idx_dl.pipe[28]` (core): 2 -- sa1@796/b5, flip@1490/b5
+- `u_dp.u_idx_dl.pipe[26]` (core): 2 -- sa1@159/b5, sa0@1380/b3
+- `u_dp.u_idx_dl.pipe[1]` (core): 2 -- flip@865/b2, sa1@371/b3
+- `u_dp.u_first_dl.pipe[13]` (core): 2 -- sa1@522/b0, flip@305/b0
+- `u_dp.u_idx_dl.pipe[39]` (core): 2 -- flip@1411/b5, flip@1035/b3
+- `u_dp.u_idx_dl.pipe[32]` (core): 2 -- flip@783/b1, sa1@589/b4
+- `u_dp.u_idx_dl.pipe[17]` (core): 2 -- flip@1058/b0, sa1@717/b3
+- `u_dp.u_idx_dl.pipe[24]` (core): 2 -- flip@1629/b0, sa1@1094/b3
+- `u_dp.u_idx_dl.pipe[18]` (core): 2 -- sa1@1308/b3, flip@894/b4
+- `u_dp.u_first_dl.pipe[20]` (core): 2 -- sa1@359/b0, sa1@85/b0
+- `u_dp.u_idx_dl.pipe[16]` (core): 2 -- sa1@774/b5, sa0@1082/b0
+- `u_dp.u_idx_dl.pipe[2]` (core): 2 -- sa1@522/b5, flip@111/b3
+- `u_dp.u_idx_dl.pipe[11]` (core): 2 -- sa0@474/b5, flip@1070/b3
+- `u_dp.u_idx_dl.pipe[12]` (core): 2 -- flip@1196/b5, sa1@890/b0
+- `u_dp.u_idx_dl.pipe[0]` (core): 2 -- flip@277/b5, sa1@226/b1
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[20]` (tile): 2 -- sa0@2916/b3, sa1@2958/b3
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[30]` (tile): 2 -- sa1@3499/b0, sa1@294/b1
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[37]` (tile): 2 -- flip@2422/b0, sa1@3492/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[33]` (tile): 2 -- sa0@2706/b2, flip@2249/b1
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[12]` (tile): 2 -- flip@2938/b4, sa1@2713/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[25]` (tile): 2 -- sa1@1187/b4, flip@3256/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[14]` (tile): 2 -- sa0@505/b0, sa0@1303/b2
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[4]` (tile): 2 -- sa0@2638/b1, sa0@993/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[6]` (tile): 2 -- sa1@800/b0, sa0@829/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[21]` (tile): 2 -- flip@3355/b5, sa1@278/b1
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[17]` (tile): 2 -- sa1@999/b4, sa0@1152/b2
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[10]` (tile): 2 -- sa1@296/b2, sa1@999/b2
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[23]` (tile): 2 -- sa0@2803/b5, sa1@909/b1
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[7]` (tile): 2 -- sa0@3402/b0, flip@2206/b4
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[26]` (tile): 2 -- sa1@490/b2, sa1@1884/b4
+- `u_dp.u_idx_dl.pipe[34]` (core): 1 -- sa0@1642/b2
+- `u_dp.u_first_dl.pipe[23]` (core): 1 -- sa1@227/b0
+- `u_dp.u_first_dl.pipe[4]` (core): 1 -- flip@768/b0
+- `u_dp.u_idx_dl.pipe[19]` (core): 1 -- sa1@113/b0
+- `u_dp.u_idx_dl.pipe[33]` (core): 1 -- flip@1324/b0
+- `u_dp.u_first_dl.pipe[11]` (core): 1 -- flip@1118/b0
+- `u_dp.u_first_dl.pipe[36]` (core): 1 -- sa1@686/b0
+- `u_dp.u_first_dl.pipe[7]` (core): 1 -- flip@1001/b0
+- `u_dp.u_idx_dl.pipe[9]` (core): 1 -- sa1@33/b5
+- `u_dp.u_idx_dl.pipe[7]` (core): 1 -- sa1@475/b1
+- `u_dp.u_first_dl.pipe[27]` (core): 1 -- flip@497/b0
+- `u_dp.u_first_dl.pipe[24]` (core): 1 -- flip@1626/b0
+- `u_dp.u_idx_dl.pipe[25]` (core): 1 -- sa1@947/b4
+- `u_dp.u_idx_dl.pipe[6]` (core): 1 -- sa0@1290/b1
+- `u_dp.u_idx_dl.pipe[30]` (core): 1 -- sa0@261/b4
+- `u_dp.u_idx_dl.pipe[13]` (core): 1 -- flip@959/b5
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[2]` (tile): 1 -- sa0@3398/b1
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[34]` (tile): 1 -- sa0@1155/b3
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[38]` (tile): 1 -- sa0@259/b5
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[1]` (tile): 1 -- sa1@2001/b1
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[28]` (tile): 1 -- flip@3439/b3
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_first_dl.pipe[3]` (tile): 1 -- sa1@2568/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_first_dl.pipe[11]` (tile): 1 -- sa1@1194/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[19]` (tile): 1 -- flip@3480/b3
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_first_dl.pipe[31]` (tile): 1 -- sa1@308/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[16]` (tile): 1 -- sa1@1555/b2
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[18]` (tile): 1 -- sa0@3280/b5
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[8]` (tile): 1 -- sa0@2255/b2
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_first_dl.pipe[35]` (tile): 1 -- sa1@1204/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[9]` (tile): 1 -- sa0@3053/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_idx_dl.pipe[11]` (tile): 1 -- sa1@2844/b4
+- `u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_first_dl.pipe[22]` (tile): 1 -- sa1@578/b0
+
+## noc_router (1)
+
+- `u_mesh.g_y[0].g_x[0].u_t.u_router.occ[4]` (tile): 1 -- sa0@3755/b0
+
+## prog_mem (1)
+
+- `u_mesh.g_y[0].g_x[0].u_t.u_prog.rdata` (tile): 1 -- sa0@828/b52
+
+## tile_nic (28)
+
+- `u_mesh.g_y[0].g_x[1].u_t.u_nic.st_ptr` (tile): 4 -- flip@3782/b0, sa1@814/b5, sa1@690/b1, sa1@1626/b2
+- `u_mesh.g_y[0].g_x[1].u_t.u_nic.q_nwo` (tile): 3 -- flip@3778/b14, sa1@3413/b14, sa1@2696/b10
+- `u_mesh.g_y[0].g_x[1].u_t.u_nic.st_mge` (tile): 3 -- sa0@917/b0, sa0@3094/b6, sa0@2711/b15
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.dfifo_wr` (tile): 2 -- sa1@1186/b2, flip@2464/b3
+- `u_mesh.g_y[1].g_x[1].u_t.u_nic.s_rem` (tile): 2 -- flip@256/b11, flip@271/b11
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.drain_stride` (tile): 1 -- sa1@816/b7
+- `u_mesh.g_y[0].g_x[1].u_t.u_nic.st_md1[15]` (tile): 1 -- sa1@1353/b3
+- `u_mesh.g_y[1].g_x[1].u_t.u_nic.s_row` (tile): 1 -- flip@54/b3
+- `u_mesh.g_y[0].g_x[1].u_t.u_nic.st_md1[5]` (tile): 1 -- sa1@235/b0
+- `u_mesh.g_y[0].g_x[1].u_t.u_nic.st_md1[8]` (tile): 1 -- sa1@834/b2
+- `u_mesh.g_y[0].g_x[1].u_t.u_nic.st_md1[9]` (tile): 1 -- sa1@2777/b3
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.fetch_is_w` (tile): 1 -- sa1@329/b0
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.drain_sent` (tile): 1 -- flip@3078/b2
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.fetch_entry` (tile): 1 -- sa0@1631/b5
+- `u_mesh.g_y[0].g_x[1].u_t.u_nic.st_md1[13]` (tile): 1 -- sa1@2116/b1
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.drain_gaddr` (tile): 1 -- sa1@3305/b6
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.stage[1]` (tile): 1 -- sa0@78/b31
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.req_len` (tile): 1 -- sa1@213/b9
+- `u_mesh.g_y[1].g_x[1].u_t.u_nic.serve_row` (tile): 1 -- flip@111/b460
+
+## tile_nic.macro (46)
+
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.rb_data` (tile): 46 -- sa1@2188/b65, sa1@2498/b100, sa1@761/b100, sa1@3546/b271, sa0@2910/b181, sa1@2498/b53 ...
+
+## tile_nic.sram (11)
+
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[20]` (tile): 1 -- sa1@2748/b266
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[11]` (tile): 1 -- sa1@2483/b178
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[18]` (tile): 1 -- sa0@2887/b48
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[22]` (tile): 1 -- sa0@423/b189
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[15]` (tile): 1 -- sa0@464/b205
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[7]` (tile): 1 -- sa1@3100/b172
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[30]` (tile): 1 -- sa1@1410/b58
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[27]` (tile): 1 -- sa1@1775/b234
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[4]` (tile): 1 -- sa0@3185/b91
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[17]` (tile): 1 -- sa0@2112/b281
+- `u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[0]` (tile): 1 -- sa1@896/b191
+

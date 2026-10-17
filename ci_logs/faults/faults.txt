@@ -32,3 +32,6 @@ Installing collected packages: python-constraint, pyyaml, find-libpython, cocotb
 Successfully installed cocotb-1.9.2 cocotb-coverage-1.2.0 find-libpython-0.5.1 python-constraint-1.4.0 pyyaml-6.0.3
 python3 dv/cocotb/faults/run_faults.py all --n-tile 20000 --n-core 20000 --seed 215 \
   --workers 4 --budget-min 300 --out ci_logs/faults
+core: 25000 of 25000 faults (20000 flop, 5000 memory) run by 4 workers in 3215.4 s (mean 510.3 ms per fault; fault-free run 1698 cycles)
+tile: 24998 of 24998 faults (20000 flop, 4998 memory) run by 4 workers in 12942.3 s (mean 2064.1 ms per fault; fault-free run 3864 cycles)
+report: 49998 faults -> /home/runner/work/Astracore-Neo/Astracore-Neo/ci_logs/faults/faults_report.md, undetected.md (1162), faults.csv, faults_summary.json
