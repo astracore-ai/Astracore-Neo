@@ -1,0 +1,164 @@
+$ docker run --rm --init --name neo-pnr-prog_mem-cts-3201 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/prog_mem/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/in cts
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth_canonicalize.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/logs/asap7/prog_mem/base/1_1_yosys_canonicalize.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/1_2_yosys.v
+Elapsed time: 0:00.04[h:]min:sec. CPU time: user 0.02 sys 0.01 (98%). Peak memory: 27692KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     0.75       27 N/A
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/logs/asap7/prog_mem/base/1_2_yosys.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/1_2_yosys.v
+Elapsed time: 0:00.04[h:]min:sec. CPU time: user 0.02 sys 0.01 (98%). Peak memory: 27488KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_2_yosys              .v            0        0     0.75       26 4f76151e25
+1_2_yosys              .sdc                                       65b8df2b1b
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 4_1_cts cts
+Running cts.tcl, stage 4_1_cts
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/3_place.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/3_place.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+[INFO CTS-0050] Root buffer is BUFx16f_ASAP7_75t_R.
+[INFO CTS-0051] Sink buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0052] The following clock buffers will be used for CTS:
+                    BUFx16f_ASAP7_75t_R
+                    BUFx24_ASAP7_75t_R
+[INFO CTS-0049] Characterization buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0007] Net "clk" found for clock "clk".
+[INFO CTS-0010]  Clock net "clk" has 2562 sinks.
+[INFO CTS-0008] TritonCTS found 1 clock nets.
+[INFO CTS-0097] Characterization used 2 buffer(s) types.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk.
+[INFO CTS-0028]  Total number of sinks: 2562.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 14.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 135.
+[INFO CTS-0024]  Normalized sink region: [(1.52074, 1.85), (43.93, 43.9333)].
+[INFO CTS-0025]     Width:  42.4092.
+[INFO CTS-0026]     Height: 42.0833.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 68
+    Sub-region size: 21.2046 X 42.0833
+[INFO CTS-0034]     Segment length (rounded): 10.
+ Level 2
+    Direction: Vertical
+    Sinks per sub-region: 34
+    Sub-region size: 21.2046 X 21.0417
+[INFO CTS-0034]     Segment length (rounded): 10.
+ Level 3
+    Direction: Horizontal
+    Sinks per sub-region: 17
+    Sub-region size: 10.6023 X 21.0417
+[INFO CTS-0034]     Segment length (rounded): 6.
+ Level 4
+    Direction: Vertical
+    Sinks per sub-region: 9
+    Sub-region size: 10.6023 X 10.5208
+[INFO CTS-0034]     Segment length (rounded): 6.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 135.
+[INFO CTS-0018]     Created 156 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 4.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 4.
+[INFO CTS-0015]     Created 156 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 7:1, 8:7, 9:8, 15:1, 16:4, 17:17, 18:31, 19:43, 20:18, 21:9, 22:6, 23:6..
+[INFO CTS-0017]     Max level of the clock tree: 4.
+[INFO CTS-0098] Clock net "clk"
+[INFO CTS-0099]  Sinks 2683
+[INFO CTS-0100]  Leaf buffers 135
+[INFO CTS-0101]  Average sink wire length 110.35 um
+[INFO CTS-0102]  Path depth 3 - 4
+[INFO CTS-0207]  Dummy loads inserted 121
+[INFO CTS-0500] Runtime: 0.86s
+estimate_parasitics -placement
+detailed_placement
+[INFO DPL-0006] Core area: 3541.19 um^2
+[INFO DPL-0007] Movable instances area: 2049.89 um^2
+[INFO DPL-0008] Fixed instances area within core: 19.30 um^2
+[INFO DPL-0009] Utilization: 58.4%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 14849 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |        845 |       121 |       724
+        1 |         46 |         6 |        40
+        2 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 2.
+[INFO DPL-0500] Runtime: 0.17s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                9179
+total displacement       2615.4 u
+average displacement        0.2 u
+max displacement            2.0 u
+original HPWL           42454.6 u
+legalized HPWL          43938.9 u
+delta HPWL                    3 %
+
+estimate_parasitics -placement
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -verbose
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove BufferMove CloneMove SplitLoadMove 
+[INFO RSZ-0098] No setup violations found
+[INFO RSZ-0505] Runtime: 0.51s
+[INFO RSZ-0033] No hold violations found.
+[INFO RSZ-0506] Runtime: 0.13s
+detailed_placement
+[INFO DPL-0006] Core area: 3541.19 um^2
+[INFO DPL-0007] Movable instances area: 2049.89 um^2
+[INFO DPL-0008] Fixed instances area within core: 19.30 um^2
+[INFO DPL-0009] Utilization: 58.4%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 14849 cells
+[INFO DPL-0500] Runtime: 0.08s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                   0
+total displacement          0.0 u
+average displacement        0.0 u
+max displacement            0.0 u
+original HPWL           43938.9 u
+legalized HPWL          43938.9 u
+delta HPWL                    0 %
+
+estimate_parasitics -placement
+Report metrics stage 4, cts final...
+
+==========================================================================
+cts final report_design_area
+--------------------------------------------------------------------------
+Design area 2069 um^2 58% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/4_1_cts.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/4_cts.sdc
+Elapsed time: 0:09.28[h:]min:sec. CPU time: user 12.92 sys 0.78 (147%). Peak memory: 304556KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+4_1_cts                .odb          9       14     1.48      297 1fb7f932a2
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/4_1_cts.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/prog_mem/orfs/results/asap7/prog_mem/base/4_cts.odb

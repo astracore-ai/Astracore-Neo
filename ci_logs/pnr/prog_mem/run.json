@@ -1,0 +1,57 @@
+{
+ "block": "prog_mem",
+ "runner": "docker",
+ "image": "openroad/orfs:26Q4-124-g3451ca1f5",
+ "flow_args": "",
+ "budget_min": 316.0,
+ "start": "2026-10-20 10:36:54 UTC",
+ "stages": [
+  {
+   "stage": "fakeram",
+   "exit": 0,
+   "seconds": 0.0
+  },
+  {
+   "stage": "prep",
+   "exit": 0,
+   "seconds": 1.6
+  },
+  {
+   "stage": "synth_sta",
+   "exit": 0
+  },
+  {
+   "stage": "activity",
+   "exit": 0,
+   "seconds": 4.4,
+   "file": "activity/prog_mem.json.gz"
+  },
+  {
+   "stage": "synth",
+   "exit": 0,
+   "seconds": 2.9,
+   "note": ""
+  },
+  {
+   "stage": "floorplan",
+   "exit": 0,
+   "seconds": 10.4,
+   "note": ""
+  },
+  {
+   "stage": "place",
+   "exit": 0,
+   "seconds": 38.3,
+   "note": ""
+  },
+  {
+   "stage": "cts",
+   "exit": 0,
+   "seconds": 10.7,
+   "note": ""
+  }
+ ],
+ "status": "started",
+ "orfs_stages": "synth,floorplan,place,cts,route,do-finish",
+ "seconds": 70.1
+}
