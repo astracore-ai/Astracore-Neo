@@ -698,6 +698,9 @@ def c16_targets():
         ("u_dp.u_core.u_skew.g_pairs.g_pair[0].r_odd", 2, "u_dp.u_core.g_vskew[1].g_vd.u_vd.pipe[1]", "act_perr"),   # row 1's register
         ("u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[2]", 11, "u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[3]", "act_perr"),  # a chain stage, consumed 8 cycles later by row 6
         ("u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_pa.pipe[2]", 1, "u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[3]", "act_perr"),   # the parity chain
+        ("u_dp.u_core.g_vskew[7].g_vd.u_vd.pipe[5]", 0, "u_dp.u_feeder.valid_q2", "act_perr"),                        # row 7's valid line (a row held or run)
+        ("u_dp.u_core.u_skew.g_srow[3].g_sn.u_ds.pipe[5]", 0, None, "act_perr"),                                     # row 3's swap-token line
+        ("u_dp.u_core.valid_pipe", 20, "u_dp.u_feeder.valid_q2", "act_perr"),                                        # the accumulator's write valid
     ]
 
 
@@ -707,8 +710,10 @@ async def c16_act_path_flips(dut):
     the register holds a row in use: the index / first delay lines of neo_mac_core_v02 (a wrong accumulator row or a wrong
     overwrite flag -- the ABFT at drain cannot see a consistent row) raise ctrl_err through the lines' parity; the feeder's
     row register and the skew chains (a wrong byte reaching every column and the check column alike) raise act_perr through
-    the byte parity checked at the array's row inputs. Every run completes with its rows drained; before this drop each of
-    these finished silently (FMEDA v2's undetected list: 79 skew flips, 41 index-line faults)."""
+    the byte parity checked at the array's row inputs; the rows' valid and swap-token lines and the accumulator's write
+    valid (a row held, run, adopted or written wrongly in every column alike) raise act_perr through the row-to-row check.
+    Every run completes with its rows drained; before this drop each of these finished silently (FMEDA v2's undetected
+    list: 79 skew flips, 41 index-line faults; the valid / token lines were the next group once the bytes were covered)."""
     start_clock(dut, "C16")
     rng = np.random.default_rng(16)
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)

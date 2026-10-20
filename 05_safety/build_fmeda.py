@@ -531,7 +531,6 @@ V2_UNDETECTED = 201
 # the mechanisms of drop 0.44 (S1): (label, the campaign selection -- a block, or a regex on the flop path)
 S1_REGS = [
     ("activation buffer cells (SECDED, abuf_ce / abuf_ue)", dict(block="act_feeder.sram")),
-    ("activation buffer output register (the macro's rb_data, decoded behind it)", dict(re=r"u_feeder\.u_mem\.rb_data$")),
     ("feeder row register x_vec_q (byte parity, act_perr)", dict(re=r"u_feeder\.x_vec_q$")),
     ("feeder parity register x_par_q", dict(re=r"u_feeder\.x_par_q$")),
     ("feeder second-stage control and its copies (valid / swap / idx / first _q2, _dq2: ctrl_err)", dict(re=r"u_feeder\.(valid|swap|idx|first)_d?q2$")),
@@ -826,7 +825,8 @@ def build_v2(faults_path, formal_path, out_dir):
     formal, formal_title = parse_formal(formal_path)
     rows = v2_rows(faults, formal)
     bv = base_values()
-    modes = [("v1", "v1 (claims)"), ("v2", f"{VER} measured"), ("nomask", f"{VER}, no credit for masked faults"),
+    modes = [("v1", "v1 (claims)" if VER == "v2" else "v1's claims at v3's base rates"), ("v2", f"{VER} measured"),
+             ("nomask", f"{VER}, no credit for masked faults"),
              ("upper", f"{VER}, 95 % upper bounds")]
     core = {m: core_metrics(rows, m) for m, _ in modes}
     core_v1rows = core_metrics(rows, "v2", with_new=False)
@@ -1321,6 +1321,10 @@ def write_v2_md(path, rows, faults, meta, run, formal, formal_title, core, core_
         L.append("")
     L.append("## Metrics")
     L.append("")
+    if VER == "v3":
+        L.append("The first column is v1's coverage claims applied to v3's base rates (the SRAM leaves at the silicon sizes, the NIC memories "
+                 "at a 99 % claim): what the analytical FMEDA would have said of this design. The measured columns are this campaign's.")
+        L.append("")
     L.append("| | " + " | ".join(label for _, label in modes) + " |")
     L.append("| --- | " + " | ".join("---:" for _ in modes) + " |")
     for key, label, fmt in (("spfm", "Core SPFM", "p3"), ("lfm", "Core LFM", "p4"), ("pmhf", "Core PMHF (FIT)", "f3"),

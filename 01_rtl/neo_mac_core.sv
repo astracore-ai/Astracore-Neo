@@ -27,6 +27,15 @@
 //   checked against its bit; a mismatch raises xpar_err (sticky xpar_err_sticky, the tile's act_perr cause, cleared with
 //   abft_clear). This is the check the ABFT cannot make: a byte corrupted before the array's first column feeds every
 //   data column and the check column the same wrong value (FMEDA v2: the skew pipes' 79 undetected flips).
+//   The row's valid and the swap token are row inputs of the same kind (a wrong v_row[i] holds or runs every PE of row i,
+//   the check PE included; a wrong s_row[i] adopts the shadow weights early or late): each row's line is checked against
+//   the previous row's output delayed by PE_LAT (v_row[i] == v_row[i-1] delayed PE_LAT, s_row[i] likewise: a second
+//   PE_LAT-deep line per row, 2 x 2 x (ROWS - 1) flops), and valid_out against v_row[ROWS-1] delayed COLS + PE_LAT. The
+//   check lines carry the complement with the complemented reset (delay_line RSTV = 1): synthesis merges the rows' lines
+//   -- every row's first stage has D = valid_in -- into one shared chain with taps, and a plain check line would merge
+//   into it too and the compare fold to a constant (the unit's flop count did not move until the complement). A fault
+//   in any stage of any line, or in a check line, is a mismatch the cycle it reaches a row (xpar_err too). The campaign of
+//   drop 0.44 found these lines as the next undetected group (38 of 45 in 12,496 faults) once the bytes were covered.
 module neo_mac_core #(
   parameter int ROWS      = 32,
   parameter int COLS      = 32,
@@ -145,7 +154,29 @@ module neo_mac_core #(
       assign xp_bad[r] = v_row[r] && (pr != p_row[r]);
     end
   endgenerate
-  assign xpar_err = (xp_bad != '0);
+  // the valid and token lines against the previous row's delayed by PE_LAT; valid_out against the last row's delayed by
+  // COLS + PE_LAT (drop 0.44)
+  logic [ROWS-1:0] vt_bad;
+  logic signed [0:0] vo_chk_n;                              // the complement of valid_out as expected
+  logic              vl_n;                                  // the last row's valid, complemented, into the check line
+  generate
+    for (genvar r = 0; r < ROWS; r++) begin : g_vtchk
+      if (r == 0) begin : g_r0
+        assign vt_bad[r] = 1'b0;
+      end else begin : g_rn
+        logic              vp_n, sp_n;                      // the previous row's valid / token, complemented
+        logic signed [0:0] vq_n, sq_n;                      // ... delayed PE_LAT: the complement of this row's
+        assign vp_n = !v_row[r-1];
+        assign sp_n = !s_row[r-1];
+        delay_line #(.W(1), .DEPTH(PE_LAT), .RSTV(1)) u_vc (.clk(clk), .rst_n(rst_n), .d(vp_n), .q(vq_n));
+        delay_line #(.W(1), .DEPTH(PE_LAT), .RSTV(1)) u_sc (.clk(clk), .rst_n(rst_n), .d(sp_n), .q(sq_n));
+        assign vt_bad[r] = (v_row[r] == vq_n[0]) || (s_row[r] == sq_n[0]);
+      end
+    end
+  endgenerate
+  assign vl_n = !v_row[ROWS-1];
+  delay_line #(.W(1), .DEPTH(COLS + PE_LAT), .RSTV(1)) u_voc (.clk(clk), .rst_n(rst_n), .d(vl_n), .q(vo_chk_n));
+  assign xpar_err = (xp_bad != '0) || (vt_bad != '0) || (valid_out == vo_chk_n[0]);
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)          xpar_err_sticky <= 1'b0;
     else if (abft_clear) xpar_err_sticky <= 1'b0;
