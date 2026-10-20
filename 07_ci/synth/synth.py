@@ -1430,10 +1430,11 @@ def pe_limited_units(names):
     return lim
 
 
-def judge(results, scope, periods):
-    """Over a scope of units: the PE-limited ones, the judged ones (the rest with a sweep), the violating units per period,
-    the smallest clean period and the largest minimum period among the judged."""
-    lim = pe_limited_units(scope)
+def judge(results, scope, periods, lim_from=None):
+    """Over a scope of units: the PE-limited ones (found over lim_from, the tree the scope's parents reach the PEs
+    through, when given), the judged ones (the rest with a sweep), the violating units per period, the smallest clean
+    period and the largest minimum period among the judged."""
+    lim = {n for n in pe_limited_units(lim_from or scope) if n in scope}
     judged = [n for n in scope if n not in lim and (results.get(n, {}).get("sweep") or {}).get("periods")]
     per = {}
     for p in periods:
@@ -1461,8 +1462,9 @@ def sweep_verdict(results, names, periods):
              pe_stage_ps=pe, pe_limited_stages=stages, tile_period_ps=tile, tile_fmax_mhz=(1e6 / tile if tile else None),
              worst_other_min_period=worst_other)
     if "neo_top" in names and "neo_tile" in names:
-        tscope = [n for n in subtree("neo_top", results) if n in names and n not in scope]
-        tlim, tjudged, tper, tclean, tworst = judge(results, tscope, periods)
+        whole = [n for n in subtree("neo_top", results) if n in names]
+        tscope = [n for n in whole if n not in scope]
+        tlim, tjudged, tper, tclean, tworst = judge(results, tscope, periods, lim_from=whole)
         v["top"] = dict(scope=tscope, pe_limited=sorted(tlim), judged=tjudged, violating_by_period=tper, clean_period_ps=tclean,
                         worst_other_min_period=tworst, chip_period_ps=(None if tclean is None or tile is None else max(tclean, tile)))
     return v
