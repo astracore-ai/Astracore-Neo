@@ -203,6 +203,11 @@ def main():
         # the leaf units' RTL: the one file that defines the module (they have no children)
         files = [f for f in S.RTL_FILES if os.path.isfile(os.path.join(args.rtl, f))
                  and re.search(rf"^\s*module\s+{re.escape(module)}\b", open(os.path.join(args.rtl, f)).read(), flags=re.M)]
+        # drop 0.43 (B2): a gated unit's RTL instantiates neo_icg -- the clock gate's behavioural model joins the RTL side
+        # (the netlist side has the library's ICG cell from the cell models); without it requant failed to elaborate (run 184)
+        if S.ICG_MODULE + ".sv" not in files and any(re.search(rf"\b{re.escape(S.ICG_MODULE)}\b", open(os.path.join(args.rtl, f)).read())
+                                                   for f in files):
+            files = [S.ICG_MODULE + ".sv"] + files
         ports, signed = rtl_ports(args.rtl, module, params, files)
         nl = os.path.join(args.synth, unit, "netlist.v")
         with open(nl) as f:

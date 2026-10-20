@@ -1,4 +1,9 @@
-# AstraCore Neo — handoff package v0.16 (2026-10-05)
+# AstraCore Neo — handoff package v0.43 (2026-10-20)
+
+**Start here:** `HANDOFF-5.md` (the state at drop 0.43: what is RTL-proven, proxy-measured and model, the open items, the plan to
+the freeze), `CLAUDE.md` (the operating manual for the repository: layout, commands, rules, CI), `00_overview/ROADMAP.md`
+(the streams and drops), `00_overview/drop_log.md` (one row per drop with its CI proof), `00_overview/streams/` (the briefs the
+parallel streams were built from, and the four still open).
 
 As of drop 0.15 the deliverable is described in IP form (tile and mesh as the block, `08_ip_product/`); the chip-level
 material elsewhere in this package is the reference SoC configuration of the same RTL.
@@ -13,7 +18,7 @@ neosim bug until proven otherwise.
 
 | Folder | Contents |
 | --- | --- |
-| `00_overview/` | the engineering record (spec v2.1, decisions, drop log, every drop's findings) exported from the project document; product strategy and development plan live inside it |
+| `00_overview/` | the engineering record (spec v2.1, decisions, drop log, every drop's findings) exported from the project document; product strategy and development plan live inside it; `streams/` the stream briefs (drop 0.41 onward) |
 | `01_rtl/` | 25 SystemVerilog modules: PE, systolic array with ABFT check column, streaming core, feeder, accumulator, sequencer, requantization, weight buffer with ECC, (39,32) SECDED, SRAM bank with ECC and MBIST, CRC-16, NoC router and mesh, tile interface, DMA program engine, host register interface, error-signaling module, tile and tile mesh |
 | `02_dv/` | directed testbenches for Xcelium (`tb/`), the assertion set with binds (`sva/`), the UVM skeleton (`uvm/`), the Python executable-spec harnesses and the neosim simulator (`sim/`), golden vectors (`vectors*/`), the formal harnesses and SymbiYosys tasks (`formal/`, drop 0.41), and the DV plan (`README.md`) |
 | `03_models/` | feasibility model, cycle-accurate systolic reference, compiler (lowering, scheduling, backend emitting tile programs), performance models v2/v3 and their reports |
