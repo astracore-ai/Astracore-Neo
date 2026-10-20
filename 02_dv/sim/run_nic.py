@@ -96,6 +96,7 @@ class Nic:
         self.abuf, self.wbuf = [], []                   # buffer writes seen (address, bytes[, check])
         self.p["rst_n"].v = 0; d.tick(); d.tick(); self.p["rst_n"].v = 1; d.tick()
         self.pending_read = None
+        self.tag = None                                 # the sequence tag of the last RDREQ sent (hdr[11:8], drop 0.44)
 
     def tick(self):
         """One clock with the bank model: writes land at the edge, a read returns its row the next cycle. Buffer writes
@@ -142,9 +143,13 @@ class Nic:
         p["cmd_valid"].v = 1; p["cmd_op"].v = op; p["cmd_x"].v = x; p["cmd_y"].v = y; p["cmd_addr"].v = addr; p["cmd_len"].v = length; p["cmd_base"].v = base
         self.tick()
         p["cmd_valid"].v = 0
-        # the RDREQ goes out on the link
+        # the RDREQ goes out on the link; its hdr[11:8] is the fetch's sequence tag (drop 0.44), which the serving side
+        # must echo in the response's RDRSP beats and CRC flit (fetch_test does)
         p["tx_ready"].v = 1
         for _ in range(4):
+            self.d.settle()
+            if p["tx_valid"].v and ((p["tx_flit"].v >> (VW + 29)) & 7) == T_RDREQ:
+                self.tag = ((p["tx_flit"].v >> VW) >> 8) & 0xF
             self.tick()
         p["tx_ready"].v = 0
 
@@ -330,10 +335,10 @@ def fetch_test(rows, cols, is_w, n_entries, seed, src=(1, 1), sizes=(1, 2, 5, 9,
     pos, held = 0, []
     while pos < len(words):
         n = min(r.choice(list(sizes)), len(words) - pos)
-        held.append((n, nic.send(flit(T_RDRSP, words[pos:pos + n], src=src))))
+        held.append((n, nic.send(flit(T_RDRSP, words[pos:pos + n], src=src, tag=nic.tag))))
         pos += n
     busy_before = nic.p["cmd_busy"].v
-    nic.send(flit(T_CRC, [(len(words) << 16) | crc16(words)], src=src))
+    nic.send(flit(T_CRC, [(len(words) << 16) | crc16(words)], src=src, tag=nic.tag))
     nic.tick()
     got = nic.wbuf if is_w else nic.abuf
     exp = []
@@ -375,6 +380,31 @@ nic.tick()
 ok10 = nic.abuf == [] and nic.wbuf == [] and held == [1, 1] and nic.p["crc_err_sticky"].v == 0 and nic.p["lost_err_sticky"].v == 0
 print(f"  I10 response with no fetch outstanding: 20 words in 2 beats taken in {held} cycle(s), no buffer write, CRC and count still checked clean -> {'PASS' if ok10 else 'FAIL'}")
 fails += not ok10
+
+# ---------------- I16: a late response of an abandoned fetch (drop 0.44, review #2) ----------------
+# A fetch is outstanding (tag t); a whole response tagged t - 1 -- the dead server of I7 answering the fetch the watchdog
+# abandoned, while the retry from the same bank is in flight -- arrives first: nothing is stored, the fetch stays
+# outstanding, the stale message's CRC and count are still checked; then the response tagged t completes it.
+nic = Nic()
+stale = [rng.getrandbits(32) for _ in range(20)]
+good = [rng.getrandbits(32) for _ in range(3 * nic.wpa)]
+nic.fetch(1, 1, 1, 0x200, len(good), 36)
+tag_ok = nic.tag is not None and nic.tag == 1                       # the first fetch after reset carries tag 1
+old = (nic.tag - 1) & 0xF if nic.tag is not None else 0
+nic.send(flit(T_RDRSP, stale[:16], tag=old)); nic.send(flit(T_RDRSP, stale[16:], tag=old))
+nic.send(flit(T_CRC, [(20 << 16) | crc16(stale)], tag=old))
+nic.tick()
+still_busy, stored_stale = nic.p["cmd_busy"].v, list(nic.abuf)
+nic.send(flit(T_RDRSP, good, tag=nic.tag))
+nic.send(flit(T_CRC, [(len(good) << 16) | crc16(good)], tag=nic.tag))
+nic.tick()
+exp12 = [(36 + e, entry_bytes(good[e * nic.wpa:(e + 1) * nic.wpa], nic.wpa)[:16]) for e in range(3)]
+ok12 = (tag_ok and still_busy == 1 and stored_stale == [] and nic.p["cmd_busy"].v == 0 and nic.abuf == exp12
+        and nic.p["crc_err_sticky"].v == 0 and nic.p["lost_err_sticky"].v == 0 and nic.p["fetch_timeout_sticky"].v == 0)
+print(f"  I16 late response of an abandoned fetch: RDREQ tagged {nic.tag} (expect 1); a 20-word response tagged {old} while the fetch is outstanding -> "
+      f"{len(stored_stale)} entries stored (expect 0), still busy {still_busy} (expect 1); then the response tagged {nic.tag} -> "
+      f"{len(nic.abuf)} entries (expect 3), busy {nic.p['cmd_busy'].v}, flags clean -> {'PASS' if ok12 else 'FAIL'}")
+fails += not ok12
 
 # ---------------- I11: PSUM rows into the reduce port at beat rate (drop 0.31) ----------------
 def psum_rx_test(rows, cols, seed):

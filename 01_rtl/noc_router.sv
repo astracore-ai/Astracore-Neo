@@ -4,8 +4,10 @@
 //   Each input has a 2-entry FIFO; each output a registered stage with ready/valid handshake.
 //   Routing: X first (E/W), then Y (S = +y, N = -y), then local. Round-robin arbitration per
 //   output among the inputs whose head flit requests it. A flit whose parity is wrong is
-//   dropped at the input and parity_err_sticky is raised: the sender's end-to-end sequence
-//   check and timeout recover the packet, the error pin reports the fault.
+//   dropped at the input and parity_err_sticky is raised; the error pin reports the fault. What recovers the message is
+//   at the ends, not here: the receiver's CRC flit check counts the words of every message (lost_err / crc_err), the
+//   requesting tile's fetch watchdog abandons a response that never completes, and since drop 0.44 (review #2) every
+//   fetch's response carries the requester's 4-bit sequence tag, so a late response cannot complete a later fetch.
 //   Drop 0.41 (the same function, cycle for cycle; the arbitration was `(rr + 1 + k) % 5` in a priority chain behind a
 //   1,077-bit parity reduce on the FIFO head, 2.57 ns on the ASAP7 SS proxy):
 //   - the parity is computed when a flit is pushed (^in_flit, on the input side) and stored with the entry (fbad), so
@@ -46,6 +48,7 @@ module noc_router #(
 )(
   input  logic          clk,
   input  logic          rst_n,
+  input  logic          test_en,       // drop 0.44 (review #8): test mode -- the five output stages' clock gates forced on
   input  logic [XW-1:0] my_x,          // this router's mesh coordinates (drop 0.35: ports strapped by the mesh, not parameters)
   input  logic [YW-1:0] my_y,
   input  logic [15:0]   prio,          // drop 0.43: bit p = partition p is the high class (static: a control-plane register)
@@ -214,7 +217,7 @@ module noc_router #(
       // through the reset (the asynchronous reset needs no clock; the simulators' first cycles may see no reset edge)
       logic gclk;
       assign stage_en[o] = fire[o] || (out_valid[o] && out_ready[o]) || !rst_n;
-      neo_icg u_icg (.clk(clk), .en(stage_en[o]), .te(1'b0), .gclk(gclk));
+      neo_icg u_icg (.clk(clk), .en(stage_en[o]), .te(test_en), .gclk(gclk));
       // the stage's registers (its own variables -- one array written by five differently clocked blocks is a multiply
       // driven variable to the simulators -- presented on the arrays by continuous assignment)
       logic           ov;             // out_valid[o]
