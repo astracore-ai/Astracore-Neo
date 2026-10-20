@@ -42,7 +42,11 @@ on:
         type: string
         default: ""
       pnr_budget_min:
-        description: "pnr: minutes for the block's flow on the runner (empty: 320 less the setup on the hosted runner); the job's timeout follows it"
+        description: "pnr: minutes for the block's flow on the runner, less the setup (empty: 320, the hosted runner's); set pnr_timeout_min with it"
+        type: string
+        default: ""
+      pnr_timeout_min:
+        description: "pnr: the job's timeout in minutes (empty: 350); at least pnr_budget_min + 30"
         type: string
         default: ""
       faults_only:
@@ -577,7 +581,7 @@ jobs:
     needs: pnr-plan
     if: needs.pnr-plan.outputs.run == '1'
     runs-on: ${{ inputs.pnr_runner || 'ubuntu-latest' }}
-    timeout-minutes: ${{ fromJSON(inputs.pnr_budget_min || '320') + 30 }}
+    timeout-minutes: ${{ fromJSON(inputs.pnr_timeout_min || '350') }}
     strategy:
       fail-fast: false
       matrix:
