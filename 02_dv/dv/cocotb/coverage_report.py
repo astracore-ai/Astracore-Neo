@@ -101,6 +101,16 @@ def main():
             cells.append(f"{c} / {t} | {100.0 * c / t:.1f}" if t else "— | —")
         out.append("| **all** | " + " | ".join(cells) + " |")
         out.append("")
+        # drop 0.44 (review #15): the one file excluded from these figures, said next to them
+        out.append("Not in the figures above: `vec_unit.sv` (the vector unit -- vec_ctrl, vec_mul, vec_interp, vec_unit; ~820 lines) "
+                   "carries `/* verilator coverage_off */`, so its lines, branches and toggles are not instrumented in any "
+                   "coverage build. Reason: the tile32 coverage build peaked at 15.7 GB of the runner's 16 GB without it (run 211: "
+                   "tile32_cov 15,674,996 KB; run 196 with the pipelined unit instrumented ran out of memory), and the pragma is a "
+                   "source-file property the builds share (neosim has no preprocessor, so it cannot be a define). The unit's "
+                   "function is checked bit for bit outside these figures: V1 / V2 (`sim/run_vec_unit.py` against `model/vec_ref.py`, "
+                   "`tb/tb_vec_unit.sv` under Verilator and Icarus), C12-C14 on the core and M21 / M23 / M24 on the mesh; the "
+                   "functional bins below sample its ops.")
+        out.append("")
         out.append("## Uncovered line points (what no test reached)")
         out.append("")
         for f in sorted(per_file):

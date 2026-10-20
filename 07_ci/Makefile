@@ -43,6 +43,7 @@
 # make cocotb_coverage : the coverage report (drop 0.26): 16x8 suite, M10 and C1 with Verilator line/toggle coverage + functional covergroups
 # make cocotb_top : the chip top's suite (drop 0.42): neo_top on 2x2 tiles of 16x8 cores + 2 bridge nodes, T1-T5 with clk / aclk at 1.0 / 1.6 ns,
 #                   then again with aclk == clk (the hdl-sim job's step after the tile suites)
+# make cocotb_axil: the AXI4-Lite wrapper neo_tile_axil under cocotb (drop 0.44): A1-A3, the hdl-sim job's step after the chip top
 # make perf2      : 64-core event model with mesh and bank contention (compiler/neo_perf_v2.py)
 # make regress    : everything above that is self-checking (model, RTL v0.1/v0.2/core/NoC, compiler); hours under neosim
 # make regress_ci : the subset that finishes in minutes (drop 0.24); CI's python-regress job runs this -- the whole-convolution
@@ -74,7 +75,7 @@ TOPR := rtl/cdc_bits.sv rtl/cdc_fifo.sv rtl/cdc_sync.sv rtl/noc_axi_bridge.sv rt
 TBC := tb/tb_neo_core.sv
 TB  := tb/tb_neo_mac_core.sv
 
-.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage cocotb_coverage_report synth crc16 cocotb_top vectors_sp iverilog_sp vectors_vec iverilog_vec vec
+.PHONY: all model vectors sim compile conv core noc requant ksplit tiles ecc mbist nic two_layer backend_check xrun_tiles perf2 perf3 backend cdriver regress regress_ci iverilog xrun verilator lint clean vectors_core xrun_core verilator_core iverilog_core cocotb_tiles cocotb_mesh8 cocotb_mesh8_build cocotb_mesh8_run cocotb_mesh8s_build cocotb_mesh8s_run cocotb_coverage cocotb_coverage_report synth crc16 cocotb_top cocotb_axil vectors_sp iverilog_sp vectors_vec iverilog_vec vec
 
 all: regress model
 
@@ -252,8 +253,9 @@ verilator: vectors vectors_sp vectors_core vectors_vec
 	$(MAKE) crc16
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD +incdir+$(VECDIR) --top-module tb_neo_mac_core \
 	          $(RTL) $(TB) -o sim
-	./obj_dir/sim +VECDIR=$(VECDIR)
 	mkdir -p build
+	./obj_dir/sim +VECDIR=$(VECDIR) | tee build/tb_verilator.txt
+	grep -q "^RESULT: ALL PASS" build/tb_verilator.txt          # gated since drop 0.44 (review #5): the bench prints its verdict and $finishes with exit 0
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_v32_4 +incdir+build/v32_4 --top-module tb_neo_mac_core \
 	          $(RTL) $(TB) -o sim
 	./obj_v32_4/sim +VECDIR=build/v32_4 | tee build/tb_v32_4_verilator.txt
@@ -264,7 +266,8 @@ verilator: vectors vectors_sp vectors_core vectors_vec
 	grep -q "^RESULT: ALL PASS" build/tb_v168s_verilator.txt
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_core +incdir+vectors_core --top-module tb_neo_core \
 	          $(RTL) $(TBC) -o sim_core
-	./obj_core/sim_core +VECDIR=vectors_core
+	./obj_core/sim_core +VECDIR=vectors_core | tee build/tb_core_verilator.txt
+	grep -q "^RESULT: ALL PASS" build/tb_core_verilator.txt      # gated since drop 0.44 (review #5)
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD --Mdir obj_vec +incdir+build/vvec --top-module tb_vec_unit \
 	          rtl/neo_mem.sv rtl/vec_unit.sv tb/tb_vec_unit.sv -o sim_vec
 	./obj_vec/sim_vec +VECDIR=build/vvec | tee build/tb_vec_verilator.txt
@@ -272,7 +275,8 @@ verilator: vectors vectors_sp vectors_core vectors_vec
 	python3 sim/gen_tile_vectors.py
 	verilator --binary --timing -Wno-fatal -Wno-TIMESCALEMOD -Wno-WIDTHTRUNC --Mdir obj_tiles --top-module tb_tile_mesh \
 	          $(TILE) tb/tb_tile_mesh.sv -o sim_tiles
-	./obj_tiles/sim_tiles
+	./obj_tiles/sim_tiles | tee build/tb_tiles_verilator.txt
+	grep -q "^PASS: M1" build/tb_tiles_verilator.txt             # gated since drop 0.44 (review #5): tb_tile_mesh prints PASS: M1 ... or FAIL: ...
 	$(MAKE) cocotb_tiles
 
 # the beat CRC in matrix form (drop 0.41): rtl/crc16_beat.sv must be what sim/gen_crc16_beat.py generates (the script checks its
@@ -307,7 +311,7 @@ MESH8_BUILD_JOBS ?= 4
 STATS ?= ci_logs/hdl-sim/build_stats.txt
 timed = $(if $(TIME_BIN),mkdir -p $(dir $(STATS)) && $(TIME_BIN) -f "$(1): %e s wall; peak RSS %M KB; exit %x" -a -o $(STATS),)   # no commas: $(if) would split on them
 cocotb_tiles:
-	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"   # cocotb 2.x needs Verilator >= 5.036; Ubuntu ships 5.020
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb==1.9.2" "cocotb-coverage<2"   # pinned (drop 0.44, review #16): cocotb 2.x needs Verilator >= 5.036; Ubuntu ships 5.020
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
 	-$(call timed,tile) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile
 	-$(call timed,tile8) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile8
@@ -326,10 +330,17 @@ cocotb_tiles:
 # the chip top (drop 0.42): neo_top's suite, one build run twice -- clk 1.0 ns / aclk 1.6 ns, then aclk == clk -- in its own build
 # directory (no clean: the tile suites' results stay); check_results.py fails the target on any failed or missing test
 cocotb_top:
-	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb==1.9.2" "cocotb-coverage<2"
 	-$(call timed,top) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb top
 	-$(call timed,top_sync) $(MAKE) -C dv/cocotb top_sync
 	python3 dv/cocotb/check_results.py dv/cocotb/results_top.xml dv/cocotb/results_top_sync.xml
+# the AXI4-Lite wrapper (drop 0.44, review #17): neo_tile_axil -- one 16x8 tile behind host_axil, the datasheet's integration view,
+# driven through its AXI-Lite port under cocotb (A1 registers, A2 MBIST, A3 a convolution from the tile's own bank); the hdl-sim
+# job's step after the chip top (one small build, a few minutes)
+cocotb_axil:
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb==1.9.2" "cocotb-coverage<2"
+	-$(call timed,axil) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb axil
+	python3 dv/cocotb/check_results.py dv/cocotb/results_axil.xml
 
 # the coverage report (drop 0.26, item 5): the 16x8 suite, M10 and C1 rebuilt with Verilator line/toggle coverage and the
 # functional covergroups on; the report and the raw data land in ci_logs/hdl-sim/, which the CI job publishes
@@ -344,7 +355,7 @@ cocotb_coverage_report:
 
 # the 8x8 silicon mesh under cocotb (drop 0.24): a 64-tile Verilator build, run by the hdl-mesh8 job so the hdl-sim job stays short
 cocotb_mesh8:
-	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb==1.9.2" "cocotb-coverage<2"
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
 	-$(MAKE) -C dv/cocotb mesh8
 	python3 dv/cocotb/check_results.py dv/cocotb/results_mesh8.xml
@@ -353,7 +364,7 @@ cocotb_mesh8:
 # --build-jobs alone never gave it (that only splits the generated C++ into more files); run 115's mesh8s compile ran one
 # file at a time on the 4-core runner
 cocotb_mesh8_build:
-	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb==1.9.2" "cocotb-coverage<2"
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
 	$(call timed,mesh8 build) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb mesh8_build
 cocotb_mesh8_run:
@@ -362,7 +373,7 @@ cocotb_mesh8_run:
 # the 8x8 mesh on 16x8 cores (drop 0.32; the hdl-mesh8 job's default since drop 0.34): MESH8_BUILD_JOBS and MESH8_CFLAGS
 # pass through to both variants
 cocotb_mesh8s_build:
-	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb==1.9.2" "cocotb-coverage<2"
 	$(MAKE) -C dv/cocotb clean >/dev/null 2>&1 || true
 	$(call timed,mesh8s build) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb mesh8s_build
 cocotb_mesh8s_run:
@@ -457,7 +468,7 @@ FAULTS_BUDGET_MIN ?= 0
 FAULTS_OUT ?= ci_logs/faults
 .PHONY: faults
 faults:
-	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+	python3 -c "import cocotb" 2>/dev/null || pip install "cocotb==1.9.2" "cocotb-coverage<2"
 	python3 dv/cocotb/faults/run_faults.py all --n-tile $(FAULTS_N) --n-core $(FAULTS_N) --seed $(FAULTS_SEED) \
 	  --workers $(FAULTS_WORKERS) --budget-min $(FAULTS_BUDGET_MIN) --out $(FAULTS_OUT)
 

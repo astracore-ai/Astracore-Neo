@@ -222,6 +222,27 @@ over the data words[15:0]}, the receiver keeping CRC and count per source.
 Since drop 0.43 an RDREQ no longer waits at the bridge's input behind a busy server — it queues (four deep; a fifth waits at
 the input) — so the head-of-line blocking B1 inherited from the tile's server is gone up to the queue's depth.
 
+**AXI compliance (drop 0.44, review #19) — what the bridges do not do, and what the masters must.** The AXI4 ports
+implement the subset above and nothing beyond it. *Not supported, on either side:* exclusive and locked accesses (AxLOCK is
+not an input of the master ports and is ignored on the host slave — a locked or exclusive transaction is treated as a
+plain one, EXOKAY is never returned); FIXED and WRAP bursts, narrow transfers and unaligned starts on the host slave
+(SLVERR, the beats consumed: §5 *Host role*); AxCACHE / AxPROT / AxQOS / AxREGION / xUSER (not present); multiple IDs on the
+memory master (AxID 0, up to four bursts in flight per direction, in order). *The host slave's write burst:* its length is
+AWLEN + 1 beats; a WLAST earlier than that (drop 0.44 — ignored before, which left the slave waiting for the missing beats
+and every transaction behind them) ends the burst at that beat: the beats received are written, the CRC flit is sent,
+BRESP is SLVERR and `host` is set in the bridge's ERR; a master that offers more beats than AWLEN + 1 is held on WREADY
+(its own violation — there is no watchdog on W). *The host slave's read:* a response that does not complete within
+`HOST_TIMEOUT` is answered SLVERR (`timeout` in ERR), the host must keep RREADY coming. *The control plane (`s_axil_*`,
+`host_axil` in `neo_tile_axil`):* BRESP / RRESP are always OKAY on `host_axil` (an unknown address writes nothing and reads
+zero, as a register block does); the chip top's `s_axil_*` answers SLVERR for a disabled tile and DECERR past the map. *No
+protocol checker is built in:* the bridges assume AXI-legal masters and slaves (VALID held with its payload until READY,
+responses only to requests), and the simulation-bound assertion set (`02_dv/dv/sva/`, drop 0.44) checks exactly those
+rules on `m_axi_*` / `s_axi_*` in the cocotb builds — an integrator's protocol checker (a VIP) belongs on the SoC side.
+*Outstanding limits:* memory master — four read bursts and four write bursts in flight (one AXI ID each way, responses in
+order); host slave — one transaction at a time (writes before reads: AW is taken first when both are valid), AWREADY may
+depend on AWVALID and WVALID being held together (`host_axil`: the write is accepted only when both are valid, legal for an
+AXI4-Lite slave); control plane — one access in flight through the crossing (`cdc_sync`).
+
 **Throughput, measured** (`top` T3b against a DRAM-like memory: 32 aclk from AR to a burst's first R beat, the model
 pipelining reads as a controller does; 16 aclk from the last W beat to B): four tiles' 4,092-word fetches at once 2,082 ns
 (B1 2,750 ns): 50.3 bytes per aclk cycle of 64 (B1 38.1); a tile's layer with its drain in memory 2,478 ns after its start
