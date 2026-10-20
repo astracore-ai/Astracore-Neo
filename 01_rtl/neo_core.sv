@@ -104,8 +104,9 @@ module neo_core #(
   input  logic signed [PW-1:0]  ext_chk,
   output logic                  ext_ready,
   output logic                  reduce_ready,
-  // drained results: INT32 (ABFT-checked) and, three cycles later, requantized INT8 (drop 0.41: requant in three stages)
-  // -- with a vector program (drop 0.43, C2) the INT8 rows are the unit's and rd_valid stays low
+  // drained results: INT32 (ABFT-checked) and, four cycles later, requantized INT8 (drop 0.41: requant in three stages;
+  // drop 0.44: the vector unit's bypass register in front of them) -- with a vector program (drop 0.43, C2) the INT8
+  // rows are the unit's and rd_valid stays low
   output wire  signed [PW-1:0]  rd_data [COLS],      // nets (drop 0.43): Icarus 12 passes no unpacked output port on through a variable
   output logic signed [PW-1:0]  rd_chk,
   output logic                  rd_valid,
@@ -275,7 +276,7 @@ module neo_core #(
     .clk(clk), .rst_n(rst_n),
     .vh_we(vec_we), .vh_addr(vec_addr), .vh_wdata(vec_wdata),
     .go(go), .seq_done(seq_done), .cfg_m(cfg_m),
-    .acc_rd_en(vu_rd_en), .acc_rd_idx(vu_rd_idx), .acc_rd_data(rd_data),
+    .acc_rd_en(vu_rd_en), .acc_rd_idx(vu_rd_idx), .acc_rd_data(rd_data), .acc_rd_valid(dp_rd_valid),
     .rbuf_we(rbuf_we), .rbuf_we2(rbuf_we2), .rbuf_waddr(rbuf_waddr), .rbuf_wdata(rbuf_wdata), .rbuf_wdata2(rbuf_wdata2),
     .active(vu_active), .busy(vu_busy), .done(vu_done), .rd_q(vu_rd_q), .out_valid(vu_out_valid), .out_row(vu_out),
     .err_clear(err_clear), .ctrl_err_sticky(vec_err_sticky), .perr_sticky(vec_perr_sticky),
@@ -299,17 +300,21 @@ module neo_core #(
   assign tel_ev = {(state_dbg == 3'd1 || state_dbg == 3'd2 || state_dbg == 3'd3) && !arr_valid, arr_valid};
 
   // requantization, duplicated with a comparator (R10); the fault hook corrupts the primary's input only. Drop 0.43: the
-  // input is the accumulator's drain (rd_data / its valid) or, for a descriptor with a vector program, the unit's rows
+  // input is the accumulator's drain or, for a descriptor with a vector program, the unit's rows. Drop 0.44 (A4): both
+  // come from the unit's output register -- the bypass is registered inside the unit (vec_unit.sv: xo takes the
+  // accumulator's drain row while the unit is idle), so the requantizers' carry-save stage starts at a flop, as it did
+  // before the unit (the select by vec_on and its fan-out over 1,024 inputs were 331 ps in front of it); the INT8 rows
+  // of a dense layer leave one cycle later than before (rq_valid four cycles after rd_valid, three before)
   logic signed [PW-1:0] rq_in   [COLS];
   logic signed [PW-1:0] rq_in_p [COLS];
   logic                 rq_in_valid;
   wire  signed [7:0]    rq_q_d [COLS];
   logic                 rq_valid_d;
   logic                 rq_err;
-  assign rq_in_valid = vec_on ? vu_out_valid : dp_rd_valid;
+  assign rq_in_valid = vu_out_valid;
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_rqin
-      assign rq_in[j] = vec_on ? vu_out[j] : rd_data[j];
+      assign rq_in[j] = vu_out[j];
       if (j == 0) begin : g_f
         assign rq_in_p[j] = rq_in[j] ^ {{(PW-13){1'b0}}, rq_fault_inject, 12'd0};
       end else begin : g_n

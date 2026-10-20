@@ -127,12 +127,13 @@ class VecDut:
         self.p = {n: d.cell_of(n) for n in ("rst_n", "vh_we", "vh_addr", "vh_wdata", "go", "seq_done", "cfg_m", "acc_rd_en",
                                             "acc_rd_idx", "rbuf_we", "rbuf_we2", "rbuf_waddr", "active", "busy", "done",
                                             "rd_q", "out_valid", "err_clear", "ctrl_err_sticky", "perr_sticky",
-                                            "ctrl_fault_inject", "tbl_fault_inject")}
+                                            "ctrl_fault_inject", "tbl_fault_inject", "acc_rd_valid")}
         self.acc = d.array_of("acc_rd_data")
         self.rbw = d.array_of("rbuf_wdata")
         self.rbw2 = d.array_of("rbuf_wdata2")
         self.out = d.array_of("out_row")
-        for n in ("vh_we", "go", "seq_done", "rbuf_we", "rbuf_we2", "err_clear", "ctrl_fault_inject", "tbl_fault_inject"):
+        for n in ("vh_we", "go", "seq_done", "rbuf_we", "rbuf_we2", "err_clear", "ctrl_fault_inject", "tbl_fault_inject",
+                  "acc_rd_valid"):
             self.p[n].v = 0
         self.p["rst_n"].v = 0
         self.d.tick(); self.d.tick()

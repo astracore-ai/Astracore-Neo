@@ -35,7 +35,7 @@ module tb_vec_unit;
 
   vec_unit #(.COLS(COLS), .ROWS(ROWS), .ACC_ROWS(ACC_ROWS)) dut (
     .clk(clk), .rst_n(rst_n), .vh_we(vh_we), .vh_addr(vh_addr), .vh_wdata(vh_wdata),
-    .go(go), .seq_done(seq_done), .cfg_m(cfg_m), .acc_rd_en(acc_rd_en), .acc_rd_idx(acc_rd_idx), .acc_rd_data(acc_rd_data),
+    .go(go), .seq_done(seq_done), .cfg_m(cfg_m), .acc_rd_en(acc_rd_en), .acc_rd_idx(acc_rd_idx), .acc_rd_data(acc_rd_data), .acc_rd_valid(1'b0),
     .rbuf_we(rbuf_we), .rbuf_we2(1'b0), .rbuf_waddr(rbuf_waddr), .rbuf_wdata(rbuf_wdata), .rbuf_wdata2(rbuf_wdata),
     .active(active), .busy(busy), .done(done), .rd_q(rd_q), .out_valid(out_valid), .out_row(out_row),
     .err_clear(err_clear), .ctrl_err_sticky(ctrl_err_sticky), .perr_sticky(perr_sticky),

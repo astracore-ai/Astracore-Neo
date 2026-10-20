@@ -199,7 +199,7 @@ module tile_nic #(
   input  logic                  ext_ready,
   // core drain
   input  logic                  rd_valid,
-  input  logic                  rq_valid,     // requantized row (two cycles after rd_valid)
+  input  logic                  rq_valid,     // requantized row (four cycles after rd_valid since drop 0.44)
   input  logic signed [7:0]     rq_q [COLS],
   input  logic signed [PW-1:0]  rd_data [COLS],
   input  logic signed [PW-1:0]  rd_chk,
@@ -276,14 +276,24 @@ module tile_nic #(
   logic [TW-1:0]   q_tt;                                  // the fetch's t of the beat's first cycle (thermometer)
   logic [EW-1:0]   sg_on;                                 // one-hot: the staged count of the next cycle (fetch receive)
   logic [2:0]      in_type;
-  logic [13:0]     in_hdr;                               // hdr[13:0]: the count field and the column
+  logic [5:0]      in_cnt;                               // hdr[13:8]: the count field (the column is a link beat's: ln_hdr)
   logic            in_data;
   logic [CW-1:0]   in_nw;
-  logic [COLS:0]   in_pmask;                              // PSUM: the columns 0..COLS the beat covers
-  logic [BW-1:0]   in_cnto;                               // one-hot of the count field (data types; words - 1)
-  logic [BW-1:0]   in_nwt;                                // thermometer of the word count: bit k = (words > k)
   logic [TW-1:0]   in_tt;                                 // q_tt's next value
   logic [BW-1:0]   in_cge;                                // the count field >= m (m >= 1; data types or not)
+  // drop 0.44 (A4): what only a link beat can need is decoded from the link's flit alone (ln_*), not from the beat the
+  // loopback select chooses -- the loopback carries RDRSP beats and CRC flits of this tile's own serve, never a PSUM or
+  // a WRDATA beat, so the PSUM columns (q_pcm, q_pschk, q_c0), the WRDATA crossing test (q_nwt) and the pointer's turn
+  // (q_nwo) of a loopback beat are never read (every reader is qualified by the registered beat's type). The loopback's
+  // select (lb_csel, 8 loads, a buffer tree) sat in front of the 33-bit shift by the first column: the merged NIC's one
+  // endpoint at 1,250 ps (lb_csel_reg -> q_pcm[29]_reg, 1,118 ps from the flop; run 211)
+  logic [2:0]      ln_type;                               // the link flit's type and header
+  logic [13:0]     ln_hdr;
+  logic            ln_data;
+  logic [COLS:0]   ln_pmask;                              // PSUM: the columns 0..COLS the beat covers
+  logic [BW-1:0]   ln_cnto;                               // one-hot of the count field (data types; words - 1)
+  logic [BW-1:0]   ln_nwt;                                // thermometer of the word count: bit k = (words > k)
+  logic [BW-1:0]   ln_cge;                                // the count field >= m (m >= 1; data types or not)
   logic [BW-1:0]   q_nwt;                                 // thermometer of the word count (the WRDATA crossing test)
   logic            q_foreign;                             // the beat is of another partition (the compare with it)
   // the stage's input (drop 0.43): the loopback register's beat when it holds one, else the link's; a request from the
@@ -307,20 +317,27 @@ module tile_nic #(
   assign i_take   = lb_csel || (rx_valid && !rq_hold);
   assign i_load   = lb_valid || (rx_valid && !rq_hold);
   assign in_type  = lb_csel ? lb_flit[DW-1 -: 3] : rx_flit[DW-1 -: 3];
-  assign in_hdr   = lb_csel ? lb_flit[VW +: 14] : rx_flit[VW +: 14];
+  assign in_cnt   = lb_csel ? lb_flit[VW + 8 +: 6] : rx_flit[VW + 8 +: 6];
   assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
-  assign in_nw    = in_data ? CW'(in_hdr[13:8]) + CW'(1) : CW'(1);
+  assign in_nw    = in_data ? CW'(in_cnt) + CW'(1) : CW'(1);
+  assign ln_type  = rx_flit[DW-1 -: 3];
+  assign ln_hdr   = rx_flit[VW +: 14];
+  assign ln_data  = (ln_type == T_RDRSP) || (ln_type == T_WRDATA) || (ln_type == T_PSUM);
   localparam int PMW = COLS + 1;                           // the columns and the check value
-  assign in_pmask = PMW'(in_nwt) << in_hdr[7:0];          // column j: words > j - col0 (j >= col0)
+  assign ln_pmask = PMW'(ln_nwt) << ln_hdr[7:0];          // column j: words > j - col0 (j >= col0)
   assign st_free  = !q_valid || q_ready;
   assign rx_ready = st_free && !lb_csel && !rq_hold;      // the link's beat: when the loopback has none and it may enter
   always_comb begin
-    for (int j = 0; j < BW; j++) in_cnto[j] = in_data && (in_hdr[13:8] == 6'(j));
+    for (int j = 0; j < BW; j++) ln_cnto[j] = ln_data && (ln_hdr[13:8] == 6'(j));
     for (int m = 0; m < BW; m++) begin                    // count field >= m, by its one-hot (the type applied after)
       in_cge[m] = (m == 0);
-      for (int j = m; j < BW; j++) if (m > 0) in_cge[m] = in_cge[m] | (in_hdr[13:8] == 6'(j));
+      ln_cge[m] = (m == 0);
+      for (int j = m; j < BW; j++) if (m > 0) begin
+        in_cge[m] = in_cge[m] | (in_cnt == 6'(j));
+        ln_cge[m] = ln_cge[m] | (ln_hdr[13:8] == 6'(j));
+      end
     end
-    for (int k = 0; k < BW; k++) in_nwt[k] = (k == 0) || (in_data && in_cge[k]);   // words = count + 1 (data), 1
+    for (int k = 0; k < BW; k++) ln_nwt[k] = (k == 0) || (ln_data && ln_cge[k]);   // words = count + 1 (data), 1
     for (int k = 0; k < TW; k++) begin                    // staged + words > k: staged >= k, or the count >= k - staged
       in_tt[k] = 1'b0;
       for (int j = 0; j < EW; j++)
@@ -338,13 +355,13 @@ module tile_nic #(
         q_nw    <= in_nw;
         q_nwc_n <= ~in_nw;
         for (int k = 0; k < BW; k++)                      // words mod BW = (count field + 1) mod BW; 1 for the other types
-          q_nwo[k] <= in_data ? in_cnto[(k + BW - 1) % BW] : (k == 1);
-        q_pschk <= (in_type == T_PSUM) && in_pmask[COLS];
-        q_pcm   <= (in_type == T_PSUM) ? in_pmask[COLS-1:0] : '0;
+          q_nwo[k] <= ln_data ? ln_cnto[(k + BW - 1) % BW] : (k == 1);   // (ln_*: the link beat's, drop 0.44 above)
+        q_pschk <= (ln_type == T_PSUM) && ln_pmask[COLS];
+        q_pcm   <= (ln_type == T_PSUM) ? ln_pmask[COLS-1:0] : '0;
         for (int k = 0; k < BW; k++)
-          q_c0[k] <= in_hdr[LW-1:0] == LW'(k);
+          q_c0[k] <= ln_hdr[LW-1:0] == LW'(k);
         q_tt    <= in_tt;
-        q_nwt   <= in_nwt;
+        q_nwt   <= ln_nwt;
         q_foreign <= (lb_csel ? lb_flit[SEQ_LO +: 4] : rx_flit[SEQ_LO +: 4]) != partition;
       end
     end
@@ -378,25 +395,29 @@ module tile_nic #(
   logic [15:0]          crc_acc [NSRC];
   logic [15:0]          rx_cnt  [NSRC];                 // data words received in the current message
   // Drop 0.42: the state of the registered beat's source, st_* (write pointer, CRC accumulator, word count of source
-  // st_src), is registered with the beat: read from the source's g_src registers in the cycle the stage takes the beat
+  // st_cx / st_cy), is registered with the beat: read from the source's g_src registers in the cycle the stage takes the beat
   // (the 64:1 muxes select on the arriving beat's source field and end in st_*), then updated in place by every beat
-  // of that source -- the g_src registers of st_src are stale meanwhile. A beat of another source loads its own state
+  // of that source -- the g_src registers of that source are stale meanwhile. A beat of another source loads its own state
   // and the outgoing one goes back to its g_src registers through the write-back register wb3_* (one cycle; a beat whose
   // source is in wb3_* takes the state from there). So the beat's actions read only registers: the WRDATA lane masks
   // from st_ptr (behind the 64:1 wr_ptr[rx_src] mux before, 2.32 ns), the CRC from st_crc (behind crc_acc[rx_src]).
   logic                 st_v;                             // st_* holds a source's state (after the first beat)
-  logic [SRCW-1:0]      st_src;
+  logic [XW-1:0]        st_cx;                            // its source's coordinates (drop 0.44: the index was y * NX + x)
+  logic [YW-1:0]        st_cy;
+  logic [NSRC-1:0]      st_hot;                           // ... and as a one-hot over the sources
   logic [BAW-1:0]       st_ptr;
   logic [15:0]          st_crc;
   logic [15:0]          st_cnt;
-  logic                 wb3_v;                            // wb3_* goes back to source wb3_src's registers this cycle
-  logic [SRCW-1:0]      wb3_src;
+  logic                 wb3_v;                            // wb3_* goes back to the registers of source wb3_hot this cycle
+  logic [NSRC-1:0]      wb3_hot;
   logic [BAW-1:0]       wb3_ptr;
   logic [15:0]          wb3_crc;
   logic [15:0]          wb3_cnt;
-  logic [SRCW-1:0]      in_src;                           // the source of the beat at the port
-  logic                 st_load;                          // the stage takes a beat of another source than st_src
-  logic [BAW-1:0]       lk_ptr, u_ptr;                    // in_src's state (lk: its registers or wb3); st after this cycle's beat (u)
+  logic [XW-1:0]        in_cx;                            // the source of the beat at the port: its coordinates ...
+  logic [YW-1:0]        in_cy;
+  logic [NSRC-1:0]      in_hot;                           // ... decoded one-hot (source s = y * NX + x)
+  logic                 st_load;                          // the stage takes a beat of another source than st_*'s
+  logic [BAW-1:0]       lk_ptr, u_ptr;                    // the port beat's source's state (lk: its registers or wb3); st after this cycle's beat (u)
   logic [15:0]          lk_crc, lk_cnt, u_crc, u_cnt;
   localparam int FTW = $clog2(FETCH_TIMEOUT + 1);          // timer width follows the parameter (drop 0.24: was a fixed 16 bits)
   logic [FTW-1:0]       fetch_timer;
@@ -756,7 +777,7 @@ module tile_nic #(
       always_ff @(posedge clk_rx or negedge rst_n) begin
         if (!rst_n) begin
           wr_ptr[s] <= '0; crc_acc[s] <= 16'hFFFF; rx_cnt[s] <= '0;
-        end else if (wb3_v && (wb3_src == s)) begin
+        end else if (wb3_v && wb3_hot[s]) begin
           wr_ptr[s] <= wb3_ptr; crc_acc[s] <= wb3_crc; rx_cnt[s] <= wb3_cnt;
         end
       end
@@ -764,13 +785,26 @@ module tile_nic #(
   endgenerate
 
   // the registered beat's source state (drop 0.42): u_* = st_* after this cycle's beat, as the g_src registers were updated
-  // before; lk_* = the state of the port's beat's source, from wb3_* when it is the source going back this cycle
-  logic [SRCW-1:0] ln_src, lb_src;                        // the link's beat's source, the loopback's (each before the select)
-  assign ln_src  = SRCW'(32'(rx_flit[SRCY_LO +: YW]) * NX + 32'(rx_flit[SRCX_LO +: XW]));
-  assign lb_src  = SRCW'(32'(lb_flit[SRCY_LO +: YW]) * NX + 32'(lb_flit[SRCX_LO +: XW]));
-  assign in_src  = lb_csel ? lb_src : ln_src;
-  assign st_load = i_take && st_free && (!st_v || (in_src != st_src));
+  // before; lk_* = the state of the port's beat's source, from wb3_* when it is the source going back this cycle.
+  // Drop 0.44 (A4): the port beat's source is decoded one-hot from its coordinates (in_hot[s] = the flit's y / x against
+  // the constants of source s); the state's source is kept as its coordinates and its one-hot (st_cx / st_cy / st_hot,
+  // wb3_hot), so no index is compared or decoded in the write-back and the load decision. The source's state is read by
+  // the index {y, x} -- wiring -- when NX is a power of two (the tile's own NIC: 64 sources, a 6-level select), and
+  // through AND-OR selects of the one-hot when it is not (the chip top's NIC: NX + 1 = 9 columns, where the index
+  // y * 9 + x needed an adder in front of a 72-entry select -- 130 endpoints at 1,250 ps on this path, rx_flit -> the
+  // source's lane offset -> st_md2, -103 ps in run 211; +34 ps with the one-hot). The one-hot form is the slower of the
+  // two at 64 sources (-34 ps on the same path: the 64 compares and the OR trees against a mux tree with its select
+  // bits straight from the flit), so each NIC takes the form that fits its width.
+  localparam int NX_POW2 = ((NX == (1 << XW)) && (NSRC == (1 << (XW + YW)))) ? 1 : 0;
+  logic wb3_hit;                                          // the port beat's source is the one going back this cycle
+  logic [SRCW-1:0] in_idx;                                // the index {y, x} (NX_POW2: NSRC = 2^(XW + YW) sources)
+  assign in_idx  = SRCW'({in_cy, in_cx});
+  assign in_cx   = lb_csel ? lb_flit[SRCX_LO +: XW] : rx_flit[SRCX_LO +: XW];
+  assign in_cy   = lb_csel ? lb_flit[SRCY_LO +: YW] : rx_flit[SRCY_LO +: YW];
+  assign st_load = i_take && st_free && (!st_v || (in_cx != st_cx) || (in_cy != st_cy));
   always_comb begin
+    for (int s = 0; s < NSRC; s++) in_hot[s] = (in_cy == YW'(s / NX)) && (in_cx == XW'(s % NX));
+    wb3_hit = wb3_v && ((wb3_hot & in_hot) != '0);
     u_ptr = st_ptr; u_crc = st_crc; u_cnt = st_cnt;
     if (fire_wrhdr) u_ptr = rx_word[BAW-1:0];
     if (fire_wrdata) begin                                   // the whole beat, after its last row write
@@ -786,10 +820,18 @@ module tile_nic #(
       u_crc = 16'hFFFF;
       u_cnt = '0;
     end
-    if (wb3_v && (wb3_src == in_src)) begin
-      lk_ptr = wb3_ptr; lk_crc = wb3_crc; lk_cnt = wb3_cnt;
+    lk_ptr = '0; lk_crc = '0; lk_cnt = '0;
+    if (NX_POW2 != 0) begin                                  // the source's registers by the index {y, x} (wiring)
+      lk_ptr = wr_ptr[in_idx]; lk_crc = crc_acc[in_idx]; lk_cnt = rx_cnt[in_idx];
     end else begin
-      lk_ptr = wr_ptr[in_src]; lk_crc = crc_acc[in_src]; lk_cnt = rx_cnt[in_src];
+      for (int s = 0; s < NSRC; s++) begin                   // ... or through the one-hot (AND-OR)
+        lk_ptr = lk_ptr | ({BAW{in_hot[s]}} & wr_ptr[s]);
+        lk_crc = lk_crc | ({16{in_hot[s]}} & crc_acc[s]);
+        lk_cnt = lk_cnt | ({16{in_hot[s]}} & rx_cnt[s]);
+      end
+    end
+    if (wb3_hit) begin
+      lk_ptr = wb3_ptr; lk_crc = wb3_crc; lk_cnt = wb3_cnt;
     end
   end
   // the lane offset of st_ptr's next value as a one-hot (drop 0.42): the port beat's source's (lk_ptr), a WRHDR's
@@ -819,15 +861,15 @@ module tile_nic #(
   end
   always_ff @(posedge clk_rx or negedge rst_n) begin
     if (!rst_n) begin
-      st_v <= 1'b0; st_src <= '0; st_ptr <= '0; st_crc <= 16'hFFFF; st_cnt <= '0;
-      wb3_v <= 1'b0; wb3_src <= '0; wb3_ptr <= '0; wb3_crc <= 16'hFFFF; wb3_cnt <= '0;
+      st_v <= 1'b0; st_cx <= '0; st_cy <= '0; st_hot <= '0; st_ptr <= '0; st_crc <= 16'hFFFF; st_cnt <= '0;
+      wb3_v <= 1'b0; wb3_hot <= '0; wb3_ptr <= '0; wb3_crc <= 16'hFFFF; wb3_cnt <= '0;
       st_mge <= '1; st_rot <= BW'(1);
       for (int l = 0; l < BW; l++) begin st_md1[l] <= LW'(l); st_md2[l] <= RW'(l + BW); end
     end else begin
       wb3_v <= st_load && st_v;
       if (st_load) begin                                     // a beat of another source: its state in, st_* out to wb3_*
-        st_v <= 1'b1; st_src <= in_src; st_ptr <= lk_ptr; st_crc <= lk_crc; st_cnt <= lk_cnt;
-        wb3_src <= st_src; wb3_ptr <= u_ptr; wb3_crc <= u_crc; wb3_cnt <= u_cnt;
+        st_v <= 1'b1; st_cx <= in_cx; st_cy <= in_cy; st_hot <= in_hot; st_ptr <= lk_ptr; st_crc <= lk_crc; st_cnt <= lk_cnt;
+        wb3_hot <= st_hot; wb3_ptr <= u_ptr; wb3_crc <= u_crc; wb3_cnt <= u_cnt;
       end else begin                                         // the same source (or none): in place
         st_ptr <= u_ptr; st_crc <= u_crc; st_cnt <= u_cnt;
       end
@@ -1033,9 +1075,33 @@ module tile_nic #(
   logic               f1_v, f2_v, f3_v;
   assign dfmt = drain_tr || drain_ent || drain_pad;
   assign drain_push = drain_int8 ? (dfmt ? f3_v : rq_valid) : rd_valid;
+  // drop 0.44 (A4): the format selects of the FIFO's write data, one copy per word -- di8_w[k] (drain_int8) for word k
+  // of the row, dfmt_w[k] (a formatted drain) for the four bytes of word k, dent_w (the entry's check weight) for its
+  // one word -- each loaded with the register's next value through its own output (q ^ (q ^ d) = d, vec_unit's idiom:
+  // the synthesis keeps the copies apart), so that no one flop fans out over the 1,068 bits the leaf takes: the routed
+  // NIC's worst path was drain_int8_reg into the drain FIFO macro's write data, -891 ps at 1,250 ps across the 327 um
+  // die (pnr_tile_nic.md, run 197), where the synthesized netlist read 1,197 ps register to register
+  logic [COLS:0]      di8_w;
+  logic [COLS/4-1:0]  dfmt_w;
+  logic               dent_w;
+  logic               di8_nx, dfmt_nx, dent_nx;           // the three registers' next values (the command block below)
+  logic               dcmd;
+  assign dcmd    = cmd_valid && (cmd_op == 3'd3 || cmd_op == 3'd4);
+  assign di8_nx  = dcmd ? ((cmd_op == 3'd3) && cmd_int8) : drain_int8;
+  assign dfmt_nx = dcmd ? ((cmd_op == 3'd3) && cmd_int8 && (cmd_base[15] || cmd_base[14] || cmd_base[13])) : dfmt;
+  assign dent_nx = dcmd ? ((cmd_op == 3'd3) && cmd_int8 && cmd_base[14]) : drain_ent;
+  always_ff @(posedge clk_tx or negedge rst_n) begin
+    if (!rst_n) begin
+      di8_w <= '0; dfmt_w <= '0; dent_w <= 1'b0;
+    end else begin
+      for (int k = 0; k <= COLS; k++) di8_w[k] <= di8_w[k] ^ (di8_w[k] ^ di8_nx);
+      for (int k = 0; k < COLS / 4; k++) dfmt_w[k] <= dfmt_w[k] ^ (dfmt_w[k] ^ dfmt_nx);
+      dent_w <= dent_w ^ (dent_w ^ dent_nx);
+    end
+  end
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_drow
-      assign drow[j] = dfmt ? f3_row[j] : rq_q[j];
+      assign drow[j] = dfmt_w[j / 4] ? f3_row[j] : rq_q[j];
     end
   endgenerate
   always_comb begin                                       // stage 2's partial sums, stage 3's check weight (WCW bits)
@@ -1126,14 +1192,15 @@ module tile_nic #(
   // (zero above the row's words: the beat's words below d_n); the head row is read on port B (above)
   always_comb begin
     dfifo_wrow = '0;
-    for (int j = 0; j < COLS; j++) dfifo_wrow[j * PW +: PW] = rd_data[j];
-    dfifo_wrow[COLS * PW +: PW] = rd_chk;
-    if (drain_int8) begin                                 // (drop 0.43: drow -- rq_q, or the formatted stage's row; the entry's check weight)
-      for (int k = 0; k < COLS / 4; k++)
-        dfifo_wrow[k * PW +: PW] = PW'({drow[4 * k + 3], drow[4 * k + 2], drow[4 * k + 1], drow[4 * k]});
-      for (int k = COLS / 4; k <= COLS; k++)
-        dfifo_wrow[k * PW +: PW] = '0;
-      if (drain_ent) dfifo_wrow[(COLS / 4) * PW +: WCW] = f3_chk;
+    // word k of the row: the INT32 row's word, or the INT8 row's (drop 0.43: drow -- rq_q, or the formatted stage's row;
+    // the entry's check weight in the word after the bytes), each word by its own copy of the select (drop 0.44)
+    for (int k = 0; k <= COLS; k++) begin
+      if (k < COLS / 4)
+        dfifo_wrow[k * PW +: PW] = di8_w[k] ? PW'({drow[4 * k + 3], drow[4 * k + 2], drow[4 * k + 1], drow[4 * k]}) : rd_data[k];
+      else if (k == COLS / 4)
+        dfifo_wrow[k * PW +: PW] = di8_w[k] ? (dent_w ? {{(PW - WCW){1'b0}}, f3_chk} : PW'(0)) : ((k < COLS) ? rd_data[k] : rd_chk);
+      else
+        dfifo_wrow[k * PW +: PW] = di8_w[k] ? PW'(0) : ((k < COLS) ? rd_data[k] : rd_chk);
     end
     dfifo_wrow[(COLS + 1) * PW +: IDXW] = IDXW'(drain_sent) + IDXW'(dfifo_np - dfifo_nq);   // rows sent + rows in the FIFO: rows arrive in order 0..M-1 (the index wraps)
     for (int w = 0; w <= COLS; w++)

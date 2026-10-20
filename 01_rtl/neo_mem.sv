@@ -7,8 +7,12 @@
 //   while every simulator runs the behavioural array here. The program memory (prog_mem), the requantization tables and
 //   the router FIFOs stay flops in their own modules.
 //
-//   neo_mem_sp -- single-port style: one write port of G groups (we[g] writes bits [g*GW +: GW] of the word at waddr,
-//     GW = W / G) and one registered read port (rdata holds the word at raddr from the cycle after re). The bank's lanes.
+//   neo_mem_sp -- one write port of G groups (we[g] writes bits [g*GW +: GW] of the word at waddr, GW = W / G) and one
+//     registered read port (rdata holds the word at raddr from the cycle after re), driven independently: a write and a
+//     read in one cycle, of different words or of the same (the read returns the old word). The bank's lanes. Drop 0.44
+//     (review finding 4): this is a two-port (1W1R) array, not a single-port one -- the NIC writes a WRDATA beat while
+//     its server reads a row (tile_nic.sv b_we / b_re) -- and it is priced as one (synth.py MACRO_AREA_FACTOR 1.5 x the
+//     single-port cell; the pnr job's FakeRAM macro is the 1w1r class). The port-B leaves below are two-port alike.
 //   neo_mem_rf -- register-file style: the same write port, an asynchronous read port A (ra_data is the word at ra_addr
 //     in the same cycle) and, with RB = 1, a registered read port B (rb_en / rb_addr -> rb_data the cycle after). The
 //     weight buffer, the activation buffer, the NIC's drain FIFO and its partial-sum rows use port A; the accumulator
@@ -23,6 +27,11 @@
 //     the macro would. A write to the latched word at the latching edge is then seen (write-first); the three users
 //     never do that by protocol except the accumulator, whose forward supplies the same row either way (acc_bank).
 //     RBQ = 0: rb_addr_q is 0 and port B is the read of drop 0.41.
+//     The RBQ = 1 contract (drop 0.44, review finding 14): rb_data = mem[rb_addr_q] is write-through -- a write of the
+//     latched word in a later cycle shows on rb_data at once, where a macro with an output register would hold the word
+//     read. The rule every user keeps: port B's word is read in the cycle after rb_en and never later (wbuf_mem,
+//     act_feeder and acc_bank each take it that cycle; acc_bank's forward covers the one same-cycle write), so the two
+//     agree on every cycle a user samples.
 //
 //   Testbench hooks (DV_HOOKS = 1; the ports are tied off at 0, the default): a backdoor write at the rising edge
 //   (bd_we[g]: group g of the word at bd_addr <= the same group of bd_wdata, independent of the functional write of the
