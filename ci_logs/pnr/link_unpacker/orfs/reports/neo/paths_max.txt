@@ -1,0 +1,374 @@
+Startpoint: link_flit[273] (input port clocked by clk)
+Endpoint: core_flit[564] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (propagated)
+                      250.0  250.0 ^ input external delay
+     1    0.8    0.0    0.0  250.0 ^ link_flit[273] (in)
+     2    2.1   21.1   24.9  274.9 ^ input278/Y (BUFx2_ASAP7_75t_R)
+     1    1.8   38.3   38.3  313.2 ^ _4156_/Y (XOR2x1_ASAP7_75t_R)
+     1    1.1   17.1   60.9  374.1 v _4178_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.7   21.5   47.7  421.8 ^ _4222_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.5   34.1   36.3  458.0 ^ _4311_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.6   34.7   38.8  496.9 ^ _4322_/Y (XNOR2x1_ASAP7_75t_R)
+     1    3.8   67.7   48.2  545.1 ^ _4452_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   38.9   49.9  595.0 ^ _4523_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   34.3   41.1  636.1 ^ _4612_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.0   42.0   41.9  678.1 ^ _4701_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.8   39.3   41.9  719.9 ^ _4702_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.0   21.4   34.5  754.4 ^ _4764_/Y (AO21x1_ASAP7_75t_R)
+     1    1.8   23.2   35.8  790.3 ^ _2493_/Y (AO31x2_ASAP7_75t_R)
+     1    1.2   15.4   30.7  821.0 ^ output1603/Y (BUFx2_ASAP7_75t_R)
+                15.4    0.3  821.2 ^ core_flit[564] (out)
+                             821.2   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -821.2   data arrival time
+-------------------------------------------------------------------------
+                              78.8   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[270] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    32   19.2  151.7  119.2  569.1 ^ place1844/Y (BUFx2_ASAP7_75t_R)
+     1    1.4   21.7   58.9  628.0 ^ _3511_/Y (AND2x2_ASAP7_75t_R)
+     1    0.7   19.5   25.7  653.7 ^ _3513_/Y (AO21x1_ASAP7_75t_R)
+     1    0.5   14.2   29.3  683.0 ^ _3514_/Y (AND2x2_ASAP7_75t_R)
+     1    0.7   11.8   25.3  708.2 ^ output1277/Y (BUFx2_ASAP7_75t_R)
+                11.8    0.1  708.3 ^ core_flit[270] (out)
+                             708.3   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -708.3   data arrival time
+-------------------------------------------------------------------------
+                             191.7   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[273] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    32   19.2  151.7  119.2  569.1 ^ place1844/Y (BUFx2_ASAP7_75t_R)
+     1    1.4   21.5   60.1  629.3 ^ _3521_/Y (AND2x2_ASAP7_75t_R)
+     1    0.6   18.4   25.0  654.3 ^ _3522_/Y (AO21x1_ASAP7_75t_R)
+     1    0.5   14.7   28.8  683.1 ^ _3524_/Y (AND2x2_ASAP7_75t_R)
+     1    0.2    8.2   23.3  706.4 ^ output1280/Y (BUFx2_ASAP7_75t_R)
+                 8.2    0.0  706.4 ^ core_flit[273] (out)
+                             706.4   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -706.4   data arrival time
+-------------------------------------------------------------------------
+                             193.6   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[293] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    32   19.2  151.7  119.2  569.1 ^ place1844/Y (BUFx2_ASAP7_75t_R)
+     1    1.0   19.4   59.0  628.1 ^ _3595_/Y (AND2x2_ASAP7_75t_R)
+     1    0.5   17.2   23.7  651.7 ^ _3596_/Y (AO21x1_ASAP7_75t_R)
+     1    0.5   16.6   28.5  680.2 ^ _3597_/Y (AND2x2_ASAP7_75t_R)
+     1    0.5   10.2   25.2  705.4 ^ output1302/Y (BUFx2_ASAP7_75t_R)
+                10.2    0.0  705.5 ^ core_flit[293] (out)
+                             705.5   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -705.5   data arrival time
+-------------------------------------------------------------------------
+                             194.5   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[275] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    26   16.1  131.3  108.8  558.7 ^ place1846/Y (BUFx2_ASAP7_75t_R)
+     1    0.6   16.1   56.0  614.6 ^ _3528_/Y (AND2x2_ASAP7_75t_R)
+     1    1.8   35.5   31.1  645.7 ^ _3529_/Y (AO21x1_ASAP7_75t_R)
+     1    0.6   16.8   34.8  680.5 ^ _3530_/Y (AND2x2_ASAP7_75t_R)
+     1    0.2    8.1   24.0  704.5 ^ output1282/Y (BUFx2_ASAP7_75t_R)
+                 8.1    0.0  704.6 ^ core_flit[275] (out)
+                             704.6   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -704.6   data arrival time
+-------------------------------------------------------------------------
+                             195.4   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[295] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    32   19.2  151.7  119.2  569.1 ^ place1844/Y (BUFx2_ASAP7_75t_R)
+     1    0.7   17.2   56.1  625.2 ^ _3602_/Y (AND2x2_ASAP7_75t_R)
+     1    0.6   18.4   23.0  648.2 ^ _3603_/Y (AO21x1_ASAP7_75t_R)
+     1    0.5   16.4   28.8  677.0 ^ _3604_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   13.5   26.9  703.9 ^ output1304/Y (BUFx2_ASAP7_75t_R)
+                13.5    0.1  704.1 ^ core_flit[295] (out)
+                             704.1   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -704.1   data arrival time
+-------------------------------------------------------------------------
+                             195.9   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[292] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    32   19.2  151.7  119.2  569.1 ^ place1844/Y (BUFx2_ASAP7_75t_R)
+     1    0.7   17.5   56.4  625.5 ^ _3592_/Y (AND2x2_ASAP7_75t_R)
+     1    0.6   18.4   23.1  648.6 ^ _3593_/Y (AO21x1_ASAP7_75t_R)
+     1    0.6   16.8   29.0  677.6 ^ _3594_/Y (AND2x2_ASAP7_75t_R)
+     1    0.8   12.0   26.3  703.9 ^ output1301/Y (BUFx2_ASAP7_75t_R)
+                12.0    0.2  704.0 ^ core_flit[292] (out)
+                             704.0   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -704.0   data arrival time
+-------------------------------------------------------------------------
+                             196.0   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[291] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    32   19.2  151.7  119.2  569.1 ^ place1844/Y (BUFx2_ASAP7_75t_R)
+     1    0.6   16.7   55.8  624.9 ^ _3588_/Y (AND2x2_ASAP7_75t_R)
+     1    0.6   19.2   23.2  648.1 ^ _3589_/Y (AO21x1_ASAP7_75t_R)
+     1    0.6   16.8   29.3  677.4 ^ _3591_/Y (AND2x2_ASAP7_75t_R)
+     1    0.8   12.3   26.4  703.8 ^ output1300/Y (BUFx2_ASAP7_75t_R)
+                12.3    0.1  703.9 ^ core_flit[291] (out)
+                             703.9   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -703.9   data arrival time
+-------------------------------------------------------------------------
+                             196.1   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[286] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    32   19.2  151.7  119.2  569.1 ^ place1844/Y (BUFx2_ASAP7_75t_R)
+     1    0.6   17.0   56.6  625.8 ^ _3569_/Y (AND2x2_ASAP7_75t_R)
+     1    0.5   16.9   22.5  648.2 ^ _3570_/Y (AO21x1_ASAP7_75t_R)
+     1    1.0   19.1   30.0  678.3 ^ _3571_/Y (AND2x2_ASAP7_75t_R)
+     1    0.3    9.1   25.5  703.8 ^ output1294/Y (BUFx2_ASAP7_75t_R)
+                 9.1    0.0  703.8 ^ core_flit[286] (out)
+                             703.8   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -703.8   data arrival time
+-------------------------------------------------------------------------
+                             196.2   slack (MET)
+
+
+Startpoint: base[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: core_flit[306] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1    2.8    0.0    0.0    0.0 ^ clk (in)
+     2    1.9   14.3   27.2   27.2 ^ clkbuf_0_clk/Y (BUFx8_ASAP7_75t_R)
+     4    2.2   14.7   31.7   58.9 ^ clkbuf_1_0__f_clk/Y (BUFx8_ASAP7_75t_R)
+                14.7    0.2   59.1 ^ base[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     9    9.4  157.2  146.4  205.6 ^ base[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+    31   19.5  155.0  118.7  324.2 ^ place1848/Y (BUFx2_ASAP7_75t_R)
+    30   19.2  151.6  125.7  449.9 ^ place1847/Y (BUFx2_ASAP7_75t_R)
+    32   19.2  151.7  119.2  569.1 ^ place1844/Y (BUFx2_ASAP7_75t_R)
+     1    0.6   17.0   55.3  624.4 ^ _3643_/Y (AND2x2_ASAP7_75t_R)
+     1    0.5   16.3   22.5  646.9 ^ _3644_/Y (AO21x1_ASAP7_75t_R)
+     1    0.6   16.7   28.3  675.2 ^ _3646_/Y (AND2x2_ASAP7_75t_R)
+     1    1.3   15.8   28.2  703.4 ^ output1317/Y (BUFx2_ASAP7_75t_R)
+                15.8    0.2  703.7 ^ core_flit[306] (out)
+                             703.7   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -703.7   data arrival time
+-------------------------------------------------------------------------
+                             196.3   slack (MET)
+
+

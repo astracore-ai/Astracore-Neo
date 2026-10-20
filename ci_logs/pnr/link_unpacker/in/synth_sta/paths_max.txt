@@ -1,0 +1,327 @@
+Startpoint: link_flit[1029] (input port clocked by clk)
+Endpoint: core_flit[564] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 v input external delay
+     5    2.9    0.0    0.0  250.0 v link_flit[1029] (in)
+     3    2.3   62.2   80.2  330.2 v _5218_/SN (HAxp5_ASAP7_75t_R)
+     1    0.5   12.6   39.8  370.0 v _2405_/Y (AND4x1_ASAP7_75t_R)
+     1    0.8   15.8   33.5  403.5 v _2406_/Y (AO21x1_ASAP7_75t_R)
+     1    0.9   15.8   43.4  446.9 ^ _2407_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   18.8   54.5  501.5 v _2408_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   19.3   31.5  533.0 v _2409_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   19.4   47.0  580.0 ^ _2427_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   32.6   34.9  614.8 ^ _2488_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   33.9   37.8  652.6 ^ _2489_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.9   27.6   35.9  688.5 ^ _2491_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.9   11.5   30.1  718.6 ^ _2492_/Y (AND2x4_ASAP7_75t_R)
+     1    0.0   11.1   28.4  747.1 ^ _2493_/Y (AO31x2_ASAP7_75t_R)
+                11.1    0.0  747.1 ^ core_flit[564] (out)
+                             747.1   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -747.1   data arrival time
+-------------------------------------------------------------------------
+                             152.9   slack (MET)
+
+
+Startpoint: link_flit[1055] (input port clocked by clk)
+Endpoint: link_ready (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 v input external delay
+     6    4.0    0.0    0.0  250.0 v link_flit[1055] (in)
+     2    1.0   17.7   10.1  260.1 ^ _4441_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   17.6   35.4  295.5 ^ _4552_/Y (AND3x1_ASAP7_75t_R)
+     1    0.6   15.8   23.3  318.7 ^ _4663_/Y (AO21x1_ASAP7_75t_R)
+    10    5.9   33.9   36.2  355.0 ^ _4774_/Y (BUFx3_ASAP7_75t_R)
+     9    5.5   46.7   50.5  405.5 ^ _2467_/Y (AND2x2_ASAP7_75t_R)
+     1    0.0   14.2   16.3  421.7 v _2578_/Y (NOR2x1_ASAP7_75t_R)
+                14.2    0.0  421.7 v link_ready (out)
+                             421.7   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -421.7   data arrival time
+-------------------------------------------------------------------------
+                             478.3   slack (MET)
+
+
+Startpoint: link_flit[1054] (input port clocked by clk)
+Endpoint: core_flit[518] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 v input external delay
+     5    3.5    0.0    0.0  250.0 v link_flit[1054] (in)
+     3    1.5   25.4   13.4  263.4 ^ _2355_/Y (INVx1_ASAP7_75t_R)
+     5    2.9   49.7   54.9  318.4 ^ _2443_/Y (AND3x1_ASAP7_75t_R)
+     1    0.9   22.6   43.9  362.3 ^ _2502_/Y (AND3x1_ASAP7_75t_R)
+     1    0.0   11.7   51.1  413.3 v _2503_/Y (XNOR2x2_ASAP7_75t_R)
+                11.7    0.0  413.3 v core_flit[518] (out)
+                             413.3   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -413.3   data arrival time
+-------------------------------------------------------------------------
+                             486.7   slack (MET)
+
+
+Startpoint: link_flit[1054] (input port clocked by clk)
+Endpoint: core_flit[516] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 v input external delay
+     5    3.5    0.0    0.0  250.0 v link_flit[1054] (in)
+     3    1.5   25.4   13.4  263.4 ^ _2355_/Y (INVx1_ASAP7_75t_R)
+     5    2.9   49.7   54.9  318.4 ^ _2443_/Y (AND3x1_ASAP7_75t_R)
+     3    2.4   25.7   45.1  363.5 ^ _2497_/Y (AND2x2_ASAP7_75t_R)
+     1    0.0   11.7   40.0  403.5 v _2498_/Y (XOR2x2_ASAP7_75t_R)
+                11.7    0.0  403.5 v core_flit[516] (out)
+                             403.5   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -403.5   data arrival time
+-------------------------------------------------------------------------
+                             496.5   slack (MET)
+
+
+Startpoint: link_flit[1054] (input port clocked by clk)
+Endpoint: core_flit[519] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 v input external delay
+     5    3.5    0.0    0.0  250.0 v link_flit[1054] (in)
+     3    1.5   25.4   13.4  263.4 ^ _2355_/Y (INVx1_ASAP7_75t_R)
+     5    2.9   49.7   54.9  318.4 ^ _2443_/Y (AND3x1_ASAP7_75t_R)
+     1    0.9   23.3   45.4  363.8 ^ _2504_/Y (AND3x1_ASAP7_75t_R)
+     1    0.0   11.7   39.5  403.3 v _2505_/Y (XOR2x2_ASAP7_75t_R)
+                11.7    0.0  403.3 v core_flit[519] (out)
+                             403.3   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -403.3   data arrival time
+-------------------------------------------------------------------------
+                             496.7   slack (MET)
+
+
+Startpoint: link_flit[1054] (input port clocked by clk)
+Endpoint: core_flit[517] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 v input external delay
+     5    3.5    0.0    0.0  250.0 v link_flit[1054] (in)
+     3    1.5   25.4   13.4  263.4 ^ _2355_/Y (INVx1_ASAP7_75t_R)
+     5    2.9   49.7   54.9  318.4 ^ _2443_/Y (AND3x1_ASAP7_75t_R)
+     3    2.4   25.7   45.1  363.5 ^ _2497_/Y (AND2x2_ASAP7_75t_R)
+     1    0.5   18.9   13.7  377.1 v _2499_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.0   10.7   25.5  402.6 v _2500_/Y (OA21x2_ASAP7_75t_R)
+                10.7    0.0  402.6 v core_flit[517] (out)
+                             402.6   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -402.6   data arrival time
+-------------------------------------------------------------------------
+                             497.4   slack (MET)
+
+
+Startpoint: link_flit[1055] (input port clocked by clk)
+Endpoint: core_flit[524] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 v input external delay
+     6    4.0    0.0    0.0  250.0 v link_flit[1055] (in)
+     2    1.0   17.7   10.1  260.1 ^ _4441_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   17.6   35.4  295.5 ^ _4552_/Y (AND3x1_ASAP7_75t_R)
+     1    0.6   15.8   23.3  318.7 ^ _4663_/Y (AO21x1_ASAP7_75t_R)
+    10    5.9   33.9   36.2  355.0 ^ _4774_/Y (BUFx3_ASAP7_75t_R)
+     2    1.0   18.7   18.4  373.3 v _2494_/Y (INVx1_ASAP7_75t_R)
+     1    0.0    8.6   28.5  401.9 v _2496_/Y (AND2x2_ASAP7_75t_R)
+                 8.6    0.0  401.9 v core_flit[524] (out)
+                             401.9   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -401.9   data arrival time
+-------------------------------------------------------------------------
+                             498.1   slack (MET)
+
+
+Startpoint: link_flit[1055] (input port clocked by clk)
+Endpoint: core_flit[525] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 v input external delay
+     6    4.0    0.0    0.0  250.0 v link_flit[1055] (in)
+     2    1.0   17.7   10.1  260.1 ^ _4441_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   17.6   35.4  295.5 ^ _4552_/Y (AND3x1_ASAP7_75t_R)
+     1    0.6   15.8   23.3  318.7 ^ _4663_/Y (AO21x1_ASAP7_75t_R)
+    10    5.9   33.9   36.2  355.0 ^ _4774_/Y (BUFx3_ASAP7_75t_R)
+     2    1.0   18.7   18.4  373.3 v _2494_/Y (INVx1_ASAP7_75t_R)
+     1    0.0    8.6   28.5  401.9 v _2495_/Y (AND2x2_ASAP7_75t_R)
+                 8.6    0.0  401.9 v core_flit[525] (out)
+                             401.9   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -401.9   data arrival time
+-------------------------------------------------------------------------
+                             498.1   slack (MET)
+
+
+Startpoint: link_flit[1055] (input port clocked by clk)
+Endpoint: core_flit[520] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 ^ input external delay
+     6    4.0    0.0    0.0  250.0 ^ link_flit[1055] (in)
+     2    1.0   12.1    7.6  257.6 v _4441_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   10.8   23.6  281.2 v _4552_/Y (AND3x1_ASAP7_75t_R)
+     1    0.6   14.0   31.9  313.1 v _4663_/Y (AO21x1_ASAP7_75t_R)
+    10    5.9   26.8   37.1  350.2 v _4774_/Y (BUFx3_ASAP7_75t_R)
+     1    0.0    8.9   31.3  381.6 v _2506_/Y (AO21x1_ASAP7_75t_R)
+                 8.9    0.0  381.6 v core_flit[520] (out)
+                             381.6   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -381.6   data arrival time
+-------------------------------------------------------------------------
+                             518.4   slack (MET)
+
+
+Startpoint: link_flit[1055] (input port clocked by clk)
+Endpoint: core_flit[521] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      250.0  250.0 ^ input external delay
+     6    4.0    0.0    0.0  250.0 ^ link_flit[1055] (in)
+     2    1.0   12.1    7.6  257.6 v _4441_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   10.8   23.6  281.2 v _4552_/Y (AND3x1_ASAP7_75t_R)
+     1    0.6   14.0   31.9  313.1 v _4663_/Y (AO21x1_ASAP7_75t_R)
+    10    5.9   26.8   37.1  350.2 v _4774_/Y (BUFx3_ASAP7_75t_R)
+     1    0.0    8.9   31.3  381.6 v _2507_/Y (AO21x1_ASAP7_75t_R)
+                 8.9    0.0  381.6 v core_flit[521] (out)
+                             381.6   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -381.6   data arrival time
+-------------------------------------------------------------------------
+                             518.4   slack (MET)
+
+

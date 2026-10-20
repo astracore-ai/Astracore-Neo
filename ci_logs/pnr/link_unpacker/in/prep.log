@@ -1,0 +1,102 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2026  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)
+
+-- Executing script file `prep.ys' --
+
+1. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib
+Imported 42 cell types from liberty file.
+
+2. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib
+Imported 37 cell types from liberty file.
+
+3. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib
+Imported 34 cell types from liberty file.
+
+4. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib
+Imported 56 cell types from liberty file.
+
+5. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+Imported 33 cell types from liberty file.
+
+6. Executing Verilog-2005 frontend: /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/link_unpacker/netlist.v
+Parsing Verilog input from `/home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/link_unpacker/netlist.v' to AST representation.
+Generating RTLIL representation for module `\link_unpacker'.
+Successfully finished Verilog frontend.
+
+7. Executing HIERARCHY pass (managing design hierarchy).
+
+7.1. Analyzing design hierarchy..
+Top module:  \link_unpacker
+
+7.2. Analyzing design hierarchy..
+Top module:  \link_unpacker
+Removed 0 unused modules.
+
+8. Executing SPLITNETS pass (splitting up multi-bit signals).
+
+9. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \link_unpacker..
+Removed 0 unused cells and 9 unused wires.
+<suppressed ~5 debug messages>
+
+10. Executing HILOMAP pass (mapping to constant drivers).
+
+11. Executing INSBUF pass (insert buffer cells for connected wires).
+Add link_unpacker/$auto$insbuf.cc:97:execute$3: \link_flit [1024] -> \core_flit [512]
+Add link_unpacker/$auto$insbuf.cc:97:execute$4: \link_flit [1025] -> \core_flit [513]
+Add link_unpacker/$auto$insbuf.cc:97:execute$5: \link_flit [1026] -> \core_flit [514]
+Add link_unpacker/$auto$insbuf.cc:97:execute$6: \link_flit [1027] -> \core_flit [515]
+Add link_unpacker/$auto$insbuf.cc:97:execute$7: \link_flit [1038] -> \core_flit [526]
+Add link_unpacker/$auto$insbuf.cc:97:execute$8: \link_flit [1039] -> \core_flit [527]
+Add link_unpacker/$auto$insbuf.cc:97:execute$9: \link_flit [1040] -> \core_flit [528]
+Add link_unpacker/$auto$insbuf.cc:97:execute$10: \link_flit [1041] -> \core_flit [529]
+Add link_unpacker/$auto$insbuf.cc:97:execute$11: \link_flit [1042] -> \core_flit [530]
+Add link_unpacker/$auto$insbuf.cc:97:execute$12: \link_flit [1043] -> \core_flit [531]
+Add link_unpacker/$auto$insbuf.cc:97:execute$13: \link_flit [1044] -> \core_flit [532]
+Add link_unpacker/$auto$insbuf.cc:97:execute$14: \link_flit [1045] -> \core_flit [533]
+Add link_unpacker/$auto$insbuf.cc:97:execute$15: \link_flit [1046] -> \core_flit [534]
+Add link_unpacker/$auto$insbuf.cc:97:execute$16: \link_flit [1047] -> \core_flit [535]
+Add link_unpacker/$auto$insbuf.cc:97:execute$17: \link_flit [1048] -> \core_flit [536]
+Add link_unpacker/$auto$insbuf.cc:97:execute$18: \link_flit [1049] -> \core_flit [537]
+Add link_unpacker/$auto$insbuf.cc:97:execute$19: \link_flit [1050] -> \core_flit [538]
+Add link_unpacker/$auto$insbuf.cc:97:execute$20: \link_flit [1051] -> \core_flit [539]
+Add link_unpacker/$auto$insbuf.cc:97:execute$21: \link_flit [1052] -> \core_flit [540]
+Add link_unpacker/$auto$insbuf.cc:97:execute$22: \link_flit [1053] -> \core_flit [541]
+Add link_unpacker/$auto$insbuf.cc:97:execute$23: \link_flit [1054] -> \core_flit [542]
+Add link_unpacker/$auto$insbuf.cc:97:execute$24: \link_flit [1055] -> \core_flit [543]
+Add link_unpacker/$auto$insbuf.cc:97:execute$25: \link_flit [1056] -> \core_flit [544]
+Add link_unpacker/$auto$insbuf.cc:97:execute$26: \link_flit [1057] -> \core_flit [545]
+Add link_unpacker/$auto$insbuf.cc:97:execute$27: \link_flit [1058] -> \core_flit [546]
+Add link_unpacker/$auto$insbuf.cc:97:execute$28: \link_flit [1059] -> \core_flit [547]
+Add link_unpacker/$auto$insbuf.cc:97:execute$29: \link_flit [1060] -> \core_flit [548]
+Add link_unpacker/$auto$insbuf.cc:97:execute$30: \link_flit [1061] -> \core_flit [549]
+Add link_unpacker/$auto$insbuf.cc:97:execute$31: \link_flit [1062] -> \core_flit [550]
+Add link_unpacker/$auto$insbuf.cc:97:execute$32: \link_flit [1063] -> \core_flit [551]
+Add link_unpacker/$auto$insbuf.cc:97:execute$33: \link_flit [1064] -> \core_flit [552]
+Add link_unpacker/$auto$insbuf.cc:97:execute$34: \link_flit [1065] -> \core_flit [553]
+Add link_unpacker/$auto$insbuf.cc:97:execute$35: \link_flit [1066] -> \core_flit [554]
+Add link_unpacker/$auto$insbuf.cc:97:execute$36: \link_flit [1067] -> \core_flit [555]
+Add link_unpacker/$auto$insbuf.cc:97:execute$37: \link_flit [1068] -> \core_flit [556]
+Add link_unpacker/$auto$insbuf.cc:97:execute$38: \link_flit [1069] -> \core_flit [557]
+Add link_unpacker/$auto$insbuf.cc:97:execute$39: \link_flit [1070] -> \core_flit [558]
+Add link_unpacker/$auto$insbuf.cc:97:execute$40: \link_flit [1071] -> \core_flit [559]
+Add link_unpacker/$auto$insbuf.cc:97:execute$41: \link_flit [1072] -> \core_flit [560]
+Add link_unpacker/$auto$insbuf.cc:97:execute$42: \link_flit [1073] -> \core_flit [561]
+Add link_unpacker/$auto$insbuf.cc:97:execute$43: \link_flit [1074] -> \core_flit [562]
+Add link_unpacker/$auto$insbuf.cc:97:execute$44: \link_flit [1075] -> \core_flit [563]
+Add link_unpacker/$auto$insbuf.cc:97:execute$45: \link_valid -> \core_valid
+14. Executing CHECK pass (checking for obvious problems).
+Checking module link_unpacker...
+Found and reported 0 problems.
+
+15. Executing Verilog backend.
+Dumping module `\link_unpacker'.
+
+End of script. Logfile hash: 23bc344db0, time: 0.64s, user: 0.58s, system: 0.08s, MEM: 43.03 MB peak
+Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)
+Time spent: 40% 2x stat (0 sec), 35% 2x read_verilog (0 sec), ...

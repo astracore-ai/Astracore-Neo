@@ -1,0 +1,131 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/link_unpacker/orfs/results/asap7/link_unpacker/base/3_place.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/link_unpacker/orfs/results/asap7/link_unpacker/base/3_place.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+[INFO CTS-0050] Root buffer is BUFx8_ASAP7_75t_R.
+[INFO CTS-0051] Sink buffer is BUFx16f_ASAP7_75t_R.
+[INFO CTS-0052] The following clock buffers will be used for CTS:
+                    BUFx10_ASAP7_75t_R
+                    BUFx16f_ASAP7_75t_R
+[INFO CTS-0049] Characterization buffer is BUFx16f_ASAP7_75t_R.
+[INFO CTS-0007] Net "clk" found for clock "clk".
+[INFO CTS-0010]  Clock net "clk" has 8 sinks.
+[INFO CTS-0008] TritonCTS found 1 clock nets.
+[INFO CTS-0097] Characterization used 2 buffer(s) types.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk.
+[INFO CTS-0028]  Total number of sinks: 8.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0023]  Original sink region: [(12298, 18181), (15916, 20341)].
+[INFO CTS-0024]  Normalized sink region: [(9.10963, 13.4674), (11.7896, 15.0674)].
+[INFO CTS-0025]     Width:  2.6800.
+[INFO CTS-0026]     Height: 1.6000.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 4
+    Sub-region size: 1.3400 X 1.6000
+[INFO CTS-0034]     Segment length (rounded): 1.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 8.
+[INFO CTS-0018]     Created 3 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 2.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 2.
+[INFO CTS-0015]     Created 3 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 4:2..
+[INFO CTS-0017]     Max level of the clock tree: 1.
+[INFO CTS-0098] Clock net "clk"
+[INFO CTS-0099]  Sinks 8
+[INFO CTS-0100]  Leaf buffers 0
+[INFO CTS-0101]  Average sink wire length 17.69 um
+[INFO CTS-0102]  Path depth 2 - 2
+[INFO CTS-0207]  Dummy loads inserted 0
+[INFO CTS-0500] Runtime: 0.41s
+estimate_parasitics -placement
+detailed_placement
+[INFO DPL-0006] Core area: 955.72 um^2
+[INFO DPL-0007] Movable instances area: 449.52 um^2
+[INFO DPL-0008] Fixed instances area within core: 8.34 um^2
+[INFO DPL-0009] Utilization: 47.9%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 4718 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 0.
+[INFO DPL-0500] Runtime: 0.02s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                  40
+total displacement        497.8 u
+average displacement        0.1 u
+max displacement            0.6 u
+original HPWL           14839.6 u
+legalized HPWL          15212.6 u
+delta HPWL                    3 %
+
+estimate_parasitics -placement
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -verbose
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove BufferMove CloneMove SplitLoadMove 
+[INFO RSZ-0098] No setup violations found
+[INFO RSZ-0505] Runtime: 0.17s
+[INFO RSZ-0033] No hold violations found.
+[INFO RSZ-0506] Runtime: 0.02s
+detailed_placement
+[INFO DPL-0006] Core area: 955.72 um^2
+[INFO DPL-0007] Movable instances area: 449.52 um^2
+[INFO DPL-0008] Fixed instances area within core: 8.34 um^2
+[INFO DPL-0009] Utilization: 47.9%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 4718 cells
+[INFO DPL-0500] Runtime: 0.02s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                   0
+total displacement          0.0 u
+average displacement        0.0 u
+max displacement            0.0 u
+original HPWL           15212.6 u
+legalized HPWL          15212.6 u
+delta HPWL                    0 %
+
+estimate_parasitics -placement
+Report metrics stage 4, cts final...
+
+==========================================================================
+cts final report_design_area
+--------------------------------------------------------------------------
+Design area 458 um^2 48% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/link_unpacker/orfs/results/asap7/link_unpacker/base/4_1_cts.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/link_unpacker/orfs/results/asap7/link_unpacker/base/4_cts.sdc
+Elapsed time: 0:03.68[h:]min:sec. CPU time: user 4.27 sys 0.09 (118%). Peak memory: 246300KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+4_1_cts                .odb          3        4     1.18      240 d978745bc3
