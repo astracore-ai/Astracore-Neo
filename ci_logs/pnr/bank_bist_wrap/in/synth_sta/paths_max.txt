@@ -1,0 +1,472 @@
+Startpoint: u_bank/u_mem/u_lane11
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/mism_q_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane11/clk (fakeram7_32768x39_cm64_1w1r)
+     1    0.9    7.2  218.0  218.0 ^ u_bank/u_mem/u_lane11/rdata[35] (fakeram7_32768x39_cm64_1w1r)
+     1    0.9   16.2   50.7  268.7 v u_bank/_6483_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   21.8   47.6  316.3 ^ u_bank/_6486_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   54.4  370.7 v u_bank/_6499_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.1   49.5  420.2 ^ u_bank/_6500_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   18.8   54.6  474.8 v u_bank/_6501_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.1   21.4   32.6  507.5 v u_bank/_6507_/Y (XNOR2x1_ASAP7_75t_R)
+    10    5.5   25.7   39.2  546.6 v u_bank/_6509_/Y (BUFx3_ASAP7_75t_R)
+     6    5.5   34.7   49.0  595.6 v u_bank/_6705_/Y (AND2x2_ASAP7_75t_R)
+     1    0.9   28.0   26.3  621.9 ^ u_bank/_6747_/Y (NAND2x1_ASAP7_75t_R)
+     3    1.0   16.9   56.5  678.5 v u_bank/_6748_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.5   19.8   57.0  735.5 v u_bist/_1344_/Y (OR4x1_ASAP7_75t_R)
+     2    1.0   29.6   76.7  812.1 v u_bist/_1345_/Y (OR5x1_ASAP7_75t_R)
+     1    1.2   23.4   51.5  863.6 v u_bist/_1350_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   26.5   12.9  876.5 ^ u_bist/_1351_/Y (OAI21x1_ASAP7_75t_R)
+     1    1.1   30.9   49.3  925.8 ^ u_bist/_1356_/Y (AND4x1_ASAP7_75t_R)
+     2    0.9   27.2   18.1  943.9 v u_bist/_1357_/Y (AOI21x1_ASAP7_75t_R)
+     1    0.5   23.3   68.9 1012.8 v u_bist/_1387_/Y (OR5x1_ASAP7_75t_R)
+     1    0.5   24.1   72.5 1085.2 v u_bist/_1388_/Y (OR5x1_ASAP7_75t_R)
+     1    0.5   13.4   38.2 1123.4 v u_bist/_1392_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0 1123.4 v u_bist/mism_q_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1123.4   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/mism_q_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -1123.4   data arrival time
+-------------------------------------------------------------------------
+                              14.7   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane5
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[5]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane5/clk (fakeram7_32768x39_cm64_1w1r)
+     2    2.3    7.8  218.0  218.0 ^ u_bank/u_mem/u_lane5/rdata[24] (fakeram7_32768x39_cm64_1w1r)
+     2    2.3   43.8   35.9  253.9 ^ u_bank/_6797_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.3   46.0   43.8  297.6 ^ u_bank/_6798_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.3   47.6   46.3  344.0 ^ u_bank/_6802_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.9   27.9   38.9  382.9 ^ u_bank/_3116_/Y (XOR2x1_ASAP7_75t_R)
+     1    1.4   18.7   58.0  440.8 v u_bank/_3117_/Y (XNOR2x2_ASAP7_75t_R)
+     7    4.6   52.6   49.1  489.9 v u_bank/_3118_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.2   15.2   45.2  535.1 v u_bank/_3151_/Y (AND2x2_ASAP7_75t_R)
+    10    5.3   25.1   36.6  571.7 v u_bank/_3152_/Y (BUFx3_ASAP7_75t_R)
+     1    0.9   14.0   33.9  605.6 v u_bank/_3366_/Y (AND2x2_ASAP7_75t_R)
+     1    0.9   27.0   16.3  621.9 ^ u_bank/_3368_/Y (NAND2x1_ASAP7_75t_R)
+     3    1.0   16.9   56.3  678.2 v u_bank/_3369_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.5   19.8   57.0  735.2 v u_bist/_1219_/Y (OR4x1_ASAP7_75t_R)
+     2    1.0   29.6   76.7  811.8 v u_bist/_1220_/Y (OR5x1_ASAP7_75t_R)
+     1    0.6   17.6   47.0  858.8 v u_bist/_1235_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.9   13.1  871.8 ^ u_bist/_1237_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   15.4   21.4  893.3 ^ u_bist/_1238_/Y (AO21x1_ASAP7_75t_R)
+     1    1.1   28.7   46.7  940.0 ^ u_bist/_1243_/Y (AND4x1_ASAP7_75t_R)
+     2    0.9   27.2   17.5  957.5 v u_bist/_1244_/Y (AOI21x1_ASAP7_75t_R)
+     1    0.5   17.0   46.1 1003.6 v u_bist/_1476_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4 1030.0 v u_bist/_1477_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0 1030.0 v u_bist/hit_q[5]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1030.0   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[5]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -1030.0   data arrival time
+-------------------------------------------------------------------------
+                             108.1   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane13
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[13]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane13/clk (fakeram7_32768x39_cm64_1w1r)
+     3    2.7    8.0  218.0  218.0 ^ u_bank/u_mem/u_lane13/rdata[11] (fakeram7_32768x39_cm64_1w1r)
+     1    1.4   18.7   53.0  271.0 v u_bank/_3755_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.8   18.2   30.8  301.8 v u_bank/_3866_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.3   25.4   49.3  351.1 ^ u_bank/_3977_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   33.3   36.7  387.8 ^ u_bank/_4644_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.9   26.9   36.8  424.7 ^ u_bank/_5977_/Y (XNOR2x1_ASAP7_75t_R)
+     6    5.6   39.1   71.9  496.6 v u_bank/_6088_/Y (XNOR2x2_ASAP7_75t_R)
+     3    2.1   49.4   35.4  531.9 ^ u_bank/_6818_/Y (NAND3x1_ASAP7_75t_R)
+    10    5.0   41.6   51.6  583.5 ^ u_bank/_5022_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   14.0   36.1  619.6 ^ u_bank/_5974_/Y (OR2x2_ASAP7_75t_R)
+     3    1.0   16.9   52.6  672.2 v u_bank/_5975_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.5   19.8   57.0  729.2 v u_bist/_1162_/Y (OR4x1_ASAP7_75t_R)
+     2    1.0   29.6   76.7  805.8 v u_bist/_1163_/Y (OR5x1_ASAP7_75t_R)
+     1    0.6   17.6   47.0  852.8 v u_bist/_1177_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.9   13.1  865.8 ^ u_bist/_1178_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   15.4   21.4  887.3 ^ u_bist/_1179_/Y (AO21x1_ASAP7_75t_R)
+     1    1.1   28.7   46.7  934.0 ^ u_bist/_1185_/Y (AND4x1_ASAP7_75t_R)
+     2    1.0   27.7   17.7  951.7 v u_bist/_1186_/Y (AOI21x1_ASAP7_75t_R)
+     1    0.5   17.0   46.2  997.9 v u_bist/_1506_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4 1024.3 v u_bist/_1507_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0 1024.3 v u_bist/hit_q[13]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1024.3   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[13]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -1024.3   data arrival time
+-------------------------------------------------------------------------
+                             113.8   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane0
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[0]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane0/clk (fakeram7_32768x39_cm64_1w1r)
+     3    2.6    8.0  218.0  218.0 v u_bank/u_mem/u_lane0/rdata[16] (fakeram7_32768x39_cm64_1w1r)
+     1    0.9   16.1   47.6  265.6 ^ u_bank/_6142_/Y (XOR2x2_ASAP7_75t_R)
+     2    2.3   23.3   58.1  323.7 v u_bank/_6143_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   27.3   37.5  361.2 v u_bank/_6144_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   18.7   45.5  406.7 v u_bank/_6145_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   23.8   34.1  440.8 v u_bank/_6146_/Y (XNOR2x1_ASAP7_75t_R)
+     6    3.8   46.1   47.2  488.0 v u_bank/_6147_/Y (XNOR2x1_ASAP7_75t_R)
+     6    3.0   41.1   65.4  553.3 v u_bank/_4907_/Y (OR3x1_ASAP7_75t_R)
+    10    5.7   26.7   46.3  599.7 v u_bank/_4915_/Y (BUFx3_ASAP7_75t_R)
+     1    1.4   25.8   52.8  652.4 v u_bank/_5068_/Y (OR3x1_ASAP7_75t_R)
+     3    1.0   20.4   34.4  686.8 v u_bank/_5069_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.5   19.8   56.6  743.4 v u_bist/_0963_/Y (OR4x1_ASAP7_75t_R)
+     1    0.9   28.6   75.8  819.3 v u_bist/_0964_/Y (OR5x1_ASAP7_75t_R)
+     2    1.0   25.6   21.9  841.2 ^ u_bist/_0967_/Y (NOR2x1_ASAP7_75t_R)
+     1    0.5   12.9   30.9  872.1 ^ u_bist/_0993_/Y (AND2x2_ASAP7_75t_R)
+     2    1.3   21.8   39.0  911.1 ^ u_bist/_0998_/Y (OA211x2_ASAP7_75t_R)
+     1    0.5   16.6   13.0  924.1 v u_bist/_1457_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.5   13.8   26.2  950.3 v u_bist/_1459_/Y (OA21x2_ASAP7_75t_R)
+     1    0.5   17.0   43.6  993.9 v u_bist/_1460_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4 1020.3 v u_bist/_1461_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0 1020.3 v u_bist/hit_q[0]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1020.3   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[0]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -1020.3   data arrival time
+-------------------------------------------------------------------------
+                             117.8   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane11
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[11]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane11/clk (fakeram7_32768x39_cm64_1w1r)
+     1    0.9    7.2  218.0  218.0 ^ u_bank/u_mem/u_lane11/rdata[35] (fakeram7_32768x39_cm64_1w1r)
+     1    0.9   16.2   50.7  268.7 v u_bank/_6483_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   21.8   47.6  316.3 ^ u_bank/_6486_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   54.4  370.7 v u_bank/_6499_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.1   49.5  420.2 ^ u_bank/_6500_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.4   18.8   54.6  474.8 v u_bank/_6501_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.1   21.4   32.6  507.5 v u_bank/_6507_/Y (XNOR2x1_ASAP7_75t_R)
+    10    5.5   25.7   39.2  546.6 v u_bank/_6509_/Y (BUFx3_ASAP7_75t_R)
+     6    5.5   34.7   49.0  595.6 v u_bank/_6705_/Y (AND2x2_ASAP7_75t_R)
+     1    0.9   28.0   26.3  621.9 ^ u_bank/_6747_/Y (NAND2x1_ASAP7_75t_R)
+     3    1.0   16.9   56.5  678.5 v u_bank/_6748_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.5   19.8   57.0  735.5 v u_bist/_1344_/Y (OR4x1_ASAP7_75t_R)
+     2    1.0   29.6   76.7  812.1 v u_bist/_1345_/Y (OR5x1_ASAP7_75t_R)
+     1    1.2   23.4   51.5  863.6 v u_bist/_1350_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   26.5   12.9  876.5 ^ u_bist/_1351_/Y (OAI21x1_ASAP7_75t_R)
+     1    1.1   30.9   49.3  925.8 ^ u_bist/_1356_/Y (AND4x1_ASAP7_75t_R)
+     2    0.9   27.2   18.1  943.9 v u_bist/_1357_/Y (AOI21x1_ASAP7_75t_R)
+     1    0.5   17.0   46.1  990.0 v u_bist/_1499_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4 1016.4 v u_bist/_1500_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0 1016.4 v u_bist/hit_q[11]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1016.4   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[11]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -1016.4   data arrival time
+-------------------------------------------------------------------------
+                             121.7   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[14]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2    2.3    7.8  218.0  218.0 v u_bank/u_mem/u_lane14/rdata[16] (fakeram7_32768x39_cm64_1w1r)
+     1    1.4   19.7   49.7  267.7 ^ u_bank/_4681_/Y (XOR2x2_ASAP7_75t_R)
+     2    2.3   46.7   38.1  305.9 ^ u_bank/_4682_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   35.7   43.0  348.8 ^ u_bank/_4686_/Y (XNOR2x1_ASAP7_75t_R)
+     2    1.8   38.7   40.1  388.9 ^ u_bank/_4687_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.3   23.2   65.0  454.0 v u_bank/_4701_/Y (XNOR2x2_ASAP7_75t_R)
+     4    2.0   29.7   38.3  492.3 v u_bank/_4702_/Y (XNOR2x1_ASAP7_75t_R)
+     6    3.1   42.1   61.7  554.0 v u_bank/_4771_/Y (OR3x1_ASAP7_75t_R)
+    10    5.1   24.9   45.4  599.4 v u_bank/_4772_/Y (BUFx3_ASAP7_75t_R)
+     1    1.4   26.3   51.9  651.3 v u_bank/_4787_/Y (OR3x1_ASAP7_75t_R)
+     3    1.0   20.4   34.6  685.9 v u_bank/_4788_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.5   19.8   56.6  742.5 v u_bist/_1303_/Y (OR4x1_ASAP7_75t_R)
+     2    1.7   37.0   82.8  825.4 v u_bist/_1304_/Y (OR5x1_ASAP7_75t_R)
+     1    0.8   19.4   49.6  875.0 v u_bist/_1320_/Y (OR3x1_ASAP7_75t_R)
+     1    1.1   59.3   26.4  901.4 ^ u_bist/_1328_/Y (AOI211x1_ASAP7_75t_R)
+     2    0.9   28.4   24.0  925.5 v u_bist/_1329_/Y (AOI21x1_ASAP7_75t_R)
+     1    0.5   17.0   46.3  971.8 v u_bist/_1509_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4  998.2 v u_bist/_1510_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0  998.2 v u_bist/hit_q[14]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             998.2   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[14]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -998.2   data arrival time
+-------------------------------------------------------------------------
+                             139.9   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane9
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[9]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane9/clk (fakeram7_32768x39_cm64_1w1r)
+     2    2.2    7.8  218.0  218.0 ^ u_bank/u_mem/u_lane9/rdata[4] (fakeram7_32768x39_cm64_1w1r)
+     2    1.8   20.8   54.5  272.5 v u_bank/_3803_/Y (XNOR2x2_ASAP7_75t_R)
+     2    2.3   25.5   50.7  323.1 ^ u_bank/_3805_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   32.8   36.0  359.1 ^ u_bank/_3806_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.9   26.9   36.7  395.8 ^ u_bank/_3812_/Y (XNOR2x1_ASAP7_75t_R)
+     1    1.4   18.7   57.6  453.5 v u_bank/_3813_/Y (XNOR2x2_ASAP7_75t_R)
+     4    3.2   41.2   42.1  495.6 v u_bank/_3834_/Y (XNOR2x1_ASAP7_75t_R)
+     3    1.6   27.7   56.7  552.3 v u_bank/_4185_/Y (OR3x1_ASAP7_75t_R)
+     3    1.5   26.3   53.3  605.6 v u_bank/_4202_/Y (OR3x1_ASAP7_75t_R)
+     1    1.4   17.5   40.6  646.3 v u_bank/_4207_/Y (OR2x2_ASAP7_75t_R)
+     3    1.0   20.1   31.6  677.8 v u_bank/_4208_/Y (XNOR2x1_ASAP7_75t_R)
+     1    0.5   19.8   56.5  734.4 v u_bist/_1277_/Y (OR4x1_ASAP7_75t_R)
+     2    1.7   36.5   82.5  816.9 v u_bist/_1278_/Y (OR5x1_ASAP7_75t_R)
+     1    0.8   19.4   49.6  866.5 v u_bist/_1293_/Y (OR3x1_ASAP7_75t_R)
+     1    1.1   59.3   26.4  892.9 ^ u_bist/_1300_/Y (AOI211x1_ASAP7_75t_R)
+     2    1.0   28.8   24.3  917.3 v u_bist/_1301_/Y (AOI21x1_ASAP7_75t_R)
+     1    0.5   17.0   46.4  963.7 v u_bist/_1493_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4  990.1 v u_bist/_1494_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0  990.1 v u_bist/hit_q[9]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             990.1   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[9]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -990.1   data arrival time
+-------------------------------------------------------------------------
+                             148.0   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane1
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane1/clk (fakeram7_32768x39_cm64_1w1r)
+     3    2.6    8.0  218.0  218.0 v u_bank/u_mem/u_lane1/rdata[20] (fakeram7_32768x39_cm64_1w1r)
+     1    0.9   15.8   42.9  260.9 ^ u_bank/_6273_/Y (XNOR2x2_ASAP7_75t_R)
+     2    2.3   23.2   58.0  318.9 v u_bank/_6276_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.8   18.3   32.3  351.2 v u_bank/_6280_/Y (XNOR2x1_ASAP7_75t_R)
+     3    2.6   27.5   50.4  401.6 ^ u_bank/_6281_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.7   20.1   59.1  460.8 v u_bank/_6289_/Y (XNOR2x2_ASAP7_75t_R)
+     5    3.0   30.6   59.8  520.6 ^ u_bank/_6290_/Y (XOR2x2_ASAP7_75t_R)
+     3    2.1   27.3   49.6  570.2 ^ u_bank/_5178_/Y (AND3x2_ASAP7_75t_R)
+    10    7.2   23.4   33.9  604.1 ^ u_bank/_5190_/Y (BUFx6f_ASAP7_75t_R)
+     1    0.9   24.0   39.6  643.7 ^ u_bank/_5194_/Y (AND3x1_ASAP7_75t_R)
+     3    1.0   16.6   42.8  686.5 v u_bank/_5195_/Y (XOR2x2_ASAP7_75t_R)
+     1    0.5   19.8   55.9  742.4 v u_bist/_1086_/Y (OR4x1_ASAP7_75t_R)
+     1    0.9   28.6   75.8  818.3 v u_bist/_1087_/Y (OR5x1_ASAP7_75t_R)
+     2    1.0   26.1   22.2  840.5 ^ u_bist/_1090_/Y (NOR2x1_ASAP7_75t_R)
+     1    0.5   18.3   36.8  877.3 ^ u_bist/_1092_/Y (AND3x1_ASAP7_75t_R)
+     1    0.9   19.3   26.6  904.0 ^ u_bist/_1093_/Y (OR3x1_ASAP7_75t_R)
+     2    0.9   15.8   15.5  919.5 v u_bist/_1097_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.5   17.0   44.0  963.5 v u_bist/_1463_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4  989.9 v u_bist/_1464_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0  989.9 v u_bist/hit_q[1]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             989.9   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -989.9   data arrival time
+-------------------------------------------------------------------------
+                             148.2   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane10
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[10]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane10/clk (fakeram7_32768x39_cm64_1w1r)
+     3    2.6    8.0  218.0  218.0 v u_bank/u_mem/u_lane10/rdata[30] (fakeram7_32768x39_cm64_1w1r)
+     2    2.3   25.7   53.5  271.5 ^ u_bank/_4983_/Y (XOR2x2_ASAP7_75t_R)
+     1    0.9   26.7   34.5  306.0 ^ u_bank/_4985_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.2   23.0   60.9  366.9 v u_bank/_4986_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.8   23.9   39.4  406.2 v u_bank/_4995_/Y (XOR2x1_ASAP7_75t_R)
+     1    0.9   15.9   45.8  452.0 ^ u_bank/_4996_/Y (XNOR2x2_ASAP7_75t_R)
+     6    6.1   41.3   70.1  522.1 v u_bank/_4997_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   35.7   28.0  550.1 ^ u_bank/_5865_/Y (NAND3x1_ASAP7_75t_R)
+    10    5.0   41.4   47.7  597.8 ^ u_bank/_5868_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   18.7   33.3  631.1 ^ u_bank/_5961_/Y (OR3x1_ASAP7_75t_R)
+     3    1.0   16.8   53.9  685.0 v u_bank/_5962_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.5   19.8   55.9  740.9 v u_bist/_1201_/Y (OR4x1_ASAP7_75t_R)
+     1    1.0   28.8   76.0  816.9 v u_bist/_1203_/Y (OR5x1_ASAP7_75t_R)
+     2    1.0   26.1   20.5  837.4 ^ u_bist/_1204_/Y (NOR2x1_ASAP7_75t_R)
+     1    0.5   18.3   37.0  874.4 ^ u_bist/_1210_/Y (AND3x1_ASAP7_75t_R)
+     1    0.9   19.3   26.6  901.1 ^ u_bist/_1211_/Y (OR3x1_ASAP7_75t_R)
+     2    0.9   15.8   15.6  916.6 v u_bist/_1216_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.5   17.0   44.0  960.6 v u_bist/_1496_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4  987.0 v u_bist/_1497_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0  987.0 v u_bist/hit_q[10]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             987.0   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[10]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -987.0   data arrival time
+-------------------------------------------------------------------------
+                             151.1   slack (MET)
+
+
+Startpoint: u_bank/u_mem/u_lane4
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/hit_q[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_bank/u_mem/u_lane4/clk (fakeram7_32768x39_cm64_1w1r)
+     3    2.5    7.9  218.0  218.0 ^ u_bank/u_mem/u_lane4/rdata[21] (fakeram7_32768x39_cm64_1w1r)
+     1    0.8   15.6   50.5  268.5 v u_bank/_3414_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.7   21.4   46.4  314.9 ^ u_bank/_3415_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.7   20.5   57.6  372.4 v u_bank/_3419_/Y (XNOR2x2_ASAP7_75t_R)
+     1    1.4   19.7   52.5  424.9 ^ u_bank/_3427_/Y (XOR2x2_ASAP7_75t_R)
+     1    0.9   27.7   32.5  457.4 ^ u_bank/_3428_/Y (XNOR2x1_ASAP7_75t_R)
+     8    5.7   39.5   72.6  530.0 v u_bank/_3441_/Y (XNOR2x2_ASAP7_75t_R)
+    10    5.0   91.0   55.2  585.3 ^ u_bank/_5477_/Y (NAND3x1_ASAP7_75t_R)
+     1    0.9   19.6   43.0  628.2 ^ u_bank/_5615_/Y (OR3x1_ASAP7_75t_R)
+     3    1.0   16.9   54.3  682.5 v u_bank/_5616_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.5   19.8   57.0  739.5 v u_bist/_1260_/Y (OR4x1_ASAP7_75t_R)
+     1    1.0   28.8   76.0  815.5 v u_bist/_1261_/Y (OR5x1_ASAP7_75t_R)
+     2    1.0   26.1   20.5  836.0 ^ u_bist/_1262_/Y (NOR2x1_ASAP7_75t_R)
+     1    0.5   17.7   37.0  873.1 ^ u_bist/_1268_/Y (AND3x1_ASAP7_75t_R)
+     1    0.9   19.3   26.4  899.5 ^ u_bist/_1270_/Y (OR3x1_ASAP7_75t_R)
+     2    0.9   15.8   15.6  915.1 v u_bist/_1274_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.5   17.0   44.0  959.0 v u_bist/_1473_/Y (OR3x1_ASAP7_75t_R)
+     1    0.5   13.4   26.4  985.4 v u_bist/_1474_/Y (OA21x2_ASAP7_75t_R)
+                13.4    0.0  985.4 v u_bist/hit_q[4]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                             985.4   data arrival time
+
+                 0.0 1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (ideal)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                            1150.0 ^ u_bist/hit_q[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -11.9 1138.1   library setup time
+                            1138.1   data required time
+-------------------------------------------------------------------------
+                            1138.1   data required time
+                            -985.4   data arrival time
+-------------------------------------------------------------------------
+                             152.6   slack (MET)
+
+

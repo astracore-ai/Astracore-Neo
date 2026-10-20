@@ -1,0 +1,92 @@
+{
+ "unit": "bank_bist_wrap",
+ "timing": {
+  "access_time_ns": 0.218,
+  "t_setup_ns": 0.05,
+  "t_hold_ns": 0.05,
+  "cycle_time_ns": 0.157,
+  "cap_input_pf": 0.005
+ },
+ "process": {
+  "tech_nm": 7,
+  "voltage": 0.7,
+  "metal_prefix": "M",
+  "metal_layer": "M4",
+  "pin_width_nm": 24,
+  "pin_pitch_nm": 48,
+  "metal_track_pitch_nm": 48,
+  "manufacturing_grid_nm": 1,
+  "contacted_poly_pitch_nm": 54,
+  "fin_pitch_nm": 27,
+  "column_mux_factor": 1,
+  "snap_width_nm": 190,
+  "snap_height_nm": 1400
+ },
+ "macros": [
+  {
+   "leaf": "neo_mem_sp_w624_d32768_g16",
+   "macro": "fakeram7_32768x39_cm64_1w1r",
+   "W": 624,
+   "D": 32768,
+   "G": 16,
+   "RB": 0,
+   "AW": 15,
+   "bits": 20447232,
+   "instances": 1,
+   "lanes": 16,
+   "column_mux": 64,
+   "pins": 111,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     16,
+     "input"
+    ],
+    [
+     "waddr",
+     15,
+     "input"
+    ],
+    [
+     "wdata",
+     624,
+     "input"
+    ],
+    [
+     "re",
+     1,
+     "input"
+    ],
+    [
+     "raddr",
+     15,
+     "input"
+    ],
+    [
+     "rdata",
+     624,
+     "output"
+    ]
+   ],
+   "lef_width_um": 323.57,
+   "lef_height_um": 166.6,
+   "lef_area_um2": 862508.192,
+   "bitcell_area_um2": 858587.451,
+   "pin_limited": false,
+   "um2_per_bit": 0.04218,
+   "synth_model_um2": 1289647.817,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_32768x39_cm64_1w1r.lef",
+   "lib": "fakeram7_32768x39_cm64_1w1r.lib",
+   "lef_bytes": 39255,
+   "lib_bytes": 14266
+  }
+ ]
+}

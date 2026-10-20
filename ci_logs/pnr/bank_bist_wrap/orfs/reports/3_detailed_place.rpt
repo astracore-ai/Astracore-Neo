@@ -1,0 +1,1136 @@
+
+==========================================================================
+detailed place report_tns
+--------------------------------------------------------------------------
+tns max -499127.84
+
+==========================================================================
+detailed place report_wns
+--------------------------------------------------------------------------
+wns max -2339.68
+
+==========================================================================
+detailed place report_worst_slack
+--------------------------------------------------------------------------
+worst slack max -2339.68
+
+==========================================================================
+detailed place report_clock_min_period
+--------------------------------------------------------------------------
+clk period_min = 3589.68 fmax = 278.58
+
+==========================================================================
+detailed place report_checks -path_delay min
+--------------------------------------------------------------------------
+Startpoint: tq_wdata[31]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank/u_mem/u_lane0 (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ tq_wdata[31]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    1.03   34.38   77.03   77.03 ^ tq_wdata[31]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         _0487_ (net)
+                 34.38    0.08   77.12 ^ _1829_/B (NAND2x1_ASAP7_75t_R)
+     1    1.37   20.80   20.65   97.76 v _1829_/Y (NAND2x1_ASAP7_75t_R)
+                                         _0592_ (net)
+                 20.80    0.16   97.93 v _1841_/B (OA21x2_ASAP7_75t_R)
+     3    8.10   48.10   47.04  144.96 v _1841_/Y (OA21x2_ASAP7_75t_R)
+                                         b_wdata[31] (net)
+                 36.09    0.60  145.56 v u_bank/u_mem/u_lane0/wdata[31] (fakeram7_32768x39_cm64_1w1r)
+                                145.56   data arrival time
+
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                          0.00    0.00   clock reconvergence pessimism
+                                  0.00 ^ u_bank/u_mem/u_lane0/clk (fakeram7_32768x39_cm64_1w1r)
+                         50.00   50.00   library hold time
+                                 50.00   data required time
+-----------------------------------------------------------------------------
+                                 50.00   data required time
+                               -145.56   data arrival time
+-----------------------------------------------------------------------------
+                                 95.56   slack (MET)
+
+
+
+==========================================================================
+detailed place report_checks -path_delay max
+--------------------------------------------------------------------------
+Startpoint: u_bist/elem[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/mism_q_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ u_bist/elem[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     4    2.63   59.03   92.76   92.76 ^ u_bist/elem[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         u_bist/_0863_[0] (net)
+                 59.03    0.08   92.84 ^ u_bist/_1335_/A (BUFx2_ASAP7_75t_R)
+    10    6.52   53.98   58.92  151.77 ^ u_bist/_1335_/Y (BUFx2_ASAP7_75t_R)
+                                         u_bist/_0638_ (net)
+                 53.99    0.43  152.19 ^ u_bist/_1446_/A (INVx1_ASAP7_75t_R)
+    11    9.26  103.83   68.05  220.24 v u_bist/_1446_/Y (INVx1_ASAP7_75t_R)
+                                         u_bist/_0857_[0] (net)
+                103.83    0.18  220.42 v u_bist/_0954_/A1 (AO21x2_ASAP7_75t_R)
+     3   10.90   68.79   89.93  310.35 v u_bist/_0954_/Y (AO21x2_ASAP7_75t_R)
+                                         u_bist/_0767_ (net)
+                 68.85    1.40  311.75 v u_bist/wire2699/A (BUFx12f_ASAP7_75t_R)
+     1   17.74   22.53   46.21  357.96 v u_bist/wire2699/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2698 (net)
+                 67.00   19.63  377.59 v u_bist/wire2698/A (BUFx12f_ASAP7_75t_R)
+     1   17.55   22.34   45.68  423.27 v u_bist/wire2698/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2697 (net)
+                 65.68   19.21  442.48 v u_bist/wire2697/A (BUFx12f_ASAP7_75t_R)
+     1   17.58   22.27   45.35  487.83 v u_bist/wire2697/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2696 (net)
+                 65.86   19.28  507.10 v u_bist/wire2696/A (BUFx12f_ASAP7_75t_R)
+     2   16.34   22.15   44.85  551.95 v u_bist/wire2696/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2695 (net)
+                 57.36   16.41  568.36 v u_bist/wire2695/A (BUFx6f_ASAP7_75t_R)
+     1   11.47   29.63   46.38  614.74 v u_bist/wire2695/Y (BUFx6f_ASAP7_75t_R)
+                                         u_bist/net2694 (net)
+                 40.43    9.11  623.85 v u_bist/wire2694/A (BUFx12f_ASAP7_75t_R)
+     2   18.15   22.55   38.06  661.91 v u_bist/wire2694/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2693 (net)
+                 63.09   18.27  680.18 v u_bist/wire2693/A (BUFx12_ASAP7_75t_R)
+     1    2.86   16.92   53.89  734.08 v u_bist/wire2693/Y (BUFx12_ASAP7_75t_R)
+                                         u_bist/net2692 (net)
+                 16.94    0.65  734.73 v u_bist/_0955_/A (BUFx8_ASAP7_75t_R)
+     2    6.69   21.80   42.29  777.02 v u_bist/_0955_/Y (BUFx8_ASAP7_75t_R)
+                                         u_bist/_0768_ (net)
+                 21.80    0.19  777.22 v u_bist/wire2371/A (BUFx16f_ASAP7_75t_R)
+     2   22.45   24.61   36.21  813.42 v u_bist/wire2371/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2370 (net)
+                 70.84   21.17  834.59 v u_bist/wire2370/A (BUFx16f_ASAP7_75t_R)
+     2   25.87   21.46   51.02  885.61 v u_bist/wire2370/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2369 (net)
+                116.69   36.27  921.88 v u_bist/wire2365/A (BUFx16f_ASAP7_75t_R)
+     2   27.44   23.62   61.39  983.27 v u_bist/wire2365/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2364 (net)
+                110.83   33.21 1016.48 v u_bist/_1066_/A (BUFx8_ASAP7_75t_R)
+     2   14.84   36.44   77.44 1093.93 v u_bist/_1066_/Y (BUFx8_ASAP7_75t_R)
+                                         u_bist/_0147_ (net)
+                 36.45    0.24 1094.16 v u_bist/load_slew2237/A (BUFx16f_ASAP7_75t_R)
+     1   21.54   20.12   41.62 1135.78 v u_bist/load_slew2237/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2236 (net)
+                 91.84   28.06 1163.84 v u_bist/wire2236/A (BUFx16f_ASAP7_75t_R)
+     3   20.32   28.64   55.85 1219.69 v u_bist/wire2236/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2235 (net)
+                 61.14   16.63 1236.32 v u_bist/wire2235/A (BUFx16f_ASAP7_75t_R)
+     1   56.58   31.66   56.23 1292.55 v u_bist/wire2235/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2234 (net)
+                580.04  182.94 1475.50 v u_bist/wire2234/A (BUFx16f_ASAP7_75t_R)
+     2   10.43   40.94  122.08 1597.58 v u_bist/wire2234/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2233 (net)
+                 40.95    0.31 1597.89 v u_bist/wire2233/A (BUFx16f_ASAP7_75t_R)
+     3    9.94   17.49   41.30 1639.19 v u_bist/wire2233/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2232 (net)
+                 23.50    5.32 1644.51 v u_bist/wire2232/A (BUFx16f_ASAP7_75t_R)
+     1   60.67   31.96   44.56 1689.06 v u_bist/wire2232/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2231 (net)
+                665.58  210.00 1899.06 v u_bist/wire2231/A (BUFx16f_ASAP7_75t_R)
+     2    9.98   44.76  132.12 2031.18 v u_bist/wire2231/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2230 (net)
+                 48.75    7.09 2038.27 v u_bist/wire2230/A (BUFx16f_ASAP7_75t_R)
+     1   26.57   21.43   46.54 2084.81 v u_bist/wire2230/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2229 (net)
+                134.06   41.69 2126.49 v u_bist/wire2229/A (BUFx16f_ASAP7_75t_R)
+     1   26.31   26.76   67.02 2193.52 v u_bist/wire2229/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2228 (net)
+                133.55   41.23 2234.75 v u_bist/_1123_/A (OR3x1_ASAP7_75t_R)
+     1    3.16   46.43   83.58 2318.33 v u_bist/_1123_/Y (OR3x1_ASAP7_75t_R)
+                                         u_bist/_0198_ (net)
+                 46.46    0.62 2318.95 v u_bist/_1128_/A (NAND2x2_ASAP7_75t_R)
+     1    1.30   27.80   27.84 2346.79 ^ u_bist/_1128_/Y (NAND2x2_ASAP7_75t_R)
+                                         u_bist/_0202_ (net)
+                 27.80    0.07 2346.86 ^ u_bist/wire1860/A (BUFx6f_ASAP7_75t_R)
+     1    5.42   20.27   31.30 2378.17 ^ u_bist/wire1860/Y (BUFx6f_ASAP7_75t_R)
+                                         u_bist/net1859 (net)
+                 20.99    2.03 2380.20 ^ u_bist/wire1859/A (BUFx12f_ASAP7_75t_R)
+     1    7.98   17.70   27.14 2407.34 ^ u_bist/wire1859/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1858 (net)
+                 22.04    4.48 2411.82 ^ u_bist/wire1858/A (BUFx12f_ASAP7_75t_R)
+     1   62.39   50.02   43.06 2454.88 ^ u_bist/wire1858/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1857 (net)
+                715.22  225.51 2680.39 ^ u_bist/wire1857/A (BUFx12f_ASAP7_75t_R)
+     1    7.97   41.55  116.55 2796.94 ^ u_bist/wire1857/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1856 (net)
+                 43.82    4.78 2801.73 ^ u_bist/wire1856/A (BUFx12f_ASAP7_75t_R)
+     1    7.95   18.44   34.25 2835.97 ^ u_bist/wire1856/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1855 (net)
+                 22.63    4.48 2840.45 ^ u_bist/wire1855/A (BUFx12f_ASAP7_75t_R)
+     1    9.76   20.16   28.26 2868.71 ^ u_bist/wire1855/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1854 (net)
+                 28.23    6.50 2875.22 ^ u_bist/wire1854/A (BUFx12f_ASAP7_75t_R)
+     1    8.03   18.00   29.53 2904.75 ^ u_bist/wire1854/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1853 (net)
+                 22.40    4.54 2909.29 ^ u_bist/wire1853/A (BUFx12f_ASAP7_75t_R)
+     1    7.94   17.68   27.59 2936.87 ^ u_bist/wire1853/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1852 (net)
+                 21.95    4.44 2941.31 ^ u_bist/wire1852/A (BUFx12f_ASAP7_75t_R)
+     1   62.45   50.05   43.05 2984.36 ^ u_bist/wire1852/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1851 (net)
+                716.42  225.89 3210.25 ^ u_bist/wire1851/A (BUFx12f_ASAP7_75t_R)
+     1    7.98   41.61  116.70 3326.95 ^ u_bist/wire1851/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1850 (net)
+                 43.90    4.80 3331.75 ^ u_bist/wire1850/A (BUFx12f_ASAP7_75t_R)
+     2    9.11   20.63   34.58 3366.32 ^ u_bist/wire1850/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1849 (net)
+                 26.77    5.80 3372.12 ^ u_bist/_1159_/D (OR5x1_ASAP7_75t_R)
+     1    1.15   24.00   37.76 3409.88 ^ u_bist/_1159_/Y (OR5x1_ASAP7_75t_R)
+                                         u_bist/_0230_ (net)
+                 24.01    0.11 3409.99 ^ u_bist/_1392_/A1 (OA21x2_ASAP7_75t_R)
+     1    2.55   28.15   40.80 3450.79 ^ u_bist/_1392_/Y (OA21x2_ASAP7_75t_R)
+                                         u_bist/_0109_ (net)
+                 28.19    0.54 3451.33 ^ u_bist/mism_q_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                               3451.33   data arrival time
+
+                  0.00 1250.00 1250.00   clock clk (rise edge)
+                          0.00 1250.00   clock network delay (ideal)
+                       -100.00 1150.00   clock uncertainty
+                          0.00 1150.00   clock reconvergence pessimism
+                               1150.00 ^ u_bist/mism_q_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                        -38.35 1111.65   library setup time
+                               1111.65   data required time
+-----------------------------------------------------------------------------
+                               1111.65   data required time
+                               -3451.33   data arrival time
+-----------------------------------------------------------------------------
+                               -2339.68   slack (VIOLATED)
+
+
+
+==========================================================================
+detailed place report_checks -unconstrained
+--------------------------------------------------------------------------
+Startpoint: u_bist/elem[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/mism_q_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ u_bist/elem[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     4    2.63   59.03   92.76   92.76 ^ u_bist/elem[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         u_bist/_0863_[0] (net)
+                 59.03    0.08   92.84 ^ u_bist/_1335_/A (BUFx2_ASAP7_75t_R)
+    10    6.52   53.98   58.92  151.77 ^ u_bist/_1335_/Y (BUFx2_ASAP7_75t_R)
+                                         u_bist/_0638_ (net)
+                 53.99    0.43  152.19 ^ u_bist/_1446_/A (INVx1_ASAP7_75t_R)
+    11    9.26  103.83   68.05  220.24 v u_bist/_1446_/Y (INVx1_ASAP7_75t_R)
+                                         u_bist/_0857_[0] (net)
+                103.83    0.18  220.42 v u_bist/_0954_/A1 (AO21x2_ASAP7_75t_R)
+     3   10.90   68.79   89.93  310.35 v u_bist/_0954_/Y (AO21x2_ASAP7_75t_R)
+                                         u_bist/_0767_ (net)
+                 68.85    1.40  311.75 v u_bist/wire2699/A (BUFx12f_ASAP7_75t_R)
+     1   17.74   22.53   46.21  357.96 v u_bist/wire2699/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2698 (net)
+                 67.00   19.63  377.59 v u_bist/wire2698/A (BUFx12f_ASAP7_75t_R)
+     1   17.55   22.34   45.68  423.27 v u_bist/wire2698/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2697 (net)
+                 65.68   19.21  442.48 v u_bist/wire2697/A (BUFx12f_ASAP7_75t_R)
+     1   17.58   22.27   45.35  487.83 v u_bist/wire2697/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2696 (net)
+                 65.86   19.28  507.10 v u_bist/wire2696/A (BUFx12f_ASAP7_75t_R)
+     2   16.34   22.15   44.85  551.95 v u_bist/wire2696/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2695 (net)
+                 57.36   16.41  568.36 v u_bist/wire2695/A (BUFx6f_ASAP7_75t_R)
+     1   11.47   29.63   46.38  614.74 v u_bist/wire2695/Y (BUFx6f_ASAP7_75t_R)
+                                         u_bist/net2694 (net)
+                 40.43    9.11  623.85 v u_bist/wire2694/A (BUFx12f_ASAP7_75t_R)
+     2   18.15   22.55   38.06  661.91 v u_bist/wire2694/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net2693 (net)
+                 63.09   18.27  680.18 v u_bist/wire2693/A (BUFx12_ASAP7_75t_R)
+     1    2.86   16.92   53.89  734.08 v u_bist/wire2693/Y (BUFx12_ASAP7_75t_R)
+                                         u_bist/net2692 (net)
+                 16.94    0.65  734.73 v u_bist/_0955_/A (BUFx8_ASAP7_75t_R)
+     2    6.69   21.80   42.29  777.02 v u_bist/_0955_/Y (BUFx8_ASAP7_75t_R)
+                                         u_bist/_0768_ (net)
+                 21.80    0.19  777.22 v u_bist/wire2371/A (BUFx16f_ASAP7_75t_R)
+     2   22.45   24.61   36.21  813.42 v u_bist/wire2371/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2370 (net)
+                 70.84   21.17  834.59 v u_bist/wire2370/A (BUFx16f_ASAP7_75t_R)
+     2   25.87   21.46   51.02  885.61 v u_bist/wire2370/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2369 (net)
+                116.69   36.27  921.88 v u_bist/wire2365/A (BUFx16f_ASAP7_75t_R)
+     2   27.44   23.62   61.39  983.27 v u_bist/wire2365/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2364 (net)
+                110.83   33.21 1016.48 v u_bist/_1066_/A (BUFx8_ASAP7_75t_R)
+     2   14.84   36.44   77.44 1093.93 v u_bist/_1066_/Y (BUFx8_ASAP7_75t_R)
+                                         u_bist/_0147_ (net)
+                 36.45    0.24 1094.16 v u_bist/load_slew2237/A (BUFx16f_ASAP7_75t_R)
+     1   21.54   20.12   41.62 1135.78 v u_bist/load_slew2237/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2236 (net)
+                 91.84   28.06 1163.84 v u_bist/wire2236/A (BUFx16f_ASAP7_75t_R)
+     3   20.32   28.64   55.85 1219.69 v u_bist/wire2236/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2235 (net)
+                 61.14   16.63 1236.32 v u_bist/wire2235/A (BUFx16f_ASAP7_75t_R)
+     1   56.58   31.66   56.23 1292.55 v u_bist/wire2235/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2234 (net)
+                580.04  182.94 1475.50 v u_bist/wire2234/A (BUFx16f_ASAP7_75t_R)
+     2   10.43   40.94  122.08 1597.58 v u_bist/wire2234/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2233 (net)
+                 40.95    0.31 1597.89 v u_bist/wire2233/A (BUFx16f_ASAP7_75t_R)
+     3    9.94   17.49   41.30 1639.19 v u_bist/wire2233/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2232 (net)
+                 23.50    5.32 1644.51 v u_bist/wire2232/A (BUFx16f_ASAP7_75t_R)
+     1   60.67   31.96   44.56 1689.06 v u_bist/wire2232/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2231 (net)
+                665.58  210.00 1899.06 v u_bist/wire2231/A (BUFx16f_ASAP7_75t_R)
+     2    9.98   44.76  132.12 2031.18 v u_bist/wire2231/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2230 (net)
+                 48.75    7.09 2038.27 v u_bist/wire2230/A (BUFx16f_ASAP7_75t_R)
+     1   26.57   21.43   46.54 2084.81 v u_bist/wire2230/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2229 (net)
+                134.06   41.69 2126.49 v u_bist/wire2229/A (BUFx16f_ASAP7_75t_R)
+     1   26.31   26.76   67.02 2193.52 v u_bist/wire2229/Y (BUFx16f_ASAP7_75t_R)
+                                         u_bist/net2228 (net)
+                133.55   41.23 2234.75 v u_bist/_1123_/A (OR3x1_ASAP7_75t_R)
+     1    3.16   46.43   83.58 2318.33 v u_bist/_1123_/Y (OR3x1_ASAP7_75t_R)
+                                         u_bist/_0198_ (net)
+                 46.46    0.62 2318.95 v u_bist/_1128_/A (NAND2x2_ASAP7_75t_R)
+     1    1.30   27.80   27.84 2346.79 ^ u_bist/_1128_/Y (NAND2x2_ASAP7_75t_R)
+                                         u_bist/_0202_ (net)
+                 27.80    0.07 2346.86 ^ u_bist/wire1860/A (BUFx6f_ASAP7_75t_R)
+     1    5.42   20.27   31.30 2378.17 ^ u_bist/wire1860/Y (BUFx6f_ASAP7_75t_R)
+                                         u_bist/net1859 (net)
+                 20.99    2.03 2380.20 ^ u_bist/wire1859/A (BUFx12f_ASAP7_75t_R)
+     1    7.98   17.70   27.14 2407.34 ^ u_bist/wire1859/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1858 (net)
+                 22.04    4.48 2411.82 ^ u_bist/wire1858/A (BUFx12f_ASAP7_75t_R)
+     1   62.39   50.02   43.06 2454.88 ^ u_bist/wire1858/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1857 (net)
+                715.22  225.51 2680.39 ^ u_bist/wire1857/A (BUFx12f_ASAP7_75t_R)
+     1    7.97   41.55  116.55 2796.94 ^ u_bist/wire1857/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1856 (net)
+                 43.82    4.78 2801.73 ^ u_bist/wire1856/A (BUFx12f_ASAP7_75t_R)
+     1    7.95   18.44   34.25 2835.97 ^ u_bist/wire1856/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1855 (net)
+                 22.63    4.48 2840.45 ^ u_bist/wire1855/A (BUFx12f_ASAP7_75t_R)
+     1    9.76   20.16   28.26 2868.71 ^ u_bist/wire1855/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1854 (net)
+                 28.23    6.50 2875.22 ^ u_bist/wire1854/A (BUFx12f_ASAP7_75t_R)
+     1    8.03   18.00   29.53 2904.75 ^ u_bist/wire1854/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1853 (net)
+                 22.40    4.54 2909.29 ^ u_bist/wire1853/A (BUFx12f_ASAP7_75t_R)
+     1    7.94   17.68   27.59 2936.87 ^ u_bist/wire1853/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1852 (net)
+                 21.95    4.44 2941.31 ^ u_bist/wire1852/A (BUFx12f_ASAP7_75t_R)
+     1   62.45   50.05   43.05 2984.36 ^ u_bist/wire1852/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1851 (net)
+                716.42  225.89 3210.25 ^ u_bist/wire1851/A (BUFx12f_ASAP7_75t_R)
+     1    7.98   41.61  116.70 3326.95 ^ u_bist/wire1851/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1850 (net)
+                 43.90    4.80 3331.75 ^ u_bist/wire1850/A (BUFx12f_ASAP7_75t_R)
+     2    9.11   20.63   34.58 3366.32 ^ u_bist/wire1850/Y (BUFx12f_ASAP7_75t_R)
+                                         u_bist/net1849 (net)
+                 26.77    5.80 3372.12 ^ u_bist/_1159_/D (OR5x1_ASAP7_75t_R)
+     1    1.15   24.00   37.76 3409.88 ^ u_bist/_1159_/Y (OR5x1_ASAP7_75t_R)
+                                         u_bist/_0230_ (net)
+                 24.01    0.11 3409.99 ^ u_bist/_1392_/A1 (OA21x2_ASAP7_75t_R)
+     1    2.55   28.15   40.80 3450.79 ^ u_bist/_1392_/Y (OA21x2_ASAP7_75t_R)
+                                         u_bist/_0109_ (net)
+                 28.19    0.54 3451.33 ^ u_bist/mism_q_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                               3451.33   data arrival time
+
+                  0.00 1250.00 1250.00   clock clk (rise edge)
+                          0.00 1250.00   clock network delay (ideal)
+                       -100.00 1150.00   clock uncertainty
+                          0.00 1150.00   clock reconvergence pessimism
+                               1150.00 ^ u_bist/mism_q_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                        -38.35 1111.65   library setup time
+                               1111.65   data required time
+-----------------------------------------------------------------------------
+                               1111.65   data required time
+                               -3451.33   data arrival time
+-----------------------------------------------------------------------------
+                               -2339.68   slack (VIOLATED)
+
+
+
+==========================================================================
+detailed place report_check_types -max_slew -max_cap -max_fanout -violators
+--------------------------------------------------------------------------
+max slew
+
+Pin                                    Limit    Slew   Slack
+------------------------------------------------------------
+u_bist/fobuf_1499/A                   200.00 1075.57 -875.57 (VIOLATED)
+u_bist/wire2653/A                     200.00  877.44 -677.44 (VIOLATED)
+u_bist/fobuf_1501/A                   200.00  859.22 -659.22 (VIOLATED)
+_2384_/B                              200.00  856.33 -656.33 (VIOLATED)
+u_bist/wire2006/A                     200.00  833.68 -633.68 (VIOLATED)
+u_bist/wire1867/A                     200.00  797.30 -597.30 (VIOLATED)
+u_bank/wire2183/A                     200.00  792.89 -592.89 (VIOLATED)
+u_bank/wire2221/A                     200.00  788.67 -588.67 (VIOLATED)
+u_bank/wire2282/A                     200.00  779.19 -579.19 (VIOLATED)
+u_bank/wire2136/A                     200.00  770.26 -570.26 (VIOLATED)
+tq_wdata[127]_reg/D                   200.00  770.04 -570.04 (VIOLATED)
+u_bist/wire2362/A                     200.00  767.63 -567.63 (VIOLATED)
+tq_wdata[255]_reg/D                   200.00  767.41 -567.41 (VIOLATED)
+u_bist/wire2225/A                     200.00  766.89 -566.89 (VIOLATED)
+u_bist/wire2054/A                     200.00  766.68 -566.68 (VIOLATED)
+u_bank/wire2318/A                     200.00  748.70 -548.70 (VIOLATED)
+u_bank/wire2579/A                     200.00  745.48 -545.48 (VIOLATED)
+u_bank/wire2242/A                     200.00  732.37 -532.37 (VIOLATED)
+u_bist/wire1820/A                     200.00  731.41 -531.41 (VIOLATED)
+tq_wdata[383]_reg/QN                  200.00  729.67 -529.67 (VIOLATED)
+_2307_/A1                             200.00  725.61 -525.61 (VIOLATED)
+wire4068/A                            200.00  719.49 -519.49 (VIOLATED)
+_2285_/A1                             200.00  719.38 -519.38 (VIOLATED)
+u_bist/wire1851/A                     200.00  716.42 -516.42 (VIOLATED)
+u_bist/wire1857/A                     200.00  715.22 -515.22 (VIOLATED)
+u_bank/wire2179/A                     200.00  714.21 -514.21 (VIOLATED)
+wire4321/A                            200.00  713.86 -513.86 (VIOLATED)
+u_bank/wire2263/A                     200.00  713.21 -513.21 (VIOLATED)
+u_bist/wire1810/A                     200.00  708.40 -508.40 (VIOLATED)
+wire4081/A                            200.00  705.15 -505.15 (VIOLATED)
+_2074_/A1                             200.00  705.07 -505.07 (VIOLATED)
+_2096_/A1                             200.00  703.02 -503.02 (VIOLATED)
+u_bist/wire1894/A                     200.00  699.81 -499.81 (VIOLATED)
+u_bist/wire2359/A                     200.00  695.86 -495.86 (VIOLATED)
+u_bist/wire1898/A                     200.00  694.66 -494.66 (VIOLATED)
+u_bist/wire2047/A                     200.00  687.36 -487.36 (VIOLATED)
+u_bist/wire4042/A                     200.00  686.98 -486.98 (VIOLATED)
+u_bank/wire2203/A                     200.00  681.98 -481.98 (VIOLATED)
+_2296_/A                              200.00  678.11 -478.11 (VIOLATED)
+u_bist/wire1883/A                     200.00  675.66 -475.66 (VIOLATED)
+wire4066/A                            200.00  675.02 -475.02 (VIOLATED)
+u_bist/wire1888/A                     200.00  674.88 -474.88 (VIOLATED)
+_2273_/A                              200.00  672.63 -472.63 (VIOLATED)
+u_bist/wire2231/A                     200.00  670.54 -470.54 (VIOLATED)
+u_bank/wire2311/A                     200.00  665.75 -465.75 (VIOLATED)
+u_bank/wire2307/A                     200.00  664.98 -464.98 (VIOLATED)
+u_bist/wire2082/A                     200.00  663.61 -463.61 (VIOLATED)
+_1885_/A1                             200.00  659.56 -459.56 (VIOLATED)
+wire4102/A                            200.00  657.98 -457.98 (VIOLATED)
+_2085_/A                              200.00  657.54 -457.54 (VIOLATED)
+tq_wdata[191]_reg/D                   200.00  657.23 -457.23 (VIOLATED)
+_2063_/A                              200.00  654.00 -454.00 (VIOLATED)
+u_bank/_6012_/A                       200.00  647.29 -447.29 (VIOLATED)
+u_bank/wire2272/A                     200.00  645.96 -445.96 (VIOLATED)
+u_bank/wire2145/A                     200.00  643.66 -443.66 (VIOLATED)
+u_bank/wire2152/A                     200.00  642.90 -442.90 (VIOLATED)
+u_bank/wire2248/A                     200.00  641.03 -441.03 (VIOLATED)
+u_bist/wire2041/A                     200.00  639.73 -439.73 (VIOLATED)
+u_bist/wire2039/A                     200.00  639.05 -439.05 (VIOLATED)
+u_bank/wire2768/A                     200.00  637.80 -437.80 (VIOLATED)
+u_bank/wire2218/A                     200.00  636.15 -436.15 (VIOLATED)
+tq_wdata[319]_reg/D                   200.00  635.01 -435.01 (VIOLATED)
+u_bist/wire2023/A                     200.00  632.04 -432.04 (VIOLATED)
+u_bank/wire2199/A                     200.00  631.24 -431.24 (VIOLATED)
+u_bank/wire2195/A                     200.00  630.62 -430.62 (VIOLATED)
+wire4083/A                            200.00  629.04 -429.04 (VIOLATED)
+_1874_/A                              200.00  626.77 -426.77 (VIOLATED)
+wire4097/A                            200.00  626.26 -426.26 (VIOLATED)
+u_bank/u_mem/wire2267/A               200.00  624.71 -424.71 (VIOLATED)
+u_bank/wire2175/A                     200.00  624.25 -424.25 (VIOLATED)
+u_bist/wire1945/A                     200.00  623.32 -423.32 (VIOLATED)
+u_bist/wire1941/A                     200.00  622.76 -422.76 (VIOLATED)
+wire4203/A                            200.00  621.53 -421.53 (VIOLATED)
+u_bist/wire1943/A                     200.00  620.96 -420.96 (VIOLATED)
+u_bist/wire1947/A                     200.00  620.58 -420.58 (VIOLATED)
+wire4085/A                            200.00  620.58 -420.58 (VIOLATED)
+u_bank/wire2255/A                     200.00  620.18 -420.18 (VIOLATED)
+u_bank/wire2571/A                     200.00  619.99 -419.99 (VIOLATED)
+wire1932/A                            200.00  619.65 -419.65 (VIOLATED)
+u_bank/wire2251/A                     200.00  619.38 -419.38 (VIOLATED)
+wire4100/A                            200.00  618.36 -418.36 (VIOLATED)
+_1613_/A                              200.00  615.85 -415.85 (VIOLATED)
+_1589_/A                              200.00  615.59 -415.59 (VIOLATED)
+u_bist/wire1993/A                     200.00  615.55 -415.55 (VIOLATED)
+wire4142/A                            200.00  615.38 -415.38 (VIOLATED)
+wire4144/A                            200.00  615.37 -415.37 (VIOLATED)
+_2138_/A                              200.00  613.65 -413.65 (VIOLATED)
+_1876_/A                              200.00  613.42 -413.42 (VIOLATED)
+u_bank/wire2165/A                     200.00  613.39 -413.39 (VIOLATED)
+wire4095/A                            200.00  612.77 -412.77 (VIOLATED)
+wire4205/A                            200.00  612.77 -412.77 (VIOLATED)
+u_bist/wire1861/A                     200.00  611.80 -411.80 (VIOLATED)
+u_bist/wire1840/A                     200.00  611.19 -411.19 (VIOLATED)
+u_bank/wire2171/A                     200.00  610.81 -410.81 (VIOLATED)
+wire4062/A                            200.00  610.54 -410.54 (VIOLATED)
+u_bist/wire1844/A                     200.00  610.27 -410.27 (VIOLATED)
+u_bank/u_mem/wire2210/A               200.00  609.71 -409.71 (VIOLATED)
+u_bank/wire2188/A                     200.00  607.73 -407.73 (VIOLATED)
+u_bank/wire2348/A                     200.00  607.17 -407.17 (VIOLATED)
+u_bist/wire2124/A                     200.00  607.13 -407.13 (VIOLATED)
+u_bank/wire2130/A                     200.00  606.57 -406.57 (VIOLATED)
+_2181_/A                              200.00  606.23 -406.23 (VIOLATED)
+_2444_/A                              200.00  606.12 -406.12 (VIOLATED)
+u_bank/wire2327/A                     200.00  605.65 -405.65 (VIOLATED)
+u_bank/wire2323/A                     200.00  605.46 -405.46 (VIOLATED)
+u_bank/wire2334/A                     200.00  605.46 -405.46 (VIOLATED)
+u_bank/wire2338/A                     200.00  605.46 -405.46 (VIOLATED)
+u_bist/wire1876/A                     200.00  604.96 -404.96 (VIOLATED)
+u_bist/wire1949/A                     200.00  604.80 -404.80 (VIOLATED)
+wire4223/A                            200.00  604.63 -404.63 (VIOLATED)
+u_bist/wire1968/A                     200.00  604.44 -404.44 (VIOLATED)
+wire4153/A                            200.00  604.44 -404.44 (VIOLATED)
+wire4064/A                            200.00  604.42 -404.42 (VIOLATED)
+u_bank/u_mem/wire2212/A               200.00  603.87 -403.87 (VIOLATED)
+u_bank/u_mem/wire2214/A               200.00  603.87 -403.87 (VIOLATED)
+u_bank/wire2344/A                     200.00  603.43 -403.43 (VIOLATED)
+wire4151/A                            200.00  602.60 -402.60 (VIOLATED)
+wire4136/A                            200.00  602.58 -402.58 (VIOLATED)
+wire1926/A                            200.00  602.03 -402.03 (VIOLATED)
+u_bist/wire1879/A                     200.00  601.78 -401.78 (VIOLATED)
+wire4211/A                            200.00  601.29 -401.29 (VIOLATED)
+wire4163/A                            200.00  601.11 -401.11 (VIOLATED)
+wire4073/A                            200.00  601.04 -401.04 (VIOLATED)
+u_bist/wire1908/A                     200.00  600.50 -400.50 (VIOLATED)
+wire4184/A                            200.00  600.21 -400.21 (VIOLATED)
+wire4209/A                            200.00  599.82 -399.82 (VIOLATED)
+u_bist/wire1904/A                     200.00  599.02 -399.02 (VIOLATED)
+u_bank/wire2158/A                     200.00  598.91 -398.91 (VIOLATED)
+u_bist/wire2091/A                     200.00  598.72 -398.72 (VIOLATED)
+u_bank/u_mem/wire3294/A               200.00  598.48 -398.48 (VIOLATED)
+_2148_/A                              200.00  598.21 -398.21 (VIOLATED)
+u_bist/wire1915/A                     200.00  598.13 -398.13 (VIOLATED)
+u_bist/wire1802/A                     200.00  598.00 -398.00 (VIOLATED)
+_2124_/A                              200.00  597.99 -397.99 (VIOLATED)
+_2100_/A                              200.00  597.88 -397.88 (VIOLATED)
+u_bist/wire1891/A                     200.00  597.79 -397.79 (VIOLATED)
+u_bank/u_mem/wire3332/A               200.00  597.38 -397.38 (VIOLATED)
+wire4056/A                            200.00  597.37 -397.37 (VIOLATED)
+wire4171/A                            200.00  596.52 -396.52 (VIOLATED)
+wire4077/A                            200.00  596.52 -396.52 (VIOLATED)
+_2114_/A                              200.00  596.51 -396.51 (VIOLATED)
+u_bank/wire2302/A                     200.00  596.46 -396.46 (VIOLATED)
+wire4182/A                            200.00  596.16 -396.16 (VIOLATED)
+u_bank/u_mem/wire3940/A               200.00  595.91 -395.91 (VIOLATED)
+u_bank/u_mem/wire3142/A               200.00  595.73 -395.73 (VIOLATED)
+u_bist/wire2678/A                     200.00  595.69 -395.69 (VIOLATED)
+u_bist/_1348_/A1                      200.00  595.65 -395.65 (VIOLATED)
+u_bank/u_mem/wire2544/A               200.00  595.60 -395.60 (VIOLATED)
+u_bank/u_mem/wire4018/A               200.00  595.54 -395.54 (VIOLATED)
+u_bank/u_mem/wire3322/A               200.00  595.36 -395.36 (VIOLATED)
+u_bank/u_mem/wire3738/A               200.00  595.36 -395.36 (VIOLATED)
+u_bank/u_mem/wire3446/A               200.00  595.36 -395.36 (VIOLATED)
+u_bist/wire1911/A                     200.00  595.36 -395.36 (VIOLATED)
+wire4178/A                            200.00  595.25 -395.25 (VIOLATED)
+_2182_/A                              200.00  595.19 -395.19 (VIOLATED)
+u_bank/u_mem/wire3370/A               200.00  595.18 -395.18 (VIOLATED)
+u_bank/u_mem/wire3609/A               200.00  595.18 -395.18 (VIOLATED)
+_2209_/A                              200.00  595.07 -395.07 (VIOLATED)
+u_bank/u_mem/wire3246/A               200.00  594.99 -394.99 (VIOLATED)
+u_bank/u_mem/wire3284/A               200.00  594.99 -394.99 (VIOLATED)
+u_bank/u_mem/wire3778/A               200.00  594.99 -394.99 (VIOLATED)
+u_bank/u_mem/wire3657/A               200.00  594.99 -394.99 (VIOLATED)
+u_bank/u_mem/wire3348/A               200.00  594.99 -394.99 (VIOLATED)
+u_bank/u_mem/wire4008/A               200.00  594.81 -394.81 (VIOLATED)
+u_bank/u_mem/wire2718/A               200.00  594.81 -394.81 (VIOLATED)
+u_bank/u_mem/wire2939/A               200.00  594.81 -394.81 (VIOLATED)
+u_bank/u_mem/wire2859/A               200.00  594.81 -394.81 (VIOLATED)
+u_bank/u_mem/wire3056/A               200.00  594.63 -394.63 (VIOLATED)
+u_bank/u_mem/wire2949/A               200.00  594.63 -394.63 (VIOLATED)
+u_bank/u_mem/wire3522/A               200.00  594.63 -394.63 (VIOLATED)
+u_bank/u_mem/wire3902/A               200.00  594.63 -394.63 (VIOLATED)
+u_bank/u_mem/wire2967/A               200.00  594.32 -394.32 (VIOLATED)
+u_bank/wire2575/A                     200.00  594.31 -394.31 (VIOLATED)
+u_bank/u_mem/wire3018/A               200.00  594.26 -394.26 (VIOLATED)
+u_bank/u_mem/wire3930/A               200.00  594.26 -394.26 (VIOLATED)
+u_bank/u_mem/wire3748/A               200.00  594.26 -394.26 (VIOLATED)
+u_bank/wire2776/A                     200.00  594.26 -394.26 (VIOLATED)
+u_bank/u_mem/wire3256/A               200.00  594.08 -394.08 (VIOLATED)
+u_bist/wire2707/A                     200.00  594.08 -394.08 (VIOLATED)
+u_bank/u_mem/wire3170/A               200.00  594.08 -394.08 (VIOLATED)
+u_bank/u_mem/wire3816/A               200.00  594.08 -394.08 (VIOLATED)
+u_bank/u_mem/wire3854/A               200.00  594.08 -394.08 (VIOLATED)
+u_bank/u_mem/wire3892/A               200.00  594.08 -394.08 (VIOLATED)
+u_bank/u_mem/wire3704/A               200.00  594.08 -394.08 (VIOLATED)
+u_bank/u_mem/wire3788/A               200.00  594.08 -394.08 (VIOLATED)
+u_bank/u_mem/wire3463/A               200.00  593.90 -393.90 (VIOLATED)
+u_bank/u_mem/wire3132/A               200.00  593.90 -393.90 (VIOLATED)
+u_bank/u_mem/wire3082/A               200.00  593.89 -393.89 (VIOLATED)
+u_bank/u_mem/wire3805/A               200.00  593.72 -393.72 (VIOLATED)
+u_bank/u_mem/wire3272/A               200.00  593.53 -393.53 (VIOLATED)
+u_bank/u_mem/wire2560/A               200.00  593.53 -393.53 (VIOLATED)
+u_bank/u_mem/wire3094/A               200.00  593.35 -393.35 (VIOLATED)
+u_bank/u_mem/wire3551/A               200.00  593.35 -393.35 (VIOLATED)
+u_bank/u_mem/wire3979/A               200.00  593.35 -393.35 (VIOLATED)
+u_bist/wire1980/A                     200.00  593.23 -393.23 (VIOLATED)
+u_bank/u_mem/wire3398/A               200.00  593.17 -393.17 (VIOLATED)
+u_bank/u_mem/wire3006/A               200.00  593.16 -393.16 (VIOLATED)
+u_bank/u_mem/wire3196/A               200.00  593.16 -393.16 (VIOLATED)
+u_bank/u_mem/wire3120/A               200.00  592.98 -392.98 (VIOLATED)
+u_bank/u_mem/wire3387/A               200.00  592.81 -392.81 (VIOLATED)
+u_bank/u_mem/wire3674/A               200.00  592.81 -392.81 (VIOLATED)
+u_bank/u_mem/wire3997/A               200.00  592.80 -392.80 (VIOLATED)
+u_bank/u_mem/wire3310/A               200.00  592.80 -392.80 (VIOLATED)
+u_bist/wire1957/A                     200.00  592.62 -392.62 (VIOLATED)
+u_bist/wire1901/A                     200.00  592.62 -392.62 (VIOLATED)
+u_bank/u_mem/wire3958/A               200.00  592.49 -392.49 (VIOLATED)
+u_bank/u_mem/wire3539/A               200.00  592.44 -392.44 (VIOLATED)
+u_bank/u_mem/wire3578/A               200.00  592.44 -392.44 (VIOLATED)
+u_bank/u_mem/wire3843/A               200.00  592.44 -392.44 (VIOLATED)
+u_bank/u_mem/wire2980/A               200.00  592.44 -392.44 (VIOLATED)
+u_bank/u_mem/wire4036/A               200.00  592.44 -392.44 (VIOLATED)
+u_bank/u_mem/wire3721/A               200.00  592.26 -392.26 (VIOLATED)
+u_bank/u_mem/wire3919/A               200.00  592.26 -392.26 (VIOLATED)
+u_bank/u_mem/wire3694/A               200.00  592.25 -392.25 (VIOLATED)
+u_bank/u_mem/wire3234/A               200.00  592.25 -392.25 (VIOLATED)
+u_bist/wire1923/A                     200.00  592.24 -392.24 (VIOLATED)
+u_bank/u_mem/wire3881/A               200.00  592.07 -392.07 (VIOLATED)
+u_bank/u_mem/wire2534/A               200.00  592.07 -392.07 (VIOLATED)
+u_bank/u_mem/wire3408/A               200.00  592.07 -392.07 (VIOLATED)
+u_bank/u_mem/wire3066/A               200.00  591.90 -391.90 (VIOLATED)
+u_bank/u_mem/wire3104/A               200.00  591.90 -391.90 (VIOLATED)
+u_bank/u_mem/wire3180/A               200.00  591.89 -391.89 (VIOLATED)
+u_bank/u_mem/wire2746/A               200.00  591.89 -391.89 (VIOLATED)
+u_bank/u_mem/wire3647/A               200.00  591.89 -391.89 (VIOLATED)
+wire4075/A                            200.00  591.78 -391.78 (VIOLATED)
+u_bist/wire1998/A                     200.00  591.77 -391.77 (VIOLATED)
+u_bank/u_mem/wire2877/A               200.00  591.71 -391.71 (VIOLATED)
+u_bank/u_mem/wire3474/A               200.00  591.71 -391.71 (VIOLATED)
+u_bank/u_mem/wire3561/A               200.00  591.71 -391.71 (VIOLATED)
+u_bank/u_mem/wire3864/A               200.00  591.71 -391.71 (VIOLATED)
+u_bist/wire2690/A                     200.00  591.71 -391.71 (VIOLATED)
+u_bank/u_mem/wire3044/A               200.00  591.70 -391.70 (VIOLATED)
+u_bank/u_mem/wire3158/A               200.00  591.70 -391.70 (VIOLATED)
+u_bank/u_mem/wire2849/A               200.00  591.52 -391.52 (VIOLATED)
+u_bank/u_mem/wire3208/A               200.00  591.52 -391.52 (VIOLATED)
+u_bank/u_mem/wire3512/A               200.00  591.52 -391.52 (VIOLATED)
+u_bank/u_mem/wire3501/A               200.00  591.35 -391.35 (VIOLATED)
+u_bank/u_mem/wire3360/A               200.00  591.34 -391.34 (VIOLATED)
+u_bank/u_mem/wire3436/A               200.00  591.34 -391.34 (VIOLATED)
+u_bist/wire2683/A                     200.00  591.04 -391.04 (VIOLATED)
+u_bank/u_mem/wire3599/A               200.00  590.98 -390.98 (VIOLATED)
+u_bank/u_mem/wire3969/A               200.00  590.98 -390.98 (VIOLATED)
+u_bank/u_mem/wire3826/A               200.00  590.98 -390.98 (VIOLATED)
+u_bank/wire2514/A                     200.00  590.97 -390.97 (VIOLATED)
+wire4180/A                            200.00  590.86 -390.86 (VIOLATED)
+u_bist/wire1935/A                     200.00  590.83 -390.83 (VIOLATED)
+u_bank/u_mem/wire2990/A               200.00  590.80 -390.80 (VIOLATED)
+u_bank/u_mem/wire3028/A               200.00  590.80 -390.80 (VIOLATED)
+u_bank/u_mem/wire3425/A               200.00  590.80 -390.80 (VIOLATED)
+u_bank/u_mem/wire3626/A               200.00  590.80 -390.80 (VIOLATED)
+u_bank/u_mem/wire3765/A               200.00  590.80 -390.80 (VIOLATED)
+u_bank/u_mem/wire3218/A               200.00  590.80 -390.80 (VIOLATED)
+u_bank/u_mem/wire2728/A               200.00  590.79 -390.79 (VIOLATED)
+u_bank/u_mem/wire3484/A               200.00  590.79 -390.79 (VIOLATED)
+u_bist/wire2703/A                     200.00  590.79 -390.79 (VIOLATED)
+wire4159/A                            200.00  590.30 -390.30 (VIOLATED)
+wire4060/A                            200.00  590.05 -390.05 (VIOLATED)
+u_bist/wire2050/A                     200.00  589.57 -389.57 (VIOLATED)
+_2420_/A                              200.00  589.57 -389.57 (VIOLATED)
+wire4138/A                            200.00  589.57 -389.57 (VIOLATED)
+u_bist/wire2686/A                     200.00  589.48 -389.48 (VIOLATED)
+wire4174/A                            200.00  589.03 -389.03 (VIOLATED)
+wire4225/A                            200.00  589.03 -389.03 (VIOLATED)
+wire4201/A                            200.00  588.86 -388.86 (VIOLATED)
+wire4079/A                            200.00  588.67 -388.67 (VIOLATED)
+u_bist/wire2013/A                     200.00  588.67 -388.67 (VIOLATED)
+u_bist/wire1984/A                     200.00  588.67 -388.67 (VIOLATED)
+u_bist/wire1989/A                     200.00  588.67 -388.67 (VIOLATED)
+u_bist/wire1929/A                     200.00  588.67 -388.67 (VIOLATED)
+u_bist/wire4044/A                     200.00  588.66 -388.66 (VIOLATED)
+wire4235/A                            200.00  588.66 -388.66 (VIOLATED)
+u_bist/wire2021/A                     200.00  588.66 -388.66 (VIOLATED)
+wire4169/A                            200.00  588.50 -388.50 (VIOLATED)
+u_bist/wire2667/A                     200.00  588.46 -388.46 (VIOLATED)
+u_bist/wire2663/A                     200.00  588.37 -388.37 (VIOLATED)
+wire4165/A                            200.00  588.30 -388.30 (VIOLATED)
+wire4071/A                            200.00  588.27 -388.27 (VIOLATED)
+wire2001/A                            200.00  587.94 -387.94 (VIOLATED)
+wire4147/A                            200.00  587.76 -387.76 (VIOLATED)
+wire4188/A                            200.00  587.58 -387.58 (VIOLATED)
+wire1938/A                            200.00  587.57 -387.57 (VIOLATED)
+wire4207/A                            200.00  587.39 -387.39 (VIOLATED)
+_1928_/A                              200.00  587.16 -387.16 (VIOLATED)
+wire4186/A                            200.00  586.68 -386.68 (VIOLATED)
+wire4058/A                            200.00  585.77 -385.77 (VIOLATED)
+wire4316/A                            200.00  585.71 -385.71 (VIOLATED)
+u_bist/wire2062/A                     200.00  585.11 -385.11 (VIOLATED)
+wire4054/A                            200.00  584.67 -384.67 (VIOLATED)
+wire4131/A                            200.00  584.66 -384.66 (VIOLATED)
+u_bist/wire2234/A                     200.00  584.61 -384.61 (VIOLATED)
+u_bist/wire2368/A                     200.00  584.57 -384.57 (VIOLATED)
+_1903_/A                              200.00  583.92 -383.92 (VIOLATED)
+_1877_/A                              200.00  583.74 -383.74 (VIOLATED)
+_1809_/A                              200.00  583.34 -383.34 (VIOLATED)
+_1833_/A                              200.00  583.26 -383.26 (VIOLATED)
+_2234_/A                              200.00  581.70 -381.70 (VIOLATED)
+_1844_/A                              200.00  574.29 -374.29 (VIOLATED)
+_1819_/A                              200.00  574.24 -374.24 (VIOLATED)
+_2430_/A                              200.00  574.10 -374.10 (VIOLATED)
+_2454_/A                              200.00  574.08 -374.08 (VIOLATED)
+u_bist/fobuf_1497/A                   200.00  566.19 -366.19 (VIOLATED)
+u_bist/_1015_/A                       200.00  564.96 -364.96 (VIOLATED)
+tq_wdata[63]_reg/D                    200.00  557.91 -357.91 (VIOLATED)
+u_bist/_1243_/A                       200.00  555.87 -355.87 (VIOLATED)
+_1687_/A                              200.00  554.02 -354.02 (VIOLATED)
+u_bist/_1028_/A                       200.00  551.21 -351.21 (VIOLATED)
+u_bist/wire2009/A                     200.00  544.16 -344.16 (VIOLATED)
+u_bist/fobuf_1500/A                   200.00  542.64 -342.64 (VIOLATED)
+fanout4315/A                          200.00  504.43 -304.43 (VIOLATED)
+wire4328/A                            200.00  457.09 -257.09 (VIOLATED)
+u_bist/wire2674/A                     200.00  433.52 -233.52 (VIOLATED)
+u_bist/wire4047/A                     200.00  412.38 -212.38 (VIOLATED)
+u_bist/_0923_/B                       200.00  412.30 -212.30 (VIOLATED)
+rdata[357]                            200.00  389.89 -189.89 (VIOLATED)
+rdata[355]                            200.00  389.58 -189.58 (VIOLATED)
+rdata[361]                            200.00  389.56 -189.56 (VIOLATED)
+rdata[295]                            200.00  388.21 -188.21 (VIOLATED)
+rdata[288]                            200.00  387.95 -187.95 (VIOLATED)
+rdata[296]                            200.00  387.73 -187.73 (VIOLATED)
+rdata[383]                            200.00  386.44 -186.44 (VIOLATED)
+rdata[301]                            200.00  385.94 -185.94 (VIOLATED)
+rdata[381]                            200.00  384.95 -184.95 (VIOLATED)
+rdata[352]                            200.00  384.61 -184.61 (VIOLATED)
+rdata[298]                            200.00  384.55 -184.55 (VIOLATED)
+wire4325/A                            200.00  384.23 -184.23 (VIOLATED)
+rdata[362]                            200.00  384.17 -184.17 (VIOLATED)
+rdata[294]                            200.00  384.12 -184.12 (VIOLATED)
+rdata[358]                            200.00  384.02 -184.02 (VIOLATED)
+rdata[373]                            200.00  384.00 -184.00 (VIOLATED)
+rdata[364]                            200.00  383.66 -183.66 (VIOLATED)
+rdata[363]                            200.00  383.54 -183.54 (VIOLATED)
+rdata[359]                            200.00  383.51 -183.51 (VIOLATED)
+rdata[303]                            200.00  383.49 -183.49 (VIOLATED)
+rdata[319]                            200.00  383.39 -183.39 (VIOLATED)
+rdata[365]                            200.00  383.24 -183.24 (VIOLATED)
+rdata[367]                            200.00  382.77 -182.77 (VIOLATED)
+rdata[300]                            200.00  382.61 -182.61 (VIOLATED)
+rdata[297]                            200.00  382.39 -182.39 (VIOLATED)
+rdata[356]                            200.00  382.16 -182.16 (VIOLATED)
+rdata[305]                            200.00  381.65 -181.65 (VIOLATED)
+rdata[354]                            200.00  381.53 -181.53 (VIOLATED)
+rdata[353]                            200.00  381.45 -181.45 (VIOLATED)
+rdata[310]                            200.00  381.39 -181.39 (VIOLATED)
+rdata[380]                            200.00  381.35 -181.35 (VIOLATED)
+rdata[311]                            200.00  381.20 -181.20 (VIOLATED)
+rdata[289]                            200.00  381.09 -181.09 (VIOLATED)
+rdata[299]                            200.00  380.92 -180.92 (VIOLATED)
+rdata[293]                            200.00  380.75 -180.75 (VIOLATED)
+rdata[366]                            200.00  380.74 -180.74 (VIOLATED)
+rdata[360]                            200.00  380.72 -180.72 (VIOLATED)
+rdata[292]                            200.00  380.70 -180.70 (VIOLATED)
+rdata[374]                            200.00  380.21 -180.21 (VIOLATED)
+rdata[320]                            200.00  379.34 -179.34 (VIOLATED)
+rdata[307]                            200.00  379.34 -179.34 (VIOLATED)
+rdata[318]                            200.00  379.09 -179.09 (VIOLATED)
+rdata[312]                            200.00  378.69 -178.69 (VIOLATED)
+rdata[309]                            200.00  378.45 -178.45 (VIOLATED)
+rdata[291]                            200.00  378.31 -178.31 (VIOLATED)
+rdata[375]                            200.00  378.16 -178.16 (VIOLATED)
+rdata[377]                            200.00  378.01 -178.01 (VIOLATED)
+rdata[369]                            200.00  377.68 -177.68 (VIOLATED)
+rdata[290]                            200.00  377.66 -177.66 (VIOLATED)
+rdata[302]                            200.00  377.32 -177.32 (VIOLATED)
+rdata[306]                            200.00  377.26 -177.26 (VIOLATED)
+rdata[308]                            200.00  376.89 -176.89 (VIOLATED)
+rdata[313]                            200.00  376.77 -176.77 (VIOLATED)
+rdata[379]                            200.00  376.51 -176.51 (VIOLATED)
+rdata[372]                            200.00  375.96 -175.96 (VIOLATED)
+rdata[315]                            200.00  375.61 -175.61 (VIOLATED)
+rdata[371]                            200.00  375.46 -175.46 (VIOLATED)
+rdata[370]                            200.00  375.21 -175.21 (VIOLATED)
+rdata[378]                            200.00  375.19 -175.19 (VIOLATED)
+rdata[368]                            200.00  375.13 -175.13 (VIOLATED)
+rdata[304]                            200.00  375.13 -175.13 (VIOLATED)
+rdata[314]                            200.00  375.02 -175.02 (VIOLATED)
+rdata[334]                            200.00  374.81 -174.81 (VIOLATED)
+rdata[376]                            200.00  374.80 -174.80 (VIOLATED)
+rdata[326]                            200.00  374.52 -174.52 (VIOLATED)
+rdata[332]                            200.00  374.47 -174.47 (VIOLATED)
+rdata[382]                            200.00  374.07 -174.07 (VIOLATED)
+rdata[321]                            200.00  373.96 -173.96 (VIOLATED)
+u_bist/wire4048/A                     200.00  373.63 -173.63 (VIOLATED)
+rdata[328]                            200.00  373.58 -173.58 (VIOLATED)
+rdata[317]                            200.00  373.35 -173.35 (VIOLATED)
+rdata[331]                            200.00  373.33 -173.33 (VIOLATED)
+rdata[316]                            200.00  373.08 -173.08 (VIOLATED)
+rdata[347]                            200.00  372.47 -172.47 (VIOLATED)
+u_bist/wire2064/A                     200.00  371.56 -171.56 (VIOLATED)
+rdata[329]                            200.00  371.46 -171.46 (VIOLATED)
+rdata[324]                            200.00  371.05 -171.05 (VIOLATED)
+rdata[322]                            200.00  371.00 -171.00 (VIOLATED)
+rdata[327]                            200.00  370.77 -170.77 (VIOLATED)
+rdata[346]                            200.00  370.17 -170.17 (VIOLATED)
+rdata[330]                            200.00  369.45 -169.45 (VIOLATED)
+rdata[343]                            200.00  369.13 -169.13 (VIOLATED)
+rdata[333]                            200.00  368.31 -168.31 (VIOLATED)
+rdata[337]                            200.00  367.96 -167.96 (VIOLATED)
+rdata[348]                            200.00  367.77 -167.77 (VIOLATED)
+rdata[342]                            200.00  367.68 -167.68 (VIOLATED)
+rdata[341]                            200.00  367.42 -167.42 (VIOLATED)
+rdata[350]                            200.00  367.18 -167.18 (VIOLATED)
+wire4190/A                            200.00  366.90 -166.90 (VIOLATED)
+rdata[344]                            200.00  366.80 -166.80 (VIOLATED)
+rdata[349]                            200.00  366.55 -166.55 (VIOLATED)
+rdata[323]                            200.00  366.20 -166.20 (VIOLATED)
+rdata[351]                            200.00  365.70 -165.70 (VIOLATED)
+rdata[345]                            200.00  365.67 -165.67 (VIOLATED)
+rdata[325]                            200.00  365.63 -165.63 (VIOLATED)
+rdata[339]                            200.00  365.52 -165.52 (VIOLATED)
+rdata[340]                            200.00  364.11 -164.11 (VIOLATED)
+rdata[336]                            200.00  362.43 -162.43 (VIOLATED)
+rdata[335]                            200.00  362.06 -162.06 (VIOLATED)
+rdata[338]                            200.00  361.79 -161.79 (VIOLATED)
+wire4195/A                            200.00  360.39 -160.39 (VIOLATED)
+u_bist/_0909_/A                       200.00  356.16 -156.16 (VIOLATED)
+input962/A                            200.00  339.68 -139.68 (VIOLATED)
+wire4127/A                            200.00  330.25 -130.25 (VIOLATED)
+_2493_/A                              200.00  328.93 -128.93 (VIOLATED)
+_1270_/A                              200.00  328.54 -128.54 (VIOLATED)
+_1294_/A                              200.00  325.98 -125.98 (VIOLATED)
+u_bist/wire2673/A                     200.00  322.65 -122.65 (VIOLATED)
+u_bist/load_slew2007/A                200.00  320.28 -120.28 (VIOLATED)
+u_bist/_1177_/A                       200.00  320.09 -120.09 (VIOLATED)
+wire4123/A                            200.00  310.29 -110.29 (VIOLATED)
+_2505_/A                              200.00  301.94 -101.94 (VIOLATED)
+u_bist/wire2101/A                     200.00  301.71 -101.71 (VIOLATED)
+_1282_/A                              200.00  301.67 -101.67 (VIOLATED)
+_1696_/A                              200.00  300.32 -100.32 (VIOLATED)
+_2488_/A                              200.00  299.23  -99.23 (VIOLATED)
+_2486_/A                              200.00  299.22  -99.22 (VIOLATED)
+_2490_/A                              200.00  299.00  -99.00 (VIOLATED)
+wire4113/A                            200.00  297.19  -97.19 (VIOLATED)
+u_bist/wire2104/A                     200.00  292.90  -92.90 (VIOLATED)
+wire4197/A                            200.00  284.66  -84.66 (VIOLATED)
+u_bist/fobuf_1505/A                   200.00  284.52  -84.52 (VIOLATED)
+tq_wmask[9]_reg/RESETN                200.00  276.64  -76.64 (VIOLATED)
+input1247/A                           200.00  273.79  -73.79 (VIOLATED)
+_1314_/A                              200.00  266.09  -66.09 (VIOLATED)
+_1316_/A                              200.00  265.95  -65.95 (VIOLATED)
+_1389_/A                              200.00  263.65  -63.65 (VIOLATED)
+u_bist/_2070_/A                       200.00  261.70  -61.70 (VIOLATED)
+u_bist/_2073_/A                       200.00  261.68  -61.68 (VIOLATED)
+u_bist/_2068_/A                       200.00  261.64  -61.64 (VIOLATED)
+u_bist/_2066_/A                       200.00  261.63  -61.63 (VIOLATED)
+u_bist/_2075_/A                       200.00  261.48  -61.48 (VIOLATED)
+u_bist/_2077_/A                       200.00  261.10  -61.10 (VIOLATED)
+tq_wdata[384]_reg/D                   200.00  260.95  -60.95 (VIOLATED)
+ecc_ue_sticky                         200.00  260.50  -60.50 (VIOLATED)
+u_bist/_2079_/A                       200.00  260.28  -60.28 (VIOLATED)
+u_bist/_2084_/A                       200.00  260.24  -60.24 (VIOLATED)
+u_bist/_2081_/A                       200.00  260.17  -60.17 (VIOLATED)
+u_bist/_2064_/A                       200.00  260.14  -60.14 (VIOLATED)
+u_bist/_2086_/A                       200.00  259.66  -59.66 (VIOLATED)
+u_bist/_2088_/A                       200.00  257.24  -57.24 (VIOLATED)
+u_bist/_2090_/A                       200.00  256.18  -56.18 (VIOLATED)
+wire4329/A                            200.00  255.68  -55.68 (VIOLATED)
+u_bist/_2092_/A                       200.00  255.53  -55.53 (VIOLATED)
+u_bist/_2095_/A                       200.00  254.51  -54.51 (VIOLATED)
+u_bist/_2067_/A                       200.00  250.87  -50.87 (VIOLATED)
+u_bist/_2072_/A                       200.00  250.84  -50.84 (VIOLATED)
+u_bist/_2074_/A                       200.00  250.82  -50.82 (VIOLATED)
+u_bist/_2065_/A                       200.00  250.77  -50.77 (VIOLATED)
+u_bist/_2069_/A                       200.00  250.66  -50.66 (VIOLATED)
+u_bist/_2076_/A                       200.00  250.34  -50.34 (VIOLATED)
+u_bist/_2078_/A                       200.00  249.99  -49.99 (VIOLATED)
+_2429_/A                              200.00  249.87  -49.87 (VIOLATED)
+u_bist/_2080_/A                       200.00  249.59  -49.59 (VIOLATED)
+u_bist/_2063_/A                       200.00  249.42  -49.42 (VIOLATED)
+u_bist/_2083_/A                       200.00  248.97  -48.97 (VIOLATED)
+u_bist/_2085_/A                       200.00  248.80  -48.80 (VIOLATED)
+u_bist/_2087_/A                       200.00  246.46  -46.46 (VIOLATED)
+u_bist/_2089_/A                       200.00  246.18  -46.18 (VIOLATED)
+u_bist/_2091_/A                       200.00  244.49  -44.49 (VIOLATED)
+_1707_/A                              200.00  241.96  -41.96 (VIOLATED)
+u_bist/_2094_/A                       200.00  241.94  -41.94 (VIOLATED)
+_2492_/A                              200.00  241.86  -41.86 (VIOLATED)
+_1464_/A                              200.00  240.01  -40.01 (VIOLATED)
+_1489_/A                              200.00  239.84  -39.84 (VIOLATED)
+_1514_/A                              200.00  239.61  -39.61 (VIOLATED)
+input960/A                            200.00  234.36  -34.36 (VIOLATED)
+input1033/A                           200.00  232.19  -32.19 (VIOLATED)
+_2440_/A1                             200.00  229.87  -29.87 (VIOLATED)
+wire4194/A                            200.00  229.02  -29.02 (VIOLATED)
+_1763_/A                              200.00  228.93  -28.93 (VIOLATED)
+input817/A                            200.00  227.11  -27.11 (VIOLATED)
+_1308_/A1                             200.00  226.90  -26.90 (VIOLATED)
+_1312_/A1                             200.00  226.82  -26.82 (VIOLATED)
+_1310_/A1                             200.00  226.70  -26.70 (VIOLATED)
+u_bist/_2096_/A                       200.00  226.13  -26.13 (VIOLATED)
+input961/A                            200.00  223.99  -23.99 (VIOLATED)
+input819/A                            200.00  222.09  -22.09 (VIOLATED)
+_1718_/A                              200.00  221.61  -21.61 (VIOLATED)
+wire4128/A                            200.00  219.25  -19.25 (VIOLATED)
+wire4279/A                            200.00  215.72  -15.72 (VIOLATED)
+input854/A                            200.00  215.52  -15.52 (VIOLATED)
+input853/A                            200.00  213.87  -13.87 (VIOLATED)
+u_bist/_2180_/A                       200.00  213.59  -13.59 (VIOLATED)
+u_bist/_2178_/A                       200.00  213.58  -13.58 (VIOLATED)
+u_bist/_2176_/A                       200.00  213.53  -13.53 (VIOLATED)
+u_bist/_2183_/A                       200.00  213.51  -13.51 (VIOLATED)
+u_bist/_2185_/A                       200.00  213.40  -13.40 (VIOLATED)
+u_bist/_2174_/A                       200.00  213.32  -13.32 (VIOLATED)
+u_bist/_2172_/A                       200.00  213.29  -13.29 (VIOLATED)
+u_bist/_2187_/A                       200.00  213.12  -13.12 (VIOLATED)
+u_bist/_2191_/A                       200.00  212.98  -12.98 (VIOLATED)
+u_bist/_2189_/A                       200.00  212.69  -12.69 (VIOLATED)
+u_bist/_2167_/A                       200.00  212.37  -12.37 (VIOLATED)
+u_bist/_2165_/A                       200.00  212.33  -12.33 (VIOLATED)
+u_bist/_2169_/A                       200.00  212.27  -12.27 (VIOLATED)
+output1287/Y                          200.00  212.25  -12.25 (VIOLATED)
+u_bist/_2194_/A                       200.00  212.22  -12.22 (VIOLATED)
+u_bist/_2196_/A                       200.00  211.49  -11.49 (VIOLATED)
+u_bist/_2190_/A                       200.00  210.94  -10.94 (VIOLATED)
+u_bist/_2188_/A                       200.00  210.94  -10.94 (VIOLATED)
+u_bist/_2186_/A                       200.00  210.88  -10.88 (VIOLATED)
+u_bist/_2182_/A                       200.00  210.87  -10.87 (VIOLATED)
+u_bist/_2184_/A                       200.00  210.86  -10.86 (VIOLATED)
+u_bist/_2173_/A                       200.00  210.79  -10.79 (VIOLATED)
+u_bist/_2171_/A                       200.00  210.73  -10.73 (VIOLATED)
+u_bist/_2175_/A                       200.00  210.70  -10.70 (VIOLATED)
+input855/A                            200.00  210.67  -10.67 (VIOLATED)
+u_bist/_2179_/A                       200.00  210.52  -10.52 (VIOLATED)
+u_bist/_2177_/A                       200.00  210.33  -10.33 (VIOLATED)
+u_bist/_2166_/A                       200.00  210.03  -10.03 (VIOLATED)
+u_bist/_2195_/A                       200.00  210.01  -10.01 (VIOLATED)
+u_bist/_2168_/A                       200.00  209.86   -9.86 (VIOLATED)
+u_bist/_2193_/A                       200.00  209.53   -9.53 (VIOLATED)
+u_bist/_2197_/A                       200.00  208.71   -8.71 (VIOLATED)
+u_bist/load_slew1973/A                200.00  207.22   -7.22 (VIOLATED)
+u_bist/_2164_/A                       200.00  207.03   -7.03 (VIOLATED)
+input994/A                            200.00  207.02   -7.02 (VIOLATED)
+wire4213/A                            200.00  206.69   -6.69 (VIOLATED)
+input995/A                            200.00  204.26   -4.26 (VIOLATED)
+input997/A                            200.00  203.76   -3.76 (VIOLATED)
+u_bank/_4503_/B                       200.00  203.01   -3.01 (VIOLATED)
+_2314_/Y                              200.00  202.54   -2.54 (VIOLATED)
+u_bank/_5702_/B                       200.00  202.11   -2.11 (VIOLATED)
+u_bank/_5743_/A                       200.00  202.04   -2.04 (VIOLATED)
+input977/A                            200.00  201.97   -1.97 (VIOLATED)
+_2407_/A                              200.00  201.96   -1.96 (VIOLATED)
+input801/A                            200.00  201.50   -1.50 (VIOLATED)
+u_bank/_3998_/A                       200.00  201.50   -1.50 (VIOLATED)
+u_bank/_4507_/B                       200.00  201.48   -1.48 (VIOLATED)
+_1463_/Y                              200.00  201.47   -1.47 (VIOLATED)
+u_bank/_4517_/B                       200.00  201.41   -1.41 (VIOLATED)
+_2331_/Y                              200.00  200.80   -0.80 (VIOLATED)
+input849/A                            200.00  200.48   -0.48 (VIOLATED)
+_2113_/Y                              200.00  200.35   -0.35 (VIOLATED)
+wire4238/A                            200.00  200.30   -0.30 (VIOLATED)
+wire4109/A                            200.00  200.04   -0.04 (VIOLATED)
+
+
+==========================================================================
+detailed place max_slew_check_slack
+--------------------------------------------------------------------------
+-875.5711669921875
+
+==========================================================================
+detailed place max_slew_check_limit
+--------------------------------------------------------------------------
+200.0
+
+==========================================================================
+detailed place max_slew_check_slack_limit
+--------------------------------------------------------------------------
+-4.3779
+
+==========================================================================
+detailed place max_fanout_check_slack
+--------------------------------------------------------------------------
+1.0
+
+==========================================================================
+detailed place max_fanout_check_limit
+--------------------------------------------------------------------------
+32.0
+
+==========================================================================
+detailed place max_fanout_check_slack_limit
+--------------------------------------------------------------------------
+0.0312
+
+==========================================================================
+detailed place max_capacitance_check_slack
+--------------------------------------------------------------------------
+0.047250885516405106
+
+==========================================================================
+detailed place max_capacitance_check_limit
+--------------------------------------------------------------------------
+46.08000183105469
+
+==========================================================================
+detailed place max_capacitance_check_slack_limit
+--------------------------------------------------------------------------
+0.0010
+
+==========================================================================
+detailed place max_slew_violation_count
+--------------------------------------------------------------------------
+max slew violation count 550
+
+==========================================================================
+detailed place max_fanout_violation_count
+--------------------------------------------------------------------------
+max fanout violation count 0
+
+==========================================================================
+detailed place max_cap_violation_count
+--------------------------------------------------------------------------
+max cap violation count 0
+
+==========================================================================
+detailed place setup_violation_count
+--------------------------------------------------------------------------
+setup violation count 1114
+
+==========================================================================
+detailed place hold_violation_count
+--------------------------------------------------------------------------
+hold violation count 0
+
+==========================================================================
+detailed place report_checks -path_delay max reg to reg
+--------------------------------------------------------------------------
+Startpoint: u_bist/elem[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist/mism_q_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ u_bist/elem[1]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  92.76   92.76 ^ u_bist/elem[1]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+  59.00  151.77 ^ u_bist/_1335_/Y (BUFx2_ASAP7_75t_R)
+  68.47  220.24 v u_bist/_1446_/Y (INVx1_ASAP7_75t_R)
+  90.11  310.35 v u_bist/_0954_/Y (AO21x2_ASAP7_75t_R)
+  47.61  357.96 v u_bist/wire2699/Y (BUFx12f_ASAP7_75t_R)
+  65.31  423.27 v u_bist/wire2698/Y (BUFx12f_ASAP7_75t_R)
+  64.56  487.83 v u_bist/wire2697/Y (BUFx12f_ASAP7_75t_R)
+  64.12  551.95 v u_bist/wire2696/Y (BUFx12f_ASAP7_75t_R)
+  62.79  614.74 v u_bist/wire2695/Y (BUFx6f_ASAP7_75t_R)
+  47.17  661.91 v u_bist/wire2694/Y (BUFx12f_ASAP7_75t_R)
+  72.16  734.08 v u_bist/wire2693/Y (BUFx12_ASAP7_75t_R)
+  42.95  777.02 v u_bist/_0955_/Y (BUFx8_ASAP7_75t_R)
+  36.40  813.42 v u_bist/wire2371/Y (BUFx16f_ASAP7_75t_R)
+  72.18  885.61 v u_bist/wire2370/Y (BUFx16f_ASAP7_75t_R)
+  97.66  983.27 v u_bist/wire2365/Y (BUFx16f_ASAP7_75t_R)
+ 110.65 1093.93 v u_bist/_1066_/Y (BUFx8_ASAP7_75t_R)
+  41.85 1135.78 v u_bist/load_slew2237/Y (BUFx16f_ASAP7_75t_R)
+  83.91 1219.69 v u_bist/wire2236/Y (BUFx16f_ASAP7_75t_R)
+  72.86 1292.55 v u_bist/wire2235/Y (BUFx16f_ASAP7_75t_R)
+ 305.03 1597.58 v u_bist/wire2234/Y (BUFx16f_ASAP7_75t_R)
+  41.61 1639.19 v u_bist/wire2233/Y (BUFx16f_ASAP7_75t_R)
+  49.87 1689.06 v u_bist/wire2232/Y (BUFx16f_ASAP7_75t_R)
+ 342.12 2031.18 v u_bist/wire2231/Y (BUFx16f_ASAP7_75t_R)
+  53.63 2084.81 v u_bist/wire2230/Y (BUFx16f_ASAP7_75t_R)
+ 108.71 2193.52 v u_bist/wire2229/Y (BUFx16f_ASAP7_75t_R)
+ 124.81 2318.33 v u_bist/_1123_/Y (OR3x1_ASAP7_75t_R)
+  28.47 2346.79 ^ u_bist/_1128_/Y (NAND2x2_ASAP7_75t_R)
+  31.37 2378.17 ^ u_bist/wire1860/Y (BUFx6f_ASAP7_75t_R)
+  29.18 2407.34 ^ u_bist/wire1859/Y (BUFx12f_ASAP7_75t_R)
+  47.54 2454.88 ^ u_bist/wire1858/Y (BUFx12f_ASAP7_75t_R)
+ 342.06 2796.94 ^ u_bist/wire1857/Y (BUFx12f_ASAP7_75t_R)
+  39.03 2835.97 ^ u_bist/wire1856/Y (BUFx12f_ASAP7_75t_R)
+  32.74 2868.71 ^ u_bist/wire1855/Y (BUFx12f_ASAP7_75t_R)
+  36.03 2904.75 ^ u_bist/wire1854/Y (BUFx12f_ASAP7_75t_R)
+  32.13 2936.87 ^ u_bist/wire1853/Y (BUFx12f_ASAP7_75t_R)
+  47.48 2984.36 ^ u_bist/wire1852/Y (BUFx12f_ASAP7_75t_R)
+ 342.59 3326.95 ^ u_bist/wire1851/Y (BUFx12f_ASAP7_75t_R)
+  39.38 3366.32 ^ u_bist/wire1850/Y (BUFx12f_ASAP7_75t_R)
+  43.56 3409.88 ^ u_bist/_1159_/Y (OR5x1_ASAP7_75t_R)
+  40.91 3450.79 ^ u_bist/_1392_/Y (OA21x2_ASAP7_75t_R)
+   0.54 3451.33 ^ u_bist/mism_q_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+        3451.33   data arrival time
+
+1250.00 1250.00   clock clk (rise edge)
+   0.00 1250.00   clock network delay (ideal)
+-100.00 1150.00   clock uncertainty
+   0.00 1150.00   clock reconvergence pessimism
+        1150.00 ^ u_bist/mism_q_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+ -38.35 1111.65   library setup time
+        1111.65   data required time
+---------------------------------------------------------
+        1111.65   data required time
+        -3451.33   data arrival time
+---------------------------------------------------------
+        -2339.68   slack (VIOLATED)
+
+
+
+==========================================================================
+detailed place report_checks -path_delay min reg to reg
+--------------------------------------------------------------------------
+Startpoint: tq_wdata[31]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank/u_mem/u_lane0 (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ tq_wdata[31]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+  77.03   77.03 ^ tq_wdata[31]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+  20.73   97.76 v _1829_/Y (NAND2x1_ASAP7_75t_R)
+  47.20  144.96 v _1841_/Y (OA21x2_ASAP7_75t_R)
+   0.60  145.56 v u_bank/u_mem/u_lane0/wdata[31] (fakeram7_32768x39_cm64_1w1r)
+         145.56   data arrival time
+
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00   clock reconvergence pessimism
+           0.00 ^ u_bank/u_mem/u_lane0/clk (fakeram7_32768x39_cm64_1w1r)
+  50.00   50.00   library hold time
+          50.00   data required time
+---------------------------------------------------------
+          50.00   data required time
+        -145.56   data arrival time
+---------------------------------------------------------
+          95.56   slack (MET)
+
+
+
+==========================================================================
+detailed place critical path target clock latency max path
+--------------------------------------------------------------------------
+0.0000
+
+==========================================================================
+detailed place critical path target clock latency min path
+--------------------------------------------------------------------------
+0
+
+==========================================================================
+detailed place critical path source clock latency min path
+--------------------------------------------------------------------------
+0
+
+==========================================================================
+detailed place critical path delay
+--------------------------------------------------------------------------
+3451.3335
+
+==========================================================================
+detailed place critical path slack
+--------------------------------------------------------------------------
+-2339.6821
+
+==========================================================================
+detailed place slack div critical path delay
+--------------------------------------------------------------------------
+-67.790670
+
+==========================================================================
+detailed place report_power
+--------------------------------------------------------------------------
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power (Watts)
+----------------------------------------------------------------
+Sequential             7.28e-04   1.03e-04   1.41e-06   8.32e-04   1.4%
+Combinational          8.42e-03   1.29e-02   2.95e-05   2.14e-02  36.2%
+Clock                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Macro                  3.48e-02   0.00e+00   2.06e-03   3.69e-02  62.4%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  4.40e-02   1.30e-02   2.09e-03   5.91e-02 100.0%
+                          74.4%      22.0%       3.5%

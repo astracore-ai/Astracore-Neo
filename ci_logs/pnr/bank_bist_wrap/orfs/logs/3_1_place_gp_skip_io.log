@@ -1,0 +1,107 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/macros/fakeram7_32768x39_cm64_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_floorplan.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+global_placement -skip_io -density 0.6 -pad_left 0 -pad_right 0
+[INFO GPL-0190] Using 2 of 4 threads for placement: one per core, SMT siblings idle.
+[INFO GPL-0001] ---- Initialize GPL Main Data Structures
+[INFO GPL-0002] DBU: 1000
+[INFO GPL-0003] SiteSize: (  0.054  0.270 ) um
+[INFO GPL-0004] CoreBBox: (  4.050  4.050 ) ( 1387.962 699.840 ) um
+[INFO GPL-0016] Core area:                  962912.130 um^2
+[INFO GPL-0036] Movable instances area:       1049.206 um^2
+[INFO GPL-0037] Total instances area:       865823.181 um^2
+[INFO GPL-0035] Pin density area adjust:        35.781 um^2
+[INFO GPL-0032] ---- Initialize Region: Top-level
+[INFO GPL-0006] Number of instances:             34603
+[INFO GPL-0007] Movable instances:                7779
+[INFO GPL-0008] Fixed instances:                 26796
+[INFO GPL-0009] Dummy instances:                    28
+[INFO GPL-0010] Number of nets:                   9095
+[INFO GPL-0011] Number of pins:                  26064
+[INFO GPL-0012] Die BBox:       (  0.000  0.000 ) ( 1392.000 704.000 ) um
+[INFO GPL-0013] Placement BBox: (  4.050  4.050 ) ( 1387.962 699.840 ) um
+[INFO GPL-0014] Region name: top-level.
+[INFO GPL-0015] Region area:                962912.130 um^2
+[INFO GPL-0017] Fixed instances area:       895256.673 um^2
+[INFO GPL-0018] Movable instances area:       1084.987 um^2
+[INFO GPL-0019] Utilization:                     1.604 %
+[INFO GPL-0020] Standard cells area:          1084.987 um^2
+[INFO GPL-0021] Large instances area:            0.000 um^2
+[INFO GPL-0005] ---- Execute Conjugate Gradient Initial Placement.
+[INFO GPL-0051] Source of initial instance position counters:
+	Odb location = 0	Core center = 7779	Region center = 0
+[INFO GPL-0033] ---- Initialize Nesterov Region: Top-level
+[INFO GPL-0023] Placement target density:       0.6000
+[INFO GPL-0024] Movable insts average area:      0.139 um^2
+[INFO GPL-0025] Ideal bin area:                  0.232 um^2
+[INFO GPL-0026] Ideal bin count:               4142270
+[INFO GPL-0027] Total bin area:             962912.130 um^2
+[INFO GPL-0028] Bin count (X, Y):        1024 ,   1024
+[INFO GPL-0029] Bin size (W * H):       1.351 *  0.679 um
+[INFO GPL-0030] Number of bins:                1048576
+[INFO GPL-0084] ---- Execute Nesterov Global Placement.
+[INFO GPL-0031] HPWL: Half-Perimeter Wirelength
+Iteration | Overflow |     HPWL (um) |  HPWL(%) |   Penalty | Group
+---------------------------------------------------------------
+        0 |   0.9131 |  7.377917e+05 |   +0.00% |  2.00e-13 |      
+       10 |   0.7988 |  6.938272e+05 |   -5.96% |  3.25e-13 |      
+       20 |   0.8797 |  5.598349e+05 |  -19.31% |  5.29e-13 |      
+       30 |   0.7298 |  3.915808e+05 |  -30.05% |  8.61e-13 |      
+       40 |   0.7853 |  3.247384e+05 |  -17.07% |  1.40e-12 |      
+       50 |   0.5671 |  2.426879e+05 |  -25.27% |  2.28e-12 |      
+       60 |   0.7809 |  2.273802e+05 |   -6.31% |  3.72e-12 |      
+       70 |   0.7440 |  2.202966e+05 |   -3.12% |  6.06e-12 |      
+       80 |   0.7228 |  2.109711e+05 |   -4.23% |  9.87e-12 |      
+       90 |   0.6565 |  2.088817e+05 |   -0.99% |  1.61e-11 |      
+      100 |   0.7028 |  2.100937e+05 |   +0.58% |  2.62e-11 |      
+      110 |   0.7295 |  2.113660e+05 |   +0.61% |  4.27e-11 |      
+      120 |   0.7201 |  2.111371e+05 |   -0.11% |  6.95e-11 |      
+      130 |   0.6551 |  2.107485e+05 |   -0.18% |  1.13e-10 |      
+      140 |   0.6028 |  2.109912e+05 |   +0.12% |  1.84e-10 |      
+      150 |   0.5712 |  2.132589e+05 |   +1.07% |  3.00e-10 |      
+      160 |   0.5358 |  2.217409e+05 |   +3.98% |  4.89e-10 |      
+      170 |   0.4964 |  2.393655e+05 |   +7.95% |  7.95e-10 |      
+      180 |   0.4674 |  2.566014e+05 |   +7.20% |  1.29e-09 |      
+      190 |   0.4424 |  2.592325e+05 |   +1.03% |  2.11e-09 |      
+      200 |   0.4187 |  2.485140e+05 |   -4.13% |  3.43e-09 |      
+      210 |   0.3938 |  2.534908e+05 |   +2.00% |  5.59e-09 |      
+      220 |   0.3695 |  2.658101e+05 |   +4.86% |  9.09e-09 |      
+      230 |   0.3463 |  2.597327e+05 |   -2.29% |  1.48e-08 |      
+      240 |   0.3200 |  2.517105e+05 |   -3.09% |  2.18e-08 |      
+      250 |   0.2996 |  2.439384e+05 |   -3.09% |  3.21e-08 |      
+      260 |   0.2841 |  2.140439e+05 |  -12.25% |  4.73e-08 |      
+      270 |   0.2312 |  2.057404e+05 |   -3.88% |  6.97e-08 |      
+      280 |   0.2169 |  2.046121e+05 |   -0.55% |  1.03e-07 |      
+      290 |   0.1766 |  2.045151e+05 |   -0.05% |  1.51e-07 |      
+      300 |   0.1265 |  2.046478e+05 |   +0.06% |  2.23e-07 |      
+      307 |   0.0978 |  2.043545e+05 |          |  3.04e-07 |      
+---------------------------------------------------------------
+[INFO GPL-1001] Global placement finished at iteration 307
+[INFO GPL-1002] Placed Cell Area             1084.9868
+[INFO GPL-1003] Available Free Area         67655.4574
+[INFO GPL-1004] Minimum Feasible Density        0.0200 (cell_area / free_area)
+[INFO GPL-1006]   Suggested Target Densities:
+[INFO GPL-1007]     - For 90% usage of free space: 0.0178
+[INFO GPL-1008]     - For 80% usage of free space: 0.0200
+[INFO GPL-1009]     - For 50% usage of free space: 0.0321
+[INFO GPL-1014] Final placement area: 1084.99 (+0.00%)
+[INFO GPL-1018] Final HPWL (um): 204344.86
+Took 25 seconds: global_placement -skip_io -density 0.6 -pad_left 0 -pad_right 0
+Design area 864338 um^2 90% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/3_1_place_gp_skip_io.odb
+Elapsed time: 0:26.01[h:]min:sec. CPU time: user 35.83 sys 0.34 (139%). Peak memory: 509696KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+3_1_place_gp_skip_io   .odb         26       36     1.39      497 50894c0107

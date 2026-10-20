@@ -1,0 +1,117 @@
+$ docker run --rm --init --name neo-pnr-bank_bist_wrap-do-finish-3370 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/bank_bist_wrap/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in do-finish
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 6_1_fill density_fill
+Running density_fill.tcl, stage 6_1_fill
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/macros/fakeram7_32768x39_cm64_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/5_route.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/5_route.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/5_route.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/6_1_fill.odb
+Elapsed time: 0:01.49[h:]min:sec. CPU time: user 1.15 sys 0.33 (99%). Peak memory: 534908KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+6_1_fill               .odb          1        1     0.99      522 4d3beb70ee
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/5_route.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/6_1_fill.sdc
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 6_report final_report
+Running final_report.tcl, stage 6_report
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/macros/fakeram7_32768x39_cm64_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/6_1_fill.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/6_1_fill.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/6_final.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/6_final.sdc
+Deleted 0 routing obstructions
+[INFO RCX-0431] Defined process_corner X with ext_model_index 0
+[INFO RCX-0029] Defined extraction corner X
+[INFO RCX-0435] Reading extraction model file /OpenROAD-flow-scripts/flow/platforms/asap7/rcx_patterns.rules ...
+[INFO RCX-0436] RC segment generation bank_bist_wrap (max_merge_res 50.0) ...
+[INFO RCX-0040] Final 121400 rc segments
+[INFO RCX-0439] Coupling Cap extraction bank_bist_wrap ...
+[INFO RCX-0440] Coupling threshhold is 0.1000 fF, coupling capacitance less than 0.1000 fF will be grounded.
+[INFO RCX-0442] 9% of 207985 wires extracted
+[INFO RCX-0442] 15% of 207985 wires extracted
+[INFO RCX-0442] 23% of 207985 wires extracted
+[INFO RCX-0442] 29% of 207985 wires extracted
+[INFO RCX-0442] 36% of 207985 wires extracted
+[INFO RCX-0442] 42% of 207985 wires extracted
+[INFO RCX-0442] 48% of 207985 wires extracted
+[INFO RCX-0442] 54% of 207985 wires extracted
+[INFO RCX-0442] 68% of 207985 wires extracted
+[INFO RCX-0442] 73% of 207985 wires extracted
+[INFO RCX-0442] 80% of 207985 wires extracted
+[INFO RCX-0442] 94% of 207985 wires extracted
+[INFO RCX-0442] 99% of 207985 wires extracted
+[INFO RCX-0045] Extract 18348 nets, 139622 rsegs, 139622 caps, 150552 ccs
+[INFO RCX-0443] 18348 nets finished
+IR drop analysis for power nets is skipped because PWR_NETS_VOLTAGES is undefined
+IR drop analysis for ground nets is skipped because GND_NETS_VOLTAGES is undefined
+Cell type report:                        Count        Area
+  Macro                                     16   862508.19
+  Fill cell                             236487    65160.88
+  Tap cell                               26780      780.90
+  Tie cell                                 699       30.57
+  Buffer                                   790       73.16
+  Clock buffer                             355      149.04
+  Timing Repair Buffer                    8898     1267.16
+  Inverter                                 161        7.73
+  Clock inverter                             5        1.62
+  Sequential cell                          644      244.13
+  Multi-Input combinational cell          5487      721.17
+  Total                                 280322   930944.55
+Report metrics stage 6, finish...
+
+==========================================================================
+finish report_design_area
+--------------------------------------------------------------------------
+Design area 865784 um^2 90% utilization.
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/final_all.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/final_routing.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/final_placement.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/final_clocks.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/cts_default_clk.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/cts_default_clk_layout.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/final_resizer.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/final_congestion.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/reports/asap7/bank_bist_wrap/base/final_worst_path.webp.png
+Elapsed time: 0:15.74[h:]min:sec. CPU time: user 16.11 sys 1.60 (112%). Peak memory: 1151452KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+6_report                            15       18     1.13     1124 N/A
+/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/logs/asap7/bank_bist_wrap/base
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     1.00       26 N/A
+1_2_yosys              .v            0        0     1.00       26 d13d1a0d7e
+1_2_yosys              .sdc                                       171695955a
+1_synth                .odb          0        1     1.00      189 dde2ce9d18
+1_synth                .sdc                                       bc1ca9fd8a
+2_1_floorplan          .odb          1        2     1.07      230 b77a923be3
+2_1_floorplan          .sdc                                       bc1ca9fd8a
+2_2_floorplan_macro    .odb          1        1     0.99      178 38a6d98d8e
+2_3_floorplan_tapcell  .odb          1        1     0.99      195 9d336809ab
+2_4_floorplan_pdn      .odb          5        6     1.00      391 b9e2739426
+3_1_place_gp_skip_io   .odb         26       36     1.39      497 50894c0107
+3_2_place_iop          .odb          1        1     1.00      250 5dde17334d
+3_3_place_gp           .odb        133      175     1.31      837 64d109e51d
+3_4_place_resized      .odb          4        6     1.26      301 68e00df7ed
+3_5_place_dp           .odb         19       20     1.04     3631 de0c3cf64a
+4_1_cts                .odb         19       24     1.19     3654 0744c321db
+5_1_grt                .odb        136      240     1.76     8648 282eabe69e
+5_1_grt                .sdc                                       5ba38b07bf
+5_2_route              .odb       2059     7990     3.88     7319 f4fa436858
+5_3_fillcell           .odb          4        5     1.00     3746 4d3beb70ee
+6_1_fill               .odb          1        1     0.99      522 4d3beb70ee
+6_1_fill               .sdc                                       5ba38b07bf
+6_report                            15       18     1.13     1124 N/A
+Total                             2425     8527     3.50     8648

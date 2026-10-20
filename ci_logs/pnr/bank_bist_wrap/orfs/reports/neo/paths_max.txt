@@ -1,0 +1,635 @@
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[459] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     3    6.1   49.0   78.4 2395.1 v u_bank/_4771_/Y (OR3x2_ASAP7_75t_R)
+     2    1.2   12.9   40.8 2435.8 v u_bank/rebuffer4497/Y (BUFx3_ASAP7_75t_R)
+     1    1.3   26.0   45.9 2481.7 v u_bank/_4924_/Y (OR3x1_ASAP7_75t_R)
+     3   20.5  166.9  103.4 2585.2 ^ u_bank/_4925_/Y (XNOR2x2_ASAP7_75t_R)
+     1   11.7   42.1   79.2 2664.4 ^ output1686/Y (BUFx6f_ASAP7_75t_R)
+                46.0    6.8 2671.2 ^ rdata[459] (out)
+                            2671.2   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2671.2   data arrival time
+-------------------------------------------------------------------------
+                            -1771.2   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[457] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   11.3   36.7 2353.3 v u_bank/rebuffer4576/Y (BUFx6f_ASAP7_75t_R)
+     3    9.4   32.4   48.4 2401.7 v u_bank/_4927_/Y (OR2x6_ASAP7_75t_R)
+     5    5.6   13.6   35.7 2437.4 v u_bank/_4928_/Y (BUFx12f_ASAP7_75t_R)
+     1    1.1   24.3   48.8 2486.2 v u_bank/_4931_/Y (OR3x1_ASAP7_75t_R)
+     3   18.8  154.1   97.6 2583.8 ^ u_bank/_4932_/Y (XNOR2x2_ASAP7_75t_R)
+     1   11.4   41.1   77.1 2660.9 ^ output1684/Y (BUFx6f_ASAP7_75t_R)
+                45.0    6.7 2667.6 ^ rdata[457] (out)
+                            2667.6   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2667.6   data arrival time
+-------------------------------------------------------------------------
+                            -1767.6   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[474] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   11.3   36.7 2353.3 v u_bank/rebuffer4576/Y (BUFx6f_ASAP7_75t_R)
+     6    8.2   61.5   74.7 2428.0 v u_bank/_4718_/Y (OR3x2_ASAP7_75t_R)
+     1    1.5   27.9   62.4 2490.4 v u_bank/_4768_/Y (OR3x1_ASAP7_75t_R)
+     3   18.4  150.6   98.6 2588.9 ^ u_bank/_4769_/Y (XNOR2x2_ASAP7_75t_R)
+     1    8.2   33.1   72.5 2661.4 ^ output1703/Y (BUFx6f_ASAP7_75t_R)
+                35.5    4.7 2666.1 ^ rdata[474] (out)
+                            2666.1   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2666.1   data arrival time
+-------------------------------------------------------------------------
+                            -1766.1   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[452] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   11.3   36.7 2353.3 v u_bank/rebuffer4576/Y (BUFx6f_ASAP7_75t_R)
+     3    9.4   32.4   48.4 2401.7 v u_bank/_4927_/Y (OR2x6_ASAP7_75t_R)
+     5    5.6   13.6   35.7 2437.4 v u_bank/_4928_/Y (BUFx12f_ASAP7_75t_R)
+     1    1.0   23.3   48.9 2486.4 v u_bank/_4942_/Y (OR3x1_ASAP7_75t_R)
+     2   18.9  155.2   97.2 2583.6 ^ u_bank/_4943_/Y (XNOR2x2_ASAP7_75t_R)
+     1    7.9   32.2   75.5 2659.1 ^ output1679/Y (BUFx6f_ASAP7_75t_R)
+                34.5    4.5 2663.6 ^ rdata[452] (out)
+                            2663.6   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2663.6   data arrival time
+-------------------------------------------------------------------------
+                            -1763.6   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[476] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   11.3   36.7 2353.3 v u_bank/rebuffer4576/Y (BUFx6f_ASAP7_75t_R)
+     6    8.2   61.5   74.7 2428.0 v u_bank/_4718_/Y (OR3x2_ASAP7_75t_R)
+     1    1.5   28.1   61.7 2489.7 v u_bank/_4763_/Y (OR3x1_ASAP7_75t_R)
+     3   16.6  136.4   93.5 2583.1 ^ u_bank/_4764_/Y (XNOR2x2_ASAP7_75t_R)
+     1   11.8   41.5   71.3 2654.4 ^ output1705/Y (BUFx6f_ASAP7_75t_R)
+                45.6    6.9 2661.3 ^ rdata[476] (out)
+                            2661.3   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2661.3   data arrival time
+-------------------------------------------------------------------------
+                            -1761.3   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[450] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   11.3   36.7 2353.3 v u_bank/rebuffer4576/Y (BUFx6f_ASAP7_75t_R)
+     3    9.4   32.4   48.4 2401.7 v u_bank/_4927_/Y (OR2x6_ASAP7_75t_R)
+     5    3.2   13.2   36.7 2438.4 v clone9533/Y (BUFx6f_ASAP7_75t_R)
+     1    0.9   22.3   46.4 2484.8 v u_bank/_4947_/Y (OR3x1_ASAP7_75t_R)
+     2   18.8  153.3   97.5 2582.3 ^ u_bank/_4948_/Y (XNOR2x2_ASAP7_75t_R)
+     1    8.8   34.6   73.9 2656.3 ^ output1677/Y (BUFx6f_ASAP7_75t_R)
+                37.2    5.0 2661.2 ^ rdata[450] (out)
+                            2661.2   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2661.2   data arrival time
+-------------------------------------------------------------------------
+                            -1761.2   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[458] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   11.3   36.7 2353.3 v u_bank/rebuffer4576/Y (BUFx6f_ASAP7_75t_R)
+     3    9.4   32.4   48.4 2401.7 v u_bank/_4927_/Y (OR2x6_ASAP7_75t_R)
+     5    5.6   13.6   35.7 2437.4 v u_bank/_4928_/Y (BUFx12f_ASAP7_75t_R)
+     1    1.2   26.0   50.0 2487.4 v u_bank/_4929_/Y (OR3x1_ASAP7_75t_R)
+     3   17.2  140.8   94.2 2581.6 ^ u_bank/_4930_/Y (XNOR2x2_ASAP7_75t_R)
+     1   11.0   40.1   73.0 2654.6 ^ output1685/Y (BUFx6f_ASAP7_75t_R)
+                43.9    6.5 2661.1 ^ rdata[458] (out)
+                            2661.1   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2661.1   data arrival time
+-------------------------------------------------------------------------
+                            -1761.1   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[453] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   11.3   36.7 2353.3 v u_bank/rebuffer4576/Y (BUFx6f_ASAP7_75t_R)
+     3    9.4   32.4   48.4 2401.7 v u_bank/_4927_/Y (OR2x6_ASAP7_75t_R)
+     5    5.6   13.6   35.7 2437.4 v u_bank/_4928_/Y (BUFx12f_ASAP7_75t_R)
+     1    0.9   21.9   47.9 2485.3 v u_bank/_4940_/Y (OR3x1_ASAP7_75t_R)
+     3   18.2  150.0   93.8 2579.1 ^ u_bank/_4941_/Y (XNOR2x2_ASAP7_75t_R)
+     1    8.5   33.7   76.0 2655.1 ^ output1680/Y (BUFx6f_ASAP7_75t_R)
+                36.0    4.7 2659.8 ^ rdata[453] (out)
+                            2659.8   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2659.8   data arrival time
+-------------------------------------------------------------------------
+                            -1759.8   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[463] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     3    6.1   49.0   78.4 2395.1 v u_bank/_4771_/Y (OR3x2_ASAP7_75t_R)
+     3    2.0   15.5   42.7 2437.8 v u_bank/rebuffer4498/Y (BUFx3_ASAP7_75t_R)
+     1    1.5   28.5   48.3 2486.1 v u_bank/_4893_/Y (OR3x1_ASAP7_75t_R)
+     2   17.1  140.6   94.1 2580.1 ^ u_bank/_4894_/Y (XNOR2x2_ASAP7_75t_R)
+     1   10.9   39.8   73.2 2653.3 ^ output1691/Y (BUFx6f_ASAP7_75t_R)
+                43.0    6.0 2659.3 ^ rdata[463] (out)
+                            2659.3   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2659.3   data arrival time
+-------------------------------------------------------------------------
+                            -1759.3   slack (VIOLATED)
+
+
+Startpoint: u_bank/u_mem/u_lane14
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rdata[475] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                        0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock source latency
+     1   11.4    0.0    0.0    0.0 ^ clk (in)
+     1   10.5   23.0   33.7   33.7 ^ wire4389/Y (BUFx12f_ASAP7_75t_R)
+     1   35.8   20.8   48.3   82.0 ^ wire4388/Y (BUFx24_ASAP7_75t_R)
+     1    8.3   26.2  146.9  228.9 ^ wire4387/Y (BUFx24_ASAP7_75t_R)
+     1   11.1   18.0   43.9  272.8 ^ wire4386/Y (BUFx24_ASAP7_75t_R)
+     2   44.2   25.1   49.5  322.3 ^ wire4385/Y (BUFx24_ASAP7_75t_R)
+     1    0.6   14.9   80.4  402.8 ^ delaybuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   19.3   36.0  438.8 ^ delaybuf_1_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   11.7   32.8  471.6 ^ delaybuf_2_clk/Y (BUFx24_ASAP7_75t_R)
+     1    0.8   13.9   31.5  503.1 ^ delaybuf_3_clk/Y (BUFx4_ASAP7_75t_R)
+     1    0.6   13.4   32.0  535.1 ^ delaybuf_4_clk/Y (BUFx4_ASAP7_75t_R)
+     1   33.7  274.3   96.1  631.2 ^ delaybuf_5_clk/Y (BUFx2_ASAP7_75t_R)
+     2   36.2   40.4  187.8  819.0 ^ clkbuf_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   13.2   42.4  861.4 ^ clkbuf_1_1_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.4   13.0   31.2  892.6 ^ clkbuf_1_1_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1    3.5   13.8   31.7  924.3 ^ clkbuf_1_1_2_clk/Y (BUFx24_ASAP7_75t_R)
+     2    4.5   14.4   32.8  957.1 ^ clkbuf_1_1_3_clk/Y (BUFx24_ASAP7_75t_R)
+     1    2.3   12.9   31.8  988.9 ^ clkbuf_2_3_0_clk/Y (BUFx24_ASAP7_75t_R)
+     1   18.5   21.8   32.7 1021.6 ^ clkbuf_2_3_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   62.9   29.2   59.3 1081.0 ^ wire4413/Y (BUFx12f_ASAP7_75t_R)
+     2    4.5   49.0  393.5 1474.5 ^ clkbuf_leaf_1_clk/Y (BUFx24_ASAP7_75t_R)
+     1   34.7   28.6   45.1 1519.6 ^ u_bank/u_mem/max_length4399/Y (BUFx16f_ASAP7_75t_R)
+     2   47.2   54.8  144.1 1663.7 ^ u_bank/u_mem/wire4398/Y (BUFx24_ASAP7_75t_R)
+     1   44.7   46.0   73.3 1737.1 ^ u_bank/u_mem/wire4397/Y (BUFx24_ASAP7_75t_R)
+                97.5   38.8 1775.9 ^ u_bank/u_mem/u_lane14/clk (fakeram7_32768x39_cm64_1w1r)
+     2   11.8   12.0  218.0 1993.9 v u_bank/u_mem/u_lane14/rdata[2] (fakeram7_32768x39_cm64_1w1r)
+     2    2.9   30.2   63.5 2057.4 ^ u_bank/_4663_/Y (XOR2x2_ASAP7_75t_R)
+     1    1.6   36.0   38.6 2095.9 ^ u_bank/_4665_/Y (XNOR2x1_ASAP7_75t_R)
+     2    2.7   51.2   43.6 2139.6 ^ u_bank/_4666_/Y (XNOR2x1_ASAP7_75t_R)
+     1    2.8   53.9   47.7 2187.2 ^ u_bank/_4672_/Y (XNOR2x1_ASAP7_75t_R)
+     2    3.2   59.8   49.6 2236.9 ^ u_bank/_4679_/Y (XNOR2x1_ASAP7_75t_R)
+     3    5.8   42.0   79.8 2316.6 v u_bank/_4702_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.8   11.3   36.7 2353.3 v u_bank/rebuffer4576/Y (BUFx6f_ASAP7_75t_R)
+     6    8.2   61.5   74.7 2428.0 v u_bank/_4718_/Y (OR3x2_ASAP7_75t_R)
+     1    1.5   28.8   62.9 2490.9 v u_bank/_4765_/Y (OR3x1_ASAP7_75t_R)
+     3   17.5  142.7   96.5 2587.4 ^ u_bank/_4766_/Y (XNOR2x2_ASAP7_75t_R)
+     1    5.4   24.7   67.2 2654.6 ^ output1704/Y (BUFx6f_ASAP7_75t_R)
+                25.7    2.5 2657.1 ^ rdata[475] (out)
+                            2657.1   data arrival time
+
+                     1250.0 1250.0   clock clk (rise edge)
+                        0.0 1250.0   clock network delay (propagated)
+                     -100.0 1150.0   clock uncertainty
+                        0.0 1150.0   clock reconvergence pessimism
+                     -250.0  900.0   output external delay
+                             900.0   data required time
+-------------------------------------------------------------------------
+                             900.0   data required time
+                            -2657.1   data arrival time
+-------------------------------------------------------------------------
+                            -1757.1   slack (VIOLATED)
+
+
