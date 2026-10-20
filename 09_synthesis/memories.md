@@ -10,7 +10,7 @@ in the silicon configuration.
 
 | Instance (module.instance) | Leaf and organisation (silicon configuration) | Macro type | Notes | FakeRAM2.0 macro of the pnr job (LEF size, area) |
 | --- | --- | --- | --- | --- |
-| `sram_bank.u_mem` | `neo_mem_sp` 32,768 words × 624 bits, G = 16 (a write group per 39-bit SECDED lane), registered row read | single-port HD SRAM, 1 cycle; as 16 lane macros of 32,768 × 39 or as the compiler prefers (2 MB + ECC = 20.4 Mbit) | the ECC is in RTL around the leaf (16 encoders on the write side, 16 decoders on the read data); MBIST drives the bank's row ports through `bank_bist_wrap`; word a is lane a mod 16 of row a div 16  | `fakeram7_32768x624_g16_1w1r`: 80.94 × 10,617.60 µm, 859,389 µm² (0.0420 µm²/bit, the model at 1 ×); the 32,768-word column unfolded is a 131:1 strip -- a compiler folds it (column mux) or splits it into the 16 lane macros; drop 0.43 (A3): the pnr job's form, 16 lane macros `fakeram7_32768x39_cm64_1w1r` (one per write group, folded by a column mux of 64: 512 rows of 2,496 bit cells), 323.57 × 166.60 µm each, 862,508 µm² for the 16 (0.0422 µm²/bit) |
+| `sram_bank.u_mem` | `neo_mem_sp` 32,768 words × 624 bits, G = 16 (a write group per 39-bit SECDED lane), registered row read | **two-port (1W1R) SRAM** (drop 0.44, review finding 4: the NIC writes a WRDATA beat while its server reads a row -- `tile_nic.sv` `b_we` / `b_re` in one cycle, the telemetry counts both -- so no single-port macro implements the leaf; priced at 1.5 × the single-port cell, 1.290 mm², where drops 0.40-0.43 wrote "single-port HD SRAM" at 1 ×, 0.860 mm²), 1 cycle; as 16 lane macros of 32,768 × 39 or as the compiler prefers (2 MB + ECC = 20.4 Mbit) | the ECC is in RTL around the leaf (16 encoders on the write side, 16 decoders on the read data); MBIST drives the bank's row ports through `bank_bist_wrap`; word a is lane a mod 16 of row a div 16  | `fakeram7_32768x624_g16_1w1r`: 80.94 × 10,617.60 µm, 859,389 µm² (0.0420 µm²/bit, the model at 1 ×); the 32,768-word column unfolded is a 131:1 strip -- a compiler folds it (column mux) or splits it into the 16 lane macros; drop 0.43 (A3): the pnr job's form, 16 lane macros `fakeram7_32768x39_cm64_1w1r` (one per write group, folded by a column mux of 64: 512 rows of 2,496 bit cells), 323.57 × 166.60 µm each, 862,508 µm² for the 16 (0.0422 µm²/bit) |
 | `wbuf_mem.u_mem` | `neo_mem_rf` 512 words × 936 bits (drop 0.42, the NCHK = 4 core: a pair of coded entries, 12 lanes × 39 each; the entry is 376 bits = 32 × (8-bit weight + 2-bit index) + 4 check weights × 14 bits, one format for dense and 2:4 sparse layers), G = 2 (one entry per group), registered read of the pair on port B every cycle, port A tied off, RB = 1 (drop 0.41; until 0.40 an asynchronous read on port A) | one-write-one-read synchronous SRAM (468 kbit; 512 × 702 bits = 359 kbit with the 271-bit entry of 9 lanes of the dense-only core, NCHK = 1, which the RTL keeps as its default): address at the edge, data the cycle after -- the core delays the shadow-load strobe one cycle to match (`neo_core` `w_load_q`), in the shadow-load path that overlaps the previous run | per-lane SECDED in RTL behind the read; the entry inside the pair is selected after the read by the address bit of the previous cycle; the entry is `{idx[31..0], wc[3..0], w[31..0]}` LSB first (the weights and check column 0 where the 271-bit entry had them; a dense entry is the old one with zeros above), at 16x8 132 bits in 5 lanes (78 bits in 3 before)  | `fakeram7_512x702_g2_1w1r`: 91.01 × 166.60 µm, 15,162 µm² (0.0422 µm²/bit; the model's 2 × for a second read port: 30,226 µm²) (generated for the 0.41 entry of 702 bits; the NCHK = 4 entry is 936) |
 | `act_feeder.u_mem` | `neo_mem_rf` 1,024 words × 512 bits (a pair of entries of 32 channels × 8 bits), G = 2, registered read of the pair on port B (`rb_en` = a row generated), port A tied off, RB = 1 (drop 0.41; until 0.40 an asynchronous read on port A) | one-write-one-read synchronous SRAM (512 kbit): the feeder's incremental address generator presents the address at the edge, the entry leaves through one select the cycle after (every feeder output moves one cycle with it) | regions are address ranges, no macro feature needed  | `fakeram7_1024x512_g2_1w1r`: 66.50 × 331.80 µm, 22,065 µm² (0.0421 µm²/bit; model 44,091 µm² at 2 ×) |
 | `acc_bank.u_mem` | `neo_mem_rf` 512 words × 1,056 bits (COLS + 1 partial sums of 32 bits), G = 1, one registered read port B shared by the accumulate (at the row the arriving operation adds to) and the drain, port A tied off, RB = 1 (drop 0.41; until 0.40 port A read asynchronously for a same-cycle read-modify-write) | one-write-one-read synchronous SRAM (540 kbit): the read-modify-write takes two cycles (read, then add and write, with a one-stage forward for back-to-back operations on one row); a read and a write of different rows in one cycle | the ABFT check is on port B's data; the adders and the forward are in RTL  | `fakeram7_512x1056_g1_1w1r`: 136.99 × 166.60 µm, 22,823 µm² (0.0422 µm²/bit; model 45,468 µm² at 2 ×) |
@@ -21,10 +21,24 @@ in the silicon configuration.
 | `requant` tables | 32 × 29 bit | flops | parity in RTL  | -- |
 
 The synthesis job's macro model (ASAP7: FakeRAM2.0's 7 nm bit cell, 0.042 µm² per bit, 218 ps access, 50 ps setup / hold;
-Nangate45 since drop 0.42: ORFS's FakeRAM45 macros, 0.557 µm² per bit, 435 ps; a leaf priced by the read ports it uses --
-1 × the bit cell for a registered read only, 1.5 × with the asynchronous port A, 2 × with both) stands in for the
-compiler's figures in `synth_report.md`; `neo_ip_ppa.py`'s estimate prices the same arrays at N5A compiled-macro densities.
-The synthesis report with the macros swapped in is what replaces both.
+Nangate45 since drop 0.42: ORFS's FakeRAM45 macros, 0.557 µm² per bit, 435 ps) prices a leaf by its ports. **Drop 0.44
+(A4, review finding 4): every leaf is a two-port array** -- `neo_mem_sp`'s write and read ports are driven independently
+in one cycle (the bank, above), and every `neo_mem_rf` with RB = 1 is written while its port B reads (the three core
+arrays, the drain FIFO, the vector unit's leaves); the pnr job's FakeRAM macros are the `_1w1r` class throughout -- and
+every leaf is priced at **1.5 × the single-port high-density cell** (`synth.py` `MACRO_AREA_FACTOR`: `neo_mem_sp` 1.5,
+`neo_mem_rf` with port A 1.5, with port B 1.5, with both read ports 2.0), where drops 0.40-0.43 priced the registered-read
+leaves at 1 ×. The factor is the model's own convention, not a library figure: FakeRAM2.0 sizes a macro by its bits alone
+(its dual-port class adds pins, not area), and an 8T two-port bit cell is 1.3-1.5 × a 6T high-density cell, a compiled
+two-port macro 1.4-1.6 × in bits per mm² -- the 1.5 the model already gave the register-file read. It moves the tile's
+macro total from 0.970 to 1.455 mm² on the proxy (`synth_report_drop044.md`, `proxy_to_target.md`); `neo_ip_ppa.py`'s
+estimate prices the same arrays at N5A compiled-macro densities. The synthesis report with the macros swapped in is what
+replaces both.
+
+**The RBQ = 1 contract (drop 0.44, review finding 14).** With RBQ = 1 the leaf's `rb_data` is `mem[rb_addr_q]`: write-through
+-- a write of the latched word in a later cycle shows on `rb_data` at once, where a macro with an output register would
+hold the word it read. Every user reads port B's word in the cycle after `rb_en` and never later (`wbuf_mem`, `act_feeder`
+and `acc_bank` take it that cycle; `acc_bank`'s forward covers the one same-cycle write), so the model and such a macro
+agree on every cycle a user samples; the rule is stated in `neo_mem.sv`'s header.
 
 **LEF / LIB provenance (drop 0.42, stream A2b).** The place-and-route job (`07_ci/pnr`) makes one macro per leaf type
 with `07_ci/pnr/fakeram.py`: FakeRAM2.0 as vendored in OpenROAD-flow-scripts at 3451ca1f5 (`tools/FakeRAM2.0`, the
@@ -38,9 +52,11 @@ macro has the functional ports under the leaf's names -- a 1-write-1-read SRAM (
 clocked outputs; an RBQ = 0 user leaves it open) for the RB = 1 arrays, a register file with an asynchronous port A
 (`ra_addr` -> `ra_data`) for the NIC's -- and a wrapper with the leaf's name and ports instantiates it, the hooks and
 the unused port unconnected (`prep.py` checks the parent ties them off and reads nothing they drop). The last column
-above is `fakeram.py --leaf` at the silicon parameters. Against the model: the arrays read on port B alone since drop
-0.41 are 1-write-1-read macros at the single-port bit cell (0.042 µm²/bit), half the 2 × the model gives every RB = 1
-leaf; the drain FIFO is 0.67 × its 1.5 ×; the partial-sum rows are pin-limited at 3.2 ×; the bank matches at 1 ×.
+above is `fakeram.py --leaf` at the silicon parameters. Against the model: FakeRAM2.0's LEF areas are the single-port
+bit cell (0.042 µm²/bit) whatever the port count, so since drop 0.44 the model's 1.5 × stands 1.5 × above the LEF of
+every 1-write-1-read macro (the bank's lanes, the core's three arrays, the drain FIFO) -- the LEF is not evidence of a
+two-port macro's area, the model's factor is the convention stated above; the partial-sum rows are pin-limited at 3.2 ×
+of their 1.5 ×.
 The 16 × 8 core the job places has three:
 
 | Leaf (`c16_*`) | Macro | LEF size | Area | µm² / bit | Model |

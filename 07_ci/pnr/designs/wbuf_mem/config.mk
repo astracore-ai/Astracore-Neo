@@ -7,3 +7,4 @@ include $(dir $(DESIGN_CONFIG))../neo_common.mk
 # (195 um square) left the 1,872 data pins 11 um from the die edge and global routing overflowed
 export CORE_UTILIZATION = 45
 export MACRO_PLACEMENT_TCL = $(dir $(DESIGN_CONFIG))macro_place.tcl
+# drop 0.44 (A4): the read data's output budget in sdc_extra.sdc (0.1 of the period: the array's shadow register's mux)

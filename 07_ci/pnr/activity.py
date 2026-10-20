@@ -109,9 +109,17 @@ def main():
                 timescale_ps = int(m.group(1)) * {"s": 1e12, "ms": 1e9, "us": 1e6, "ns": 1e3, "ps": 1.0, "fs": 1e-3}[m.group(2)]
             i = j + 1
         elif t == "$scope":
-            # Verilator under cocotb writes the top scope with an empty name (`$scope module  $end`): it is TOP here,
-            # the name Verilator gives it elsewhere (the scopes activity.sh passes start with it)
-            scope.append("TOP" if toks[i + 2] == "$end" else toks[i + 2])
+            # Verilator 5.020 under cocotb writes the top scope with an empty name (`$scope module  $end`) holding
+            # everything: it is TOP here, the name Verilator gives it elsewhere (the scopes activity.sh passes start with
+            # it). Verilator 5.053 (drop 0.44) writes a `$rootio` scope with the top's own ports and closes it before the
+            # top module's scope, which then sits beside it: both are put under TOP
+            name = toks[i + 2]
+            if name in ("$end", "$rootio"):
+                scope.append("TOP")
+            else:
+                if not scope:
+                    scope.append("TOP")
+                scope.append(name)
             i = toks.index("$end", i) + 1
         elif t == "$upscope":
             scope.pop()

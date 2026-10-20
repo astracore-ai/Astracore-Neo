@@ -9,6 +9,9 @@ export DESIGN_NAME = neo_core
 include $(dir $(DESIGN_CONFIG))../neo_common.mk
 
 export SKIP_LAST_GASP = 1
+# drop 0.44 (A4): the three arrays placed with their pin edges toward the core (macro_place.tcl; run 182's feeder faced
+# the accumulator's back)
+export MACRO_PLACEMENT_TCL = $(dir $(DESIGN_CONFIG))macro_place.tcl
 export REMOVE_ABC_BUFFERS = 1
 export GPL_TIMING_DRIVEN = 0
 export GPL_ROUTABILITY_DRIVEN = 0

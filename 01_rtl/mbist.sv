@@ -13,6 +13,11 @@
 //   flops), whether any mismatched (mism_q) and the row (row_q); the cycle after records the first failure (fail,
 //   fail_ce, fail_addr) from those registers. The March sequence and its cycle count are unchanged; done rises one cycle
 //   after the last check (chk_q: a registered check is still to be recorded), so fail is final when done is seen.
+//   Drop 0.44 (A4) -- the check waits for the bank's rvalid: the engine's row, data and enables reach the bank through the
+//   wrapper's broadcast register (bank_bist_wrap.sv: the routed bank of drop 0.43 missed 1,250 ps by 1.59 ns on the
+//   engine's data into a lane a millimetre away), so a read's data comes back two cycles after S_R instead of one, and
+//   S_CHK holds until rvalid shows it (one cycle more per read row: 121 -> 161 cycles on run_mbist.py's 64-word bank,
+//   0.98 M -> 1.31 M cycles over the 2 MB bank's 32,768 rows). The sequence, the check and the recording are unchanged.
 module mbist #(
   parameter int AW    = 12,                  // word address width (fail_addr)
   parameter int WORDS = 4096,                // words tested, a multiple of LANES
@@ -95,14 +100,14 @@ module mbist #(
     end else begin
       // the check of the read data, registered (S_CHK), and the first failure recorded from the registers a cycle later
       chk_q <= (state == S_CHK) && rvalid;
-      if (state == S_CHK) begin hit_q <= lane_hit; mism_q <= (lane_bad != '0); row_q <= addr; end
+      if ((state == S_CHK) && rvalid) begin hit_q <= lane_hit; mism_q <= (lane_bad != '0); row_q <= addr; end
       if (chk_q && (hit_q != '0) && !fail) begin
         fail <= 1'b1; fail_ce <= !mism_q; fail_addr <= AW'(row_q) * AW'(LANES) + AW'(first_lane);
       end
       case (state)
         S_IDLE: if (start) begin elem <= '0; idx <= '0; fail <= 1'b0; fail_ce <= 1'b0; fail_addr <= '0; state <= has_read ? S_R : S_W; end
-        S_R:    state <= S_CHK;                                  // rdata valid next cycle
-        S_CHK: begin
+        S_R:    state <= S_CHK;                                  // rdata two cycles on (the wrapper's register, the bank's)
+        S_CHK: if (rvalid) begin                                 // drop 0.44: the check in the cycle the data shows
           state <= has_write ? S_W : S_IDLE;                    // S_IDLE here means "advance" (see below)
           if (!has_write) begin
             if (idx == IW'(ROWS - 1)) begin

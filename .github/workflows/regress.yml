@@ -33,6 +33,22 @@ on:
         description: "pnr: the ORFS docker image (empty: the tag 07_ci/pnr/tools.sh pins)"
         type: string
         default: ""
+      pnr_runner:
+        description: "pnr: the runner label (empty: ubuntu-latest; a self-hosted label for the 32 x 32 core's flat route -- 07_ci/pnr/README.md, drop 0.44)"
+        type: string
+        default: ""
+      pnr_stages:
+        description: "pnr: the ORFS targets to run, comma-separated (empty: the block's stages file, else the full flow); a persistent WORK_HOME on a self-hosted runner resumes from the last stage's database"
+        type: string
+        default: ""
+      pnr_budget_min:
+        description: "pnr: minutes for the block's flow on the runner, less the setup (empty: 320, the hosted runner's); set pnr_timeout_min with it"
+        type: string
+        default: ""
+      pnr_timeout_min:
+        description: "pnr: the job's timeout in minutes (empty: 350); at least pnr_budget_min + 30"
+        type: string
+        default: ""
       faults_only:
         description: "run only the fault campaign (the faults job), none of the others (drop 0.43)"
         type: boolean
@@ -556,11 +572,16 @@ jobs:
           git add -f ci_logs/pnr/RUN.txt
           git commit -q -m "pnr run ${{ github.run_number }}: plan"
           git push origin ci-logs-pnr --force
+  # drop 0.44 (A4): the runner, the stages and the budget are dispatch inputs -- the hosted runner's 6 h / 16 GB / 4 cores
+  # do not route the flat 32 x 32 core (pnr_drop043.md section 5); on a self-hosted runner (pnr_runner: its label; Linux with
+  # docker, sudo and the swap step skipped) with a persistent working directory (NEO_PNR_WORK on the runner, below) ORFS's
+  # make resumes from the last stage's database, so one dispatch per stage group (pnr_stages) walks the core through
+  # placement, CTS and routing in as many jobs as it takes.
   pnr:
     needs: pnr-plan
     if: needs.pnr-plan.outputs.run == '1'
-    runs-on: ubuntu-latest
-    timeout-minutes: 350
+    runs-on: ${{ inputs.pnr_runner || 'ubuntu-latest' }}
+    timeout-minutes: ${{ fromJSON(inputs.pnr_timeout_min || '350') }}
     strategy:
       fail-fast: false
       matrix:
@@ -572,6 +593,9 @@ jobs:
       PERIOD: ${{ inputs.pnr_period || '1000' }}
       FLOW_ARGS: ${{ inputs.pnr_flow_args }}
       IMAGE_INPUT: ${{ inputs.pnr_image }}
+      STAGES: ${{ inputs.pnr_stages }}
+      BUDGET: ${{ inputs.pnr_budget_min || '320' }}
+      SELF_HOSTED: ${{ inputs.pnr_runner != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -592,6 +616,7 @@ jobs:
       # c16_neo_core died at 15.6 GB in its first iteration. The finished workers are not touched again until the batch
       # ends, so swap holds them at little cost: 32 GB of swap file beside the runner's 16 GB.
       - name: swap for detailed routing's batch memory
+        if: env.SELF_HOSTED != 'true'
         run: |
           sudo fallocate -l 32G /pnr.swap && sudo chmod 600 /pnr.swap && sudo mkswap -q /pnr.swap && sudo swapon /pnr.swap
           free -m | sed -n 2,3p | tee -a ci_logs/pnr/$BLOCK/RUN.txt
@@ -617,10 +642,13 @@ jobs:
       - name: place and route (pnr/run.py; the flow bounded by the job's time left)
         run: |
           set -o pipefail
-          B=$(( 320 - ($(date +%s) - $(cat .job_start)) / 60 ))
-          echo "budget $B min" | tee -a ci_logs/pnr/$BLOCK/RUN.txt
-          python3 pnr/run.py --block $BLOCK --synth synth_out --out pnr_out --logs ci_logs/pnr/$BLOCK --runner docker \
-            --image "$NEO_ORFS_IMAGE" --flow-args "$FLOW_ARGS" --budget-min $B 2>&1 | tee ci_logs/pnr/$BLOCK/run.txt
+          B=$(( BUDGET - ($(date +%s) - $(cat .job_start)) / 60 ))
+          # a self-hosted runner keeps its working directory between dispatches (NEO_PNR_WORK set in its environment): the
+          # flow resumes from the last stage's database there (drop 0.44)
+          OUT=${NEO_PNR_WORK:-pnr_out}
+          echo "budget $B min, stages [${STAGES:-default}], work $OUT" | tee -a ci_logs/pnr/$BLOCK/RUN.txt
+          python3 pnr/run.py --block $BLOCK --synth synth_out --out "$OUT" --logs ci_logs/pnr/$BLOCK --runner docker \
+            --image "$NEO_ORFS_IMAGE" --flow-args "$FLOW_ARGS" --budget-min $B ${STAGES:+--stages "$STAGES"} 2>&1 | tee ci_logs/pnr/$BLOCK/run.txt
       - name: publish logs
         if: always()
         run: |

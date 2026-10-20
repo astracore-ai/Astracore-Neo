@@ -299,6 +299,7 @@ module vec_unit #(
   output logic                  acc_rd_en,      // the unit's own read of the accumulator (after the sequencer's drain)
   output logic [IDXW-1:0]       acc_rd_idx,
   input  logic signed [PW-1:0]  acc_rd_data [COLS],
+  input  logic                  acc_rd_valid,   // drop 0.44: the accumulator's drain row is valid (the bypass registers it)
   // residual rows from the DMA (FETCH_A, arg 1)
   input  logic                  rbuf_we,
   input  logic                  rbuf_we2,
@@ -546,16 +547,19 @@ module vec_unit #(
   logic [2:0]           lc_cq [COLS];
   logic                 lc_ex [COLS];
   logic                 lc_ld [COLS];
+  logic                 lc_bp [COLS];                    // drop 0.44: busy, a copy per lane (the bypass select of xo)
   logic signed [31:0]   lc_sa [NS];
   logic signed [31:0]   lc_sb [NS];
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       for (int j = 0; j < COLS; j++) begin
         lc_op[j] <= '0; lc_sh[j] <= '0; lc_s1[j] <= '0; lc_s3[j] <= '0; lc_cq[j] <= '0; lc_ex[j] <= 1'b0; lc_ld[j] <= 1'b0;
+        lc_bp[j] <= 1'b0;
       end
       for (int g = 0; g < NS; g++) begin lc_sa[g] <= '0; lc_sb[g] <= '0; end
     end else begin
       for (int j = 0; j < COLS; j++) begin
+        lc_bp[j] <= lc_bp[j] ^ (lc_bp[j] ^ busy);
         lc_op[j] <= lc_op[j] ^ (lc_op[j] ^ ow_nx[3:0]);
         lc_sh[j] <= lc_sh[j] ^ (lc_sh[j] ^ ow_nx[14:10]);
         lc_s1[j] <= lc_s1[j] ^ (lc_s1[j] ^ ow_nx[14:10]);
@@ -754,7 +758,10 @@ module vec_unit #(
       rsh[0] <= '0; rsh[1] <= '0; rbe <= '0; rb_sel_q <= 1'b0;
     end else begin
       for (int j = 0; j < COLS; j++) begin
-        xr[j] <= xn[j]; xm[j] <= xm[j] ^ (xm[j] ^ xn[j]); xo[j] <= xo[j] ^ (xo[j] ^ xn[j]); xa[j] <= xa[j] ^ (xa[j] ^ xn[j]);
+        xr[j] <= xn[j]; xm[j] <= xm[j] ^ (xm[j] ^ xn[j]); xa[j] <= xa[j] ^ (xa[j] ^ xn[j]);
+        // drop 0.44: the requantizers' copy is the bypass register while the unit is idle -- the accumulator's drain row,
+        // a cycle later (the select by the lane's copy of busy, in front of the register, not of the requantizer's tree)
+        xo[j] <= xo[j] ^ (xo[j] ^ (lc_bp[j] ? xn[j] : acc_rd_data[j]));
       end
       rb_sel_q <= rd_idx[0];
       if (ld) begin
@@ -777,8 +784,16 @@ module vec_unit #(
     end
   end
 
-  // EMIT
-  assign out_valid = exec && (op == OP_EMIT);
+  // EMIT, or the bypass (drop 0.44): the accumulator's drain row registered in xo while the unit is idle, its valid a
+  // cycle later -- the dense path's rows reach the requantizers from this register, one cycle later than from the
+  // accumulator's port (neo_core selected between the two in front of the requantizers' carry-save stage: 331 ps of select
+  // and fan-out on its input; the vec_on copy of busy here is the lanes' stale-by-one copy, as the data's, so the two agree)
+  logic bpv_q;
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) bpv_q <= 1'b0;
+    else        bpv_q <= !lc_bp[0] && acc_rd_valid;
+  end
+  assign out_valid = (exec && (op == OP_EMIT)) || bpv_q;
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_out
       assign out_row[j] = xo[j];

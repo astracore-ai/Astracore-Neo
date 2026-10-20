@@ -64,10 +64,10 @@
 //   Error events (one cycle, to top_ctrl's sticky registers): ev_crc, ev_lost (a stream's CRC flit disagrees), ev_axi (an
 //   AXI response other than OKAY on the memory role), ev_timeout (a host read timed out), ev_host (a host transaction
 //   answered SLVERR or DECERR).
-//   Timing structure: rx_ready is decided by the beat's type, its source's coordinates against the host read's tile and
-//   registers -- never by a per-source value or by an AXI ready; the source is decoded one-hot from its coordinates and its
-//   state read through AND-OR selects; the receive CRC is computed in two halves (the words' through crc16_beat, the
-//   source state's as A^n c) and XORed; the read request's fields (taken from the queue at IS_IDLE), its address and
+//   Timing structure: drop 0.44 (A4) -- the beat is registered at the port with its source's receive state beside it
+//   (the RX stage below, the NIC's drop-0.42 form), so rx_ready is the stage's room alone and every action on a beat
+//   reads registers; the receive CRC is crc16_beat on the registered beat and the registered state (the two-halves
+//   split of drop 0.42 is gone with the select it served); the read request's fields (taken from the queue at IS_IDLE), its address and
 //   burst sizes (IS_ADDR, IS_ARP), the R beat's lane and word count are registers, the write path works from its second
 //   beat register (its address formed between the two) into registers and the buffer, so AR, AW and W come from
 //   registers or the buffer's read port; a queue's full test compares its pointers (no subtractor before rx_ready); the
@@ -187,7 +187,49 @@ module noc_axi_bridge #(
     return {lo[16] ? wb[39:22] + 18'd1 : wb[39:22], lo[15:0], a[3:0], 2'b00};
   endfunction
 
-  // ------------------------------------------------------------------ RX: the beat at the input
+  // ------------------------------------------------------------------ RX stage (drop 0.44, A4: the NIC's drop-0.42 form)
+  // The beat from the mesh FIFO is registered at the port (q_*) before anything acts on it, with its word count formed on
+  // the way (q_nw, and a copy stored inverted for the CRC -- two flops of one input would be one flop to the synthesis)
+  // and, registered beside it, the receive state of its source: the write pointer, the CRC accumulator and the word
+  // count (st_*), read from the source's registers through an AND-OR select of the source's one-hot in the cycle the
+  // stage takes the beat, then updated in place by every beat of that source; a beat of another source loads its own
+  // state while the outgoing one goes back to its registers through the write-back register wb3_* (a beat whose source
+  // is in wb3_* takes the state from there). Every action on a beat -- the queue's take, the write path's register A,
+  // the host read's stage, the CRC and the count -- then reads registers only. Before (drop 0.42 / 0.43), the beat at
+  // the port drove the per-source select and the receive CRC in one cycle: rx_flit's count field through the CRC's
+  // 17-way matrix select into crc_acc, 1,359 ps register to register and 1,339 endpoints at 1,500 ps (run 211). The
+  // port's rx_ready is the stage's room (st_free): it no longer depends on the beat's type; every flit is one aclk cycle
+  // later, the receive rate unchanged (a beat per cycle while the stage consumes one per cycle).
+  logic            q_valid;
+  logic [FB-1:0]   q_flit;
+  logic [CW-1:0]   q_nw;
+  logic [CW-1:0]   q_nwc_n;                  // ~q_nw, the CRC's copy
+  logic            q_ready;                  // the registered beat is consumed this cycle (the handshake below)
+  logic            st_free;                  // the stage takes a beat this cycle
+  logic            i_take;
+  logic [2:0]      in_type;                  // the port beat's type and word count
+  logic            in_data;
+  logic [CW-1:0]   in_nw;
+  logic [XW-1:0]   in_cx;                    // the port beat's source: its coordinates and their one-hot over the sources
+  logic [YW-1:0]   in_cy;
+  logic [NSRC-1:0] in_hot;
+  assign in_type = rx_flit[DWB-1 -: 3];
+  assign in_data = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
+  assign in_nw   = in_data ? CW'(rx_flit[DWB-13-6 -: 6]) + CW'(1) : CW'(1);
+  assign in_cx   = rx_flit[DWB + 8 +: XW];
+  assign in_cy   = rx_flit[DWB + 8 + XW +: YW];
+  assign st_free = !q_valid || q_ready;
+  assign rx_ready = st_free;
+  assign i_take  = rx_valid && st_free;
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      q_valid <= 1'b0; q_flit <= '0; q_nw <= '0; q_nwc_n <= '1;
+    end else if (st_free) begin
+      q_valid <= rx_valid;
+      if (rx_valid) begin q_flit <= rx_flit; q_nw <= in_nw; q_nwc_n <= ~in_nw; end
+    end
+  end
+  // the registered beat's fields (rx_*: what the roles act on)
   logic [2:0]      rx_type;
   logic [19:0]     rx_hdr;
   logic [VW-1:0]   rx_words;
@@ -195,94 +237,102 @@ module noc_axi_bridge #(
   logic [7:0]      rx_seq;
   logic [XW-1:0]   rx_src_x;
   logic [YW-1:0]   rx_src_y;
-  logic            rx_is_data;
   logic [CW-1:0]   rx_nw;                    // words in the beat
-  logic            rx_fire;
-  assign rx_type    = rx_flit[DWB-1 -: 3];
-  assign rx_hdr     = rx_flit[DWB-13 -: 20];
-  assign rx_words   = rx_flit[VW-1:0];
+  logic [CW-1:0]   rx_nwc;                   // ... the CRC's copy
+  logic            rx_fire;                  // the registered beat is consumed
+  assign rx_type    = q_flit[DWB-1 -: 3];
+  assign rx_hdr     = q_flit[DWB-13 -: 20];
+  assign rx_words   = q_flit[VW-1:0];
   assign rx_word0   = rx_words[31:0];
-  assign rx_seq     = rx_flit[DWB +: 8];
-  assign rx_src_x   = rx_flit[DWB + 8 +: XW];
-  assign rx_src_y   = rx_flit[DWB + 8 + XW +: YW];
-  assign rx_is_data = (rx_type == T_RDRSP) || (rx_type == T_WRDATA) || (rx_type == T_PSUM);
-  assign rx_nw      = rx_is_data ? CW'(rx_hdr[13:8]) + CW'(1) : CW'(1);
+  assign rx_seq     = q_flit[DWB +: 8];
+  assign rx_src_x   = q_flit[DWB + 8 +: XW];
+  assign rx_src_y   = q_flit[DWB + 8 + XW +: YW];
+  assign rx_nw      = q_nw;
+  assign rx_nwc     = ~q_nwc_n;
+  assign rx_fire    = q_valid && q_ready;
   logic unused_rx_bits;                      // the destination (this node), the tag, seq[7:4], hdr[19:14]
-  assign unused_rx_bits = ^{rx_flit[FB-1 -: XW + YW], rx_flit[DWB-4 -: 9], rx_seq[7:4], rx_hdr[19:14]};
+  assign unused_rx_bits = ^{q_flit[FB-1 -: XW + YW], q_flit[DWB-4 -: 9], rx_seq[7:4], rx_hdr[19:14], rx_flit[FB-1 -: XW + YW],
+                            rx_flit[DWB-4 -: 9], rx_flit[DWB +: 8], rx_flit[DWB-13 -: 8], rx_flit[DWB-13-6-8 -: 8]};
 
   // per-source receive state (each source in its own block, as tile_nic keeps it): the write pointer of a drain into the
-  // memory window, the CRC and the word count of the stream in progress. The beat's source is decoded one-hot from its
-  // coordinates (no index arithmetic, small fanouts), and the source's values are read through AND-OR selects of it.
+  // memory window, the CRC and the word count of the stream in progress, written from the write-back register when the
+  // source's state leaves st_*; read into st_* through the port beat's one-hot (source s = y * (NX + 1) + x)
   logic [19:0]     wr_ptr  [NSRC];
   logic [15:0]     crc_acc [NSRC];
   logic [15:0]     rx_cnt  [NSRC];
-  logic [NSRC-1:0] src_hot;                  // the beat's source, one-hot over y * (NX + 1) + x
-  logic [15:0]     crc_sel, cnt_sel;         // its CRC and word count
-  logic [19:0]     ptr_sel;                  // its write pointer
+  logic            st_v;                     // st_* holds a source's state (after the first beat)
+  logic [XW-1:0]   st_cx;
+  logic [YW-1:0]   st_cy;
+  logic [NSRC-1:0] st_hot;
+  logic [19:0]     st_ptr;
+  logic [15:0]     st_crc, st_cnt;
+  logic            wb3_v;                    // wb3_* goes back to the registers of source wb3_hot this cycle
+  logic [NSRC-1:0] wb3_hot;
+  logic [19:0]     wb3_ptr;
+  logic [15:0]     wb3_crc, wb3_cnt;
+  logic            st_load;                  // the stage takes a beat of another source than st_*'s
+  logic            wb3_hit;                  // ... whose state is the one going back this cycle
+  logic [19:0]     lk_ptr, u_ptr;            // the port beat's source's state; st_* after this cycle's beat
+  logic [15:0]     lk_crc, lk_cnt, u_crc, u_cnt;
+  logic [15:0]     rx_crc_next;
+  logic            crc_bad, cnt_bad;
+  crc16_beat #(.BW(BW)) u_rxcrc (.crc_in(st_crc), .words(rx_words), .n(rx_nwc), .crc_out(rx_crc_next));
+  assign crc_bad = (st_crc != rx_word0[15:0]);
+  assign cnt_bad = (st_cnt != rx_word0[31:16]);
+  assign st_load = i_take && (!st_v || (in_cx != st_cx) || (in_cy != st_cy));
   always_comb begin
     for (int y = 0; y < NY; y++)
       for (int x = 0; x <= NX; x++)
-        src_hot[y * (NX + 1) + x] = (rx_src_y == YW'(y)) && (rx_src_x == XW'(x));
-    crc_sel = '0; cnt_sel = '0; ptr_sel = '0;
+        in_hot[y * (NX + 1) + x] = (in_cy == YW'(y)) && (in_cx == XW'(x));
+    wb3_hit = wb3_v && ((wb3_hot & in_hot) != '0);
+    lk_ptr = '0; lk_crc = '0; lk_cnt = '0;
     for (int s = 0; s < NSRC; s++) begin
-      crc_sel = crc_sel | ({16{src_hot[s]}} & crc_acc[s]);
-      cnt_sel = cnt_sel | ({16{src_hot[s]}} & rx_cnt[s]);
-      ptr_sel = ptr_sel | ({20{src_hot[s]}} & wr_ptr[s]);
+      lk_ptr = lk_ptr | ({20{in_hot[s]}} & wr_ptr[s]);
+      lk_crc = lk_crc | ({16{in_hot[s]}} & crc_acc[s]);
+      lk_cnt = lk_cnt | ({16{in_hot[s]}} & rx_cnt[s]);
+    end
+    if (wb3_hit) begin lk_ptr = wb3_ptr; lk_crc = wb3_crc; lk_cnt = wb3_cnt; end
+    u_ptr = st_ptr; u_crc = st_crc; u_cnt = st_cnt;
+    if (rx_fire) begin
+      case (rx_type)
+        T_WRHDR:  u_ptr = rx_word0[19:0];
+        T_WRDATA: begin                      // a data beat: its words into the stream's CRC and count; the whole beat written
+          u_ptr = st_ptr + 20'(rx_hdr[13:8]) + 20'd1;
+          u_crc = rx_crc_next; u_cnt = st_cnt + 16'(rx_hdr[13:8]) + 16'd1;
+        end
+        T_RDRSP, T_PSUM: begin u_crc = rx_crc_next; u_cnt = st_cnt + 16'(rx_hdr[13:8]) + 16'd1; end
+        T_CRC:    begin u_crc = 16'hFFFF; u_cnt = '0; end
+        default: ;
+      endcase
     end
   end
-  // the beat's CRC update in two halves: the update is linear with no constant term (crc16_beat.sv), so crc(c, w, n) =
-  // crc(c, 0, n) ^ crc(0, w, n). The words' half is crc16_beat from a zero state, independent of the source; the state's
-  // half is A^n c -- n zero words, A = 32 steps of crc16_word's register with a zero input -- one 16 x 16 matrix per n,
-  // whose columns are elaboration-time constants (crc_zeros), so the source's CRC passes one AND-XOR level after its select.
-  function automatic logic [15:0] crc_zeros(input logic [15:0] c0, input int words);
-    logic [15:0] c;
-    c = c0;
-    for (int i = 0; i < 32 * words; i++) c = {c[14:0], 1'b0} ^ (c[15] ? 16'h1021 : 16'h0000);
-    return c;
-  endfunction
-  logic [15:0] az [BW + 1][16];              // az[n][k] = A^n e_k
-  for (genvar n = 0; n <= BW; n++) begin : g_az
-    for (genvar k = 0; k < 16; k++) begin : g_k
-      localparam logic [15:0] COL = crc_zeros(16'(1) << k, n);
-      assign az[n][k] = COL;
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      st_v <= 1'b0; st_cx <= '0; st_cy <= '0; st_hot <= '0; st_ptr <= '0; st_crc <= 16'hFFFF; st_cnt <= '0;
+      wb3_v <= 1'b0; wb3_hot <= '0; wb3_ptr <= '0; wb3_crc <= 16'hFFFF; wb3_cnt <= '0;
+    end else begin
+      wb3_v <= st_load && st_v;
+      if (st_load) begin                       // a beat of another source: its state in, st_* out to wb3_*
+        st_v <= 1'b1; st_cx <= in_cx; st_cy <= in_cy; st_hot <= in_hot; st_ptr <= lk_ptr; st_crc <= lk_crc; st_cnt <= lk_cnt;
+        wb3_hot <= st_hot; wb3_ptr <= u_ptr; wb3_crc <= u_crc; wb3_cnt <= u_cnt;
+      end else begin                           // the same source (or none): in place
+        st_ptr <= u_ptr; st_crc <= u_crc; st_cnt <= u_cnt;
+      end
     end
   end
-  logic [15:0] rx_crc_src, rx_crc_words, rx_crc_next;
-  logic        crc_bad, cnt_bad;
-  always_comb begin
-    rx_crc_src = '0;
-    for (int k = 0; k < 16; k++) rx_crc_src = rx_crc_src ^ ({16{crc_sel[k]}} & az[rx_nw][k]);
-  end
-  crc16_beat #(.BW(BW)) u_rxcrc (.crc_in(16'd0), .words(rx_words), .n(rx_nw), .crc_out(rx_crc_words));
-  assign rx_crc_next = rx_crc_src ^ rx_crc_words;
-  assign crc_bad = (crc_sel != rx_word0[15:0]);
-  assign cnt_bad = (cnt_sel != rx_word0[31:16]);
   generate
     for (genvar s = 0; s < NSRC; s++) begin : g_src
       always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
           crc_acc[s] <= 16'hFFFF; rx_cnt[s] <= '0;
-        end else if (rx_fire && src_hot[s]) begin
-          case (rx_type)
-            T_WRDATA, T_RDRSP, T_PSUM: begin            // a data beat: its words into the stream's CRC and count
-              crc_acc[s] <= rx_crc_next;
-              rx_cnt[s]  <= rx_cnt[s] + 16'(rx_hdr[13:8]) + 16'd1;          // a data beat's count (hdr + 1, as rx_nw)
-            end
-            T_CRC: begin
-              crc_acc[s] <= 16'hFFFF;
-              rx_cnt[s]  <= '0;
-            end
-            default: ;
-          endcase
+        end else if (wb3_v && wb3_hot[s]) begin
+          crc_acc[s] <= wb3_crc; rx_cnt[s] <= wb3_cnt;
         end
       end
       if (MEM != 0) begin : g_wp                        // the drain's write pointer into the window
         always_ff @(posedge clk or negedge rst_n) begin
           if (!rst_n) wr_ptr[s] <= '0;
-          else if (rx_fire && src_hot[s]) begin
-            if (rx_type == T_WRHDR) wr_ptr[s] <= rx_word0[19:0];
-            else if (rx_type == T_WRDATA) wr_ptr[s] <= wr_ptr[s] + 20'(rx_hdr[13:8]) + 20'd1;   // the whole beat, after its write
-          end
+          else if (wb3_v && wb3_hot[s]) wr_ptr[s] <= wb3_ptr;
         end
       end else begin : g_nowp
         assign wr_ptr[s] = '0;
@@ -305,6 +355,7 @@ module noc_axi_bridge #(
   logic [19:0]    mt_hdr, ht_hdr;
   logic [VW-1:0]  mt_words, ht_words;
   logic [CW-1:0]  mt_n, ht_n;
+  logic [CW-1:0]  mt_nd, ht_nd;              // drop 0.44: each role's data beat's count from its registers alone (tx_cnt's adder)
   logic           t_data;
   logic [XW-1:0]  t_dx;
   logic [YW-1:0]  t_dy;
@@ -324,10 +375,19 @@ module noc_axi_bridge #(
   assign t_data  = (t_type == T_RDRSP) || (t_type == T_WRDATA);
   assign tx_flit = {t_dy, t_dx, my_y, my_x, 4'd0, t_part, t_type, 9'd0, t_hdr, t_words};
   assign tx_fire = tx_valid && tx_ready;
-  crc16_beat #(.BW(BW)) u_txcrc (.crc_in(tx_crc), .words(t_words), .n(t_n), .crc_out(tx_crc_next));
+  // the CRC one cycle behind the beats (drop 0.44, the NIC's drop-0.42 form): a data beat sent is registered with its
+  // count (txc_*) and accumulated in the next cycle, so the beat's assembly -- the R data's lane rotation, the host W
+  // beat's shift -- and the CRC tree are two paths; the message's CRC flit waits for the last beat's update (txc_v low).
+  // Before, m_rdata through the rotation and the matrix select into tx_crc was 1,392 ps from the pin at 1,250 ps, and
+  // the host W beat's count register into tx_crc 1,435 ps register to register (the receive stage above fixed).
+  logic          txc_v;
+  logic [VW-1:0] txc_words;
+  logic [CW-1:0] txc_n;
+  crc16_beat #(.BW(BW)) u_txcrc (.crc_in(tx_crc), .words(txc_words), .n(txc_n), .crc_out(tx_crc_next));
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       own_mem <= 1'b0; own_host <= 1'b0; tx_rr <= 1'b0; tx_crc <= 16'hFFFF; tx_cnt <= '0;
+      txc_v <= 1'b0; txc_words <= '0; txc_n <= '0;
     end else begin
       if (own_mem && !mem_want) own_mem <= 1'b0;
       else if (own_host && !host_want) own_host <= 1'b0;
@@ -335,24 +395,28 @@ module noc_axi_bridge #(
         if (mem_want && (!host_want || !tx_rr)) begin own_mem <= 1'b1; tx_rr <= 1'b1; tx_crc <= 16'hFFFF; tx_cnt <= '0; end
         else if (host_want) begin own_host <= 1'b1; tx_rr <= 1'b0; tx_crc <= 16'hFFFF; tx_cnt <= '0; end
       end
-      if (tx_fire && t_data) begin tx_crc <= tx_crc_next; tx_cnt <= tx_cnt + 16'(t_n); end
+      txc_v <= tx_fire && t_data;
+      // the count's adder takes the role's data count from registers (the memory role's r_n, the host's wq_n); the late
+      // decision of what the flit is (a WRHDR before this beat, or the beat itself) only enables it: the host's 19-bit
+      // address compare was in front of the 16-bit add, 1,302 ps to tx_cnt[14] (drop 0.44)
+      if (tx_fire && t_data) begin txc_words <= t_words; txc_n <= t_n; tx_cnt <= tx_cnt + (own_mem ? 16'(mt_nd) : 16'(ht_nd)); end
+      if (txc_v) tx_crc <= tx_crc_next;
     end
   end
 
-  // ------------------------------------------------------------------ RX handshake
+  // ------------------------------------------------------------------ RX handshake (the registered beat, drop 0.44)
   logic rdreq_ok;                            // memory role: an RDREQ is taken now (the server is free)
-  logic wrdata_ok;                           // memory role: the WRDATA beat at the input is written (its burst's B is back)
-  logic host_rsp;                            // host role: the RDRSP beat at the input belongs to the read in progress
-  logic host_rsp_ok;                         // ... and the stage takes it now
+  logic wrdata_ok;                           // memory role: the WRDATA beat in the stage is written (register A is free)
+  logic host_rsp;                            // host role: the RDRSP beat in the stage belongs to the read in progress
+  logic host_rsp_ok;                         // ... and the read's stage takes it now
   always_comb begin
     case (rx_type)
-      T_RDREQ:  rx_ready = rdreq_ok;
-      T_RDRSP:  rx_ready = !host_rsp || host_rsp_ok;
-      T_WRDATA: rx_ready = wrdata_ok;
-      default:  rx_ready = 1'b1;
+      T_RDREQ:  q_ready = rdreq_ok;
+      T_RDRSP:  q_ready = !host_rsp || host_rsp_ok;
+      T_WRDATA: q_ready = wrdata_ok;
+      default:  q_ready = 1'b1;
     endcase
   end
-  assign rx_fire = rx_valid && rx_ready;
 
   // error events: a stream's CRC flit against the source's CRC and count; the roles' events below
   logic m_ev_axi, h_ev_timeout, h_ev_host;
@@ -495,14 +559,15 @@ module noc_axi_bridge #(
       assign rs_crc    = rs_active && (r_words == 13'd0);
       assign r_fire    = m_rvalid && m_rready;
       assign m_rready  = own_mem && rs_active && !rs_crc && tx_ready;
-      assign crc_fire  = own_mem && rs_crc && tx_ready;
+      assign crc_fire  = own_mem && rs_crc && tx_ready && !txc_v;          // (the last beat's CRC in: drop 0.44)
       // the output is asked for when there is a flit to send and held to the CRC flit (released at the message's end)
       assign mem_want  = rs_active && (own_mem || m_rvalid || rs_crc);
-      assign mt_valid  = own_mem && rs_active && (rs_crc || m_rvalid);
+      assign mt_valid  = own_mem && rs_active && (rs_crc ? !txc_v : m_rvalid);
       assign mt_dx     = q_x[qi_r];
       assign mt_dy     = q_y[qi_r];
       assign mt_part   = q_part[qi_r];
       assign mt_type   = rs_crc ? T_CRC : T_RDRSP;
+      assign mt_nd     = r_n;
       assign mt_hdr    = rs_crc ? 20'd0 : {6'd0, 6'(r_n - CW'(1)), 8'd0};
       assign mt_words  = rs_crc ? VW'({tx_cnt, tx_crc ^ {16{r_err}}}) : VW'(m_rdata) >> (32 * r_lo);
       assign mt_n      = rs_crc ? CW'(1) : r_n;
@@ -623,7 +688,7 @@ module noc_axi_bridge #(
         end else begin
           // register A: from the input; it empties into B
           if (wb_take) begin
-            wa_valid <= 1'b1; wa_words <= rx_words; wa_nw <= rx_nw; wa_ptr <= ptr_sel; wa_src <= {rx_src_y, rx_src_x};
+            wa_valid <= 1'b1; wa_words <= rx_words; wa_nw <= rx_nw; wa_ptr <= st_ptr; wa_src <= {rx_src_y, rx_src_x};
           end else if (wa_move) begin
             wa_valid <= 1'b0;
           end
@@ -707,14 +772,14 @@ module noc_axi_bridge #(
       assign m_ev_axi = 1'b0;
       assign ev_rd_wait = 1'b0; assign ev_wr_wait = 1'b0; assign wr_busy = 1'b0;
       assign mt_valid = 1'b0; assign mt_dx = '0; assign mt_dy = '0; assign mt_part = '0; assign mt_type = '0;
-      assign mt_hdr = '0; assign mt_words = '0; assign mt_n = '0;
+      assign mt_hdr = '0; assign mt_words = '0; assign mt_n = '0; assign mt_nd = '0;
       assign m_awaddr = '0; assign m_awlen = '0; assign m_awsize = '0; assign m_awburst = '0; assign m_awvalid = 1'b0;
       assign m_wdata = '0; assign m_wstrb = '0; assign m_wlast = 1'b0; assign m_wvalid = 1'b0; assign m_bready = 1'b0;
       assign m_araddr = '0; assign m_arlen = '0; assign m_arsize = '0; assign m_arburst = '0; assign m_arvalid = 1'b0;
       assign m_rready = 1'b0;
       logic unused_mem;
       assign unused_mem = ^{m_awready, m_wready, m_bresp, m_bvalid, m_arready, m_rdata, m_rresp, m_rlast, m_rvalid, win_base,
-                            rx_hdr[7:0], rx_seq[3:0], ptr_sel};
+                            rx_hdr[7:0], rx_seq[3:0], st_ptr};
     end
   endgenerate
 
@@ -802,7 +867,7 @@ module noc_axi_bridge #(
             if (w_need_hdr && !h_hdr_now) begin ht_type = T_WRHDR; ht_words = VW'(32'(wq_addr)); end
             else begin ht_type = T_WRDATA; ht_hdr = {6'd0, 6'(wq_n - CW'(1)), 8'd0}; ht_words = VW'(wq_data); ht_n = wq_n; end
           end
-          H_WCRC: if (own_host && h_hdr) begin ht_valid = 1'b1; ht_type = T_CRC; ht_words = VW'({tx_cnt, tx_crc}); end
+          H_WCRC: if (own_host && h_hdr && !txc_v) begin ht_valid = 1'b1; ht_type = T_CRC; ht_words = VW'({tx_cnt, tx_crc}); end
           H_RREQ: if (own_host) begin
             ht_valid = 1'b1; ht_type = T_RDREQ; ht_hdr = {12'd0, 4'(my_y), 4'(my_x)};
             ht_words = VW'({12'(h_nwreq), 20'(h_bword)});
@@ -812,6 +877,7 @@ module noc_axi_bridge #(
       end
       assign ht_dx = h_x;
       assign ht_dy = h_y;
+      assign ht_nd = wq_n;
       assign host_want = (h_state == H_W) || (h_state == H_WCRC) || (h_state == H_RREQ);
       assign s_bvalid = (h_state == H_B);
       assign s_bid    = h_id;
@@ -882,7 +948,7 @@ module noc_axi_bridge #(
                 if (h_beats == 9'd1) h_state <= H_WCRC;
               end
             end
-            H_WCRC: if (own_host && (!h_hdr || tx_ready)) h_state <= H_B;
+            H_WCRC: if (own_host && (!h_hdr || (tx_ready && !txc_v))) h_state <= H_B;
             H_WSKIP: if (w_fire && (h_beats == 9'd1)) h_state <= H_B; else if (w_fire) h_beats <= h_beats - 9'd1;
             H_B: if (s_bready) h_state <= H_IDLE;
             H_RREQ: if (own_host && tx_ready) begin h_state <= H_R; h_wait <= 1'b1; h_timer <= '0; end
@@ -930,7 +996,7 @@ module noc_axi_bridge #(
       assign host_want = 1'b0; assign host_rsp = 1'b0; assign host_rsp_ok = 1'b1;
       assign h_ev_timeout = 1'b0; assign h_ev_host = 1'b0;
       assign ht_valid = 1'b0; assign ht_dx = '0; assign ht_dy = '0; assign ht_type = '0; assign ht_hdr = '0; assign ht_words = '0;
-      assign ht_n = '0;
+      assign ht_n = '0; assign ht_nd = '0;
       assign s_awready = 1'b0; assign s_wready = 1'b0; assign s_bid = '0; assign s_bresp = '0; assign s_bvalid = 1'b0;
       assign s_arready = 1'b0; assign s_rid = '0; assign s_rdata = '0; assign s_rresp = '0; assign s_rlast = 1'b0;
       assign s_rvalid = 1'b0;

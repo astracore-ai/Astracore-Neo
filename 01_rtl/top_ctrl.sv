@@ -29,7 +29,9 @@
 //       command memory (4-word aligned: bits 1:0 read 0), [19:16] log2 of its entries (0 .. 8)  0x0A8 CQ_TAIL (r/w): the
 //       doorbell, the index past the last command written  0x0AC CQ_HEAD (r): the index of the next command to play
 //       0x0B0 CC_RING (r/w): the completion ring, as CQ_RING  0x0B4 CC_HEAD (r/w): the index past the last record the
-//       host has taken  0x0B8 CC_TAIL (r): the index past the last record written  0x0BC CQ_STATUS (r): bit 0 a command in
+//       host has taken  0x0B8 CC_TAIL (r): the index past the last record written -- as read, it advances two aclk cycles
+//       after the record's last word, in the cycle irq rises for it (drop 0.44: a host that sees a new tail finds IRQ_STATUS
+//       bit 4 and the pin already up; the player's own ring tests use the internal index)  0x0BC CQ_STATUS (r): bit 0 a command in
 //       progress, [7:4] the player's state, bit 8 a command since the queue's reset saw a refused write or a tile's err_pin
 //       0x0C0 TEL_CTRL (w, drop 0.43): bit 0 snapshot, bit 1 clear -- the bridges' wait counters and the window's aclk
 //       cycle count (as a tile's TEL_CTRL)  0x0C4 TEL_CYCLES (r): the snapshot's cycles
@@ -158,6 +160,7 @@ module top_ctrl #(
   logic [9:0]          cq_base, cc_base;
   logic [3:0]          cq_lg, cc_lg;
   logic [7:0]          cq_tail, cq_head, cc_head, cc_tail;   // ring indices, each below its ring's size
+  logic [7:0]          cc_tail_q, cc_tail_v;                // cc_tail as the host reads it: two cycles later, with irq (drop 0.44)
   logic [31:0]         ts_cyc;
   logic [31:0]         ts_rd [NB], ts_wr [NB];
   logic [33:0]         wb_q [NB];            // window bases, bits 39:6
@@ -269,7 +272,7 @@ module top_ctrl #(
         10'h02B: g_rd = {24'd0, cq_head};
         10'h02C: g_rd = {12'd0, cc_lg, 6'd0, cc_base};
         10'h02D: g_rd = {24'd0, cc_head};
-        10'h02E: g_rd = {24'd0, cc_tail};
+        10'h02E: g_rd = {24'd0, cc_tail_v};
         10'h02F: g_rd = {23'd0, cq_err, p_state, 3'd0, (p_state != P_IDLE)};
         10'h030: g_rd = 32'd0;
         10'h031: g_rd = ts_cyc;
@@ -404,9 +407,10 @@ module top_ctrl #(
       cq_tail <= '0; cq_head <= '0; cc_head <= '0; cc_tail <= '0; p_k <= '0; p_mask <= '0; p_img <= '0; p_left <= '0;
       p_nent <= '0; p_tag <= '0; p_val <= '0; p_reg <= '0; p_single <= 1'b0; p_err <= 1'b0; p_nowait <= 1'b0; p_rem <= '0;
       p_tile <= '0; p_cb <= '0; p_rb <= '0; p_ra <= '0;
-      p_guard <= '0; p_tmr <= '0; cq_irq <= 1'b0;
+      p_guard <= '0; p_tmr <= '0; cq_irq <= 1'b0; cc_tail_q <= '0; cc_tail_v <= '0;
     end else begin
       cq_irq <= 1'b0;
+      cc_tail_q <= cc_tail; cc_tail_v <= cc_tail_q;        // the host's view: cc_tail (edge E), IRQ_STATUS (E + 1), irq and CC_TAIL (E + 2)
       // the host's writes of the queue's registers
       if (g_do && a_we && !g_is_br) begin
         case (d_g)

@@ -120,7 +120,17 @@ PDKS = {
 # not by the RB parameter -- a neo_mem_rf whose port A is tied off and read only on its registered port B is the same
 # one-write one-read synchronous array as neo_mem_sp (the core's three arrays since drop 0.41, the NIC's drain FIFO
 # since 0.42), which the parameter priced as an array with two read ports.
-MACRO_AREA_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_b": 1.0, "neo_mem_rf_rb": 2.0}
+# Drop 0.44 (A4, review finding 4): no leaf is a single-port array. neo_mem_sp's write port and its registered read port
+# are driven independently in one cycle (the NIC writes a WRDATA beat into the bank while the server reads a row:
+# tile_nic.sv b_we / b_re, the telemetry counts both), and every neo_mem_rf with RB = 1 reads its port B while it is
+# written: each is a 1-write-1-read two-port macro (the pnr job's FakeRAM macros are `_1w1r`), which drops 0.40-0.43
+# priced at the single-port bit cell (1.0 x). FakeRAM2.0 sizes a macro by its bits alone (its dual-port class adds pins,
+# not area), so the factor is the design's own convention: 1.5 x the single-port high-density cell for every two-port
+# leaf -- the factor the model already gave the register-file read (an 8T two-port bit cell is 1.3-1.5 x a 6T
+# high-density cell; compiled two-port macros 1.4-1.6 x in bits per mm2) -- and 2.0 x with both read ports. The bank
+# goes from 0.860 to 1.290 mm2 of model, the tile's macro total from 0.970 to 1.455 mm2 (09_synthesis/memories.md,
+# proxy_to_target.md); a memory compiler's figures replace all of it.
+MACRO_AREA_FACTOR = {"neo_mem_sp": 1.5, "neo_mem_rf": 1.5, "neo_mem_rf_b": 1.5, "neo_mem_rf_rb": 2.0}
 MEM_LEAVES = ("neo_mem_sp", "neo_mem_rf")
 
 
@@ -191,11 +201,12 @@ TILE = dict(XW=3, YW=3, NX=8, NY=8, WPF=32, ROWS=32, COLS=32, ACC_ROWS=512, ABUF
 CORE16 = dict(ROWS=16, COLS=8, ACC_ROWS=64, ABUF_DEPTH=256, WBUF_DEPTH=512, NCHK=4)
 
 
-def U(name, module, params, desc, children=None, macros=(), pe=None, tile=False, icg=0):
+def U(name, module, params, desc, children=None, macros=(), pe=None, tile=False, icg=0, sdc=None):
     """children: {child module: [unit names that synthesize its parameterizations]}; macros: leaf modules to black-box;
-    icg (drop 0.43): the neo_icg instances of the unit's own logic (the gate checks the count)."""
+    icg (drop 0.43): the neo_icg instances of the unit's own logic (the gate checks the count); sdc (drop 0.44): 'top' for
+    the chip top's two-clock constraints (TOP_SDC), else the tile's or the generic block's by `tile`."""
     return dict(name=name, module=module, params=dict(params), desc=desc, children=dict(children or {}), macros=list(macros),
-                pe_expected=pe, tile=tile, icg_expected=icg)
+                pe_expected=pe, tile=tile, icg_expected=icg, sdc=sdc)
 
 
 def core_units(c, p, desc):
@@ -349,7 +360,7 @@ def top_units(P):
           children={"neo_tile": ["top_neo_tile"], "noc_router": ["top_noc_router"], "link_packer": ["top_link_packer"],
                     "link_unpacker": ["top_link_unpacker"], "noc_axi_bridge": ["noc_axi_bridge", "noc_axi_bridge_mem"],
                     "top_ctrl": ["top_ctrl"], "mesh_ctrl": ["mesh_ctrl"]},
-          pe=NX * NY * R * (C + TT["NCHK"])),
+          pe=NX * NY * R * (C + TT["NCHK"]), sdc="top"),
     ]
 
 
@@ -1037,6 +1048,49 @@ STATIC_SDC = """# the layer descriptor ({what}): written by the host or the DMA 
 set_multicycle_path 4 -setup {how} [get_{kind} {{{names}}}]
 set_multicycle_path 3 -hold  {how} [get_{kind} {{{names}}}]
 """
+# the chip top (drop 0.44, A4; review finding 9): the two clocks and the three crossing structures' exceptions of
+# 08_ip_product/neo_top_integration.md section 6, by the names the flattened neo_top gives them -- the bridges' FIFOs
+# (cdc_fifo: the gray pointers into the other side's first synchronizer flop, the entries into the read side's consumer),
+# the register bus (cdc_sync: the held request into mesh_ctrl's pins, the held response into the a_rsp_data register),
+# the levels (cdc_bits: a false path into every first flop). No set_clock_groups: OpenSTA gives an asynchronous group
+# precedence over set_max_delay (the toy of 20 Oct: the gray pointer's path reported as 'no paths' with the groups), so the
+# crossings are constrained by their exceptions alone (the note's second form); every clk / aclk path the note does not
+# list is timed at the period as any path and shows in the report by its clocks. The AXI clock runs at the mesh period on
+# the proxy; the real one is the integration's parameter (the units in it -- the bridges, top_ctrl -- are judged at the
+# period on their own). -ignore_clock_latency: the -datapath_only of the note, in OpenSTA's words.
+TOP_SDC = """# neo_top at {period} {unit}: the mesh clock clk and the AXI clock aclk (drop 0.44, A4; 08_ip_product/neo_top_integration.md section 6)
+create_clock -name clk  -period {period} [get_ports clk]
+create_clock -name aclk -period {period} [get_ports aclk]
+set_clock_uncertainty -setup {u_setup} [get_clocks {{clk aclk}}]
+set_clock_uncertainty -hold {u_hold} [get_clocks {{clk aclk}}]
+set_clock_transition {ctrans} [get_clocks {{clk aclk}}]
+# the two resets: assertion asynchronous, deassertion synchronized outside (neo_top.sv: aresetn released before rst_n)
+set_false_path -from [get_ports {{rst_n aresetn}}]
+# the AXI4-Lite control port and the AXI4 ports (every input and output but the mesh-clock ones): 0.2 of the period in aclk
+set_input_delay  -clock aclk -max {io} [delete_from_list [all_inputs] [get_ports {{clk aclk rst_n aresetn}}]]
+set_output_delay -clock aclk -max {io} [delete_from_list [all_outputs] [get_ports {{tile_pwr_en*}}]]
+# the tiles' power-switch enables: mesh-clock levels, each held for the switch's ramp (mesh_ctrl's sequencer, >= 4 clk)
+set_output_delay -clock clk -max {io} [get_ports {{tile_pwr_en*}}]
+set_multicycle_path 4 -setup -to [get_ports {{tile_pwr_en*}}]
+set_multicycle_path 3 -hold  -to [get_ports {{tile_pwr_en*}}]
+# crossing 1 -- the bridges' data path, a cdc_fifo per direction (u_rxq: clk -> aclk, u_txq: aclk -> clk): one source
+# period from each gray pointer register to its first synchronizer flop (the code's bits must arrive within a cycle of
+# each other), one destination period from the entries to the read side's consumer (the bridge's rx_flit, the packer's
+# core_flit)
+set_max_delay -ignore_clock_latency {period} -from [get_cells {{*u_rxq.wgray*_reg *u_txq.wgray*_reg}}] -to [get_cells {{*u_rxq.u_wsync.sync1*_reg *u_txq.u_wsync.sync1*_reg}}]
+set_max_delay -ignore_clock_latency {period} -from [get_cells {{*u_rxq.rgray*_reg *u_txq.rgray*_reg}}] -to [get_cells {{*u_rxq.u_rsync.sync1*_reg *u_txq.u_rsync.sync1*_reg}}]
+set_max_delay -ignore_clock_latency {period} -from [get_cells {{*u_rxq.mem*_reg}}] -to [get_pins {{*u_br/rx_flit*}}]
+set_max_delay -ignore_clock_latency {period} -from [get_cells {{*u_txq.mem*_reg}}] -to [get_pins {{*u_pack/core_flit*}}]
+# crossing 2 -- the register bus (cdc_sync u_rq): the held request into mesh_ctrl, the held response into a_rsp_data, one
+# destination period each (the payload is stable two edges before it is sampled, by the handshake)
+set_max_delay -ignore_clock_latency {period} -from [get_cells {{u_rq.a_hold*_reg}}] -to [get_pins {{u_mctrl/rq_data*}}]
+set_max_delay -ignore_clock_latency {period} -from [get_cells {{u_rq.b_hold*_reg}}] -to [get_cells {{u_rq.a_rsp_data*_reg}}]
+# crossing 3 -- the levels and the handshake's toggles (cdc_bits u_*_sync, u_rq.u_ack_sync / u_req_sync): a false path into
+# every first synchronizer flop (the FIFOs' u_rsync / u_wsync are the max-delay paths above, not these)
+set_false_path -to [get_cells {{*_sync.sync1*_reg}}]
+set_max_fanout 32 [current_design]
+set_max_transition {mtrans} [current_design]
+"""
 COMB_SDC = """# {name}: combinational -- a virtual clock of {period} {unit}, inputs and outputs at its edges (drop 0.40)
 create_clock -name vclk -period {period}
 set_input_delay  -clock vclk 0 [all_inputs]
@@ -1090,6 +1144,9 @@ def write_sdc(u, has_clk, pdk, period_ps, udir, cfg_ports=(), cfg_pins=(), fname
                             link=fmt(0.4 * P), host=fmt(0.5 * P), mtrans=fmt(0.16 * P))
         if cfg_pins:                                  # the descriptor from host_if's registers into the core's pins
             s += STATIC_SDC.format(what="the child instances' descriptor pins", how="-through", kind="pins", names=" ".join(cfg_pins))
+    elif u.get("sdc") == "top":                       # drop 0.44: the chip top's two clocks and crossings
+        s = TOP_SDC.format(period=fmt(P), unit=unit, u_setup=fmt(0.08 * P), u_hold=fmt(0.04 * P), ctrans=fmt(0.06 * P),
+                           io=fmt(0.2 * P), mtrans=fmt(0.16 * P))
     elif has_clk:
         s = BLOCK_SDC.format(name=u["name"], period=fmt(P), unit=unit, u_setup=fmt(0.08 * P), io=fmt(0.2 * P), mtrans=fmt(0.16 * P))
         if cfg_ports:
@@ -1098,6 +1155,28 @@ def write_sdc(u, has_clk, pdk, period_ps, udir, cfg_ports=(), cfg_pins=(), fname
         s = COMB_SDC.format(name=u["name"], period=fmt(P), unit=unit, mtrans=fmt(0.16 * P))
     with open(os.path.join(udir, fname), "w") as f:
         f.write(s)
+
+
+def write_deliverable_sdc(out, period_ps):
+    """drop 0.44 (A4; review finding 9): the two SDC files 09_synthesis/ ships, in nanoseconds, from the templates the
+    unit flow times with -- constraints.sdc for neo_tile at its drop-0.43 ports (TILE_SDC, the descriptor's multicycle
+    paths through the core's pins by name) and neo_top.sdc for the chip top (TOP_SDC) -- at the proxy's period."""
+    P = period_ps / 1000.0
+    f = lambda x: f"{x:.4f}"
+    tile = TILE_SDC.format(period=f(P), unit="ns", u_setup=f(0.08 * P), u_hold=f(0.04 * P), ctrans=f(0.06 * P),
+                           link=f(0.4 * P), host=f(0.5 * P), mtrans=f(0.16 * P))
+    tile += STATIC_SDC.format(what="the core's descriptor pins, from host_if's registers", how="-through", kind="pins",
+                              names=" ".join(f"u_core/{n}*" for n in STATIC_CFG))
+    top = TOP_SDC.format(period=f(P), unit="ns", u_setup=f(0.08 * P), u_hold=f(0.04 * P), ctrans=f(0.06 * P),
+                         io=f(0.2 * P), mtrans=f(0.16 * P))
+    head = (f"# written by 07_ci/synth/synth.py --write-sdc at {period_ps:.0f} ps (drop 0.44): the template the synthesis job's unit flow "
+            f"times with, in nanoseconds; regenerate here rather than edit\n")
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, "constraints.sdc"), "w") as fh:
+        fh.write(head + tile)
+    with open(os.path.join(out, "neo_top.sdc"), "w") as fh:
+        fh.write(head + top)
+    return [os.path.join(out, "constraints.sdc"), os.path.join(out, "neo_top.sdc")]
 
 
 CLK_TREE_RE = re.compile(r"timing\(\) \{[^{}]*timing_type : (?:min|max)_clock_tree_path;(?:[^{}]|\{[^{}]*\})*\}")
@@ -1351,27 +1430,44 @@ def pe_limited_units(names):
     return lim
 
 
-def sweep_verdict(results, names, periods):
-    """The verdict of the sweep over the silicon tile's units (the 16x8 core's are not in the tile; all units when the
-    tile was not run): the smallest swept period at which every unit except the PE-limited ones has no violating
-    endpoint, the PE's own stage (mac_pe's minimum period) and the period the tile runs at on the proxy -- the larger of
-    the two -- with the units still violating at each period."""
-    scope = [n for n in (subtree("neo_tile", results) if "neo_tile" in names else names) if n in names]
-    lim = pe_limited_units(scope)
+def judge(results, scope, periods, lim_from=None):
+    """Over a scope of units: the PE-limited ones (found over lim_from, the tree the scope's parents reach the PEs
+    through, when given), the judged ones (the rest with a sweep), the violating units per period, the smallest clean
+    period and the largest minimum period among the judged."""
+    lim = {n for n in pe_limited_units(lim_from or scope) if n in scope}
     judged = [n for n in scope if n not in lim and (results.get(n, {}).get("sweep") or {}).get("periods")]
     per = {}
     for p in periods:
         tag = ptag(p)
-        bad = [n for n in judged if (results[n]["sweep"]["periods"].get(tag) or {}).get("endpoints_violating", 1) != 0]
-        per[tag] = bad
+        per[tag] = [n for n in judged if (results[n]["sweep"]["periods"].get(tag) or {}).get("endpoints_violating", 1) != 0]
     clean = next((p for p in periods if not per[ptag(p)]), None)
+    worst_other = max(((results[n].get("sta") or {}).get("min_period_ps") or 0.0, n) for n in judged) if judged else (None, None)
+    return lim, judged, per, clean, dict(unit=worst_other[1], ps=worst_other[0])
+
+
+def sweep_verdict(results, names, periods):
+    """The verdict of the sweep over the silicon tile's units (the 16x8 core's are not in the tile; all units when the
+    tile was not run): the smallest swept period at which every unit except the PE-limited ones has no violating
+    endpoint, the PE's own stage (mac_pe's minimum period) and the period the tile runs at on the proxy -- the larger of
+    the two -- with the units still violating at each period. Drop 0.44 (A4): a second verdict over the chip top's own
+    units ('top': the units of neo_top's subtree outside the tile's -- the bridge column's NIC, router, packer, unpacker
+    and DMA at the chip top's coordinate widths, the two bridge roles, the control plane's halves; neo_top and its tile
+    are PE-limited through the core), judged the same way."""
+    scope = [n for n in (subtree("neo_tile", results) if "neo_tile" in names else names) if n in names]
+    lim, judged, per, clean, worst_other = judge(results, scope, periods)
     stages = {n: (results.get(n, {}).get("sta") or {}).get("min_period_ps") for n in scope if n in lim}
     pe = stages.get("mac_pe")
     tile = None if clean is None or pe is None else max(clean, pe)
-    worst_other = max(((results[n].get("sta") or {}).get("min_period_ps") or 0.0, n) for n in judged) if judged else (None, None)
-    return dict(scope=scope, pe_limited=sorted(lim), judged=judged, violating_by_period=per, clean_period_ps=clean,
-                pe_stage_ps=pe, pe_limited_stages=stages, tile_period_ps=tile, tile_fmax_mhz=(1e6 / tile if tile else None),
-                worst_other_min_period=dict(unit=worst_other[1], ps=worst_other[0]))
+    v = dict(scope=scope, pe_limited=sorted(lim), judged=judged, violating_by_period=per, clean_period_ps=clean,
+             pe_stage_ps=pe, pe_limited_stages=stages, tile_period_ps=tile, tile_fmax_mhz=(1e6 / tile if tile else None),
+             worst_other_min_period=worst_other)
+    if "neo_top" in names and "neo_tile" in names:
+        whole = [n for n in subtree("neo_top", results) if n in names]
+        tscope = [n for n in whole if n not in scope]
+        tlim, tjudged, tper, tclean, tworst = judge(results, tscope, periods, lim_from=whole)
+        v["top"] = dict(scope=tscope, pe_limited=sorted(tlim), judged=tjudged, violating_by_period=tper, clean_period_ps=tclean,
+                        worst_other_min_period=tworst, chip_period_ps=(None if tclean is None or tile is None else max(tclean, tile)))
+    return v
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1419,9 +1515,15 @@ def main():
     ap.add_argument("--no-sta", action="store_true", help="synthesis only")
     ap.add_argument("--sta-only", action="store_true", help="timing on an existing synthesis output")
     ap.add_argument("--resume", action="store_true", help="keep the units already synthesized in --out (synth_results.json) and run the rest")
+    ap.add_argument("--write-sdc", default=None, metavar="DIR", help="drop 0.44: write the delivered constraints.sdc (the tile) and "
+                    "neo_top.sdc (the chip top) into DIR at --period (default 1250 ps), in ns, and exit")
     ap.add_argument("--sweep", default="none", help="the period sweep after the timing runs (drop 0.42): 'default' (the library's "
                     "list: 500,750,1000,1250,1500 ps on both), 'none', or a list in ps -- an 'ns' suffix per value for ns (0.75ns)")
     args = ap.parse_args()
+    if args.write_sdc:
+        for f in write_deliverable_sdc(args.write_sdc, args.period or 1250.0):
+            print(f)
+        return 0
     pdk = dict(PDKS[args.pdk])
     if args.corner not in pdk["libs"]:
         sys.exit(f"synth.py: corner {args.corner} not in {sorted(pdk['libs'])} for {args.pdk}")
@@ -1510,7 +1612,8 @@ def main():
                     f"violating endpoints {[(r.get('periods') or {}).get(ptag(p), {}).get('endpoints_violating') for p in periods]})")
         verdict = sweep_verdict(results, names, periods)
         log(f"sweep done in {time.time() - t_sw:.0f} s; verdict: every unit outside the PE-limited ones clean from "
-            f"{verdict['clean_period_ps']} ps, the PE's stage {verdict['pe_stage_ps']} ps, the tile at {verdict['tile_period_ps']} ps")
+            f"{verdict['clean_period_ps']} ps, the PE's stage {verdict['pe_stage_ps']} ps, the tile at {verdict['tile_period_ps']} ps"
+            + (f"; the chip top's units clean from {verdict['top']['clean_period_ps']} ps" if verdict.get("top") else ""))
     if "neo_tile" in results and not results["neo_tile"].get("failed"):
         bad = [n for n in subtree("neo_tile", results) if results[n].get("dv_hooks") and not results[n]["dv_hooks"]["passed"]]
         results["neo_tile"]["dv_hooks_tree"] = dict(passed=not bad, failing_units=bad)

@@ -112,6 +112,35 @@ of the same signal at the folded index (`power.py`); `pnr_<block>.md` says how m
 leaves an unpacked array above its `--trace-max-array` (32 elements) out of the trace: `prog_mem`'s 32 × 2 instruction
 words keep the default activity. `09_synthesis/power_drop043.md` has the table.
 
+## Drop 0.44 (stream A4): the routed restructures, the runner inputs, the 32 × 32 core's route
+
+- **The blocks the 0.43 routes missed** (`09_synthesis/pnr_drop043.md` section 2) were restructured in RTL and in their
+  floorplans: `tile_nic`'s drain-format select is a register copy per word of the FIFO's write data (`tile_nic.sv`);
+  `bank_bist_wrap` registers the MBIST's broadcast with a select copy per lane group (`bank_bist_wrap.sv`, `mbist.sv`
+  waits for `rvalid`) and its lanes are packed four across in an explicit 1,384 × 696 µm core with a 20 µm channel in
+  front of each pin edge (`designs/bank_bist_wrap`: `DIE_AREA` / `CORE_AREA` instead of a utilization, the sketch's
+  arrangement); `wbuf_mem`'s read data carries the budget its consumer needs (`designs/wbuf_mem/sdc_extra.sdc`: 0.1 of the
+  period, the array's shadow register's mux -- `prep.py` appends a block's `sdc_extra.sdc` to synth.py's SDC with `{P}`
+  the period); `neo_core`'s three arrays are placed with their pin edges toward the core (`designs/neo_core/macro_place.tcl`:
+  run 182's feeder faced the accumulator's back). The re-runs are in `09_synthesis/pnr_drop044.md`.
+- **The 32 × 32 core.** The flat route needs a machine the hosted runner is not (`pnr_drop043.md` section 5: detailed
+  routing of the 16 × 8 core peaked at 15.2 GB; the 32 × 32 core is 5.1 × its cells, its placement's `repair_design` alone
+  took the job's 300 min at 89.5 %). The flow is ready for a larger runner: the dispatch inputs `pnr_runner` (the runner
+  label; a self-hosted Linux runner with docker and sudo, 64-128 GB and 16 or more cores, the swap step skipped there),
+  `pnr_stages` (the ORFS targets of one dispatch) and `pnr_budget_min` (the block's minutes; the job's timeout follows);
+  with `NEO_PNR_WORK` set in the runner's environment to a directory that persists between jobs, `run.py` works in it and
+  ORFS's make resumes from the last stage's database (`3_place.odb`, `4_cts.odb`, `5_1_grt.odb`), so the core walks through
+  `synth,floorplan,place`, then `cts`, then `grt`, then `route,do-finish` in as many dispatches as it takes (the activity
+  and the report run on the last database each time). Scaled from the 16 × 8 core on the hosted runner, the flat core's
+  global route is ~3 h and its detailed route ~15 h on 4 cores (the router scales with threads), 30-40 GB resident.
+  The alternative, the array as four quadrant hard macros through ORFS's `BLOCKS` flow (`generate_abstract`:
+  `write_abstract_lef` + `write_timing_model` per block, placed as macros in the parent), needs the quadrant as a module of
+  its own with the row buses and the column sums as its ports -- a restructure of `systolic_array.sv` and of every path
+  name the tests, the fault campaign and the activity recording reach the PEs by -- and is not in this drop.
+- **Power** (`tile_table.py --power`, `report.py`): the share of a block's flops that kept the default activity is in the
+  table beside the counts, and the cocotb trace takes `--trace-max-array 64`, so `prog_mem`'s instruction words are in the
+  next recording (`activity.sh`).
+
 ## Running it
 
 CI: dispatch `regress.yml` with `pnr_only` (the other jobs skipped) and `pnr_blocks`; the weekly run (Sunday 02:00 UTC)

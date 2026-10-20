@@ -198,9 +198,16 @@ def main():
     if unknown:
         sys.exit(f"prep.py: block.sdc names ports the netlist lacks: {unknown}")
     period = re.search(r"create_clock\s+.*-period\s+([0-9.]+)", sdc)
+    # drop 0.44 (A4): a block's own constraints beside synth.py's (designs/<block>/sdc_extra.sdc: a budget the unit's
+    # generic 0.2-of-the-period I/O does not express, e.g. wbuf_mem's read data into the array's registers), appended with
+    # {P} the period; a later set_input_delay / set_output_delay on a port replaces the generic one in OpenSTA
+    extra = os.path.join(os.path.dirname(os.path.abspath(__file__)), "designs", args.unit, "sdc_extra.sdc")
     with open(os.path.join(out, "1_block.sdc"), "w") as f:
         f.write(f"# {args.unit}: synth.py's block.sdc ({os.path.relpath(src, synth_dir)}), unchanged, for ORFS (07_ci/pnr/prep.py)\n")
         f.write(sdc)
+        if os.path.isfile(extra) and period:
+            f.write(f"\n# {args.unit}: the block's own constraints (designs/{args.unit}/sdc_extra.sdc, drop 0.44)\n")
+            f.write(open(extra).read().replace("{P}", period.group(1)))
 
     # what the report compares against: the synthesis flow's figures for the block's units
     def count_area(s):

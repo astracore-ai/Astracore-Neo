@@ -107,7 +107,9 @@ export NEO_NCHK := $(NCHK)
 # Give the build its own SIM_BUILD: the traced model is not the plain one
 TRACE_VCD ?=
 ifneq ($(TRACE_VCD),)
-  EXTRA_ARGS += --trace --trace-max-width 4096
+  # drop 0.44: --trace-max-array 64 so prog_mem's 32 x 2 instruction words are traced (power.py); --trace-max-width 16384 because
+  # Verilator 5.053 traces an unpacked array of vectors as one flat variable (the router's five 1,077-bit flits: 5,385 bits)
+  EXTRA_ARGS += --trace --trace-max-width 16384 --trace-max-array 64
   SIM_ARGS += --trace --trace-file $(TRACE_VCD)
 endif
 ifeq ($(VCOV),1)
