@@ -258,15 +258,24 @@ def single_region_tensor(bank, base, cin_tiles, h, w, wpa):
 
 
 def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank, act_base, w_bank, w_base,
-                  owner, free_tiles, nx, shares, int8_out=False, out_base=0, act=None, out_bank=None, nchk=1, sparse=False):
+                  owner, free_tiles, nx, shares, int8_out=False, out_base=0, act=None, out_bank=None, nchk=1, sparse=False,
+                  drain_fmt=0, int4=False, rbuf=None):
     """One (output tile nt, output-row range) group split into `shares` contiguous run ranges.
     `act`: the input tensor's regions (neo_alloc.Tensor); when None, channel tiles whole at act_bank/act_base.
     `out_bank`/`out_base`: where the group's M output pixels are drained (the owner's bank when out_bank is None).
     nchk: the core's check columns (the weight entry's format); sparse (drop 0.42, nchk = 4): a 2:4 layer -- channel tiles
     of 2*ROWS channels (cfg_ct_n / cfg_ct0 / cfg_rn count them), two activation entries per pixel (cfg_tile_pixels stays
-    in pixels: the feeder doubles its addresses), cfg_flags = 1."""
+    in pixels: the feeder doubles its addresses), cfg_flags = 1.
+    Drop 0.44 (stream D3, the runtime's networks): drain_fmt = the INT8 drain's format in DRAIN_WR's base field (neo_xfmr's
+    DR_P: a row padded to an activation entry of ROWS channels, the next layer's channel tile on a core with COLS < ROWS);
+    int4: the weights are INT4 entries (WP4 words each, FETCH_W with arg 1: the NIC expands them); rbuf = (bank, addr,
+    words): the owner fetches the group's M residual rows into the vector unit's residual buffer (FETCH_A with arg 1,
+    entries from 0) before its GO."""
     ho, wo = (h + 2 * p - k) // s + 1, (w + 2 * p - k) // s + 1
     cin_tiles, _, wpa, wpw = geometry(cin, cout, k, rows, cols, nchk, sparse)
+    if int4:
+        assert not sparse, "INT4 entries have no 2:4 form"
+        wpw = (cols * 4 + wcw_of(rows) + 31) // 32
     wpe = rows * 8 // 32                              # words per activation entry (the fetch cuts at entries)
     epp = 2 if sparse else 1                          # entries per pixel
     apt, wpt_run = h * w * wpa, rows * wpw            # words per activation tile, per run's weight tile
@@ -282,6 +291,8 @@ def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank,
     shares = max(1, min(shares, runs, 1 + len(free_tiles)))
     bounds = [(i * runs) // shares for i in range(shares + 1)]
     M = oy_n * wo
+    if M < 1:
+        raise ValueError(f"a group of {oy_n} output rows (cfg_m = {M}): a descriptor of 0 rows never ends its drain (review finding 13)")
     tiles, free = [], list(free_tiles)
     placed = [owner]
     for i in range(shares):
@@ -310,6 +321,10 @@ def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank,
             for bank, addr, ya, yb in act.segments(ct, iy_lo, iy_hi):
                 prog += fetch(OP_FETCH_A, bank, addr, (yb - ya + 1) * w * wpa, (ct * region_pixels + (ya - iy_lo) * w) * epp, wpe)
         prog += fetch(OP_FETCH_W, w_bank, w_base + (nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0, wpw)
+        if int4:
+            prog[-1] |= 1                                                  # FETCH_W arg 1: INT4 entries
+        if i == 0 and rbuf is not None:
+            prog.append(ins(OP_FETCH_A, rbuf[0][0], rbuf[0][1], rbuf[1], rbuf[2], 0, 1))
         fetch_words = (ct_hi - ct_lo + 1) * region_pixels * wpa + (r1 - r0) * wpt_run
         if i == 0:
             tp = TileProgram(tile, "owner" if shares > 1 else "solo", desc, [], fetch_words=fetch_words, out_words=M * (cols + 1))
@@ -321,7 +336,7 @@ def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank,
             tp.program = prog
     # finish the owner's program now that contributors are placed; INT8 output is the next layer's input
     owner_tp = tiles[0]
-    owner_tp.program += [ins(OP_DRAIN_WR, out_bank[0], out_bank[1], out_base, M, 0, 1 if int8_out else 0), ins(OP_GO)]
+    owner_tp.program += [ins(OP_DRAIN_WR, out_bank[0], out_bank[1], out_base, M, drain_fmt if int8_out else 0, 1 if int8_out else 0), ins(OP_GO)]
     if shares > 1:
         owner_tp.program.append(ins(OP_WAIT_REDUCE))
         owner_tp.program += [ins(OP_NOTIFY, t.tile[0], t.tile[1]) for t in tiles[1:]]
@@ -330,7 +345,8 @@ def compile_group(h, w, cin, cout, k, s, p, rows, cols, nt, oy0, oy_n, act_bank,
 
 
 def compile_layer(name, h, w, cin, cout, k, s, p, rows, cols, nx, ny, act_bank, act_base, w_bank, w_base,
-                  owner=(0, 0), shares=1, oy0=0, oy_n=None, int8_out=False, out_base=0, exclude=(), nchk=1, sparse=False) -> LayerProgram:
+                  owner=(0, 0), shares=1, oy0=0, oy_n=None, int8_out=False, out_base=0, exclude=(), nchk=1, sparse=False,
+                  drain_fmt=0, int4=False, rbuf=None) -> LayerProgram:
     """Single group (one output tile, one output-row range) executable on the test mesh. `exclude` lists tiles that take no
     share (the tile-exclusion mask of compile_network, the chip top's disabled tiles); act_bank / w_bank may be a bridge
     position (x = nx, the chip top's bridge column): a bridge is addressed exactly like a bank; nchk / sparse: compile_group."""
@@ -341,7 +357,7 @@ def compile_layer(name, h, w, cin, cout, k, s, p, rows, cols, nx, ny, act_bank, 
     free = [(x, y) for y in range(ny) for x in range(nx) if (x, y) != owner and (x, y) not in exclude]
     tiles, _, out_base = compile_group(h, w, cin, cout, k, s, p, rows, cols, 0, oy0, oy_n, act_bank, act_base,
                                        w_bank, w_base, owner, free, nx, shares, int8_out=int8_out, out_base=out_base,
-                                       nchk=nchk, sparse=sparse)
+                                       nchk=nchk, sparse=sparse, drain_fmt=drain_fmt, int4=int4, rbuf=rbuf)
     return LayerProgram(name, tiles, owner, out_base, oy_n * ((w + 2 * p - k) // s + 1))
 
 
@@ -375,6 +391,8 @@ def cq_image(tiles, nx, extra=()):
     broadcast to the command's mask. Returns [(word 0, value)]."""
     ent = []
     for tp in tiles:
+        if tp.descriptor["cfg_m"] < 1:
+            raise ValueError(f"tile {tp.tile}: cfg_m = 0 (review finding 13)")
         one = (1 << 14) | ((tp.tile[1] * nx + tp.tile[0]) << 8)
         for i, name in enumerate(CQ_CFG20):
             ent.append((one | (0x10 + i), tp.descriptor.get(name, 0) & 0xFFFF))
