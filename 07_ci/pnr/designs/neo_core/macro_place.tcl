@@ -4,7 +4,9 @@
 # edge facing the accumulator's back across 10 um with half of its 1,048 pins (pnr_drop043.md section 4: the wbuf_mem /
 # tile_nic overflow of runs 183 / 188 waiting to happen). Here: the weight buffer (121.4 x 166.6) and the accumulator
 # (137.0 x 166.6) stacked against the left edge mirrored (MY: pins inward), the feeder (66.5 x 331.8) against the right
-# edge R0 (pins inward), 4 um apart (twice the platform's 2 um halo); rtl_macro_placer then finds every macro placed.
+# edge R0 (pins inward), 4 um apart (twice the platform's 2 um halo). The vector unit's 35 small leaves (33 LUTs of
+# 5.7 x 84 um, the row statistics, the residual buffer: in the core since drop 0.43, C2) are left to rtl_macro_placer,
+# which runs after this script and places what it did not (run 226 stacked them on the left edge past the core's top).
 set block [ord::get_db_block]
 set dbu [$block getDbUnitsPerMicron]
 set core [$block getCoreArea]
@@ -19,6 +21,7 @@ foreach inst [$block getInsts] {
   set n [$inst getName]
   set w [expr {[$m getWidth] / double($dbu)}]
   set h [expr {[$m getHeight] / double($dbu)}]
+  if { ![string match "*u_feeder*" $n] && ![string match "*u_acc*" $n] && ![string match "*u_wbuf*" $n] } { continue }
   if { [string match "*feeder*" $n] } {
     puts "macro_place.tcl: $n ([$m getName]) at [expr {$x1 - $w - 2.0}] $yr R0 (the feeder, right edge, pins inward)"
     place_macro -macro_name $n -location [list [expr {$x1 - $w - 2.0}] $yr] -orientation R0
