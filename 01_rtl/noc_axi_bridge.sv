@@ -355,6 +355,7 @@ module noc_axi_bridge #(
   logic [19:0]    mt_hdr, ht_hdr;
   logic [VW-1:0]  mt_words, ht_words;
   logic [CW-1:0]  mt_n, ht_n;
+  logic [CW-1:0]  mt_nd, ht_nd;              // drop 0.44: each role's data beat's count from its registers alone (tx_cnt's adder)
   logic           t_data;
   logic [XW-1:0]  t_dx;
   logic [YW-1:0]  t_dy;
@@ -395,7 +396,10 @@ module noc_axi_bridge #(
         else if (host_want) begin own_host <= 1'b1; tx_rr <= 1'b0; tx_crc <= 16'hFFFF; tx_cnt <= '0; end
       end
       txc_v <= tx_fire && t_data;
-      if (tx_fire && t_data) begin txc_words <= t_words; txc_n <= t_n; tx_cnt <= tx_cnt + 16'(t_n); end
+      // the count's adder takes the role's data count from registers (the memory role's r_n, the host's wq_n); the late
+      // decision of what the flit is (a WRHDR before this beat, or the beat itself) only enables it: the host's 19-bit
+      // address compare was in front of the 16-bit add, 1,302 ps to tx_cnt[14] (drop 0.44)
+      if (tx_fire && t_data) begin txc_words <= t_words; txc_n <= t_n; tx_cnt <= tx_cnt + 16'(own_mem ? mt_nd : ht_nd); end
       if (txc_v) tx_crc <= tx_crc_next;
     end
   end
@@ -563,6 +567,7 @@ module noc_axi_bridge #(
       assign mt_dy     = q_y[qi_r];
       assign mt_part   = q_part[qi_r];
       assign mt_type   = rs_crc ? T_CRC : T_RDRSP;
+      assign mt_nd     = r_n;
       assign mt_hdr    = rs_crc ? 20'd0 : {6'd0, 6'(r_n - CW'(1)), 8'd0};
       assign mt_words  = rs_crc ? VW'({tx_cnt, tx_crc ^ {16{r_err}}}) : VW'(m_rdata) >> (32 * r_lo);
       assign mt_n      = rs_crc ? CW'(1) : r_n;
@@ -767,7 +772,7 @@ module noc_axi_bridge #(
       assign m_ev_axi = 1'b0;
       assign ev_rd_wait = 1'b0; assign ev_wr_wait = 1'b0; assign wr_busy = 1'b0;
       assign mt_valid = 1'b0; assign mt_dx = '0; assign mt_dy = '0; assign mt_part = '0; assign mt_type = '0;
-      assign mt_hdr = '0; assign mt_words = '0; assign mt_n = '0;
+      assign mt_hdr = '0; assign mt_words = '0; assign mt_n = '0; assign mt_nd = '0;
       assign m_awaddr = '0; assign m_awlen = '0; assign m_awsize = '0; assign m_awburst = '0; assign m_awvalid = 1'b0;
       assign m_wdata = '0; assign m_wstrb = '0; assign m_wlast = 1'b0; assign m_wvalid = 1'b0; assign m_bready = 1'b0;
       assign m_araddr = '0; assign m_arlen = '0; assign m_arsize = '0; assign m_arburst = '0; assign m_arvalid = 1'b0;
@@ -872,6 +877,7 @@ module noc_axi_bridge #(
       end
       assign ht_dx = h_x;
       assign ht_dy = h_y;
+      assign ht_nd = wq_n;
       assign host_want = (h_state == H_W) || (h_state == H_WCRC) || (h_state == H_RREQ);
       assign s_bvalid = (h_state == H_B);
       assign s_bid    = h_id;
@@ -990,7 +996,7 @@ module noc_axi_bridge #(
       assign host_want = 1'b0; assign host_rsp = 1'b0; assign host_rsp_ok = 1'b1;
       assign h_ev_timeout = 1'b0; assign h_ev_host = 1'b0;
       assign ht_valid = 1'b0; assign ht_dx = '0; assign ht_dy = '0; assign ht_type = '0; assign ht_hdr = '0; assign ht_words = '0;
-      assign ht_n = '0;
+      assign ht_n = '0; assign ht_nd = '0;
       assign s_awready = 1'b0; assign s_wready = 1'b0; assign s_bid = '0; assign s_bresp = '0; assign s_bvalid = 1'b0;
       assign s_arready = 1'b0; assign s_rid = '0; assign s_rdata = '0; assign s_rresp = '0; assign s_rlast = 1'b0;
       assign s_rvalid = 1'b0;
