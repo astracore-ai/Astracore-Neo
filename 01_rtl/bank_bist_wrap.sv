@@ -55,7 +55,7 @@ module bank_bist_wrap #(
     .dv_bd_we(dv_bd_we), .dv_bd_addr(dv_bd_addr), .dv_bd_wdata(dv_bd_wdata), .dv_bd_rdata(dv_bd_rdata),
     .dv_fi_or(dv_fi_or), .dv_fi_addr(dv_fi_addr), .dv_fi_mask(dv_fi_mask));
   mbist #(.AW(AW), .WORDS(BIST_WORDS), .LANES(LANES)) u_bist (
-    .clk(clk), .rst_n(rst_n), .start(bist_start), .active(bist_active), .done(bist_done), .fail(bist_fail), .fail_addr(bist_fail_addr),
+    .clk(clk), .rst_n(rst_n), .start(bist_start), .err_clear(err_clear), .active(bist_active), .done(bist_done), .fail(bist_fail), .fail_addr(bist_fail_addr),
     .we(t_we), .wrow(t_wrow), .wmask(t_wmask), .wdata(t_wdata), .re(t_re), .rrow(t_rrow), .rdata(rdata), .rvalid(rvalid),
     .ce_lane(ce_lane), .fail_ce(bist_fail_ce));
 endmodule

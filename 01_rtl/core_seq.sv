@@ -8,7 +8,9 @@
 //   after the last run, wait for the pipeline to drain into the accumulator; if this core owns
 //   the group (cfg_contrib_n > 0) accept cfg_contrib_n * cfg_m partial-sum rows on the reduce
 //   port first (reduce_ready); then read the accumulator rows 0..cfg_m-1 out through the drain
-//   port (an owner drains the result, a contributor drains its partial sums for the owner).
+//   port (an owner drains the result, a contributor drains its partial sums for the owner). cfg_m = 0 means ACC_ROWS
+//   rows (drop 0.44, review #13: the drain's end compared at IDXW bits, the reduce count at 32 -- the one meaning the
+//   vector unit already gave it; a contributor group with cfg_m = 0 sends cfg_contrib_n * ACC_ROWS rows).
 //   Weight tiles live in a buffer outside this module (wbuf_mem, read at w_raddr) so that a
 //   duplicate sequencer (R10, lockstep with comparator) shares one copy. `done` pulses for one
 //   cycle when the drain has finished.
@@ -100,6 +102,12 @@ module core_seq #(
 
   logic [WAW-1:0]      laddr;               // weight-buffer row of the load: tile ltile, row ROWS-1-lcnt (in the buffer's address width)
   assign laddr = WAW'(32'(ltile) * ROWS + (ROWS - 1 - 32'(lcnt)));
+  // drop 0.44 (review #13): cfg_m = 0 means ACC_ROWS = 2^IDXW rows -- the drain's last index at IDXW bits (cm1 wraps to all
+  // ones, as vec_unit's) and the reduce count at 32 bits (m_rows); the 32-bit `cfg_m - 1` of before never ended the drain
+  logic [IDXW-1:0]     cm1;                 // cfg_m - 1 at IDXW bits: the last row index of the drain
+  logic signed [31:0]  m_rows;              // the rows a contributor sends: cfg_m, or ACC_ROWS when cfg_m = 0
+  assign cm1    = cfg_m - IDXW'(1);
+  assign m_rows = (cfg_m == '0) ? (32'sd1 <<< IDXW) : 32'(cfg_m);
   logic                ct_free_q;
   logic signed [15:0]  ct_free_idx_q;
   assign ct_free     = ct_free_q;
@@ -209,12 +217,12 @@ module core_seq #(
             red_last <= 1'b0;
             dcnt     <= '0;
             state    <= S_DRAIN;
-          end else if (ext_cnt + (ext_fire ? 1 : 0) >= cfg_contrib_n * cfg_m) begin
+          end else if (ext_cnt + (ext_fire ? 1 : 0) >= 32'(cfg_contrib_n) * m_rows) begin   // (m_rows: cfg_m = 0 is ACC_ROWS, drop 0.44)
             red_last <= 1'b1;                  // the last row accepted this cycle (stage 0); reduce_ready drops
           end
         end
         S_DRAIN: begin
-          if (dcnt == cfg_m - 1) state <= S_DONE;
+          if (dcnt == cm1) state <= S_DONE;        // at IDXW bits (drop 0.44, review #13): cfg_m = 0 drains ACC_ROWS rows
           else dcnt <= dcnt + 1;
         end
         S_DONE: state <= S_IDLE;

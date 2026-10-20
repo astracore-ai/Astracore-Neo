@@ -5,7 +5,9 @@
   B3 after the MBIST, functional writes and reads still work and ECC flags are clean
   B4 (drop 0.43: the check registered, the first failure recorded a cycle after its read) a stuck bit that appears only
      for the last element's last read (word 63, the last row of the final up(r0)): fail and fail_addr are already set in
-     the first cycle done is high -- done waits for the registered check"""
+     the first cycle done is high -- done waits for the registered check
+  B5 (drop 0.44, review #11) after a failing MBIST, err_clear clears fail and fail_ce (the tile's CTRL bit 1 clears every
+     cause together); fail_addr keeps the address; a start afterwards runs a clean pass"""
 import os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from neosim import Design, load
@@ -57,5 +59,17 @@ got = (p["rdata"].v >> (32 * 9)) & 0xFFFFFFFF
 ok3 = got == 0xC0FFEE11 and p["rvalid"].v == 1 and p["ecc_ce_sticky"].v == 0
 print(f"  B3 functional access after MBIST (row port, lane 9): wrote 0xC0FFEE11 at word 9, read 0x{got:08x}, ecc clean -> {'PASS' if ok3 else 'FAIL'}")
 fails += not ok3
+# B5 (drop 0.44): the failing bank of B2 -- err_clear pulsed once: fail / fail_ce drop, fail_addr stays; a clean start passes
+p2["err_clear"].v = 1; d2.tick(); p2["err_clear"].v = 0; d2.tick()
+cleared = (p2["bist_fail"].v, p2["bist_fail_ce"].v, p2["bist_fail_addr"].v)
+p2["bist_start"].v = 1; d2.tick(); p2["bist_start"].v = 0
+n5 = 0
+while not p2["bist_done"].v:
+    d2.tick(); n5 += 1
+    if n5 > 20000: raise RuntimeError("B5: mbist did not finish")
+ok5 = cleared == (0, 0, 37) and p2["bist_fail"].v == 0 and p2["bist_fail_ce"].v == 0
+print(f"  B5 err_clear after the failing pass: fail={cleared[0]} fail_ce={cleared[1]} (expect 0, 0), fail_addr={cleared[2]} kept (expect 37); "
+      f"the next start (stuck bit gone) done in {n5} cycles with fail={p2['bist_fail'].v} -> {'PASS' if ok5 else 'FAIL'}")
+fails += not ok5
 print("RESULT:", "ALL PASS" if fails == 0 else f"{fails} FAILURES")
 raise SystemExit(1 if fails else 0)

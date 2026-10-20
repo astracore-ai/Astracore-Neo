@@ -13,6 +13,9 @@
 //   flops), whether any mismatched (mism_q) and the row (row_q); the cycle after records the first failure (fail,
 //   fail_ce, fail_addr) from those registers. The March sequence and its cycle count are unchanged; done rises one cycle
 //   after the last check (chk_q: a registered check is still to be recorded), so fail is final when done is seen.
+//   Drop 0.44 (review #11): fail and fail_ce are stickies like the tile's others -- cleared by err_clear (CTRL bit 1) as
+//   well as by the next start, so the ESM's cause 14 (bist_fail) clears with every other cause and err_pin can fall after a
+//   failing MBIST; fail_addr keeps the last failing address until the next start (readable after the clear).
 module mbist #(
   parameter int AW    = 12,                  // word address width (fail_addr)
   parameter int WORDS = 4096,                // words tested, a multiple of LANES
@@ -24,6 +27,7 @@ module mbist #(
   input  logic          clk,
   input  logic          rst_n,
   input  logic          start,
+  input  logic          err_clear,         // drop 0.44 (review #11): clears fail / fail_ce with the tile's other stickies
   output logic          active,
   output logic          done,
   output logic          fail,
@@ -96,6 +100,7 @@ module mbist #(
       // the check of the read data, registered (S_CHK), and the first failure recorded from the registers a cycle later
       chk_q <= (state == S_CHK) && rvalid;
       if (state == S_CHK) begin hit_q <= lane_hit; mism_q <= (lane_bad != '0); row_q <= addr; end
+      if (err_clear) begin fail <= 1'b0; fail_ce <= 1'b0; end
       if (chk_q && (hit_q != '0) && !fail) begin
         fail <= 1'b1; fail_ce <= !mism_q; fail_addr <= AW'(row_q) * AW'(LANES) + AW'(first_lane);
       end
