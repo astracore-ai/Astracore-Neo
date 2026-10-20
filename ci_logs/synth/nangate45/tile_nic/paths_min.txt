@@ -1,0 +1,81 @@
+Startpoint: dfifo_wr[3]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dfifo (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ dfifo_wr[3]_reg/CK (DFFR_X1)
+   0.1    0.1 v dfifo_wr[3]_reg/Q (DFFR_X1)
+   0.0    0.1 v u_dfifo/waddr[3] (neo_mem_rf_w1068_d512_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_dfifo/clk (neo_mem_rf_w1068_d512_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+
+Startpoint: dfifo_wr[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dfifo (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ dfifo_wr[4]_reg/CK (DFFR_X1)
+   0.1    0.1 v dfifo_wr[4]_reg/Q (DFFR_X1)
+   0.0    0.1 v u_dfifo/waddr[4] (neo_mem_rf_w1068_d512_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_dfifo/clk (neo_mem_rf_w1068_d512_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+
+Startpoint: dfifo_wr[8]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dfifo (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ dfifo_wr[8]_reg/CK (DFFR_X1)
+   0.1    0.1 v dfifo_wr[8]_reg/Q (DFFR_X1)
+   0.0    0.1 v u_dfifo/waddr[8] (neo_mem_rf_w1068_d512_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_dfifo/clk (neo_mem_rf_w1068_d512_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+

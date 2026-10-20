@@ -1,0 +1,104 @@
+Startpoint: n[1] (input port clocked by vclk)
+Endpoint: crc_out[4] (output port clocked by vclk)
+Path Group: vclk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ input external delay
+   0.0    0.0 ^ n[1] (in)
+   0.0    0.0 ^ _3676_/Z (BUF_X2)
+   0.0    0.1 v _6798_/ZN (NOR2_X2)
+   0.0    0.1 ^ _6262_/ZN (NAND2_X1)
+   0.0    0.1 v _6264_/ZN (AOI21_X1)
+   0.0    0.1 ^ _6266_/ZN (NAND2_X1)
+   0.0    0.1 v _6267_/ZN (XNOR2_X1)
+   0.0    0.2 ^ _6271_/ZN (XNOR2_X1)
+   0.0    0.2 v _6272_/ZN (XNOR2_X1)
+   0.0    0.2 ^ _6300_/ZN (XNOR2_X1)
+   0.0    0.2 ^ crc_out[4] (out)
+          0.2   data arrival time
+
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+   0.0    0.0   output external delay
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.2   data arrival time
+-------------------------------------------------------
+          0.2   slack (MET)
+
+
+Startpoint: n[3] (input port clocked by vclk)
+Endpoint: crc_out[7] (output port clocked by vclk)
+Path Group: vclk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ input external delay
+   0.0    0.0 ^ n[3] (in)
+   0.0    0.0 ^ _4009_/Z (BUF_X1)
+   0.0    0.1 v _4076_/ZN (NAND2_X2)
+   0.0    0.1 ^ _6140_/ZN (AOI21_X1)
+   0.0    0.1 v _6142_/ZN (NOR4_X1)
+   0.0    0.1 ^ _6144_/ZN (NAND2_X1)
+   0.0    0.1 v _6146_/Z (XOR2_X1)
+   0.0    0.2 ^ _6150_/ZN (XNOR2_X1)
+   0.0    0.2 v _6159_/ZN (XNOR2_X1)
+   0.0    0.2 ^ _6177_/ZN (XNOR2_X2)
+   0.0    0.2 ^ crc_out[7] (out)
+          0.2   data arrival time
+
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+   0.0    0.0   output external delay
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.2   data arrival time
+-------------------------------------------------------
+          0.2   slack (MET)
+
+
+Startpoint: n[0] (input port clocked by vclk)
+Endpoint: crc_out[0] (output port clocked by vclk)
+Path Group: vclk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ input external delay
+   0.0    0.0 ^ n[0] (in)
+   0.0    0.0 ^ _7031_/Z (BUF_X1)
+   0.0    0.1 v _4087_/ZN (NAND2_X1)
+   0.0    0.1 ^ _6886_/ZN (AOI22_X1)
+   0.0    0.1 v _6888_/ZN (NOR2_X1)
+   0.0    0.1 ^ _6402_/ZN (AOI22_X1)
+   0.0    0.2 v _6403_/ZN (XNOR2_X1)
+   0.0    0.2 ^ _6412_/ZN (XNOR2_X1)
+   0.0    0.2 v _6429_/ZN (XNOR2_X2)
+   0.0    0.2 v crc_out[0] (out)
+          0.2   data arrival time
+
+   0.0    0.0   clock vclk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+   0.0    0.0   output external delay
+          0.0   data required time
+-------------------------------------------------------
+          0.0   data required time
+         -0.2   data arrival time
+-------------------------------------------------------
+          0.2   slack (MET)
+
+

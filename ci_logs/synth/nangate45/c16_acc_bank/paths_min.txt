@@ -1,0 +1,81 @@
+Startpoint: idx1[0]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ idx1[0]_reg/CK (DFFR_X1)
+   0.1    0.1 v idx1[0]_reg/Q (DFFR_X1)
+   0.0    0.1 v u_mem/waddr[0] (neo_mem_rf_w288_d64_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_mem/clk (neo_mem_rf_w288_d64_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+
+Startpoint: idx1[4]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ idx1[4]_reg/CK (DFFR_X1)
+   0.1    0.1 v idx1[4]_reg/Q (DFFR_X1)
+   0.0    0.1 v u_mem/waddr[4] (neo_mem_rf_w288_d64_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_mem/clk (neo_mem_rf_w288_d64_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+
+Startpoint: idx1[5]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ idx1[5]_reg/CK (DFFR_X1)
+   0.1    0.1 v idx1[5]_reg/Q (DFFR_X1)
+   0.0    0.1 v u_mem/waddr[5] (neo_mem_rf_w288_d64_g1_rb1)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_mem/clk (neo_mem_rf_w288_d64_g1_rb1)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+

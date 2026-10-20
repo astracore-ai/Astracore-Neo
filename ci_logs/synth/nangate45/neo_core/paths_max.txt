@@ -1,0 +1,291 @@
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3   12.0    0.0    0.4    0.4 v u_dp/rd_data[1004] (neo_mac_core_v02)
+     2    3.4    0.0    0.1    0.5 v _1677_/Z (MUX2_X1)
+     1    1.0    0.0    0.1    0.6 v _1679_/Z (XOR2_X1)
+                 0.0    0.0    0.6 v u_rq/in_acc[1004] (requant)
+                               0.6   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq/clk (requant)
+                       -0.8   -0.3   library setup time
+                              -0.3   data required time
+-------------------------------------------------------------------------
+                              -0.3   data required time
+                              -0.6   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.5    0.0    0.4    0.4 v u_dp/rd_data[511] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1698_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq/in_acc[511] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq_dup (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.5    0.0    0.4    0.4 v u_dp/rd_data[511] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1698_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq_dup/in_acc[511] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq_dup/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.5    0.0    0.4    0.4 v u_dp/rd_data[159] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1713_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq/in_acc[159] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.8    0.0    0.4    0.4 v u_dp/rd_data[191] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1710_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq/in_acc[191] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.7    0.0    0.4    0.4 v u_dp/rd_data[255] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1708_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq/in_acc[255] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.7    0.0    0.4    0.4 v u_dp/rd_data[319] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1706_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq/in_acc[319] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.4    0.0    0.4    0.4 v u_dp/rd_data[735] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1691_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq/in_acc[735] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq_dup (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.5    0.0    0.4    0.4 v u_dp/rd_data[159] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1713_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq_dup/in_acc[159] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq_dup/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+
+Startpoint: u_dp (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq_dup (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_dp/clk (neo_mac_core_v02)
+     3    7.8    0.0    0.4    0.4 v u_dp/rd_data[191] (neo_mac_core_v02)
+     2    4.2    0.0    0.1    0.5 v _1710_/Z (MUX2_X1)
+                 0.0    0.0    0.5 v u_rq_dup/in_acc[191] (requant)
+                               0.5   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_rq_dup/clk (requant)
+                       -0.8   -0.4   library setup time
+                              -0.4   data required time
+-------------------------------------------------------------------------
+                              -0.4   data required time
+                              -0.5   data arrival time
+-------------------------------------------------------------------------
+                              -0.9   slack (VIOLATED)
+
+

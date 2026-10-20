@@ -1,0 +1,40 @@
+# unit neo_tile: neo_tile {'XW': 3, 'YW': 3, 'NX': 8, 'NY': 8, 'WPF': 32, 'ROWS': 32, 'COLS': 32, 'ACC_ROWS': 512, 'ABUF_DEPTH': 2048, 'WBUF_DEPTH': 1024, 'BANK_DEPTH': 524288, 'FETCH_TIMEOUT': 1048575, 'NCHK': 4, 'DV_HOOKS': 0}
+plugin -i slang
+read_slang --ignore-timing --blackboxed-module neo_core --blackboxed-module tile_nic --blackboxed-module noc_router --blackboxed-module bank_bist_wrap --blackboxed-module tile_dma --blackboxed-module prog_mem --blackboxed-module host_if --blackboxed-module esm --blackboxed-module link_packer --blackboxed-module link_unpacker --blackboxed-module tile_telem --blackboxed-module neo_icg --top neo_tile -G XW=3 -G YW=3 -G NX=8 -G NY=8 -G WPF=32 -G ROWS=32 -G COLS=32 -G ACC_ROWS=512 -G ABUF_DEPTH=2048 -G WBUF_DEPTH=1024 -G BANK_DEPTH=524288 -G FETCH_TIMEOUT=1048575 -G NCHK=4 -G DV_HOOKS=0 /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_icg.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_iso.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/tile_telem.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/delay_line.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/mac_pe.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/skew_in.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/deskew_out.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/systolic_array.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/abft_checker.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_mem.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_mac_core.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/act_feeder.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/acc_bank.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_mac_core_v02.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/core_seq.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/ecc39.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/wbuf_mem.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/requant.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/vec_unit.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_core.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/host_if.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/noc_router.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/sram_bank.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/mbist.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/bank_bist_wrap.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/crc16_word.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/crc16_beat.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/tile_nic.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/tile_dma.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/prog_mem.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/esm.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/link_pack.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_tile.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/cdc_bits.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/cdc_fifo.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/cdc_sync.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/noc_axi_bridge.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/top_ctrl.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/mesh_ctrl.sv /home/runner/work/Astracore-Neo/Astracore-Neo/rtl/neo_top.sv
+setparam -unset AW -unset BIST_WORDS -unset BRAW -unset BROWS -unset DEPTH -unset DV_HOOKS -unset DW -unset LANES -unset RAW -unset ROWS t:bank_bist_wrap
+setparam -unset ABUF_DEPTH -unset ACC_ROWS -unset AW -unset COLS -unset DV_HOOKS -unset FAULT_COL -unset FAULT_ROW -unset IDXW -unset IW -unset NCHK -unset PE_LAT -unset PW -unset ROWS -unset WAW -unset WBUF_DEPTH -unset WCW -unset WW -unset XW -unset j t:neo_core
+setparam -unset DV_HOOKS -unset PAW -unset PDEPTH -unset S_END -unset S_FETCH -unset S_IDLE -unset S_ISSUE -unset S_WAITCMD -unset S_WAITDONE -unset S_WAITFREE -unset S_WAITNTF -unset S_WAITRDY -unset S_WAITRED -unset XW -unset YW t:tile_dma
+setparam -unset NFLAGS t:esm
+setparam -unset DV_HOOKS -unset IDXW -unset PAW t:host_if
+setparam -unset AW -unset BAW -unset BRAW -unset BW -unset CB -unset COLS -unset CW -unset DBW -unset DFD -unset DFW -unset DFWD -unset DV_HOOKS -unset DW -unset DWW -unset EW -unset FETCH_TIMEOUT -unset FTW -unset FW -unset IDXW -unset IW -unset LW -unset NCHK -unset NDB -unset NI8 -unset NI8P -unset NPS -unset NSRC -unset NX -unset PMW -unset PW -unset ROWS -unset RW -unset SEQ_LO -unset SRCW -unset SRCX_LO -unset SRCY_LO -unset TW -unset TXW -unset T_CRC -unset T_PSUM -unset T_RDREQ -unset T_RDRSP -unset T_RDY -unset T_WRDATA -unset T_WRHDR -unset VW -unset WAW -unset WCW -unset WP4 -unset WPA -unset WPW -unset XW -unset X_DRAIN_CRC -unset X_DRAIN_HDR -unset X_DRAIN_WORD -unset X_IDLE -unset X_NOTIFY -unset X_REQ -unset X_SERVE_CRC -unset X_SERVE_RD -unset X_SERVE_SEND -unset YW -unset c -unset j -unset s -unset w t:tile_nic
+setparam -unset BW -unset BWL -unset CWB -unset CWL -unset CWR -unset DWB -unset DWL -unset FWB -unset FWL -unset HW -unset T_PSUM -unset T_RDRSP -unset T_WRDATA -unset VWB -unset VWL -unset WPF -unset XW -unset YW t:link_packer
+setparam -unset AW -unset DEPTH -unset DV_HOOKS t:prog_mem
+setparam -unset DV_HOOKS -unset DW -unset FW -unset PRIO_N -unset WCW -unset XW -unset YW -unset i -unset o t:noc_router
+setparam -unset NCNT t:tile_telem
+setparam -unset BW -unset CHB -unset CWL -unset DWB -unset DWL -unset FWB -unset FWL -unset HW -unset LWB -unset NB -unset T_PSUM -unset T_RDRSP -unset T_WRDATA -unset VWB -unset VWL -unset WPF -unset XW -unset YW t:link_unpacker
+# generic synthesis (the children and the leaves stay black boxes); the arithmetic as the ORFS flow maps it: Booth
+# multipliers, Kogge-Stone carry lookahead, the full adders on the library's FA / HA cells
+synth -top neo_tile -booth -noabc -extra-map /home/runner/neo-synth/pdk/lib/common/lcu_kogge_stone.v
+tee -q -o generic_stat.json stat -json
+tee -q -o check.txt check
+extract_fa
+techmap -map /home/runner/neo-synth/pdk/lib/nangate45/cells_adders.v
+techmap
+opt -fast -purge
+# the flops named after the registers they hold (the paths read in RTL terms), then the library: flops, then ABC's
+# speed script at the clock period with the driver / load of the platform
+rename -wire -suffix _reg t:$_DFF* t:$_DFFE* t:$_SDFF* t:$_SDFFE* t:$_DFFSR* t:$_DFFSRE* t:$_ALDFF* t:$_DLATCH*
+dfflibmap -liberty /home/runner/neo-synth/pdk/lib/nangate45/NangateOpenCellLibrary_typical.lib -dont_use TAPCELL_X1 -dont_use FILLCELL_X1 -dont_use AOI211_X1 -dont_use OAI211_X1
+opt
+setundef -zero
+abc -script /home/runner/work/Astracore-Neo/Astracore-Neo/synth/abc_speed.script -liberty /home/runner/neo-synth/pdk/lib/nangate45/NangateOpenCellLibrary_typical.lib -dont_use TAPCELL_X1 -dont_use FILLCELL_X1 -dont_use AOI211_X1 -dont_use OAI211_X1 -D 500 -constr abc.constr
+opt_clean -purge
+# the library cells as black boxes, so the JSON carries every pin's direction (the repeater trees need it)
+read_liberty -lib /home/runner/neo-synth/pdk/lib/nangate45/NangateOpenCellLibrary_typical.lib
+# the clock gates onto the library's integrated clock-gating cell (drop 0.43)
+techmap -map icg_map.v
+opt_clean
+tee -q -o stat.json stat -liberty /home/runner/neo-synth/pdk/lib/nangate45/NangateOpenCellLibrary_typical.lib -json
+tee -q -o stat.txt stat -liberty /home/runner/neo-synth/pdk/lib/nangate45/NangateOpenCellLibrary_typical.lib
+write_verilog -noattr -noexpr -nohex -nodec netlist.v
+write_json netlist.json

@@ -1,0 +1,298 @@
+Startpoint: x_in[12] (input port clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+     2    1.4    0.0    0.0  100.0 ^ x_in[12] (in)
+                 0.0    0.0  100.0 ^ u_array/x_in[1004] (systolic_array)
+                             100.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -910.0 -450.0   library setup time
+                            -450.0   data required time
+-------------------------------------------------------------------------
+                            -450.0   data required time
+                            -100.0   data arrival time
+-------------------------------------------------------------------------
+                            -550.0   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[14].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[14].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[14].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _49957_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[100] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[13].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[13].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[13].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _47876_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[164] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[12].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[12].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[12].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _45930_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[228] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[11].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[11].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[11].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _44124_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[292] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[10].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[10].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[10].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _42455_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[356] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[15].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[15].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[15].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _52179_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[36] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[9].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[9].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[9].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _40922_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[420] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[8].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[8].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[8].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _77279_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[484] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+
+Startpoint: u_skew.g_pairs.g_pair[7].g_next.r_even[4]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_array (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_skew.g_pairs.g_pair[7].g_next.r_even[4]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.6   33.1   76.7   76.7 v u_skew.g_pairs.g_pair[7].g_next.r_even[4]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.5   29.8   24.7  101.3 ^ _76022_/Y (INVx1_ASAP7_75t_R)
+                29.8    0.0  101.3 ^ u_array/x_in[548] (systolic_array)
+                             101.3   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ u_array/clk (systolic_array)
+                     -908.6 -448.6   library setup time
+                            -448.6   data required time
+-------------------------------------------------------------------------
+                            -448.6   data required time
+                            -101.3   data arrival time
+-------------------------------------------------------------------------
+                            -549.9   slack (VIOLATED)
+
+

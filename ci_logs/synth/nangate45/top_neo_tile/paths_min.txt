@@ -1,0 +1,81 @@
+Startpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_core (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_nic/clk (top_tile_nic)
+   0.1    0.1 v u_nic/abuf_waddr[4] (top_tile_nic)
+   0.0    0.1 v u_core/abuf_waddr[4] (neo_core)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_core/clk (neo_core)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+
+Startpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_core (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_nic/clk (top_tile_nic)
+   0.1    0.1 v u_nic/rbuf_waddr[4] (top_tile_nic)
+   0.0    0.1 v u_core/rbuf_waddr[4] (neo_core)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_core/clk (neo_core)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+
+Startpoint: u_nic (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_core (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_nic/clk (top_tile_nic)
+   0.1    0.1 v u_nic/wbuf_waddr[4] (top_tile_nic)
+   0.0    0.1 v u_core/wbuf_waddr[4] (neo_core)
+          0.1   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_core/clk (neo_core)
+   0.1    0.1   library hold time
+          0.1   data required time
+-------------------------------------------------------
+          0.1   data required time
+         -0.1   data arrival time
+-------------------------------------------------------
+          0.0   slack (MET)
+
+

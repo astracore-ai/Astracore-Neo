@@ -1,0 +1,380 @@
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[0] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _61364_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _51420_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _51421_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _51422_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _51423_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _51424_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _51425_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _51426_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[0] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[10] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _61364_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _61678_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _61680_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61681_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61682_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61684_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61686_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _61687_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[10] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[14] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _59195_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _61053_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _61054_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61055_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61056_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61057_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61059_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _61060_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[14] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[17] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _61364_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _51576_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _51577_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _51578_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _51579_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _51580_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _51581_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _51582_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[17] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[18] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _61364_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _51744_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _51745_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _51746_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _51747_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _51748_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _51749_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _51751_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[18] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[20] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _59195_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _60976_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _60977_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _60978_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _60979_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _60981_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _60982_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _60983_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[20] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[21] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _61364_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _51497_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _51498_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _51499_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _51500_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _51501_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _51502_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _51503_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[21] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[22] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _59195_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _61210_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _61211_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61212_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61214_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61215_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61216_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _61217_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[22] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[23] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _61364_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _61523_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _61526_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61527_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61528_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61529_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61530_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _61531_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[23] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+
+Startpoint: b2i[1]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: rq_rsp[24] (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ b2i[1]_reg/CK (DFFR_X1)
+     1    1.0    0.0    0.1    0.1 ^ b2i[1]_reg/Q (DFFR_X1)
+     2    2.8    0.0    0.0    0.1 ^ _59065_/Z (BUF_X1)
+    10    9.7    0.0    0.0    0.2 ^ _59070_/Z (BUF_X2)
+    10   17.3    0.0    0.1    0.2 ^ _59194_/Z (BUF_X1)
+    10   19.2    0.0    0.1    0.3 ^ _61364_/Z (BUF_X1)
+     1    0.9    0.0    0.1    0.3 v _61365_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.4 v _61366_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61367_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.5 v _61369_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61370_/Z (MUX2_X1)
+     1    0.9    0.0    0.1    0.6 v _61371_/Z (MUX2_X1)
+     1    0.0    0.0    0.0    0.7 v _61372_/ZN (AND2_X1)
+                 0.0    0.0    0.7 v rq_rsp[24] (out)
+                               0.7   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                       -0.1    0.4   output external delay
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -0.7   data arrival time
+-------------------------------------------------------------------------
+                              -0.3   slack (VIOLATED)
+
+

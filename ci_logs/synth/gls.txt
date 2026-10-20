@@ -1,0 +1,9 @@
+python3 synth/gls.py --synth synth_out --rtl rtl --cells /home/runner/neo-synth/pdk/verilog/asap7 --out ci_logs/synth/gls --units mac_pe,mac_pe_chk,requant,crc16_beat,ecc39_enc,ecc39_dec,link_packer \
+  --iverilog /home/runner/neo-synth/oss-cad-suite/bin/iverilog --cycles 3000
+gls mac_pe: PASS 2992 cycles, 0 mismatches, 0 X-only compares, 1.4 s
+gls mac_pe_chk: PASS 2992 cycles, 0 mismatches, 0 X-only compares, 1.9 s
+gls requant: PASS 2992 cycles, 0 mismatches, 0 X-only compares, 1196.7 s
+gls crc16_beat: PASS 2992 cycles, 0 mismatches, 0 X-only compares, 7.9 s
+gls ecc39_enc: PASS 2992 cycles, 0 mismatches, 0 X-only compares, 0.3 s
+gls ecc39_dec: PASS 2992 cycles, 0 mismatches, 0 X-only compares, 0.7 s
+gls link_packer: PASS 2992 cycles, 0 mismatches, 0 X-only compares, 39.8 s

@@ -1,0 +1,510 @@
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[484]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _076342_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.7   38.5 1326.0 ^ _078131_/Y (OA21x2_ASAP7_75t_R)
+                13.7    0.0 1326.0 ^ crc_acc[484]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[484]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.2  425.8   library setup time
+                             425.8   data required time
+-------------------------------------------------------------------------
+                             425.8   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[612]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _079046_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.7   38.5 1326.0 ^ _079915_/Y (OA21x2_ASAP7_75t_R)
+                13.7    0.0 1326.0 ^ crc_acc[612]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[612]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.2  425.8   library setup time
+                             425.8   data required time
+-------------------------------------------------------------------------
+                             425.8   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[276]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _073117_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.7   38.5 1326.0 ^ _074468_/Y (OA21x2_ASAP7_75t_R)
+                13.7    0.0 1326.0 ^ crc_acc[276]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[276]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.2  425.8   library setup time
+                             425.8   data required time
+-------------------------------------------------------------------------
+                             425.8   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[676]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _079046_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.6   38.5 1326.0 ^ _081048_/Y (OA21x2_ASAP7_75t_R)
+                13.6    0.0 1326.0 ^ crc_acc[676]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[676]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.1  425.9   library setup time
+                             425.9   data required time
+-------------------------------------------------------------------------
+                             425.9   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[1044]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _086203_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.6   38.5 1326.0 ^ _086431_/Y (OA21x2_ASAP7_75t_R)
+                13.6    0.0 1326.0 ^ crc_acc[1044]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[1044]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.1  425.9   library setup time
+                             425.9   data required time
+-------------------------------------------------------------------------
+                             425.9   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[1092]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _086203_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.6   38.5 1326.0 ^ _087942_/Y (OA21x2_ASAP7_75t_R)
+                13.6    0.0 1326.0 ^ crc_acc[1092]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[1092]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.1  425.9   library setup time
+                             425.9   data required time
+-------------------------------------------------------------------------
+                             425.9   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[1124]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _086203_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.6   38.5 1326.0 ^ _088363_/Y (OA21x2_ASAP7_75t_R)
+                13.6    0.0 1326.0 ^ crc_acc[1124]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[1124]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.1  425.9   library setup time
+                             425.9   data required time
+-------------------------------------------------------------------------
+                             425.9   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[516]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _076342_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.6   38.5 1326.0 ^ _078560_/Y (OA21x2_ASAP7_75t_R)
+                13.6    0.0 1326.0 ^ crc_acc[516]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[516]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.1  425.9   library setup time
+                             425.9   data required time
+-------------------------------------------------------------------------
+                             425.9   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[68]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _101627_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.6   38.5 1326.0 ^ _102563_/Y (OA21x2_ASAP7_75t_R)
+                13.6    0.0 1326.0 ^ crc_acc[68]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[68]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.1  425.9   library setup time
+                             425.9   data required time
+-------------------------------------------------------------------------
+                             425.9   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+
+Startpoint: rx_flit[521] (input port clocked by clk)
+Endpoint: crc_acc[708]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                      100.0  100.0 ^ input external delay
+    10    5.1    0.0    0.0  100.0 ^ rx_flit[521] (in)
+    32   47.8  343.0  172.3  272.3 ^ fobuf_68659/Y (BUFx2_ASAP7_75t_R)
+     4    2.4   35.5   84.3  356.6 ^ _074121_/Y (AND2x2_ASAP7_75t_R)
+     1    1.0   18.2   58.3  415.0 v _074233_/Y (XNOR2x2_ASAP7_75t_R)
+     9    5.6   94.7   52.4  467.4 ^ _074788_/Y (AOI22x1_ASAP7_75t_R)
+     3    1.5   37.8   35.3  502.8 v _086343_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   14.6   37.8  540.6 v _086455_/Y (AO21x1_ASAP7_75t_R)
+     7    3.8   27.1   39.1  579.7 v _086566_/Y (AND2x2_ASAP7_75t_R)
+    10    9.0   50.9   56.0  635.7 v _086677_/Y (BUFx2_ASAP7_75t_R)
+     1    0.9   32.9   31.2  666.9 ^ _088010_/Y (NAND2x1_ASAP7_75t_R)
+     1    0.9   16.2   57.9  724.7 v _090010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3  769.0 ^ _095010_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6  821.6 v _095121_/Y (XNOR2x2_ASAP7_75t_R)
+     8    3.9   36.0   54.9  876.5 ^ _105965_/Y (XNOR2x2_ASAP7_75t_R)
+     2    1.0   19.2   18.9  895.5 v _073093_/Y (INVx1_ASAP7_75t_R)
+     1    0.5   20.0   48.3  943.7 v _073097_/Y (OA211x2_ASAP7_75t_R)
+     1    0.9   20.7   44.6  988.3 v _073102_/Y (OR3x1_ASAP7_75t_R)
+     1    0.9   15.8   45.4 1033.8 ^ _073106_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.2   52.6 1086.3 v _073107_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   15.8   44.3 1130.6 ^ _073114_/Y (XNOR2x2_ASAP7_75t_R)
+     1    0.9   16.4   52.7 1183.3 v _073115_/Y (XNOR2x2_ASAP7_75t_R)
+     9    4.6   86.9   41.9 1225.2 ^ _073116_/Y (NAND2x1_ASAP7_75t_R)
+    10    5.4   45.6   62.3 1287.5 ^ _081725_/Y (BUFx2_ASAP7_75t_R)
+     1    0.5   13.6   38.5 1326.0 ^ _081727_/Y (OA21x2_ASAP7_75t_R)
+                13.6    0.0 1326.0 ^ crc_acc[708]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                            1326.0   data arrival time
+
+                 0.0  500.0  500.0   clock clk (rise edge)
+                        0.0  500.0   clock network delay (ideal)
+                      -40.0  460.0   clock uncertainty
+                        0.0  460.0   clock reconvergence pessimism
+                             460.0 ^ crc_acc[708]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                      -34.1  425.9   library setup time
+                             425.9   data required time
+-------------------------------------------------------------------------
+                             425.9   data required time
+                            -1326.0   data arrival time
+-------------------------------------------------------------------------
+                            -900.1   slack (VIOLATED)
+
+

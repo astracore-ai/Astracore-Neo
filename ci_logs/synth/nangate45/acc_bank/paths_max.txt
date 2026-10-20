@@ -1,0 +1,411 @@
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_abft.r_q[127]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[158] (neo_mem_rf_w1056_d512_g1_rb1)
+     2    6.2    0.0    0.1    0.6 ^ _26831_/S (FA_X1)
+     2    6.5    0.0    0.1    0.7 v _26708_/S (FA_X1)
+     2    6.7    0.0    0.1    0.8 ^ _26953_/S (FA_X1)
+     1    3.6    0.0    0.1    0.9 v _27189_/S (FA_X1)
+     1    2.4    0.0    0.1    1.0 v _26619_/CO (FA_X1)
+     1    2.1    0.0    0.1    1.0 v _19612_/Z (XOR2_X1)
+     1    2.1    0.0    0.0    1.1 v _19634_/ZN (XNOR2_X1)
+     1    2.1    0.0    0.0    1.1 v _19678_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    1.2 v _19756_/ZN (XNOR2_X1)
+     1    1.1    0.0    0.0    1.2 v _19767_/ZN (XNOR2_X1)
+                 0.0    0.0    1.2 v u_abft.r_q[127]_reg/D (DFFR_X1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_abft.r_q[127]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.8   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_abft.r_q[63]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[670] (neo_mem_rf_w1056_d512_g1_rb1)
+     2    6.2    0.0    0.1    0.6 ^ _26557_/S (FA_X1)
+     2    6.5    0.0    0.1    0.7 v _26434_/S (FA_X1)
+     2    6.7    0.0    0.1    0.8 ^ _27072_/S (FA_X1)
+     1    3.6    0.0    0.1    0.9 v _27160_/S (FA_X1)
+     1    2.1    0.0    0.1    1.0 v _26345_/CO (FA_X1)
+     1    2.4    0.0    0.0    1.0 v _17567_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    1.1 v _17578_/ZN (XNOR2_X1)
+     1    2.4    0.0    0.0    1.1 v _17590_/ZN (XNOR2_X1)
+     1    2.1    0.0    0.0    1.2 v _17601_/ZN (XNOR2_X1)
+     1    1.1    0.0    0.0    1.2 v _17767_/ZN (XNOR2_X1)
+                 0.0    0.0    1.2 v u_abft.r_q[63]_reg/D (DFFR_X1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_abft.r_q[63]_reg/CK (DFFR_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.8   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[320] (neo_mem_rf_w1056_d512_g1_rb1)
+     1    0.9    0.0    0.1    0.5 v _19704_/Z (MUX2_X1)
+     1    3.3    0.0    0.0    0.5 v _19705_/ZN (AND2_X1)
+     4   10.8    0.0    0.0    0.6 v _28625_/CO (HA_X1)
+     3    6.7    0.0    0.1    0.7 v _26276_/CO (FA_X1)
+     2    4.8    0.0    0.1    0.7 ^ _24974_/ZN (AOI211_X2)
+     1    0.9    0.0    0.0    0.7 v _25008_/ZN (OAI211_X2)
+     2    2.9    0.0    0.0    0.8 v _25015_/ZN (AND3_X1)
+     2    3.3    0.0    0.0    0.8 ^ _25045_/ZN (AOI21_X1)
+     2    4.4    0.0    0.0    0.9 v _25057_/ZN (AOI22_X1)
+     2    3.3    0.0    0.1    0.9 ^ _25095_/ZN (AOI221_X2)
+     3    7.0    0.0    0.0    1.0 v _25111_/ZN (AOI221_X1)
+     3    5.7    0.1    0.1    1.1 ^ _25120_/ZN (AOI221_X2)
+     1    2.4    0.0    0.0    1.1 v _25181_/ZN (OAI21_X1)
+     2    6.1    0.0    0.1    1.2 v _25182_/Z (XOR2_X1)
+                 0.0    0.0    1.2 v u_mem/wdata[350] (neo_mem_rf_w1056_d512_g1_rb1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: new_q[350]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[320] (neo_mem_rf_w1056_d512_g1_rb1)
+     1    0.9    0.0    0.1    0.5 v _19704_/Z (MUX2_X1)
+     1    3.3    0.0    0.0    0.5 v _19705_/ZN (AND2_X1)
+     4   10.8    0.0    0.0    0.6 v _28625_/CO (HA_X1)
+     3    6.7    0.0    0.1    0.7 v _26276_/CO (FA_X1)
+     2    4.8    0.0    0.1    0.7 ^ _24974_/ZN (AOI211_X2)
+     1    0.9    0.0    0.0    0.7 v _25008_/ZN (OAI211_X2)
+     2    2.9    0.0    0.0    0.8 v _25015_/ZN (AND3_X1)
+     2    3.3    0.0    0.0    0.8 ^ _25045_/ZN (AOI21_X1)
+     2    4.4    0.0    0.0    0.9 v _25057_/ZN (AOI22_X1)
+     2    3.3    0.0    0.1    0.9 ^ _25095_/ZN (AOI221_X2)
+     3    7.0    0.0    0.0    1.0 v _25111_/ZN (AOI221_X1)
+     3    5.7    0.1    0.1    1.1 ^ _25120_/ZN (AOI221_X2)
+     1    2.4    0.0    0.0    1.1 v _25181_/ZN (OAI21_X1)
+     2    6.1    0.0    0.1    1.2 v _25182_/Z (XOR2_X1)
+                 0.0    0.0    1.2 v new_q[350]_reg/D (DFF_X1)
+                               1.2   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ new_q[350]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.2   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[704] (neo_mem_rf_w1056_d512_g1_rb1)
+     1    0.9    0.0    0.1    0.5 v _20620_/Z (MUX2_X1)
+     1    3.3    0.0    0.0    0.5 v _20621_/ZN (AND2_X1)
+     4   11.0    0.0    0.0    0.6 v _27897_/CO (HA_X1)
+     3    6.5    0.0    0.1    0.7 v _26263_/CO (FA_X1)
+     2    4.8    0.0    0.0    0.7 ^ _16497_/ZN (AOI211_X2)
+     1    0.9    0.0    0.0    0.7 v _16531_/ZN (OAI211_X2)
+     2    2.9    0.0    0.0    0.8 v _16538_/ZN (AND3_X1)
+     2    3.3    0.0    0.0    0.8 ^ _16566_/ZN (AOI21_X1)
+     2    4.4    0.0    0.0    0.8 v _16579_/ZN (AOI22_X1)
+     2    3.3    0.0    0.1    0.9 ^ _16618_/ZN (AOI221_X2)
+     3    7.0    0.0    0.0    1.0 v _16633_/ZN (AOI221_X1)
+     3    5.7    0.1    0.1    1.1 ^ _16643_/ZN (AOI221_X2)
+     1    2.4    0.0    0.0    1.1 v _16703_/ZN (OAI21_X1)
+     2    6.1    0.0    0.1    1.1 v _16704_/Z (XOR2_X1)
+                 0.0    0.0    1.1 v u_mem/wdata[734] (neo_mem_rf_w1056_d512_g1_rb1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[320] (neo_mem_rf_w1056_d512_g1_rb1)
+     1    0.9    0.0    0.1    0.5 v _19704_/Z (MUX2_X1)
+     1    3.3    0.0    0.0    0.5 v _19705_/ZN (AND2_X1)
+     4   10.8    0.0    0.0    0.6 v _28625_/CO (HA_X1)
+     3    6.7    0.0    0.1    0.7 v _26276_/CO (FA_X1)
+     2    4.8    0.0    0.1    0.7 ^ _24974_/ZN (AOI211_X2)
+     1    0.9    0.0    0.0    0.7 v _25008_/ZN (OAI211_X2)
+     2    2.9    0.0    0.0    0.8 v _25015_/ZN (AND3_X1)
+     2    3.3    0.0    0.0    0.8 ^ _25045_/ZN (AOI21_X1)
+     2    4.4    0.0    0.0    0.9 v _25057_/ZN (AOI22_X1)
+     2    3.3    0.0    0.1    0.9 ^ _25095_/ZN (AOI221_X2)
+     3    7.0    0.0    0.0    1.0 v _25111_/ZN (AOI221_X1)
+     3    5.7    0.1    0.1    1.1 ^ _25120_/ZN (AOI221_X2)
+     1    2.4    0.0    0.0    1.1 v _25136_/ZN (OAI21_X1)
+     2    6.1    0.0    0.1    1.1 ^ _25137_/ZN (XNOR2_X1)
+                 0.1    0.0    1.1 ^ u_mem/wdata[346] (neo_mem_rf_w1056_d512_g1_rb1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: new_q[734]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[704] (neo_mem_rf_w1056_d512_g1_rb1)
+     1    0.9    0.0    0.1    0.5 v _20620_/Z (MUX2_X1)
+     1    3.3    0.0    0.0    0.5 v _20621_/ZN (AND2_X1)
+     4   11.0    0.0    0.0    0.6 v _27897_/CO (HA_X1)
+     3    6.5    0.0    0.1    0.7 v _26263_/CO (FA_X1)
+     2    4.8    0.0    0.0    0.7 ^ _16497_/ZN (AOI211_X2)
+     1    0.9    0.0    0.0    0.7 v _16531_/ZN (OAI211_X2)
+     2    2.9    0.0    0.0    0.8 v _16538_/ZN (AND3_X1)
+     2    3.3    0.0    0.0    0.8 ^ _16566_/ZN (AOI21_X1)
+     2    4.4    0.0    0.0    0.8 v _16579_/ZN (AOI22_X1)
+     2    3.3    0.0    0.1    0.9 ^ _16618_/ZN (AOI221_X2)
+     3    7.0    0.0    0.0    1.0 v _16633_/ZN (AOI221_X1)
+     3    5.7    0.1    0.1    1.1 ^ _16643_/ZN (AOI221_X2)
+     1    2.4    0.0    0.0    1.1 v _16703_/ZN (OAI21_X1)
+     2    6.1    0.0    0.1    1.1 v _16704_/Z (XOR2_X1)
+                 0.0    0.0    1.1 v new_q[734]_reg/D (DFF_X1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ new_q[734]_reg/CK (DFF_X1)
+                        0.0    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[704] (neo_mem_rf_w1056_d512_g1_rb1)
+     1    0.9    0.0    0.1    0.5 v _20620_/Z (MUX2_X1)
+     1    3.3    0.0    0.0    0.5 v _20621_/ZN (AND2_X1)
+     4   11.0    0.0    0.0    0.6 v _27897_/CO (HA_X1)
+     3    6.5    0.0    0.1    0.7 v _26263_/CO (FA_X1)
+     2    4.8    0.0    0.0    0.7 ^ _16497_/ZN (AOI211_X2)
+     1    0.9    0.0    0.0    0.7 v _16531_/ZN (OAI211_X2)
+     2    2.9    0.0    0.0    0.8 v _16538_/ZN (AND3_X1)
+     2    3.3    0.0    0.0    0.8 ^ _16566_/ZN (AOI21_X1)
+     2    4.4    0.0    0.0    0.8 v _16579_/ZN (AOI22_X1)
+     2    3.3    0.0    0.1    0.9 ^ _16618_/ZN (AOI221_X2)
+     3    7.0    0.0    0.0    1.0 v _16633_/ZN (AOI221_X1)
+     3    5.7    0.1    0.1    1.1 ^ _16643_/ZN (AOI221_X2)
+     1    2.4    0.0    0.0    1.1 v _16659_/ZN (OAI21_X1)
+     2    6.1    0.0    0.1    1.1 ^ _16660_/ZN (XNOR2_X1)
+                 0.1    0.0    1.1 ^ u_mem/wdata[730] (neo_mem_rf_w1056_d512_g1_rb1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     4    7.6    0.0    0.4    0.4 v u_mem/rb_data[749] (neo_mem_rf_w1056_d512_g1_rb1)
+     1    0.9    0.0    0.1    0.5 v _20728_/Z (MUX2_X1)
+     1    3.3    0.0    0.0    0.5 v _20729_/ZN (AND2_X1)
+     4    6.0    0.0    0.1    0.6 v _27903_/S (HA_X1)
+     2    2.4    0.0    0.0    0.6 v _21022_/ZN (OR2_X1)
+     1    3.0    0.0    0.0    0.7 v _21034_/ZN (AND3_X1)
+     1    3.3    0.0    0.1    0.8 ^ _21045_/ZN (AOI221_X2)
+     3    5.3    0.0    0.0    0.8 v _21344_/ZN (OAI211_X2)
+     2    3.3    0.0    0.0    0.8 ^ _21355_/ZN (NAND4_X1)
+     3    4.4    0.0    0.0    0.9 v _21489_/ZN (AOI22_X1)
+     2    3.3    0.1    0.1    1.0 ^ _21533_/ZN (AOI222_X1)
+     3    4.8    0.0    0.0    1.0 v _21544_/ZN (AOI21_X1)
+     1    1.5    0.0    0.1    1.1 v _21589_/ZN (OR4_X1)
+     2    6.1    0.0    0.0    1.1 ^ _21655_/ZN (NAND4_X1)
+                 0.0    0.0    1.1 ^ u_mem/wdata[766] (neo_mem_rf_w1056_d512_g1_rb1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+
+Startpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_mem (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout    Cap   Slew  Delay   Time   Description
+-------------------------------------------------------------------------
+                 0.0    0.0    0.0   clock clk (rise edge)
+                        0.0    0.0   clock network delay (ideal)
+                 0.0    0.0    0.0 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+     3    3.6    0.0    0.4    0.4 v u_mem/rb_data[768] (neo_mem_rf_w1056_d512_g1_rb1)
+     1    0.9    0.0    0.1    0.5 v _20772_/Z (MUX2_X1)
+     1    3.3    0.0    0.0    0.5 v _20773_/ZN (AND2_X1)
+     3    8.2    0.0    0.0    0.6 v _27640_/CO (HA_X1)
+     3    6.7    0.0    0.1    0.7 v _26261_/CO (FA_X1)
+     2    4.8    0.0    0.1    0.7 ^ _16902_/ZN (AOI211_X2)
+     2    4.7    0.0    0.0    0.8 v _16915_/ZN (OAI211_X2)
+     4    8.7    0.1    0.1    0.8 ^ _16942_/ZN (AOI221_X2)
+     3    4.4    0.0    0.0    0.9 v _16969_/ZN (OAI211_X2)
+     2    3.4    0.0    0.0    0.9 ^ _17024_/ZN (AOI21_X1)
+     1    1.4    0.0    0.0    0.9 v _17060_/ZN (NOR3_X1)
+     4    7.6    0.0    0.1    1.0 ^ _17068_/ZN (NOR2_X1)
+     1    1.6    0.0    0.0    1.0 v _17120_/ZN (NOR2_X1)
+     1    2.6    0.0    0.1    1.1 ^ _17127_/ZN (AOI221_X1)
+     2    6.1    0.0    0.1    1.1 ^ _17128_/ZN (XNOR2_X1)
+                 0.1    0.0    1.1 ^ u_mem/wdata[798] (neo_mem_rf_w1056_d512_g1_rb1)
+                               1.1   data arrival time
+
+                 0.0    0.5    0.5   clock clk (rise edge)
+                        0.0    0.5   clock network delay (ideal)
+                        0.0    0.5   clock uncertainty
+                        0.0    0.5   clock reconvergence pessimism
+                               0.5 ^ u_mem/clk (neo_mem_rf_w1056_d512_g1_rb1)
+                       -0.1    0.4   library setup time
+                               0.4   data required time
+-------------------------------------------------------------------------
+                               0.4   data required time
+                              -1.1   data arrival time
+-------------------------------------------------------------------------
+                              -0.7   slack (VIOLATED)
+
+

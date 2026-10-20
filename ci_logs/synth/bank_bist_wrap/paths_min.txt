@@ -1,0 +1,85 @@
+Startpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_bank/clk (sram_bank)
+ 182.9  182.9 v u_bank/rvalid (sram_bank)
+   0.0  182.9 v u_bist/rvalid (mbist)
+        182.9   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_bist/clk (mbist)
+  -8.8   -8.8   library hold time
+         -8.8   data required time
+-------------------------------------------------------
+         -8.8   data required time
+       -182.9   data arrival time
+-------------------------------------------------------
+        191.7   slack (MET)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_bist/clk (mbist)
+ 167.8  167.8 v u_bist/re (mbist)
+  26.2  193.9 v _1597_/Y (AND2x2_ASAP7_75t_R)
+  52.2  246.2 v _1708_/Y (AO21x1_ASAP7_75t_R)
+   0.0  246.2 v u_bank/re (sram_bank)
+        246.2   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_bank/clk (sram_bank)
+  50.0   50.0   library hold time
+         50.0   data required time
+-------------------------------------------------------
+         50.0   data required time
+       -246.2   data arrival time
+-------------------------------------------------------
+        196.2   slack (MET)
+
+
+Startpoint: u_bist (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_bank (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_bist/clk (mbist)
+ 165.6  165.6 v u_bist/we (mbist)
+  27.5  193.1 v _1375_/Y (AND2x2_ASAP7_75t_R)
+  40.7  233.8 v _1486_/Y (AO21x1_ASAP7_75t_R)
+   0.0  233.8 v u_bank/we (sram_bank)
+        233.8   data arrival time
+
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0   clock reconvergence pessimism
+          0.0 ^ u_bank/clk (sram_bank)
+  11.2   11.2   library hold time
+         11.2   data required time
+-------------------------------------------------------
+         11.2   data required time
+       -233.8   data arrival time
+-------------------------------------------------------
+        222.6   slack (MET)
+
+
