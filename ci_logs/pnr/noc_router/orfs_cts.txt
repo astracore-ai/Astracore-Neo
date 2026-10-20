@@ -1,0 +1,461 @@
+$ docker run --rm --init --name neo-pnr-noc_router-cts-3507 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/noc_router/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/in cts
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth_canonicalize.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/logs/asap7/noc_router/base/1_1_yosys_canonicalize.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/1_2_yosys.v
+Elapsed time: 0:00.05[h:]min:sec. CPU time: user 0.03 sys 0.02 (98%). Peak memory: 27308KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     1.00       26 N/A
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/logs/asap7/noc_router/base/1_2_yosys.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/1_2_yosys.v
+Elapsed time: 0:00.05[h:]min:sec. CPU time: user 0.03 sys 0.02 (99%). Peak memory: 27156KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_2_yosys              .v            0        0     1.00       26 5df18845d0
+1_2_yosys              .sdc                                       5a4163a2e3
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 4_1_cts cts
+Running cts.tcl, stage 4_1_cts
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/3_place.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/3_place.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+[INFO CTS-0050] Root buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0051] Sink buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0052] The following clock buffers will be used for CTS:
+                    BUFx24_ASAP7_75t_R
+[INFO CTS-0049] Characterization buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0007] Net "clk" found for clock "clk".
+[INFO CTS-0011]  Clock net "clk" for macros has 5 sinks.
+[INFO CTS-0011]  Clock net "clk_regs" for registers has 10866 sinks.
+[INFO CTS-0010]  Clock net "g_out\[4\].gclk" has 1093 sinks.
+[INFO CTS-0010]  Clock net "g_out\[3\].gclk" has 1093 sinks.
+[INFO CTS-0010]  Clock net "g_out\[2\].gclk" has 1093 sinks.
+[INFO CTS-0010]  Clock net "g_out\[1\].gclk" has 1093 sinks.
+[INFO CTS-0010]  Clock net "g_out\[0\].gclk" has 1093 sinks.
+[INFO CTS-0008] TritonCTS found 7 clock nets.
+[INFO CTS-0097] Characterization used 1 buffer(s) types.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk.
+[INFO CTS-0028]  Total number of sinks: 5.
+[INFO CTS-0060]  Macro  sinks will be clustered in groups of up to 4 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0023]  Original sink region: [(100425, 100595), (103746, 102485)].
+[INFO CTS-0024]  Normalized sink region: [(74.3889, 74.5148), (76.8489, 75.9148)].
+[INFO CTS-0025]     Width:  2.4600.
+[INFO CTS-0026]     Height: 1.4000.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 3
+    Sub-region size: 1.2300 X 1.4000
+[INFO CTS-0034]     Segment length (rounded): 1.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 5.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_regs.
+[INFO CTS-0028]  Total number of sinks: 10866.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 49.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 627.
+[INFO CTS-0024]  Normalized sink region: [(2.68709, 2.92353), (146.089, 146.147)].
+[INFO CTS-0025]     Width:  143.4022.
+[INFO CTS-0026]     Height: 143.2235.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 314
+    Sub-region size: 71.7011 X 143.2235
+[INFO CTS-0034]     Segment length (rounded): 36.
+ Level 2
+    Direction: Vertical
+    Sinks per sub-region: 157
+    Sub-region size: 71.7011 X 71.6118
+[INFO CTS-0034]     Segment length (rounded): 36.
+ Level 3
+    Direction: Horizontal
+    Sinks per sub-region: 79
+    Sub-region size: 35.8505 X 71.6118
+[INFO CTS-0034]     Segment length (rounded): 18.
+ Level 4
+    Direction: Vertical
+    Sinks per sub-region: 40
+    Sub-region size: 35.8505 X 35.8059
+[INFO CTS-0034]     Segment length (rounded): 18.
+ Level 5
+    Direction: Horizontal
+    Sinks per sub-region: 20
+    Sub-region size: 17.9253 X 35.8059
+[INFO CTS-0034]     Segment length (rounded): 8.
+ Level 6
+    Direction: Vertical
+    Sinks per sub-region: 10
+    Sub-region size: 17.9253 X 17.9029
+[INFO CTS-0034]     Segment length (rounded): 8.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 627.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net g_out\[4\].gclk.
+[INFO CTS-0028]  Total number of sinks: 1093.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 48.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 91.
+[INFO CTS-0024]  Normalized sink region: [(3.91805, 4.96416), (144.033, 145.25)].
+[INFO CTS-0025]     Width:  140.1152.
+[INFO CTS-0026]     Height: 140.2863.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 46
+    Sub-region size: 140.1152 X 70.1432
+[INFO CTS-0034]     Segment length (rounded): 36.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 23
+    Sub-region size: 70.0576 X 70.1432
+[INFO CTS-0034]     Segment length (rounded): 36.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 12
+    Sub-region size: 70.0576 X 35.0716
+[INFO CTS-0034]     Segment length (rounded): 18.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 91.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net g_out\[3\].gclk.
+[INFO CTS-0028]  Total number of sinks: 1093.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 49.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 101.
+[INFO CTS-0024]  Normalized sink region: [(8.42519, 5.33333), (144.934, 145.983)].
+[INFO CTS-0025]     Width:  136.5084.
+[INFO CTS-0026]     Height: 140.6494.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 51
+    Sub-region size: 136.5084 X 70.3247
+[INFO CTS-0034]     Segment length (rounded): 36.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 26
+    Sub-region size: 68.2542 X 70.3247
+[INFO CTS-0034]     Segment length (rounded): 34.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 13
+    Sub-region size: 68.2542 X 35.1623
+[INFO CTS-0034]     Segment length (rounded): 18.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 101.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net g_out\[2\].gclk.
+[INFO CTS-0028]  Total number of sinks: 1093.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 46.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 102.
+[INFO CTS-0024]  Normalized sink region: [(7.7163, 6.3842), (144.772, 145.564)].
+[INFO CTS-0025]     Width:  137.0562.
+[INFO CTS-0026]     Height: 139.1794.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 51
+    Sub-region size: 137.0562 X 69.5897
+[INFO CTS-0034]     Segment length (rounded): 34.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 26
+    Sub-region size: 68.5281 X 69.5897
+[INFO CTS-0034]     Segment length (rounded): 34.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 13
+    Sub-region size: 68.5281 X 34.7948
+[INFO CTS-0034]     Segment length (rounded): 18.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 102.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net g_out\[1\].gclk.
+[INFO CTS-0028]  Total number of sinks: 1093.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 76.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 96.
+[INFO CTS-0024]  Normalized sink region: [(7.78741, 4.25318), (146.13, 144.844)].
+[INFO CTS-0025]     Width:  138.3422.
+[INFO CTS-0026]     Height: 140.5911.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 48
+    Sub-region size: 138.3422 X 70.2955
+[INFO CTS-0034]     Segment length (rounded): 36.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 24
+    Sub-region size: 69.1711 X 70.2955
+[INFO CTS-0034]     Segment length (rounded): 34.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 12
+    Sub-region size: 69.1711 X 35.1478
+[INFO CTS-0034]     Segment length (rounded): 18.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 96.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net g_out\[0\].gclk.
+[INFO CTS-0028]  Total number of sinks: 1093.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 79.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 91.
+[INFO CTS-0024]  Normalized sink region: [(4.81904, 4.51037), (143.367, 145.008)].
+[INFO CTS-0025]     Width:  138.5477.
+[INFO CTS-0026]     Height: 140.4977.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 46
+    Sub-region size: 138.5477 X 70.2489
+[INFO CTS-0034]     Segment length (rounded): 36.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 23
+    Sub-region size: 69.2739 X 70.2489
+[INFO CTS-0034]     Segment length (rounded): 34.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 12
+    Sub-region size: 69.2739 X 35.1244
+[INFO CTS-0034]     Segment length (rounded): 18.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 91.
+[INFO CTS-0018]     Created 3 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 2.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 2.
+[INFO CTS-0015]     Created 3 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 2:1, 3:1..
+[INFO CTS-0017]     Max level of the clock tree: 1.
+[INFO CTS-0018]     Created 722 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 7.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 7.
+[INFO CTS-0015]     Created 722 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 4:2, 5:2, 6:6, 7:8, 8:15, 9:11, 10:16, 11:23, 12:25, 13:30, 14:32, 15:26, 16:49, 17:86, 18:105, 19:114, 20:70, 21:48, 22:17, 23:5, 24:1..
+[INFO CTS-0017]     Max level of the clock tree: 6.
+[INFO CTS-0018]     Created 106 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 5.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 5.
+[INFO CTS-0015]     Created 106 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 2:1, 5:2, 6:2, 7:7, 8:7, 9:6, 10:14, 11:4, 12:11, 13:12, 14:13, 15:5, 16:1, 17:6, 18:2, 19:4, 21:2..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0018]     Created 116 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 5.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 5.
+[INFO CTS-0015]     Created 116 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 4:4, 5:3, 6:3, 7:2, 8:7, 9:11, 10:12, 11:26, 12:10, 13:10, 14:6, 15:8, 16:4, 17:2, 18:1..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0018]     Created 117 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 5.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 5.
+[INFO CTS-0015]     Created 117 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 3:1, 5:1, 6:5, 7:7, 8:10, 9:9, 10:18, 11:13, 12:13, 13:11, 14:12, 15:6, 16:3, 19:1..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0018]     Created 111 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 5.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 5.
+[INFO CTS-0015]     Created 111 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 4:1, 5:4, 6:4, 7:4, 8:5, 9:7, 10:19, 11:8, 12:18, 13:11, 14:7, 15:6, 16:1, 17:3, 18:1, 19:2, 20:2, 22:1..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0018]     Created 106 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 5.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 5.
+[INFO CTS-0015]     Created 106 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 3:1, 4:1, 5:3, 6:4, 7:5, 8:5, 9:11, 10:10, 11:7, 12:9, 13:7, 14:10, 15:8, 16:3, 17:5, 18:3, 19:1, 20:4, 21:2..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0098] Clock net "clk"
+[INFO CTS-0099]  Sinks 5
+[INFO CTS-0100]  Leaf buffers 0
+[INFO CTS-0101]  Average sink wire length 202.51 um
+[INFO CTS-0102]  Path depth 2 - 2
+[INFO CTS-0207]  Dummy loads inserted 1
+[INFO CTS-0098] Clock net "clk_regs"
+[INFO CTS-0099]  Sinks 11448
+[INFO CTS-0100]  Leaf buffers 627
+[INFO CTS-0101]  Average sink wire length 170.10 um
+[INFO CTS-0102]  Path depth 6 - 7
+[INFO CTS-0207]  Dummy loads inserted 582
+[INFO CTS-0098] Clock net "g_out\[4\].gclk"
+[INFO CTS-0099]  Sinks 1173
+[INFO CTS-0100]  Leaf buffers 91
+[INFO CTS-0101]  Average sink wire length 154.81 um
+[INFO CTS-0102]  Path depth 4 - 5
+[INFO CTS-0207]  Dummy loads inserted 80
+[INFO CTS-0098] Clock net "g_out\[3\].gclk"
+[INFO CTS-0099]  Sinks 1188
+[INFO CTS-0100]  Leaf buffers 101
+[INFO CTS-0101]  Average sink wire length 158.17 um
+[INFO CTS-0102]  Path depth 4 - 5
+[INFO CTS-0207]  Dummy loads inserted 95
+[INFO CTS-0098] Clock net "g_out\[2\].gclk"
+[INFO CTS-0099]  Sinks 1185
+[INFO CTS-0100]  Leaf buffers 102
+[INFO CTS-0101]  Average sink wire length 154.16 um
+[INFO CTS-0102]  Path depth 4 - 5
+[INFO CTS-0207]  Dummy loads inserted 92
+[INFO CTS-0098] Clock net "g_out\[1\].gclk"
+[INFO CTS-0099]  Sinks 1183
+[INFO CTS-0100]  Leaf buffers 96
+[INFO CTS-0101]  Average sink wire length 151.51 um
+[INFO CTS-0102]  Path depth 4 - 5
+[INFO CTS-0207]  Dummy loads inserted 90
+[INFO CTS-0098] Clock net "g_out\[0\].gclk"
+[INFO CTS-0099]  Sinks 1179
+[INFO CTS-0100]  Leaf buffers 91
+[INFO CTS-0101]  Average sink wire length 153.27 um
+[INFO CTS-0102]  Path depth 4 - 5
+[INFO CTS-0207]  Dummy loads inserted 86
+[INFO CTS-0033] Balancing latency for clock clk
+[INFO CTS-0036]  inserted 0 delay buffers
+[INFO CTS-0500] Runtime: 13.30s
+Took 13 seconds: clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+estimate_parasitics -placement
+detailed_placement
+[INFO DPL-0006] Core area: 39511.10 um^2
+[INFO DPL-0007] Movable instances area: 15436.78 um^2
+[INFO DPL-0008] Fixed instances area within core: 118.24 um^2
+[INFO DPL-0009] Utilization: 39.4%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 114045 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |       7233 |      1165 |      6068
+        1 |        288 |        50 |       238
+        2 |         34 |         4 |        30
+        3 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 3.
+[INFO DPL-0500] Runtime: 1.92s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves               60994
+total displacement      21373.6 u
+average displacement        0.2 u
+max displacement            2.7 u
+original HPWL          743567.7 u
+legalized HPWL         753952.0 u
+delta HPWL                    1 %
+
+estimate_parasitics -placement
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove BufferMove CloneMove SplitLoadMove 
+[INFO RSZ-0094] Found 5 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 5 out of 5 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -287.518 |    -1279.4 |      5 | stage_en[0]
+      10* |       2 |       5 |        3 |      0 |     0 |    +0.0% | -196.113 |     -937.4 |      5 | stage_en[1]
+      20* |       2 |      10 |        7 |      0 |     1 |    +0.0% | -157.470 |     -644.6 |      5 | stage_en[2]
+      30* |       2 |      17 |        9 |      0 |     2 |    +0.0% | -112.711 |     -506.3 |      5 | stage_en[3]
+      40* |       3 |      20 |       14 |      0 |     5 |    +0.0% | -103.055 |     -474.4 |      5 | stage_en[4]
+      50* |       4 |      24 |       17 |      0 |     7 |    +0.0% | -119.804 |     -474.0 |      5 | stage_en[0]
+      60* |       9 |      24 |       22 |      0 |     7 |    +0.0% | -119.804 |     -474.0 |      5 | stage_en[0]
+      70* |      14 |      24 |       27 |      0 |     7 |    +0.0% | -119.804 |     -474.0 |      5 | stage_en[0]
+      80* |      19 |      24 |       32 |      0 |     7 |    +0.0% | -119.804 |     -474.0 |      5 | stage_en[0]
+      90* |      24 |      24 |       37 |      0 |     7 |    +0.0% | -119.804 |     -474.0 |      5 | stage_en[0]
+      97* |       3 |      24 |       15 |      0 |     7 |    +0.0% |  -99.862 |     -454.1 |      5 | stage_en[0]
+     100* |       3 |      26 |       15 |      0 |     7 |    +0.0% |  -99.862 |     -445.3 |      5 | stage_en[0]
+     104* |       3 |      27 |       17 |      0 |     8 |    +0.0% |  -99.862 |     -439.9 |      5 | stage_en[0]
+     110* |       4 |      29 |       19 |      0 |     9 |    +0.0% | -100.050 |     -426.6 |      5 | stage_en[0]
+     120* |       9 |      29 |       24 |      0 |     9 |    +0.0% | -100.050 |     -426.6 |      5 | stage_en[0]
+     130* |      14 |      29 |       29 |      0 |     9 |    +0.0% | -100.050 |     -426.6 |      5 | stage_en[0]
+     140* |      19 |      29 |       34 |      0 |     9 |    +0.0% | -100.050 |     -426.6 |      5 | stage_en[0]
+     150* |      24 |      29 |       39 |      0 |     9 |    +0.0% | -100.050 |     -426.6 |      5 | stage_en[0]
+     155* |       3 |      27 |       17 |      0 |     8 |    +0.0% |  -99.862 |     -439.9 |      5 | stage_en[0]
+     160* |       3 |      30 |       17 |      0 |     9 |    +0.0% |  -99.862 |     -425.4 |      5 | stage_en[0]
+     170* |       3 |      33 |       22 |      0 |    12 |    +0.0% |  -99.596 |     -409.6 |      5 | stage_en[0]
+     172* |       3 |      33 |       22 |      0 |    11 |    +0.0% |  -99.596 |     -406.8 |      5 | stage_en[0]
+     180* |       3 |      36 |       25 |      0 |    12 |    +0.0% |  -99.597 |     -367.4 |      5 | stage_en[0]
+     190* |       3 |      40 |       29 |      0 |    14 |    +0.0% |  -90.611 |     -313.3 |      5 | stage_en[3]
+     190* |       3 |      40 |       29 |      0 |    13 |    +0.0% |  -90.611 |     -312.7 |      5 | stage_en[3]
+     190* |       3 |      40 |       29 |      0 |    13 |    +0.0% |  -90.611 |     -312.7 |      5 | stage_en[3]
+    final |       3 |      40 |       29 |      0 |    13 |    +0.0% |  -90.611 |     -312.7 |      5 | stage_en[3]
+------------------------------------------------------------------------------------------------------------------------------
+[INFO RSZ-0059] Removed 3 buffers.
+[INFO RSZ-0040] Inserted 29 buffers.
+[INFO RSZ-0051] Resized 40 instances: 40 up, 0 up match, 0 down, 0 VT
+[INFO RSZ-0043] Swapped pins on 13 instances.
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 50.19s
+[INFO RSZ-0033] No hold violations found.
+[INFO RSZ-0506] Runtime: 0.32s
+Took 51 seconds: repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+detailed_placement
+[INFO DPL-0006] Core area: 39511.10 um^2
+[INFO DPL-0007] Movable instances area: 15440.15 um^2
+[INFO DPL-0008] Fixed instances area within core: 118.24 um^2
+[INFO DPL-0009] Utilization: 39.4%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 114071 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |         71 |        15 |        56
+        1 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 1.
+[INFO DPL-0500] Runtime: 1.19s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                 784
+total displacement         15.8 u
+average displacement        0.0 u
+max displacement            0.8 u
+original HPWL          754007.0 u
+legalized HPWL         754015.3 u
+delta HPWL                    0 %
+
+estimate_parasitics -placement
+Report metrics stage 4, cts final...
+
+==========================================================================
+cts final report_design_area
+--------------------------------------------------------------------------
+Design area 15558 um^2 39% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/4_1_cts.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/4_cts.sdc
+Elapsed time: 2:40.62[h:]min:sec. CPU time: user 326.27 sys 5.12 (206%). Peak memory: 1243504KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+4_1_cts                .odb        160      331     2.06     1214 2a054922cc
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/4_1_cts.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/4_cts.odb
