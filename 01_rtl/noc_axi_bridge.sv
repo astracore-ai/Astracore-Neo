@@ -399,7 +399,7 @@ module noc_axi_bridge #(
       // the count's adder takes the role's data count from registers (the memory role's r_n, the host's wq_n); the late
       // decision of what the flit is (a WRHDR before this beat, or the beat itself) only enables it: the host's 19-bit
       // address compare was in front of the 16-bit add, 1,302 ps to tx_cnt[14] (drop 0.44)
-      if (tx_fire && t_data) begin txc_words <= t_words; txc_n <= t_n; tx_cnt <= tx_cnt + 16'(own_mem ? mt_nd : ht_nd); end
+      if (tx_fire && t_data) begin txc_words <= t_words; txc_n <= t_n; tx_cnt <= tx_cnt + (own_mem ? 16'(mt_nd) : 16'(ht_nd)); end
       if (txc_v) tx_crc <= tx_crc_next;
     end
   end
