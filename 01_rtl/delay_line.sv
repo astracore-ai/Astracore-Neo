@@ -17,18 +17,17 @@ module delay_line #(
   output logic signed [W-1:0] q
 );
   localparam int N = (DEPTH > 0) ? DEPTH : 1;
-  localparam logic signed [W-1:0] RST = (RSTV != 0) ? {W{1'b1}} : {W{1'b0}};
   logic signed [W-1:0] pipe [N];
   generate
     for (genvar k = 0; k < DEPTH; k++) begin : g_st
       if (k == 0) begin : g_first
         always_ff @(posedge clk or negedge rst_n) begin
-          if (!rst_n) pipe[k] <= RST;
+          if (!rst_n) pipe[k] <= (RSTV != 0) ? {W{1'b1}} : {W{1'b0}};   // (an expression, not a localparam: neosim folds no replication)
           else        pipe[k] <= d;
         end
       end else begin : g_next
         always_ff @(posedge clk or negedge rst_n) begin
-          if (!rst_n) pipe[k] <= RST;
+          if (!rst_n) pipe[k] <= (RSTV != 0) ? {W{1'b1}} : {W{1'b0}};
           else        pipe[k] <= pipe[k-1];
         end
       end
