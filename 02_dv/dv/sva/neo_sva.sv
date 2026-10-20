@@ -26,16 +26,18 @@ module neo_sva_hold #(parameter int W = 8, parameter string NAME = "link") (
 endmodule
 
 // ---- noc_router: every link held, the grant one-hot -----------------------------------------------------------------
+// (the five ports arrive as packed vectors, element p at [p * W +: W]: bind_all.sv concatenates the router's unpacked
+// arrays -- an unpacked-array port on the checker made Verilator 5.020 emit a C++ copy that does not compile, run 3 of PR #16)
 module noc_router_sva #(parameter int FW = 81) (
   input logic clk, rst_n,
-  input logic in_valid [5], in_ready [5], out_valid [5], out_ready [5],
-  input logic [FW-1:0] in_flit [5], out_flit [5],
-  input logic [4:0] gnt [5]);
+  input logic [4:0] in_valid, in_ready, out_valid, out_ready,
+  input logic [5*FW-1:0] in_flit, out_flit,
+  input logic [24:0] gnt);
   genvar p;
   generate for (p = 0; p < 5; p++) begin : g_p
-    neo_sva_hold #(.W(FW), .NAME("noc_router input"))  u_in  (.clk(clk), .rst_n(rst_n), .valid(in_valid[p]),  .ready(in_ready[p]),  .data(in_flit[p]));
-    neo_sva_hold #(.W(FW), .NAME("noc_router output")) u_out (.clk(clk), .rst_n(rst_n), .valid(out_valid[p]), .ready(out_ready[p]), .data(out_flit[p]));
-    p_grant_onehot: assert property (@(posedge clk) disable iff (!rst_n) $onehot0(gnt[p]))
+    neo_sva_hold #(.W(FW), .NAME("noc_router input"))  u_in  (.clk(clk), .rst_n(rst_n), .valid(in_valid[p]),  .ready(in_ready[p]),  .data(in_flit[p*FW +: FW]));
+    neo_sva_hold #(.W(FW), .NAME("noc_router output")) u_out (.clk(clk), .rst_n(rst_n), .valid(out_valid[p]), .ready(out_ready[p]), .data(out_flit[p*FW +: FW]));
+    p_grant_onehot: assert property (@(posedge clk) disable iff (!rst_n) $onehot0(gnt[p*5 +: 5]))
       else $error("noc_router: output %0d granted to more than one input", p);
     // (no parity property on the outputs: M3 / M16 corrupt an output register through the fault hook by design -- the
     // parity check at the next router's input, and the end-to-end CRC past the last one, are the mechanisms those tests prove)

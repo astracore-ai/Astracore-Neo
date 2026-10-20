@@ -2,9 +2,15 @@
 //   neo_sva.sv by the cocotb builds (dv/cocotb/Makefile, SVA=1); a bind reaches the module's internal signals, so the RTL
 //   carries no assertion and no port for them. Every instance of a bound module gets the checker (every router of a
 //   mesh, every bridge, every crossing).
-bind noc_router noc_router_sva #(.FW(FW)) u_sva (
-  .clk(clk), .rst_n(rst_n), .in_valid(in_valid), .in_ready(in_ready), .out_valid(out_valid), .out_ready(out_ready),
-  .in_flit(in_flit), .out_flit(out_flit), .gnt(gnt));
+bind noc_router noc_router_sva #(.FW(FW)) u_sva (     // the unpacked arrays packed, element p at [p * W +: W]
+  .clk(clk), .rst_n(rst_n),
+  .in_valid({in_valid[4], in_valid[3], in_valid[2], in_valid[1], in_valid[0]}),
+  .in_ready({in_ready[4], in_ready[3], in_ready[2], in_ready[1], in_ready[0]}),
+  .out_valid({out_valid[4], out_valid[3], out_valid[2], out_valid[1], out_valid[0]}),
+  .out_ready({out_ready[4], out_ready[3], out_ready[2], out_ready[1], out_ready[0]}),
+  .in_flit({in_flit[4], in_flit[3], in_flit[2], in_flit[1], in_flit[0]}),
+  .out_flit({out_flit[4], out_flit[3], out_flit[2], out_flit[1], out_flit[0]}),
+  .gnt({gnt[4], gnt[3], gnt[2], gnt[1], gnt[0]}));
 bind tile_nic tile_nic_sva #(.FW(FW), .DFW(DFW), .DFD(DFD)) u_sva (
   .clk(clk), .rst_n(rst_n), .rx_valid(rx_valid), .rx_ready(rx_ready), .tx_valid(tx_valid), .tx_ready(tx_ready),
   .rx_flit(rx_flit), .tx_flit(tx_flit), .cmd_valid(cmd_valid), .cmd_op(cmd_op), .fetch_busy(fetch_busy),
