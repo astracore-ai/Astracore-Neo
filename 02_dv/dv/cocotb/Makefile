@@ -19,6 +19,11 @@
 #                               # and host bridge, row 1: an unused position), the AXI4-Lite control plane, clk 1.0 ns and aclk 1.6 ns
 #   make -C dv/cocotb top_sync  # the same build again with aclk == clk (both 1.0 ns, the same edges): the design does not depend on the ratio
 #   make -C dv/cocotb faults_tile / faults_core   # drop 0.43: the fault campaign's drivers (faults/; run by faults/run_faults.py)
+#   make -C dv/cocotb axil      # drop 0.44 (review #17): test_tile_axil.py, the datasheet's AXI4-Lite wrapper neo_tile_axil -- one 16x8
+#                               # tile driven through its AXI-Lite port: registers, MBIST, a convolution from its own bank (A1-A3)
+# SVA (drop 0.44, review #10): SVA=1 (the default) compiles ../sva/neo_sva.sv + bind_all.sv with --assert into every build, so
+# the bound assertions fire during the suites (a failure stops the simulation and fails the test); SVA=0 leaves them out --
+# the fault campaign's builds (an injected flip may break a handshake by design) and the coverage builds (at the memory limit)
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -27,6 +32,14 @@ CORE_SRCS := $(addprefix $(RTL)/, neo_icg.sv delay_line.sv mac_pe.sv skew_in.sv 
 TILE_SRCS := $(CORE_SRCS) $(addprefix $(RTL)/, tile_telem.sv neo_iso.sv noc_router.sv sram_bank.sv mbist.sv bank_bist_wrap.sv crc16_word.sv crc16_beat.sv tile_nic.sv tile_dma.sv \
   prog_mem.sv host_if.sv esm.sv link_pack.sv neo_tile.sv tile_mesh.sv)
 TOP_SRCS := $(TILE_SRCS) $(addprefix $(RTL)/, cdc_bits.sv cdc_fifo.sv cdc_sync.sv noc_axi_bridge.sv top_ctrl.sv mesh_ctrl.sv neo_top.sv)
+AXIL_SRCS := $(TILE_SRCS) $(addprefix $(RTL)/, host_axil.sv neo_tile_axil.sv)
+SVA ?= 1
+SVA_SRCS := $(abspath ../sva/neo_sva.sv) $(abspath ../sva/bind_all.sv)
+ifeq ($(SVA),1)
+  EXTRA_ARGS += --assert
+else
+  SVA_SRCS :=
+endif
 export PYTHONPATH := $(abspath ../../compiler):$(abspath ../../sim):$(PYTHONPATH)
 # the wrapper writes design state at the falling edge for fault injection, hence MULTIDRIVEN is expected.
 # --unroll-count 1024 (drop 0.27) did not get the 8x8 build past the NIC's reset loop over NX*NY sources (BLKLOOPINIT, run 68);
@@ -82,6 +95,7 @@ export NEO_NY := $(NY)
 export NEO_ROWS := $(ROWS)
 export NEO_COLS := $(COLS)
 export NEO_FETCH_TIMEOUT := $(FETCH_TIMEOUT)
+export NEO_ACC_ROWS := $(ACC_ROWS)
 export NEO_WPF := $(WPF)
 # the chip top's build (drop 0.42): bridges, their AXI width and host-read timeout, and the two clock periods the suite runs
 AXI_DW ?= 512
@@ -119,7 +133,7 @@ ifeq ($(VCOV),1)
   export NEO_FUNCOV_FILE
 endif
 ifeq ($(TARGET),tile)
-  VERILOG_SOURCES = $(TILE_SRCS) $(abspath ../../tb/tile_mesh_cocotb.sv)
+  VERILOG_SOURCES = $(TILE_SRCS) $(abspath ../../tb/tile_mesh_cocotb.sv) $(SVA_SRCS)
   TOPLEVEL = tile_mesh_cocotb
   MODULE ?= test_tile_mesh
   EXTRA_ARGS += -GNX=$(NX) -GNY=$(NY) -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) \
@@ -128,14 +142,21 @@ ifeq ($(TARGET),tile)
 else ifeq ($(TARGET),top)
   # the chip top (drop 0.42): neo_top itself is the toplevel -- its AXI ports are packed vectors, the tiles' hooks are off
   # (DV_HOOKS = 0 inside neo_top: the suite reaches everything through the control plane and the bridges, as a host does)
-  VERILOG_SOURCES = $(TOP_SRCS)
+  VERILOG_SOURCES = $(TOP_SRCS) $(SVA_SRCS)
   TOPLEVEL = neo_top
   MODULE ?= test_neo_top
   EXTRA_ARGS += -GNX=$(NX) -GNY=$(NY) -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) \
     -GWBUF_DEPTH=$(WBUF_DEPTH) -GBANK_DEPTH=$(BANK_DEPTH) -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS) -GWPF=$(WPF) \
     -GAXI_DW=$(AXI_DW) -GN_MEM_BRIDGES=$(N_MEM_BRIDGES) -GN_HOST_BRIDGES=$(N_HOST_BRIDGES) -GHOST_TIMEOUT=$(HOST_TIMEOUT) -GNCHK=$(NCHK)
+else ifeq ($(TARGET),axil)
+  # the AXI4-Lite wrapper (drop 0.44): one tile at (0,0) of a 2x2 coordinate space, its links tied off by the test, the hooks on
+  VERILOG_SOURCES = $(AXIL_SRCS) $(SVA_SRCS)
+  TOPLEVEL = neo_tile_axil
+  MODULE ?= test_tile_axil
+  EXTRA_ARGS += -GROWS=$(ROWS) -GCOLS=$(COLS) -GACC_ROWS=$(ACC_ROWS) -GABUF_DEPTH=$(ABUF_DEPTH) -GWBUF_DEPTH=$(WBUF_DEPTH) \
+    -GBANK_DEPTH=$(BANK_DEPTH) -GFETCH_TIMEOUT=$(FETCH_TIMEOUT) -GBIST_WORDS=$(BIST_WORDS) -GWPF=$(WPF) -GDV_HOOKS=1
 else
-  VERILOG_SOURCES = $(CORE_SRCS)
+  VERILOG_SOURCES = $(CORE_SRCS) $(SVA_SRCS)
   TOPLEVEL = neo_core
   MODULE ?= test_neo_core
   # DV_HOOKS=1: the core's weight-buffer fault hook exists in the core-level build (drop 0.37; the tile builds set it in the wrapper)
@@ -170,6 +191,9 @@ top:
 	$(MAKE) TARGET=top $(LINKS) SIM_BUILD=sim_build_top COCOTB_RESULTS_FILE=results_top.xml
 top_sync:
 	$(MAKE) TARGET=top $(LINKS) SIM_BUILD=sim_build_top COCOTB_RESULTS_FILE=results_top_sync.xml ACLK_PS=$(CLK_PS)
+# the AXI4-Lite wrapper's smoke test (drop 0.44, review #17): neo_tile_axil at 16x8 with a 16-word MBIST, the hdl-sim job's step after the chip top
+axil:
+	$(MAKE) TARGET=axil SIM_BUILD=sim_build_axil COCOTB_RESULTS_FILE=results_axil.xml
 MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_bank_ecc_in_flight,m6_compiler_program,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m12_control_path_protection,m13_partitions,m14_bank_contention,m16_link_parity
 # --build-jobs: the model's C++ compiled on several cores (drop 0.30). MESH8_BUILD_JOBS / MESH8_CFLAGS (drop 0.32) pass through
 # from the workflow. Both mesh variants verilate hierarchically (drop 0.35, HIER_ARGS): the flat 64-tile model of 32x32 cores
@@ -199,22 +223,22 @@ mesh8s_build:
 # FAULTS_CSV / FAULTS_BUDGET_S in the environment. `make faults` (07_ci/Makefile) is the job's entry.
 FAULTS_WORKER ?=
 faults_tile:
-	$(MAKE) TARGET=tile MODULE=faults.campaign_tile SIM_BUILD=sim_build_faults_tile COCOTB_RESULTS_FILE=results_faults_tile$(FAULTS_WORKER).xml
+	$(MAKE) TARGET=tile SVA=0 MODULE=faults.campaign_tile SIM_BUILD=sim_build_faults_tile COCOTB_RESULTS_FILE=results_faults_tile$(FAULTS_WORKER).xml
 faults_core:
-	$(MAKE) TARGET=core NCHK=4 MODULE=faults.campaign_core SIM_BUILD=sim_build_faults_core COCOTB_RESULTS_FILE=results_faults_core$(FAULTS_WORKER).xml
+	$(MAKE) TARGET=core SVA=0 NCHK=4 MODULE=faults.campaign_core SIM_BUILD=sim_build_faults_core COCOTB_RESULTS_FILE=results_faults_core$(FAULTS_WORKER).xml
 # coverage builds (drop 0.26, item 5): the same tests with Verilator line/toggle coverage and the functional covergroups on,
 # in their own build directories; each run's coverage.dat is renamed after it so the three merge into one report
 define keep_cov
 	@for f in coverage.dat $(1)/coverage.dat; do if [ -f $$f ]; then mv -f $$f $(2); fi; done
 endef
 core_cov:
-	$(MAKE) TARGET=core NCHK=4 VCOV=1 SIM_BUILD=sim_build_cov_core COCOTB_RESULTS_FILE=results_cov_core.xml
+	$(MAKE) TARGET=core SVA=0 NCHK=4 VCOV=1 SIM_BUILD=sim_build_cov_core COCOTB_RESULTS_FILE=results_cov_core.xml
 	$(call keep_cov,sim_build_cov_core,coverage_core.dat)
 tile_cov:
-	$(MAKE) TARGET=tile VCOV=1 SIM_BUILD=sim_build_cov_tile COCOTB_RESULTS_FILE=results_cov_tile.xml
+	$(MAKE) TARGET=tile SVA=0 VCOV=1 SIM_BUILD=sim_build_cov_tile COCOTB_RESULTS_FILE=results_cov_tile.xml
 	$(call keep_cov,sim_build_cov_tile,coverage_tile.dat)
 tile8_cov:
-	$(MAKE) TARGET=tile ROWS=8 COLS=8 MODULE=test_two_layer VCOV=1 SIM_BUILD=sim_build_cov_tile8 COCOTB_RESULTS_FILE=results_cov_tile8.xml
+	$(MAKE) TARGET=tile SVA=0 ROWS=8 COLS=8 MODULE=test_two_layer VCOV=1 SIM_BUILD=sim_build_cov_tile8 COCOTB_RESULTS_FILE=results_cov_tile8.xml
 	$(call keep_cov,sim_build_cov_tile8,coverage_tile8.dat)
 # tile32_cov (drop 0.32): the 32x32 silicon configuration at 32 words per flit, so the beat paths of the tile interface
 # (two entries per cycle, 16-column PSUM beats, 16 + 16 + 1 drains, merged flits) are measured, not only the one-word
@@ -222,7 +246,7 @@ tile8_cov:
 # adds M4 (WAIT_FREE, DMA op 6, two regions) and M19 (the INT8 drain: an 8-word row as one beat) to the subset.
 TILE32_COV_TESTS ?= m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m4_region_refill,m7_mchunks_partial_fetch,m9_lost_flit_and_timeout,m13_partitions,m19_int8_drain
 tile32_cov:
-	$(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 TESTCASE=$(TILE32_COV_TESTS) VCOV=1 SIM_BUILD=sim_build_cov_tile32 COCOTB_RESULTS_FILE=results_cov_tile32.xml NEO_FUNCOV_FILE=funcov_tile_mesh32.yml
+	$(MAKE) TARGET=tile SVA=0 $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 TESTCASE=$(TILE32_COV_TESTS) VCOV=1 SIM_BUILD=sim_build_cov_tile32 COCOTB_RESULTS_FILE=results_cov_tile32.xml NEO_FUNCOV_FILE=funcov_tile_mesh32.yml
 	$(call keep_cov,sim_build_cov_tile32,coverage_tile32.dat)
 coverage: core_cov tile_cov tile8_cov tile32_cov
 	$(MAKE) coverage_report
@@ -232,4 +256,4 @@ coverage_report:                   # the report of the coverage builds run (drop
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
 	rm -rf sim_build_faults_tile sim_build_faults_core results_faults_*.xml
-	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_tile_sp sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_tile_sp.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated sim_build_top results_top.xml results_top_sync.xml
+	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_tile_sp sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_tile_sp.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated sim_build_top results_top.xml results_top_sync.xml sim_build_axil results_axil.xml
