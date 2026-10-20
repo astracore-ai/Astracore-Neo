@@ -3052,3 +3052,27 @@ check_placement -verbose
 global_route -end_incremental -resistance_aware -congestion_report_file /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/reports/asap7/c16_neo_core/base/congestion_post_repair_timing.rpt
 Took 11 seconds: global_route -end_incremental -resistance_aware -congestion_report_file /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/reports/asap7/c16_neo_core/base/congestion_post_repair_timing.rpt
 estimate_parasitics -global_routing
+Took 7 seconds: estimate_parasitics -global_routing
+repair_timing -setup -sequence "vt_swap reroute" -skip_last_gasp -repair_tns 0 -verbose
+[INFO RSZ-0100] Repair move sequence: RerouteMove 
+[INFO RSZ-0094] Found 451 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 1 out of 451 (0.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -802.139 |  -126929.4 |    451 | cg_en[1]
+       1* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -802.139 |  -126929.4 |    451 | cg_en[1]
+       1* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -802.139 |  -126929.4 |    451 | cg_en[1]
+    final |       0 |       0 |        0 |      0 |     0 |    +0.0% | -802.139 |  -126929.4 |    451 | cg_en[1]
+------------------------------------------------------------------------------------------------------------------------------
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 23.81s
+Took 24 seconds: repair_timing -setup -sequence "vt_swap reroute" -skip_last_gasp -repair_tns 0 -verbose
+Repair antennas...
+[WARNING GRT-0246] No diode with LEF class CORE ANTENNACELL found.
+[INFO ANT-0002] Found 0 net violations.
+[INFO ANT-0001] Found 0 pin violations.
+Estimate parasitics...
+estimate_parasitics -global_routing
+Took 7 seconds: estimate_parasitics -global_routing
+Report metrics stage 5, global route...
