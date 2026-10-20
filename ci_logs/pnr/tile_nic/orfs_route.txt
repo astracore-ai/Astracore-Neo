@@ -911,3 +911,138 @@ Repair antennas...
 Estimate parasitics...
 estimate_parasitics -global_routing
 Report metrics stage 5, global route...
+
+==========================================================================
+global route report_design_area
+--------------------------------------------------------------------------
+Design area 58691 um^2 47% utilization.
+[INFO FLW-0007] clock clk period 1250.000000
+[INFO FLW-0008] Clock clk period 1804.487
+[INFO FLW-0009] Clock clk slack -649.460
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/updated_clks.sdc
+[INFO FLW-0011] Path endpoint path count 33437
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/5_1_grt.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/5_1_grt.sdc
+Elapsed time: 20:35.03[h:]min:sec. CPU time: user 2941.92 sys 33.93 (240%). Peak memory: 4030108KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+5_1_grt                .odb       1235     2976     2.41     3935 473e3b44a1
+5_1_grt                .sdc                                       ae3db7cc46
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 5_2_route detail_route
+Running detail_route.tcl, stage 5_2_route
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/in/macros/fakeram7_512x1068_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/in/macros/fakeram7_64x1024_g32_1w1a.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/5_1_grt.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/5_1_grt.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+detailed_route -output_drc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/reports/asap7/tile_nic/base/5_route_drc.rpt -output_maze /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/maze.log -droute_end_iter 64 -verbose 1 -drc_report_iter_step 5
+[INFO DRT-0149] Reading tech and libs.
+
+Units:                1000
+Number of layers:     21
+Number of macros:     214
+Number of vias:       16
+Number of viarulegen: 11
+
+[INFO DRT-0150] Reading design.
+
+Design:                   tile_nic
+Die area:                 ( 0 0 ) ( 355449 355449 )
+Number of track patterns: 32
+Number of DEF vias:       0
+Number of components:     169026
+Number of terminals:      6007
+Number of snets:          2
+Number of nets:           164490
+
+[INFO DRT-0167] List of default vias:
+  Layer V2
+    default via: VIA23
+  Layer V3
+    default via: VIA34
+  Layer V4
+    default via: VIA45
+  Layer V5
+    default via: VIA56
+  Layer V6
+    default via: VIA67
+  Layer V7
+    default via: VIA78
+  Layer V8
+    default via: VIA89
+  Layer V9
+    default via: VIA9Pad
+[INFO DRT-0162] Library cell analysis.
+[INFO DRT-0163] Instance analysis.
+  Complete 100000 instances.
+[INFO DRT-0164] Number of unique instances = 337.
+[INFO DRT-0168] Init region query.
+[INFO DRT-0018]   Complete 100000 insts.
+[INFO DRT-0024]   Complete Active.
+[INFO DRT-0024]   Complete V0.
+[INFO DRT-0024]   Complete M1.
+[INFO DRT-0024]   Complete V1.
+[INFO DRT-0024]   Complete M2.
+[INFO DRT-0024]   Complete V2.
+[INFO DRT-0024]   Complete M3.
+[INFO DRT-0024]   Complete V3.
+[INFO DRT-0024]   Complete M4.
+[INFO DRT-0024]   Complete V4.
+[INFO DRT-0024]   Complete M5.
+[INFO DRT-0024]   Complete V5.
+[INFO DRT-0024]   Complete M6.
+[INFO DRT-0024]   Complete V6.
+[INFO DRT-0024]   Complete M7.
+[INFO DRT-0024]   Complete V7.
+[INFO DRT-0024]   Complete M8.
+[INFO DRT-0024]   Complete V8.
+[INFO DRT-0024]   Complete M9.
+[INFO DRT-0024]   Complete V9.
+[INFO DRT-0024]   Complete Pad.
+[INFO DRT-0033] Active shape region query size = 0.
+[INFO DRT-0033] V0 shape region query size = 0.
+[INFO DRT-0033] M1 shape region query size = 3022873.
+[INFO DRT-0033] V1 shape region query size = 9140319.
+[INFO DRT-0033] M2 shape region query size = 161936.
+[INFO DRT-0033] V2 shape region query size = 177648.
+[INFO DRT-0033] M3 shape region query size = 177650.
+[INFO DRT-0033] V3 shape region query size = 118432.
+[INFO DRT-0033] M4 shape region query size = 142554.
+[INFO DRT-0033] V4 shape region query size = 152756.
+[INFO DRT-0033] M5 shape region query size = 89225.
+[INFO DRT-0033] V5 shape region query size = 17424.
+[INFO DRT-0033] M6 shape region query size = 8976.
+[INFO DRT-0033] V6 shape region query size = 0.
+[INFO DRT-0033] M7 shape region query size = 0.
+[INFO DRT-0033] V7 shape region query size = 0.
+[INFO DRT-0033] M8 shape region query size = 0.
+[INFO DRT-0033] V8 shape region query size = 0.
+[INFO DRT-0033] M9 shape region query size = 0.
+[INFO DRT-0033] V9 shape region query size = 0.
+[INFO DRT-0033] Pad shape region query size = 0.
+[INFO DRT-0165] Start pin access.
+[INFO DRT-0076]   Complete 1000 pins.
+[INFO DRT-0076]   Complete 2000 pins.
+[INFO DRT-0076]   Complete 3000 pins.
+[INFO DRT-0076]   Complete 4000 pins.
+[INFO DRT-0076]   Complete 5000 pins.
+[INFO DRT-0076]   Complete 6000 pins.
+[INFO DRT-0078]   Complete 6115 pins.
+[INFO DRT-0079]   Complete 100 unique inst patterns.
+[INFO DRT-0079]   Complete 200 unique inst patterns.
+[INFO DRT-0079]   Complete 300 unique inst patterns.
+[INFO DRT-0081]   Complete 335 unique inst patterns.
+[INFO DRT-0082]   Complete 10000 groups.
+[INFO DRT-0082]   Complete 20000 groups.
+[INFO DRT-0082]   Complete 30000 groups.
+[INFO DRT-0082]   Complete 40000 groups.
+[INFO DRT-0082]   Complete 50000 groups.
+[INFO DRT-0082]   Complete 60000 groups.
+[INFO DRT-0082]   Complete 70000 groups.
+[INFO DRT-0082]   Complete 80000 groups.
