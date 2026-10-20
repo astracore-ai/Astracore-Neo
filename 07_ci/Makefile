@@ -21,7 +21,10 @@
 # make perf3      : v3 model: v2.1 fabric, K-split, dataflow across layers (spec v2.1 workload numbers)
 # make backend_check: every YOLOv8-m group placed by the bank allocator, every program within the program memory (drop 0.33)
 # make backend    : compiler backend: static compilation of YOLOv8-m to tile programs on the 8x8 mesh
-# make cdriver    : build the C host driver and check it emits the Python backend's programs word for word
+# make cdriver    : build the C host driver and check it emits the Python backend's programs word for word; drop 0.44: the register
+#                   map against host_if.sv, the C runtime's transactions against the Python runtime's
+# make onnx       : drop 0.44 (stream D3): the ONNX importer, the quantizer and the scheduler's tests (onnx / onnxruntime by pip)
+# make vdev       : drop 0.44: the virtual device -- neo_perf_v3 calibrated against the measured cycles (the error table)
 # make mbist      : March C- MBIST on an ECC bank (standalone) -- the tile-level version is M11 in run_tiles.py
 # make nic        : the tile interface's bank-side paths at 16 words per cycle (writeback, serve, packer/unpacker; drop 0.29)
 # make two_layer  : M10: two layers back to back on the mesh with INT8 handoff through the bank
@@ -154,6 +157,21 @@ cdriver:
 	gcc -std=c99 -Wall -Wextra -O2 -o build/test_backend sw/neo_host.c sw/test_backend.c
 	./build/test_backend > build/c_backend.txt
 	python3 sim/check_c_backend.py
+	python3 sim/check_regmap.py
+	gcc -std=c99 -Wall -Wextra -O2 -o build/test_runtime sw/neo_host.c sw/neo_runtime.c sw/test_runtime.c
+	python3 sim/check_c_runtime.py
+
+# drop 0.44 (stream D3): the ONNX importer and the quantizer (compiler/neo_onnx.py, neo_quant.py: pip install onnx onnxruntime),
+# the scheduler and the runtime's images (neo_sched.py, sw/neo_run.py); `make cdriver` adds the register-map check against
+# host_if.sv (sim/check_regmap.py) and the C runtime's transactions against the Python runtime's (sim/check_c_runtime.py);
+# `make vdev` the virtual device: the perf model calibrated against the measured cycles of M21 / M23 / M24 / M25 and T10
+onnx:
+	python3 compiler/test_neo_onnx.py
+	python3 compiler/neo_quant.py
+	python3 sw/neo_run.py --build two_layer --summary
+	python3 sw/neo_run.py --build yolo --summary
+vdev:
+	python3 compiler/neo_perf_v3.py --calibrate compiler/perf_measured_044.json
 
 backend:
 	python3 compiler/neo_backend.py
@@ -226,6 +244,8 @@ regress_ci: vectors vectors_sp
 	python3 sim/run_vec_unit.py
 	python3 compiler/neo_xfmr.py
 	$(MAKE) cdriver
+	$(MAKE) onnx
+	$(MAKE) vdev
 
 iverilog: vectors
 	mkdir -p build
