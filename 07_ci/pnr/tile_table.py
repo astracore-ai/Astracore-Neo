@@ -262,7 +262,7 @@ def main():
 
 def power_table(logs, blocks, rows, out):
     """Per block: power at the default activity and with the recorded one (mW), dynamic = internal + switching."""
-    md = ["| block | stage, period | recording (window, MAC utilization) | flops recorded / all | default: dynamic + leakage = "
+    md = ["| block | stage, period | recording (window, MAC utilization) | flops recorded / all (at the default) | default: dynamic + leakage = "
           "total | recorded: dynamic + leakage = total | recorded / default (dynamic) |",
           "| --- | --- | --- | --- | --- | --- | --- |"]
     for b in blocks:
@@ -283,7 +283,11 @@ def power_table(logs, blocks, rows, out):
         fk = act.get("flops_by_kind") or {}
         rec = (f"{act.get('window_cycles', 0):,} cycles, " + (f"{100.0 * act['mac_util']:.1f} %" if act.get("mac_util") is not None
                                                              else "no array")) if act else "--"
-        fl = f"{fk.get('exact', 0) + fk.get('folded', 0):,} / {act.get('flops', 0):,}" if act else "--"
+        # drop 0.44 (A4): the share of the block's flops that kept the propagated default (no recorded bit), so a figure
+        # that rests on defaults says so in the table
+        nd_ = fk.get("default", 0)
+        nf_ = act.get("flops", 0) or 0
+        fl = (f"{fk.get('exact', 0) + fk.get('folded', 0):,} / {nf_:,}" + (f" ({100.0 * nd_ / nf_:.1f} % at the default)" if nf_ else "")) if act else "--"
 
         def tot(v):                # the sum of the parts (report_power prints each column to three significant digits)
             return "--" if not v else f"{(v[0] + v[1]) * 1e3:.3f} + {v[2] * 1e3:.4f} = **{(v[0] + v[1] + v[2]) * 1e3:.3f}**"

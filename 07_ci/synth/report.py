@@ -94,6 +94,20 @@ def verdict_lines(res):
     L.append(f"The largest minimum period outside the PE-limited units: `{w.get('unit')}` {f0(w.get('ps'))} ps (register to register; "
              f"the sweep also counts the I/O paths at 0.2 of the period). The PE-limited units' own minimum periods: "
              + ", ".join(f"`{n}` {f0(p)}" for n, p in stages.items() if p) + " ps.")
+    t = v.get("top")                                    # drop 0.44: the second verdict, over the chip top's own units
+    if t:
+        tw = t.get("worst_other_min_period") or {}
+        last = tag(res["sweep_ps"][-1])
+        L.append("")
+        if t.get("clean_period_ps") is not None:
+            L.append(f"**The chip top's units** ({', '.join(f'`{n}`' for n in t['judged'])}; `{'`, `'.join(t['pe_limited'])}` PE-limited "
+                     f"through the core): clean from **{t['clean_period_ps']:,.0f} ps**; the largest minimum period among them "
+                     f"`{tw.get('unit')}` {f0(tw.get('ps'))} ps; the chip on this proxy: **{f0(t.get('chip_period_ps'))} ps** "
+                     f"(the larger of the tile's period and this).")
+        else:
+            L.append(f"**The chip top's units** ({', '.join(f'`{n}`' for n in t['judged'])}): no swept period has every one clean; "
+                     f"still violating at {last} ps: {', '.join(t['violating_by_period'].get(last, []))}; the largest minimum period "
+                     f"among them `{tw.get('unit')}` {f0(tw.get('ps'))} ps.")
     return L
 
 
@@ -103,12 +117,13 @@ def sweep_table(res, units, order):
     if not periods:
         return []
     v = res.get("verdict") or {}
-    lim = set(v.get("pe_limited") or [])
+    lim = set(v.get("pe_limited") or []) | set((v.get("top") or {}).get("pe_limited") or [])
     L = ["## Period sweep", "",
          "Violating endpoints of all (WNS in ps) per unit and clock period, from one OpenSTA session per unit reading each period's "
          "constraints in turn (the children's timing models do not depend on the period; the I/O at 0.2 of the period, the "
          "uncertainty 0.08, the tile's links 0.4); the minimum period is the unit's register-to-register stage, the same at "
-         "every period. PE-limited units are marked †; the verdict above is over the other units of the tile.", "",
+         "every period. PE-limited units are marked †; the verdict above is over the other units of the tile, its second line "
+         "(drop 0.44) over the chip top's own units.", "",
          "| Unit | Min period ps | " + " | ".join(f"{tag(p)} ps" for p in periods) + " |",
          "| --- | --- | " + " | ".join("---" for _ in periods) + " |"]
     for n in order:

@@ -107,7 +107,7 @@ export NEO_NCHK := $(NCHK)
 # Give the build its own SIM_BUILD: the traced model is not the plain one
 TRACE_VCD ?=
 ifneq ($(TRACE_VCD),)
-  EXTRA_ARGS += --trace --trace-max-width 4096
+  EXTRA_ARGS += --trace --trace-max-width 4096 --trace-max-array 64   # drop 0.44: prog_mem's 32 x 2 instruction words traced too (power.py)
   SIM_ARGS += --trace --trace-file $(TRACE_VCD)
 endif
 ifeq ($(VCOV),1)

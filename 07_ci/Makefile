@@ -427,7 +427,8 @@ synth:
 synth_compare:
 	python3 synth/report.py --compare synth_out synth_out_nangate45 --out ci_logs/synth
 
-# gate-level simulation (drop 0.43, stream D2; the synth job, after the ASAP7 run): synth/gls.py simulates each unit's
+# gate-level simulation (drop 0.43, stream D2; the synth job, after the ASAP7 run; drop 0.44: tile_telem, host_if and the
+# vector unit at 8 lanes join the set, the memory leaves of a unit as wrappers around the behavioural model): synth/gls.py simulates each unit's
 # netlist (synth_out/<unit>/netlist.v, ASAP7 cells) beside its RTL at the same parameters, the same random inputs every
 # cycle, every output compared every cycle -- Icarus 14 of the OSS CAD Suite with the PDK's behavioural cell models
 # (synth/tools.sh puts them in $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7); gls_report.md, the testbenches and the logs into
@@ -435,7 +436,7 @@ synth_compare:
 # compiled image is over GitHub's 100 MB file limit); the target fails on a mismatch. neosim (sim/) gives the testbench
 # the RTL ports.
 NEO_SYNTH_TOOLS ?= /opt/neo-synth
-GLS_UNITS ?= mac_pe,mac_pe_chk,requant,crc16_beat,ecc39_enc,ecc39_dec,link_packer
+GLS_UNITS ?= mac_pe,mac_pe_chk,requant,crc16_beat,ecc39_enc,ecc39_dec,link_packer,tile_telem,host_if,c16_vec_unit
 GLS_CELLS ?= $(NEO_SYNTH_TOOLS)/pdk/verilog/asap7
 GLS_IVERILOG ?= $(NEO_SYNTH_TOOLS)/oss-cad-suite/bin/iverilog
 GLS_CYCLES ?= 3000

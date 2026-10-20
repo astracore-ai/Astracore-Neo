@@ -61,7 +61,7 @@ MIN_WIDTH_UM = 5.4 + 0.12 + 2 * 0.048
 # the synthesis model's area factors (synth.py MACRO_AREA_FACTOR), for the comparison in macros.json; the class is the
 # synthesis results' own (by the read ports an instance uses, drop 0.42: a port-B-only neo_mem_rf is neo_mem_rf_b, 1.0)
 SYNTH_AREA_PER_BIT = 0.0292 * 1.44
-SYNTH_FACTOR = {"neo_mem_sp": 1.0, "neo_mem_rf": 1.5, "neo_mem_rf_b": 1.0, "neo_mem_rf_rb": 2.0}
+SYNTH_FACTOR = {"neo_mem_sp": 1.5, "neo_mem_rf": 1.5, "neo_mem_rf_b": 1.5, "neo_mem_rf_rb": 2.0}   # drop 0.44: every leaf two-port (synth.py)
 # drop 0.43: a single-port leaf this deep with several write groups becomes one macro per group (lane_plan)
 LANE_SPLIT_DEPTH = 8192
 HOOK_INPUTS = ("bd_we", "bd_addr", "bd_wdata", "fi_en", "fi_or", "fi_addr", "fi_mask")

@@ -420,7 +420,9 @@ def main():
                    f"cycle, applied at the period above); MAC utilization in the window {util_s}. Of the block's "
                    f"{fmt(act.get('flops'))} flops {fmt(fk.get('exact'))} took a recorded bit by name, {fmt(fk.get('folded'))} by "
                    f"the folded index (a wider unit than the one simulated: the bit of the same signal at the index modulo the "
-                   f"recorded range), {fmt(fk.get('default'))} kept the propagated default; input bits {fmt(ik.get('exact'))} / "
+                   f"recorded range), {fmt(fk.get('default'))} kept the propagated default"
+                   + (f" ({100.0 * fk.get('default', 0) / act['flops']:.1f} % of the flops: that share of the recorded figure rests on the default)" if act.get('flops') else "")
+                   + f"; input bits {fmt(ik.get('exact'))} / "
                    f"{fmt(ik.get('folded'))} / {fmt(ik.get('default'))}. Pins annotated in the database: "
                    f"{applied.get('pins_found', 'n/a')} of {applied.get('pins_listed', 'n/a')}, input ports {applied.get('input_ports', 'n/a')}."]
         md += ["", "| activity | group | internal | switching | leakage | total |", "| --- | --- | --- | --- | --- | --- |"]
