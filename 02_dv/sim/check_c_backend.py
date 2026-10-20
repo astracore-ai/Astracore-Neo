@@ -8,7 +8,9 @@ ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0",
 out = subprocess.run([os.path.join(HERE, "..", "build", "test_backend")], capture_output=True, text=True).stdout.splitlines()
 cases = [compile_layer("c1", 6, 6, 40, 7, 3, 1, 1, 16, 8, 2, 2, (1, 1), 0, (1, 1), 512, owner=(0, 0), shares=3),
          compile_layer("rows3_5", 6, 6, 40, 7, 3, 1, 1, 16, 8, 2, 2, (1, 1), 0, (1, 1), 512, owner=(1, 0), shares=1, oy0=3, oy_n=3),
-         compile_layer("sparse", 6, 6, 64, 7, 3, 1, 1, 16, 8, 2, 2, (1, 1), 0, (1, 1), 512, owner=(0, 0), shares=2, nchk=4, sparse=True)]
+         compile_layer("sparse", 6, 6, 64, 7, 3, 1, 1, 16, 8, 2, 2, (1, 1), 0, (1, 1), 512, owner=(0, 0), shares=2, nchk=4, sparse=True),
+         compile_layer("runtime", 6, 6, 32, 7, 3, 1, 1, 16, 8, 2, 2, (2, 0), 0x100, (2, 0), 0x800, owner=(0, 0), shares=1, int8_out=True,
+                       out_base=0x1000, drain_fmt=0x2000, int4=True, rbuf=((2, 0), 0x2000, 36 * 4))]   # drop 0.44: the runtime's form
 i, fails, checked = 0, 0, 0
 for ci, lp in enumerate(cases):
     if ci == 2:                      # drop 0.43: the command queue's image of the first case, after the second case
@@ -28,5 +30,13 @@ for ci, lp in enumerate(cases):
         checked += 1; fails += not ok
         if not ok:
             print("MISMATCH", tp.tile, tp.role, cfg == exp_cfg, prog == tp.program, cfg_m == tp.descriptor["cfg_m"])
+assert out[i].startswith("m0 "); checked += 1
+if out[i].split()[1] != "-3":                 # drop 0.44 (review finding 13): a group of no output rows is refused by both
+    fails += 1; print("MISMATCH: the C driver did not refuse cfg_m = 0 with -3")
+try:
+    compile_layer("m0", 6, 6, 32, 7, 3, 1, 1, 16, 8, 2, 2, (2, 0), 0, (2, 0), 0x800, owner=(0, 0), oy_n=0)
+    fails += 1; print("MISMATCH: the Python backend did not refuse cfg_m = 0")
+except (ValueError, AssertionError):
+    pass
 print(f"C host driver vs Python backend: {checked} tile programs and command-queue images compared (descriptors, cfg_m, every program word, every image word) -> {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
 raise SystemExit(1 if fails else 0)

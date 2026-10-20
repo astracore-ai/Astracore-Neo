@@ -1,5 +1,6 @@
 /* neo_host.c -- see neo_host.h. Mirrors compiler/neo_backend.py compile_group() (drop 0.21: fetches split at the 12-bit
- * length field, every program write bounded by NEO_MAX_PROG) */
+ * length field, every program write bounded by NEO_MAX_PROG; drop 0.44: the drain format, INT4 entries, the residual
+ * buffer's fetch, cfg_m = 0 refused) */
 #include "neo_host.h"
 
 uint64_t neo_ins(int op, int x, int y, uint32_t addr, uint32_t len, uint32_t base, uint32_t arg) {
@@ -64,6 +65,7 @@ int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *
     wcw = 8 + (g->rows <= 1 ? 0 : ilog2_floor(g->rows - 1) + 1) + 1;
     int wpw = (g->cols * (8 + (nchk > 1 ? 2 : 0)) + nchk * wcw + 31) / 32;
     if (g->sparse && nchk != 4) return -1;
+    if (g->int4) wpw = (g->cols * 4 + wcw + 31) / 32;         /* drop 0.44: INT4 entries (WP4 words) */
     int apt = g->h * g->w * wpa, wpt_run = g->rows * wpw;
     int iy_lo = g->oy0 * g->s - g->p; if (iy_lo < 0) iy_lo = 0;
     int iy_hi = (g->oy0 + g->oy_n - 1) * g->s + g->k - 1 - g->p; if (iy_hi > g->h - 1) iy_hi = g->h - 1;
@@ -74,6 +76,7 @@ int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *
     if (shares < 1) shares = 1;
     if (shares > NEO_MAX_SHARES) return -1;
     int M = g->oy_n * wo;
+    if (M < 1) return -3;                                      /* cfg_m = 0 never ends its drain (review finding 13) */
     int used[NEO_MAX_SHARES * 4] = {0};
     int n = 0;
     for (int i = 0; i < shares; i++) {
@@ -100,6 +103,11 @@ int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *
         {
             int r = emit_fetch(tp, NEO_OP_FETCH_W, g->w_bank, g->w_base + (g->nt * runs + r0) * wpt_run, (r1 - r0) * wpt_run, 0, wpw);
             if (r < 0) return r;
+            if (g->int4) tp->prog[tp->nprog - 1] |= 1u;        /* FETCH_W arg 1: the NIC expands the nibbles */
+            if (i == 0 && g->rbuf_words > 0) {
+                r = emit(tp, neo_ins(NEO_OP_FETCH_A, g->rbuf_bank.x, g->rbuf_bank.y, g->rbuf_addr, (uint32_t)g->rbuf_words, 0, 1));
+                if (r < 0) return r;
+            }
         }
         if (i != 0) {
             if (emit(tp, neo_ins(NEO_OP_GO, 0, 0, 0, 0, 0, 0)) < 0) return -1;
@@ -112,7 +120,7 @@ int neo_compile_group(const neo_group_t *g, neo_tile_t owner, const neo_tile_t *
     }
     /* finish the owner's program now that the contributors are placed */
     neo_tile_prog_t *ow = &out[0];
-    if (emit(ow, neo_ins(NEO_OP_DRAIN_WR, owner.x, owner.y, g->out_base, M, 0, g->int8_out ? 1 : 0)) < 0) return -1;
+    if (emit(ow, neo_ins(NEO_OP_DRAIN_WR, owner.x, owner.y, g->out_base, M, g->int8_out ? g->drain_fmt : 0u, g->int8_out ? 1 : 0)) < 0) return -1;
     if (emit(ow, neo_ins(NEO_OP_GO, 0, 0, 0, 0, 0, 0)) < 0) return -1;
     if (n > 1) {
         if (emit(ow, neo_ins(NEO_OP_WAIT_REDUCE, 0, 0, 0, 0, 0, 0)) < 0) return -1;
@@ -149,6 +157,7 @@ uint32_t neo_telem_util_permille(const neo_telem_t *t) {
 int neo_cq_image(const neo_tile_prog_t *tp, int ntp, int nx, const uint32_t *extra, int nextra, uint32_t *img, int max_entries) {
     int n = 0;
 #define NEO_PUT(e0, v) do { if (n >= max_entries) return -1; img[2 * n] = (e0); img[2 * n + 1] = (v); n++; } while (0)
+    for (int i = 0; i < ntp; i++) if (tp[i].cfg_m == 0u) return -3;   /* review finding 13 */
     for (int i = 0; i < ntp; i++) {
         uint32_t t = (uint32_t)(tp[i].tile.y * nx + tp[i].tile.x);
         for (int j = 0; j < NEO_NDESC; j++) NEO_PUT(NEO_CQ_ENT(1, t, NEO_REG_CFG_BASE + j), tp[i].cfg[j]);
@@ -172,4 +181,17 @@ uint32_t neo_wait_done(neo_tile_t tile, neo_rd_fn rd, void *ctx, int max_polls) 
         if ((st & 1u) && !(st & 2u)) return st;
     }
     return st | 0x80000000u;   /* timeout */
+}
+
+/* drop 0.44 (stream D3) */
+static const char *const neo_cause_names[NEO_CAUSE_NFLAGS + 1] = {
+    "parity_err", "crc_err", "array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "ecc_ue", "ecc_ce", "wbuf_ce", "wbuf_ue",
+    "rq_tbl_perr", "lost_err", "fetch_timeout", "bist_fail", "prog_ce", "ctrl_path_err", "iso_err", "watchdog" };
+
+const char *neo_cause_name(int bit) { return (bit >= 0 && bit <= NEO_CAUSE_NFLAGS) ? neo_cause_names[bit] : "?"; }
+
+void neo_ls_pair_set(neo_axil_wr_fn wr, void *ctx, int k, int tile_a, int tile_b) {
+    uint32_t v = (((uint32_t)tile_b & 0x3Fu) << 8) | ((uint32_t)tile_a & 0x3Fu);
+    wr(ctx, NEO_TOP_LS_PAIR(k), v);                   /* the indices settle in the mesh clock first ... */
+    wr(ctx, NEO_TOP_LS_PAIR(k), v | 0x80000000u);     /* ... then the compare is enabled (review finding 12) */
 }

@@ -54,5 +54,22 @@ int main(void) {
         for (int j = 0; j < out[i].nprog; j++) printf(" %016llx", (unsigned long long)out[i].prog[j]);
         printf("\n");
     }
+    /* fourth case (drop 0.44, stream D3): the runtime's form -- the INT8 drain padded to entries (NEO_DR_P), INT4 weight
+     * entries (FETCH_W arg 1), the residual rows fetched into the vector unit's buffer before the GO */
+    neo_group_t g4 = { .h = 6, .w = 6, .cin = 32, .cout = 7, .k = 3, .s = 1, .p = 1, .rows = 16, .cols = 8, .nx = 2, .ny = 2,
+                       .act_bank = {2, 0}, .act_base = 0x100, .w_bank = {2, 0}, .w_base = 0x800, .nt = 0, .oy0 = 0, .oy_n = 6,
+                       .int8_out = 1, .out_base = 0x1000, .drain_fmt = NEO_DR_P, .int4 = 1, .rbuf_words = 36 * 4, .rbuf_bank = {2, 0}, .rbuf_addr = 0x2000 };
+    n = neo_compile_group(&g4, owner, free, 3, 1, out);
+    printf("tiles %d\n", n);
+    for (int i = 0; i < n; i++) {
+        printf("tile %d %d role %d cfg_m %u cfg", out[i].tile.x, out[i].tile.y, out[i].role, out[i].cfg_m);
+        for (int j = 0; j < NEO_NDESC; j++) printf(" %u", out[i].cfg[j]);
+        printf("\nprog");
+        for (int j = 0; j < out[i].nprog; j++) printf(" %016llx", (unsigned long long)out[i].prog[j]);
+        printf("\n");
+    }
+    /* a group of no output rows is refused (review finding 13) */
+    g4.oy_n = 0;
+    printf("m0 %d\n", neo_compile_group(&g4, owner, free, 3, 1, out));
     return 0;
 }
