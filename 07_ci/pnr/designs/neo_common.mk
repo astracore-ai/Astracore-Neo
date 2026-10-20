@@ -24,9 +24,10 @@ export CORE_ASPECT_RATIO   = 1
 
 # drop 0.44 (A4): ORFS's own equivalence check of its timing repair (Kepler, LEC_CHECK: "if this fails, report an issue to
 # OpenROAD") off for every block -- its liberty-to-truth-table step stops with "getTruthTable: uninitialized Table node"
-# on the merged 0.43 tree's netlists (wbuf_mem in runs 226 / 232, c16_neo_core in 226; the 0.43 routes ran on A3's branch
-# before B2's clock gates and C2's leaves). The netlist's equivalence to the RTL is the synth job's GLS; the repair's is
-# OpenROAD's
+# on the blocks whose macros carry the rb_addr_q address readback (wbuf_mem in runs 226 / 232, c16_neo_core in 226 -- D2's
+# pin of drop 0.43, after the 0.43 routes of those blocks; tile_nic, noc_router, requant and bank_bist_wrap, whose macros
+# have no such pin, passed the check in the same runs). The netlist's equivalence to the RTL is the synth job's GLS; the
+# repair's is OpenROAD's
 export LEC_CHECK = 0
 
 # the final report without PDNSim's IR-drop analysis of the whole grid (not a figure of this job)
