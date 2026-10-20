@@ -14,6 +14,7 @@ include $(dir $(DESIGN_CONFIG))../neo_common.mk
 # the long wires start at flops with the cycle in front of the encoders; the 7 k cells go into the channels.
 export DIE_AREA  = 0 0 1392 704
 export CORE_AREA = 4 4 1388 700
+export CORE_UTILIZATION =                       # neo_common.mk's 55 % unset: ORFS takes exactly one floorplan method (run 226)
 export MACRO_PLACEMENT_TCL = $(dir $(DESIGN_CONFIG))macro_place.tcl
 export SKIP_LAST_GASP = 1
 # run 188: global placement diverged (GPL-0307: the overflow low and rising, the wire length doubled) at the iteration
