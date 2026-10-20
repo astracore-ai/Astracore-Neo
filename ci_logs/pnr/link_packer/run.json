@@ -1,0 +1,57 @@
+{
+ "block": "link_packer",
+ "runner": "docker",
+ "image": "openroad/orfs:26Q4-124-g3451ca1f5",
+ "flow_args": "",
+ "budget_min": 317.0,
+ "start": "2026-10-20 10:39:14 UTC",
+ "stages": [
+  {
+   "stage": "fakeram",
+   "exit": 0,
+   "seconds": 0.0
+  },
+  {
+   "stage": "prep",
+   "exit": 0,
+   "seconds": 2.9
+  },
+  {
+   "stage": "synth_sta",
+   "exit": 0
+  },
+  {
+   "stage": "activity",
+   "exit": 0,
+   "seconds": 5.6,
+   "file": "activity/link_packer.json.gz"
+  },
+  {
+   "stage": "synth",
+   "exit": 0,
+   "seconds": 3.0,
+   "note": ""
+  },
+  {
+   "stage": "floorplan",
+   "exit": 0,
+   "seconds": 14.4,
+   "note": ""
+  },
+  {
+   "stage": "place",
+   "exit": 0,
+   "seconds": 74.8,
+   "note": ""
+  },
+  {
+   "stage": "cts",
+   "exit": 0,
+   "seconds": 19.0,
+   "note": ""
+  }
+ ],
+ "status": "started",
+ "orfs_stages": "synth,floorplan,place,cts,route,do-finish",
+ "seconds": 122.7
+}
