@@ -1,0 +1,255 @@
+$ docker run --rm --init --name neo-pnr-neo_core-floorplan-5733 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/neo_core/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in floorplan
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth_canonicalize.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/logs/asap7/neo_core/base/1_1_yosys_canonicalize.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/1_2_yosys.v
+Elapsed time: 0:00.08[h:]min:sec. CPU time: user 0.03 sys 0.05 (98%). Peak memory: 27228KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     1.00       26 N/A
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/logs/asap7/neo_core/base/1_2_yosys.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/1_2_yosys.v
+Elapsed time: 0:00.08[h:]min:sec. CPU time: user 0.04 sys 0.05 (99%). Peak memory: 27172KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_2_yosys              .v            0        0     1.12       26 c9f8fa94ce
+1_2_yosys              .sdc                                       8ddce14cd1
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_1_floorplan floorplan
+Running floorplan.tcl, stage 2_1_floorplan
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/1_synth.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/1_synth.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+
+==========================================================================
+Floorplan check_setup
+--------------------------------------------------------------------------
+Warning: There is 1 input port missing set_input_delay.
+number instances in verilog is 1999422
+initialize_floorplan -utilization 55 -aspect_ratio 1 -core_space 1.0 -site asap7sc7p5t
+[INFO IFP-0107] Defining die area using utilization: 55.00% and aspect ratio: 1.
+[WARNING IFP-0028] Core area lower left (1.000, 1.000) snapped to (1.026, 1.080).
+[INFO IFP-0001] Added 2918 rows of 14595 site asap7sc7p5t.
+[INFO IFP-0100] Die BBox:  (  0.000  0.000 ) ( 790.164 790.164 ) um
+[INFO IFP-0101] Core BBox: (  1.026  1.080 ) ( 789.156 788.940 ) um
+[INFO IFP-0102] Core area:                       620936.102 um^2
+[INFO IFP-0103] Total instances area:            341662.051 um^2
+[INFO IFP-0104] Effective utilization:                0.550
+[INFO IFP-0105] Number of instances:                1999422
+source /OpenROAD-flow-scripts/flow/platforms/asap7/openRoad/make_tracks.tcl
+source /OpenROAD-flow-scripts/flow/platforms/asap7/fastroute.tcl
+set_dont_use "*x1p*_ASAP7* *xp*_ASAP7* SDF* ICG*"
+repair_tie_fanout -separation 0 asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120/TIELOx1_ASAP7_75t_R/L
+[INFO RSZ-0042] Inserted 2403 tie TIELOx1_ASAP7_75t_R instances.
+repair_tie_fanout -separation 0 asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120/TIEHIx1_ASAP7_75t_R/H
+[INFO RSZ-0042] Inserted 212658 tie TIEHIx1_ASAP7_75t_R instances.
+remove_buffers
+[INFO RSZ-0026] Removed 101705 buffers.
+Took 7 seconds: remove_buffers
+Default units for flow
+ time 1ps
+ capacitance 1fF
+ resistance 1kohm
+ voltage 1v
+ current 1mA
+ power 1pW
+ distance 1um
+   Layer   | Unit Resistance | Unit Capacitance 
+           |       (kohm/um) |          (fF/um)
+------------------------------------------------
+        M1 |        7.04e-02 |         1.00e-10
+        M2 |        2.97e-02 |         1.75e-01
+        M3 |        3.13e-02 |         1.56e-01
+        M4 |        1.80e-02 |         1.78e-01
+        M5 |        1.90e-02 |         1.64e-01
+        M6 |        1.19e-02 |         1.87e-01
+        M7 |        1.25e-02 |         1.63e-01
+        M8 |        8.45e-03 |         1.04e-01
+        M9 |        8.90e-03 |         9.28e-02
+       Pad |        0.00e+00 |         0.00e+00
+------------------------------------------------
+
+   Layer   | Via Resistance 
+           |         (kohm) 
+----------------------------
+        V1 |       1.72e-02 
+        V2 |       1.72e-02 
+        V3 |       1.72e-02 
+        V4 |       1.18e-02 
+        V5 |       1.18e-02 
+        V6 |       8.20e-03 
+        V7 |       8.20e-03 
+        V8 |       6.30e-03 
+        V9 |       6.30e-03 
+----------------------------
+Report metrics stage 2, floorplan final...
+
+==========================================================================
+floorplan final report_design_area
+--------------------------------------------------------------------------
+Design area 343594 um^2 55% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.sdc
+Elapsed time: 7:16.63[h:]min:sec. CPU time: user 577.15 sys 12.06 (134%). Peak memory: 9220520KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_1_floorplan          .odb        436      589     1.35     9004 dd6f1ddd38
+2_1_floorplan          .sdc                                       eb919da97f
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_2_floorplan_macro macro_place
+Running macro_place.tcl, stage 2_2_floorplan_macro
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+source /home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/neo_core/macro_place.tcl
+macro_place.tcl: u_dp/u_acc/u_mem/u_macro (fakeram7_512x1056_g1_1w1r) at 3.026 3.08 MY (left edge, pins inward)
+[INFO MPL-0035] Macro u_dp/u_acc/u_mem/u_macro placed. Bounding box (3.026um, 3.120um), (140.016um, 169.720um). Orientation MY
+macro_place.tcl: u_dp/u_feeder/u_mem/u_macro (fakeram7_1024x512_g2_1w1r) at 720.656 3.08 R0 (the feeder, right edge, pins inward)
+[INFO MPL-0035] Macro u_dp/u_feeder/u_mem/u_macro placed. Bounding box (720.656um, 3.120um), (787.156um, 334.920um). Orientation R0
+macro_place.tcl: u_wbuf/u_mem/u_macro (fakeram7_512x936_g2_1w1r) at 3.026 173.68 MY (left edge, pins inward)
+[INFO MPL-0035] Macro u_wbuf/u_mem/u_macro placed. Bounding box (3.026um, 173.712um), (124.436um, 340.312um). Orientation MY
+rtl_macro_placer -max_num_level 2 -min_channel_size "20 20" -pin_aware_channels -min_ar 0.33 -area_weight 0.1 -wirelength_weight 100.0 -outline_weight 100.0 -boundary_weight 50.0 -notch_weight 50.0 -report_directory /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/objects/asap7/neo_core/base/rtlmp -fence_lx 0.0 -fence_ly 0.0 -fence_ux 0.0 -fence_uy 0.0 -target_util 0.6
+[INFO MPL-0062] Found fixed macro u_dp/u_acc/u_mem/u_macro.
+[INFO MPL-0062] Found fixed macro u_dp/u_feeder/u_mem/u_macro.
+[INFO MPL-0062] Found fixed macro u_wbuf/u_mem/u_macro.
+Die Area: (0.00, 0.00) (790.16, 790.16),  Floorplan Area: (1.03, 1.08) (789.16, 788.94)
+	Number of std cell instances: 2111529
+	Area of std cell instances: 255700.31
+	Number of macros: 38
+	Macros to be placed: 35
+	Area of macros: 87893.32
+	Minimum channel (Width, Height): (20.00, 20.00)
+	Area of macros with halos: 53107.18
+	Area of std cell instances + Area of macros: 343593.62
+	Floorplan area: 620936.10
+	Design Utilization: 0.55
+	Floorplan Utilization: 0.48
+	Manufacturing Grid: 1
+
+[INFO MPL-0500] Runtime: 729.03s
+Took 729 seconds: rtl_macro_placer -max_num_level 2 -min_channel_size "20 20" -pin_aware_channels -min_ar 0.33 -area_weight 0.1 -wirelength_weight 100.0 -outline_weight 100.0 -boundary_weight 50.0 -notch_weight 50.0 -report_directory /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/objects/asap7/neo_core/base/rtlmp -fence_lx 0.0 -fence_ly 0.0 -fence_ux 0.0 -fence_uy 0.0 -target_util 0.6
+Design area 343594 um^2 55% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_2_floorplan_macro.odb
+Elapsed time: 12:20.18[h:]min:sec. CPU time: user 2743.04 sys 1.24 (370%). Peak memory: 3073520KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_2_floorplan_macro    .odb        740     2744     3.71     3001 25f8f93fdc
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_3_floorplan_tapcell tapcell
+Running tapcell.tcl, stage 2_3_floorplan_tapcell
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_2_floorplan_macro.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+Tap and End Cap cell insertion
+  TAP Cell          : TAPCELL_ASAP7_75t_R
+  ENDCAP Cell       : TAPCELL_ASAP7_75t_R
+  Halo Around Macro : 2 2
+  TAP Cell Distance : 25
+[INFO ODB-0303] The initial 2918 rows (42588210 sites) were cut with 38 shapes for a total of 14243 rows (35410257 sites).
+[INFO TAP-0004] Inserted 28486 endcaps.
+[INFO TAP-0005] Inserted 36196 tapcells.
+Design area 345480 um^2 56% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_3_floorplan_tapcell.odb
+Elapsed time: 0:05.94[h:]min:sec. CPU time: user 4.99 sys 0.94 (99%). Peak memory: 2747296KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_3_floorplan_tapcell  .odb          5        6     1.00     2682 aada54d505
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_4_floorplan_pdn pdn
+Running pdn.tcl, stage 2_4_floorplan_pdn
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_3_floorplan_tapcell.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+[WARNING PDN-1051] No instances found for grid (CORE_macro_grid_2).
+[INFO PDN-0001] Inserting grid: top
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_dp/u_feeder/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[0\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[10\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[11\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[12\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[13\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[14\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[15\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[16\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[17\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[18\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[19\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[1\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[20\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[21\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[22\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[23\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[24\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[25\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[26\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[27\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[28\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[29\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[2\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[30\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[31\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[3\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[4\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[5\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[6\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[7\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[8\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[9\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_luts/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_rbuf/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_dp/u_acc/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_rs/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_wbuf/u_mem/u_macro
+[INFO PDN-0500] Runtime: 11.94s
+Design area 345480 um^2 56% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_4_floorplan_pdn.odb
+Elapsed time: 1:19.66[h:]min:sec. CPU time: user 78.59 sys 1.06 (99%). Peak memory: 3253768KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_4_floorplan_pdn      .odb         79       80     1.00     3177 e88cf580b9
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_4_floorplan_pdn.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_floorplan.odb
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_floorplan.sdc
