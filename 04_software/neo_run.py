@@ -24,7 +24,7 @@ integer executor's expected words). The runtime drives the chip top through a De
   reads   every read-back through the host bridge (host_r) or from the memory (mem_r), compared with the expected words.
 The TraceDevice records every transaction as a line ('W addr value', 'R addr tag', 'P addr mask want', 'H node word n
 words', 'G node word n name', 'M word n words', 'N word n name'); 02_dv/sim/check_c_runtime.py compares the C runtime's
-trace with it word for word, and the cocotb top suite's T9 / T10 replay it on the RTL.
+trace with it word for word, and the cocotb top suite's T12 / T13 replay it on the RTL.
 Usage: python3 sw/neo_run.py --build two_layer|yolo [--image out.txt] [--trace out.trace] [--mode queue|window]
 """
 import argparse
@@ -248,7 +248,7 @@ class Runtime:
 
 
 class TraceReplay:
-    """What a live replay of a recorded trace checks (the cocotb top suite's T9 / T10 replay the trace on the RTL): the
+    """What a live replay of a recorded trace checks (the cocotb top suite's T12 / T13 replay the trace on the RTL): the
     reads' values by their tags, as Runtime checks them -- the ID, the interrupt per completion, the record's tag and
     entries played, every cause clear -- and the telemetry per (step, tile)."""
 
@@ -296,7 +296,7 @@ class TraceReplay:
 # the networks the tests build (deterministic by seed; no model file is committed)
 # ---------------------------------------------------------------------------------------------------------------------
 def build_two_layer(seed=9, geo=None):
-    """T9's two-layer network: conv 20 -> 8, 3x3, bias + SiLU on a 6x6 input (two padded channel tiles of 8 at 16x8 -- a
+    """T12's two-layer network: conv 20 -> 8, 3x3, bias + SiLU on a 6x6 input (two padded channel tiles of 8 at 16x8 -- a
     K-split over two tiles), then conv 8 -> 7, 1x1, bias (the requantizer's path with the bias on the unit); the input
     in tile 3's bank through the host bridge, the weights in the memory window, the output in tile 0's bank."""
     import neo_onnx as no

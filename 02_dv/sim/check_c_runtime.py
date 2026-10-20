@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_c_runtime.py -- the C runtime (sw/neo_runtime.c over a recording device, sw/test_runtime.c) must issue exactly the
-transactions of the Python runtime (sw/neo_run.py) on the same network image: the two-layer network of the top suite's T9
-and the YOLOv8-m group of T10, in the command-queue mode and the window mode, with and without telemetry. Comments ('#')
+transactions of the Python runtime (sw/neo_run.py) on the same network image: the two-layer network of the top suite's T12
+and the YOLOv8-m group of T13, in the command-queue mode and the window mode, with and without telemetry. Comments ('#')
 are not compared; every other line (register writes, reads with their tags, polls, host-bridge and memory loads word for
 word, read-backs) must be identical."""
 import os, subprocess, sys

@@ -1,10 +1,10 @@
 {
  "sources": {
-  "t10": "make -j1 -C dv/cocotb top TESTCASE=t10_runtime_yolov8m_crop -> dv/cocotb/measured_t10.json",
+  "t13": "make -j1 -C dv/cocotb top TESTCASE=t13_runtime_yolov8m_crop -> dv/cocotb/measured_t13.json",
   "tile": "make -j1 -C dv/cocotb tile TESTCASE=m21_attention_head,m23_vit_block,m24_llm_layer,m25_telemetry",
   "bridge": "top T3b: 4 x 4092-word fetches at once, 50.3 bytes per aclk cycle of 64 (drop 0.43)"
  },
- "t10": {
+ "t13": {
   "build": "2x2 tiles of 16x8, WPF 32, clk 1000 ps, aclk 1600 ps",
   "steps": [
    {

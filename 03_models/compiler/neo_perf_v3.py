@@ -14,7 +14,7 @@ tile, LINK_BYTES per cycle per direction, HOP_LAT per hop).
 
 Usage: python3 compiler/neo_perf_v3.py [--h 736 --w 1280] [--link 128] [--ksplit] [--no-affinity] [--barrier]
 Drop 0.44 (stream D3, the virtual device): --calibrate perf_measured_044.json prints the error table of the model against
-the RTL's measured cycles (the conv step model of the runtime's schedule on the chip top fitted on T10, tile_layer on M25,
+the RTL's measured cycles (the conv step model of the runtime's schedule on the chip top fitted on T13, tile_layer on M25,
 C2's phase model on M21 / M23 / M24); --predict the YOLOv8-m group's predicted layer times and utilization; --collect
 builds the measured file from the test runs.
 """
@@ -306,7 +306,7 @@ def tile_layer(h, w, cin, cout, k, s, p, rows=None, cols=None, nchk=1, rx_bytes=
 # (its round trip and its words at the bridge's rate), every run as the sequencer's K-passes at the pass spacing (LAT +
 # ROWS + 4 cycles a pass at least: the feeder stall the telemetry counts), the vector unit's rows, the drained words; a
 # contributor's partial sums and the owner's reduce; the step's time the slowest tile plus the bridge's serving of the
-# other tiles' fetches (one request at a time). CONV_PM's measured terms (fitted on T10's steps, neo_perf_v3.py --calibrate)
+# other tiles' fetches (one request at a time). CONV_PM's measured terms (fitted on T13's steps, neo_perf_v3.py --calibrate)
 # and C2's PERF for the steps served from banks (M21 / M23 / M24) are the two forms of the same model.
 CONV_PM = dict(host=200,          # the host's part of a measured window: the start's register plays and the first snapshot's reads
                instr=21,          # as PERF
@@ -316,7 +316,7 @@ CONV_PM = dict(host=200,          # the host's part of a measured window: the st
                run_fill=4,        # as PERF
                drain_word=0.8,    # as PERF
                reduce_row=2.0)    # a contributor's partial-sum row into the owner (the PSUM beats and the accumulate)
-# fitted on T10's 27 steps (perf_measured_044.json): mean |error| 2.8 % over the 34 measured points, 31 within 10 %; the
+# fitted on T13's 27 steps (perf_measured_044.json): mean |error| 2.8 % over the 34 measured points, 31 within 10 %; the
 # first layer (one channel tile, M = 36 rows under the 60-cycle pass spacing) is predicted 14-18 % high -- the model takes
 # a pass at max(M, spacing) while the sequencer overlaps part of the spacing with the previous pass's rows
 
@@ -400,18 +400,18 @@ def predict_image(img, pm=CONV_PM):
     return out
 
 
-def collect(t10_json, tile_log, out):
-    """Build the measured-cycles file from the top suite's measured_t10.json and a tile-suite run's log (M21 / M23 / M24 /
+def collect(t13_json, tile_log, out):
+    """Build the measured-cycles file from the top suite's measured_t13.json and a tile-suite run's log (M21 / M23 / M24 /
     M25 lines)."""
     import json
     import re
-    t10 = json.load(open(t10_json))
+    t13 = json.load(open(t13_json))
     log = open(tile_log).read()
-    meas = dict(sources=dict(t10="make -j1 -C dv/cocotb top TESTCASE=t10_runtime_yolov8m_crop -> dv/cocotb/measured_t10.json",
+    meas = dict(sources=dict(t13="make -j1 -C dv/cocotb top TESTCASE=t13_runtime_yolov8m_crop -> dv/cocotb/measured_t13.json",
                              tile="make -j1 -C dv/cocotb tile TESTCASE=m21_attention_head,m23_vit_block,m24_llm_layer,m25_telemetry",
                              bridge="top T3b: 4 x 4092-word fetches at once, 50.3 bytes per aclk cycle of 64 (drop 0.43)"),
-                t10=dict(build=t10["build"], steps=[dict(name=s["name"], cycles=min(v["cycles"] for v in s["tel"].values()), window_max=s["cycles"],
-                                                         valid=s["array_valid"], tiles=s["tiles"]) for s in t10["steps"]]),
+                t13=dict(build=t13["build"], steps=[dict(name=s["name"], cycles=min(v["cycles"] for v in s["tel"].values()), window_max=s["cycles"],
+                                                         valid=s["array_valid"], tiles=s["tiles"]) for s in t13["steps"]]),
                 phases={}, layers=[])
     m = re.search(r"M21:.*?cycles (.*?); (\d+) in all", log)
     if m:
@@ -423,7 +423,7 @@ def collect(t10_json, tile_log, out):
     for k, s_, ct, M, av, cy in re.findall(r"k(\d) s(\d) (\d) ch\.tiles M (\d+): (\d+) valid / (\d+) cycles", log):
         meas["layers"].append(dict(k=int(k), s=int(s_), ct_n=int(ct), M=int(M), valid=int(av), cycles=int(cy)))
     json.dump(meas, open(out, "w"), indent=1)
-    print(f"collected {len(meas['t10']['steps'])} T10 steps, phases {{{', '.join(f'{k}: {len(v)}' for k, v in meas['phases'].items())}}}, "
+    print(f"collected {len(meas['t13']['steps'])} T13 steps, phases {{{', '.join(f'{k}: {len(v)}' for k, v in meas['phases'].items())}}}, "
           f"{len(meas['layers'])} M25 layers -> {out}")
 
 
@@ -456,7 +456,7 @@ def fit_conv(meas_steps, img):
 
 
 def calibrate(path, fit=True):
-    """The error table of the model against the measured file: T10's steps (the conv step model, the three bridge / host
+    """The error table of the model against the measured file: T13's steps (the conv step model, the three bridge / host
     terms fitted on them when `fit`), M25's single-tile layers (tile_layer with the pass spacing and the build's link),
     M21 / M23 / M24's phases (neo_xfmr's phase_prediction on the plans' mesh-model runs)."""
     import json
@@ -465,24 +465,24 @@ def calibrate(path, fit=True):
     import neo_xfmr as nx
     meas = json.load(open(path))
     rows = []
-    # ---- T10: the conv steps on the chip top
+    # ---- T13: the conv steps on the chip top
     img = neo_run.build_yolo()
     pm = dict(CONV_PM)
     if fit:
-        pm, _ = fit_conv(meas["t10"]["steps"], img)
+        pm, _ = fit_conv(meas["t13"]["steps"], img)
     steps = {st.name: st for st in img.steps}
-    print(f"T10 (the YOLOv8-m group on the chip top, {meas['t10']['build']}): the conv step model with "
+    print(f"T13 (the YOLOv8-m group on the chip top, {meas['t13']['build']}): the conv step model with "
           + ", ".join(f"{k} {v:g}" for k, v in pm.items()) + (" (host, fetch_req, bridge_wpc fitted on these steps)" if fit else ""))
     print(f"  {'step':<20} {'tiles':>5} {'measured':>9} {'model':>9} {'error':>7}   {'valid rows':>10} {'util meas':>9} {'util model':>10}")
     tot_m = tot_p = 0
     seen = set()
-    for s in meas["t10"]["steps"]:
+    for s in meas["t13"]["steps"]:
         if s["name"] not in steps:
             continue
         p, terms = conv_step_cycles(steps[s["name"]].tiles, img.geo, pm)
         key = (s["name"].split("#")[0], s["tiles"], s["cycles"])
         tot_m += s["cycles"]; tot_p += p
-        rows.append(("T10 " + s["name"], s["cycles"], p))
+        rows.append(("T13 " + s["name"], s["cycles"], p))
         if key in seen:
             continue
         seen.add(key)
@@ -535,7 +535,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--calibrate", metavar="JSON", help="drop 0.44: the error table of the model against the measured cycles (make vdev)")
     ap.add_argument("--no-fit", action="store_true", help="with --calibrate: CONV_PM as it stands, no fit")
-    ap.add_argument("--collect", nargs=3, metavar=("T10_JSON", "TILE_LOG", "OUT"), help="drop 0.44: build the measured file from a top T10 run and a tile-suite log")
+    ap.add_argument("--collect", nargs=3, metavar=("T13_JSON", "TILE_LOG", "OUT"), help="drop 0.44: build the measured file from a top T13 run and a tile-suite log")
     ap.add_argument("--predict", action="store_true", help="drop 0.44: the virtual device's prediction of the YOLOv8-m group's steps (sw/neo_run.py --build yolo)")
     ap.add_argument("--h", type=int, default=736)
     ap.add_argument("--w", type=int, default=1280)

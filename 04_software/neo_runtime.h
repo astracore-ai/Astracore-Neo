@@ -4,7 +4,7 @@
  * issued as commands of the control plane's queue with doorbells, their completion records and interrupts polled, every
  * tile's telemetry snapshot and causes read per step, the results read back. Pure C99, no malloc, no I/O: the platform
  * supplies the accesses (neo_dev_t). The sequence is 04_software/neo_run.py's transaction for transaction
- * (02_dv/sim/check_c_runtime.py compares the two on recorded traces; the cocotb top suite's T9 / T10 replay it). */
+ * (02_dv/sim/check_c_runtime.py compares the two on recorded traces; the cocotb top suite's T12 / T13 replay it). */
 #ifndef NEO_RUNTIME_H
 #define NEO_RUNTIME_H
 #include "neo_host.h"

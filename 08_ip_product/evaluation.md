@@ -58,17 +58,17 @@ y.trace --summary` writes the trace to read.
 `python3 compiler/tool_qual.py` runs the tool-qualification kit: `tool_qual: 147/147 cases passed` (TQ7 the importer
 against onnxruntime, TQ8 the quantizer's accuracy bars and the runtime's trace equality, with the kit's earlier cases).
 
-## 4. On the simulated chip top: T9 and T10 (3 minutes; Verilator and cocotb)
+## 4. On the simulated chip top: T12 and T13 (3 minutes; Verilator and cocotb)
 
 ```
-make -j1 -C dv/cocotb top                      # the whole suite, T1 .. T10; or TESTCASE=t9_runtime_two_layer,t10_runtime_yolov8m_crop
+make -j1 -C dv/cocotb top                      # the whole suite, T1 .. T13; or TESTCASE=t12_runtime_two_layer,t13_runtime_yolov8m_crop
 ```
-Expected: `TESTS=11 PASS=11`. The log's `T9:` line: two commands from one runtime sequence, `675 transactions replayed`,
+Expected: `TESTS=11 PASS=11`. The log's `T12:` line: two commands from one runtime sequence, `675 transactions replayed`,
 `the C runtime's 675 transactions identical`, completion records `(1, 92, ...), (2, 80, ...)` with their timers, `output
 read back through the host bridge bit-exact against the integer executor`, the telemetry per step (`l1.conv#0 2584
-cycles / 972 array-valid rows`). The `T10:` line: `27 commands, 102 tile programs, 21966 transactions in 363418 ns`,
+cycles / 972 array-valid rows`). The `T13:` line: `27 commands, 102 tile programs, 21966 transactions in 363418 ns`,
 `output bit-exact against the integer executor`, `PTQ INT8 against FP32 on 5 inputs: output cos 0.99932, SQNR 28.59 dB,
-max |err| 5.80 LSB`, the measured cycles per layer, and `measured_t10.json` written beside the test (the input of step 5).
+max |err| 5.80 LSB`, the measured cycles per layer, and `measured_t13.json` written beside the test (the input of step 5).
 The build is the suite's 2 x 2 mesh of 16 x 8 cores with 4,096-word banks and the silicon's 1024-bit links; the crop and
 the padded channel tiles it implies are explained in `04_software/README.md` §3. The two tests take 100 s of Verilator on
 a laptop (3.6 us of simulation per second).
@@ -79,16 +79,16 @@ a laptop (3.6 us of simulation per second).
 make vdev                                      # = python3 compiler/neo_perf_v3.py --calibrate compiler/perf_measured_044.json
 python3 compiler/neo_perf_v3.py --predict      # the group's predicted layer times and utilization, no RTL
 ```
-Expected: the error table -- T10's steps (`total (27 steps) 80212 81186 +1.2 %`), M25's single-tile layers (−1.7 ..
+Expected: the error table -- T13's steps (`total (27 steps) 80212 81186 +1.2 %`), M25's single-tile layers (−1.7 ..
 −12.2 %), `M21 ... +3.4 %`, `M23 ... +0.2 %`, `M24 ... −0.9 %`, `error table: 34 measured points, mean |error| 2.8 %, 31/34
 within 10 %, worst 18.3 %`, and the gaps the model does not carry. To rebuild the measured file from your own runs:
-`python3 compiler/neo_perf_v3.py --collect dv/cocotb/measured_t10.json <log of make -C dv/cocotb tile TESTCASE=m21_attention_head,m23_vit_block,m24_llm_layer,m25_telemetry> compiler/perf_measured_044.json`.
+`python3 compiler/neo_perf_v3.py --collect dv/cocotb/measured_t13.json <log of make -C dv/cocotb tile TESTCASE=m21_attention_head,m23_vit_block,m24_llm_layer,m25_telemetry> compiler/perf_measured_044.json`.
 
 ## 6. The reference networks
 
 | Network | Path | Scale | Result |
 | --- | --- | --- | --- |
-| YOLOv8-m: b0, b1, b2.c2f (3 -> 48 -> 96, cv1, 2 bottlenecks with residuals, concat, cv2 192 -> 96) | ONNX (generated, random weights) -> importer -> PTQ INT8 -> scheduler -> runtime (queue) -> the chip top under cocotb (T10) | a 12 x 12 crop of 640^2 on 2 x 2 tiles of 16 x 8 cores; 8 layers, 66 groups, 27 commands | bit-exact against the integer executor; PTQ cos 0.99932 / 28.6 dB; 80,212 cycles measured (model +1.2 %), MAC utilization 8.0 % at this crop (the 60-cycle pass spacing against 9 .. 36-row groups; see README §3) |
+| YOLOv8-m: b0, b1, b2.c2f (3 -> 48 -> 96, cv1, 2 bottlenecks with residuals, concat, cv2 192 -> 96) | ONNX (generated, random weights) -> importer -> PTQ INT8 -> scheduler -> runtime (queue) -> the chip top under cocotb (T13) | a 12 x 12 crop of 640^2 on 2 x 2 tiles of 16 x 8 cores; 8 layers, 66 groups, 27 commands | bit-exact against the integer executor; PTQ cos 0.99932 / 28.6 dB; 80,212 cycles measured (model +1.2 %), MAC utilization 8.0 % at this crop (the 60-cycle pass spacing against 9 .. 36-row groups; see README §3) |
 | the ViT block (M23: layer norm, attention, GELU MLP, INT8) | ONNX (generated) -> importer -> `block_from_graph` -> `neo_xfmr.block_plan` -> the mesh model (O3); the RTL run is M23 of the tile suite on the identical plan | T = 32, D = d = 32, H = 32 on the 2 x 2 mesh | the plan from the importer identical to the direct one (40 phases, every bank word); output 2.01 LSB from onnxruntime; M23 on the RTL 70,561 cycles, model +0.2 % |
 | the LLM layer (M24: RMS norm, causal attention, SiLU MLP, INT4 weights) | the same | T = 32, D = d = 32, H = 64 | identical plan (80 phases); 11.75 LSB from onnxruntime (2.36 from the float block with the INT4 weights); M24 on the RTL 82,760 cycles, model −0.9 % |
 

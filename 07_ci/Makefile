@@ -164,7 +164,7 @@ cdriver:
 # drop 0.44 (stream D3): the ONNX importer and the quantizer (compiler/neo_onnx.py, neo_quant.py: pip install onnx onnxruntime),
 # the scheduler and the runtime's images (neo_sched.py, sw/neo_run.py); `make cdriver` adds the register-map check against
 # host_if.sv (sim/check_regmap.py) and the C runtime's transactions against the Python runtime's (sim/check_c_runtime.py);
-# `make vdev` the virtual device: the perf model calibrated against the measured cycles of M21 / M23 / M24 / M25 and T10
+# `make vdev` the virtual device: the perf model calibrated against the measured cycles of M21 / M23 / M24 / M25 and T13
 onnx:
 	python3 compiler/test_neo_onnx.py
 	python3 compiler/neo_quant.py

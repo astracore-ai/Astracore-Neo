@@ -19,15 +19,15 @@ is reproduced by the command beside it, from a flat layout (`00_overview/streams
 | the same in C over a recording device, compared word for word | `neo_runtime.c`, `test_runtime.c` | `make cdriver` (`sim/check_c_runtime.py`) |
 | the tests of the importer and the quantizer (31 cases), the tool-qualification kit (147) | | `make onnx`, `python3 compiler/tool_qual.py` |
 | the virtual device: the model against the measured cycles | `neo_perf_v3.py` | `make vdev`, `python3 compiler/neo_perf_v3.py --predict` |
-| on the RTL: the chip top's T9 (two layers) and T10 (the YOLOv8-m group) | `dv/cocotb/test_neo_top.py` | `make -j1 -C dv/cocotb top` |
+| on the RTL: the chip top's T12 (two layers) and T13 (the YOLOv8-m group) | `dv/cocotb/test_neo_top.py` | `make -j1 -C dv/cocotb top` |
 
 ### 1.1 The importer's operator coverage (opset 17, the default domain)
 
 | Operator | Imported as | Lowered to the mesh | Checked by |
 | --- | --- | --- | --- |
-| Conv (group 1, dilation 1, square kernel, symmetric pads) + bias (an input or an Add) + Relu / SiLU (Sigmoid + Mul) | `conv` with `act` | yes: the backend's groups, the bias and SiLU on the vector unit, ReLU in the requantizer | T9, T10, `test_neo_onnx.py` O1 / Q3 |
-| Add of two activations | `add`; folded into the conv feeding it as its residual (after the activation, YOLO's bottleneck; or before it) | yes: the residual buffer (FETCH_A arg 1, ADD_ROW) | T10 (four bottleneck residuals), Q3 |
-| Concat / Split along channels | `concat` / `split` | yes, as placement: views at channel-tile offsets (a boundary inside a channel tile is refused with the layer named: it would need a host copy) | T10 (the C2f's split and concat) |
+| Conv (group 1, dilation 1, square kernel, symmetric pads) + bias (an input or an Add) + Relu / SiLU (Sigmoid + Mul) | `conv` with `act` | yes: the backend's groups, the bias and SiLU on the vector unit, ReLU in the requantizer | T12, T13, `test_neo_onnx.py` O1 / Q3 |
+| Add of two activations | `add`; folded into the conv feeding it as its residual (after the activation, YOLO's bottleneck; or before it) | yes: the residual buffer (FETCH_A arg 1, ADD_ROW) | T13 (four bottleneck residuals), Q3 |
+| Concat / Split along channels | `concat` / `split` | yes, as placement: views at channel-tile offsets (a boundary inside a channel tile is refused with the layer named: it would need a host copy) | T13 (the C2f's split and concat) |
 | MaxPool (square window, floor mode) | `maxpool` | no: the mesh has no pooling datapath (a strided fetch subsamples, it does not take a maximum); executed by the integer model, a host operator in a deployment | O1, Q2 |
 | Resize (nearest, integer scales) | `resize` | no (a host operator; placement would need replicated fetches) | O1, Q2 |
 | MatMul / Gemm with a constant weight (+ bias, + GELU as the Erf form or the contrib `Gelu`, + SiLU) | `linear` | through the transformer block path (`block_from_graph` -> `neo_xfmr.block_plan`): M23 / M24's form; a free-standing linear network is not scheduled by `neo_sched` | O1, O3 |
@@ -79,7 +79,7 @@ The runtime takes a `NetImage` (`neo_sched.py`: the loads, the steps, the read-b
 device (`neo_dev_t`: the control plane's AXI4-Lite write / read / poll, the host bridge's write / read into a bank, the
 host's own memory behind the memory bridge) and runs this sequence -- the Python and the C forms issue the same
 transactions, compared on eight traces by `sim/check_c_runtime.py` (two networks x the queue and the window mode x
-telemetry on / off; 675 .. 21,966 transactions each) and again inside T9 / T10:
+telemetry on / off; 675 .. 21,966 transactions each) and again inside T12 / T13:
 
 1. **init**: ID (`'NEOT'`), VERSION, CONFIG (the geometry must be the image's); CTRL bit 1 on every tile (every cause
    cleared); the memory bridge's window base; IRQ_STATUS cleared; the queue reset (CQ_CTRL bit 1) and configured -- a ring
@@ -108,19 +108,19 @@ the tag says what the value is checked for), `P addr mask want` (a poll), `H nod
 write), `G node word n name` (a host-bridge read-back), `M word n words...` (a memory write), `N word n name` (a memory
 read-back), `# ...` (a comment, not compared).
 
-## 3. On the RTL: the chip top's T9 and T10 (`make -j1 -C dv/cocotb top`)
+## 3. On the RTL: the chip top's T12 and T13 (`make -j1 -C dv/cocotb top`)
 
 | Test | Network | Commands / tile programs / transactions | Simulated | Result |
 | --- | --- | --- | --- | --- |
-| T9 | conv 20 -> 8 3x3 (bias, SiLU on the unit) then conv 8 -> 7 1x1 (bias); the input in tile 3's bank through the host bridge, the weights in the memory window, the output in tile 0's bank | 2 / 2 / 675 (the C runtime's 675 identical) | 12.4 us | records (tag 1, 92 entries, timer 5,762 aclk), (2, 80, 7,558); l1 2,584 cycles / 972 array-valid rows; l2 612 / 36; the output bit-exact |
-| T10 | the YOLOv8-m group: b0 3 -> 48 3x3 s2, b1 48 -> 96 3x3 s2, b2.c2f (cv1 96 -> 96, two bottlenecks 48 -> 48 3x3 with residuals, concat, cv2 192 -> 96); a 12 x 12 crop of the 640^2 input, INT8 percentile PTQ; every tensor in the memory window | 27 / 102 / 21,966 (the C runtime's identical) | 363 us (99 s of Verilator) | the output bit-exact against the integer executor; PTQ against FP32 on 5 inputs: cos 0.99932, SQNR 28.6 dB, max 5.8 LSB |
+| T12 | conv 20 -> 8 3x3 (bias, SiLU on the unit) then conv 8 -> 7 1x1 (bias); the input in tile 3's bank through the host bridge, the weights in the memory window, the output in tile 0's bank | 2 / 2 / 675 (the C runtime's 675 identical) | 12.4 us | records (tag 1, 92 entries, timer 5,762 aclk), (2, 80, 7,558); l1 2,584 cycles / 972 array-valid rows; l2 612 / 36; the output bit-exact |
+| T13 | the YOLOv8-m group: b0 3 -> 48 3x3 s2, b1 48 -> 96 3x3 s2, b2.c2f (cv1 96 -> 96, two bottlenecks 48 -> 48 3x3 with residuals, concat, cv2 192 -> 96); a 12 x 12 crop of the 640^2 input, INT8 percentile PTQ; every tensor in the memory window | 27 / 102 / 21,966 (the C runtime's identical) | 363 us (99 s of Verilator) | the output bit-exact against the integer executor; PTQ against FP32 on 5 inputs: cos 0.99932, SQNR 28.6 dB, max 5.8 LSB |
 
 The scale: the chip top's cocotb build is 2 x 2 tiles of 16 x 8 cores (ACC_ROWS 64, ABUF 256, WBUF 512), so a group drains
 at most 63 rows and a 3 x 3 layer with 48 input channels splits its 54 K-passes over two tiles; the crop keeps every
 layer to one row chunk (b0: 36 output pixels, the rest 9). On the 16 x 8 core each output tile of 8 channels is drained
 padded to a channel tile of 16 (DR_P), so a layer streams 2 x the K-passes the silicon core would (there cpt = 32 =
 ROWS, nothing is padded). The measured cycles per layer (the telemetry window of the step's first-snapshotted tile,
-`measured_t10.json`; `make vdev` prints the table with the model beside it):
+`measured_t13.json`; `make vdev` prints the table with the model beside it):
 
 | Layer | steps | measured cycles | array-valid rows | MAC utilization (window) | model | error |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -140,16 +140,16 @@ one request at a time; at 640^2 a group streams the accumulator's 511 rows a pas
 ## 4. The virtual device (`neo_perf_v3.py --calibrate compiler/perf_measured_044.json`, `make vdev`)
 
 The perf model takes the measured cycles of `perf_measured_044.json` (built by `neo_perf_v3.py --collect` from a `top`
-T10 run and a `tile` run of M21 / M23 / M24 / M25; the bridge's 50.3 bytes per aclk cycle from T3b) and prints the error
+T13 run and a `tile` run of M21 / M23 / M24 / M25; the bridge's 50.3 bytes per aclk cycle from T3b) and prints the error
 table: the conv step model for the runtime's schedule on the chip top (per tile the instructions, the fetches as bridge
 requests, the K-passes at the pass spacing, the vector unit's rows, the drained words and partial sums; the step the
 slowest tile plus the bridge's serving of the others' fetches and the host's part of the window; three terms fitted on
-T10's steps: host 200, fetch round trip 19 cycles, 7.6 words per clk), `tile_layer` with the pass spacing on M25's
+T13's steps: host 200, fetch round trip 19 cycles, 7.6 words per clk), `tile_layer` with the pass spacing on M25's
 single-tile layers, C2's phase model on the transformer plans.
 
 | Measured set | points | measured | model | error |
 | --- | --- | --- | --- | --- |
-| T10, the 27 steps (17 distinct) | 27 | 80,212 | 81,186 | +1.2 % total; per step −1.0 .. +6.4 % but b0's two steps +14 / +18 % |
+| T13, the 27 steps (17 distinct) | 27 | 80,212 | 81,186 | +1.2 % total; per step −1.0 .. +6.4 % but b0's two steps +14 / +18 % |
 | M25, single-tile layers from a bank | 4 | 3,866 / 1,572 / 2,434 / 3,270 | 3,720 / 1,380 / 2,361 / 3,216 | −3.8 / −12.2 / −3.0 / −1.7 % |
 | M21, the attention head (16 phases) | 1 | 53,838 | 55,672 | +3.4 % (per phase mean 2.7 %) |
 | M23, the ViT block (40 phases) | 1 | 70,561 | 70,708 | +0.2 % (per phase mean 7.4 %, worst −17 %) |

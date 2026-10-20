@@ -51,7 +51,7 @@ two bridge nodes at x = 2: row 0 the memory and the host bridge, row 1 an unused
   Since drop 0.43 T3b also measures the memory bridge against a DRAM-like memory (32 aclk to a burst's first R beat, 16 to
   B; the model pipelines reads as a DRAM controller does) -- the drains landing in memory and four 4,092-word fetches at
   once -- and checks the bridge's wait counters (RD_WAIT / WR_WAIT) against the cycles this file counts on the AXI ports.
-  T9  the runtime (drop 0.44, stream D3): a two-layer network (conv 20 -> 8 3x3 with bias and SiLU on the vector unit,
+  T12  the runtime (drop 0.44, stream D3): a two-layer network (conv 20 -> 8 3x3 with bias and SiLU on the vector unit,
       conv 8 -> 7 1x1 with bias) through the importer, the quantizer and the scheduler (sw/neo_run.py's build_two_layer),
       driven by the runtime's exact register sequence -- its transaction trace, recorded by the Python runtime and equal
       to the C runtime's (sw/neo_runtime.c; the comparison is run here when a C compiler is at hand, and in python-regress),
@@ -60,11 +60,11 @@ two bridge nodes at x = 2: row 0 the memory and the host bridge, row 1 an unused
       command memory, the doorbell, the completion record and its interrupt, CC_HEAD advanced), every tile's telemetry
       snapshot and causes read per step, the result read back through the host bridge and bit-exact against the
       integer executor (the vector unit's and the requantizer's models)
-  T10 the YOLOv8-m layer group (the first conv stack b0 / b1 and the C2f block b2 at the published widths 48 / 96, a 12 x 12
+  T13 the YOLOv8-m layer group (the first conv stack b0 / b1 and the C2f block b2 at the published widths 48 / 96, a 12 x 12
       crop of the 640^2 input, INT8 by the percentile calibration) through the same path: 27 commands of 2 .. 4 tile
       programs (K-splits where the weight buffer asks for them, the bottlenecks' residuals through the residual buffer,
       split / concat as placement), every tensor in the memory window; the output bit-exact against the integer executor,
-      the measured cycles and MAC utilization per step from the telemetry written to measured_t10.json (the perf model's
+      the measured cycles and MAC utilization per step from the telemetry written to measured_t13.json (the perf model's
       calibration, compiler/neo_perf_v3.py --calibrate)
 """
 import os
@@ -1353,14 +1353,14 @@ async def run_network(top, dut, img, tag, mode="queue"):
 
 
 @cocotb.test()
-async def t9_runtime_two_layer(dut):
+async def t12_runtime_two_layer(dut):
     import neo_run
     top = await setup(dut)
     img = neo_run.build_two_layer()
-    chk, n, ns_, c_note = await run_network(top, dut, img, "T9")
+    chk, n, ns_, c_note = await run_network(top, dut, img, "T12")
     cyc = chk.step_cycles()
     recs = [chk.records[i] for i in range(len(img.steps))]
-    dut._log.info(f"T9: two layers through the runtime ({len(img.steps)} commands, {n} transactions replayed in {ns_:.0f} ns; {c_note}): "
+    dut._log.info(f"T12: two layers through the runtime ({len(img.steps)} commands, {n} transactions replayed in {ns_:.0f} ns; {c_note}): "
                   f"input through the host bridge with the fence, weights in the memory window, completion records "
                   f"{[(r[0], r[1] >> 16, r[2] | (r[3] << 32)) for r in recs]} (tag, entries, timer), an interrupt each; "
                   f"output read back through the host bridge bit-exact against the integer executor; telemetry per step "
@@ -1368,13 +1368,13 @@ async def t9_runtime_two_layer(dut):
 
 
 @cocotb.test()
-async def t10_runtime_yolov8m_crop(dut):
+async def t13_runtime_yolov8m_crop(dut):
     import json
     import neo_run
     import neo_quant as nq
     top = await setup(dut)
     img = neo_run.build_yolo()
-    chk, n, ns_, c_note = await run_network(top, dut, img, "T10")
+    chk, n, ns_, c_note = await run_network(top, dut, img, "T13")
     cyc = chk.step_cycles()
     qn = img.meta["qn"]
     rows, lines = nq.accuracy_report(qn, img.meta["calib"] + [{"x": img.meta["x"]}], img.geo.cols)
@@ -1385,14 +1385,14 @@ async def t10_runtime_yolov8m_crop(dut):
         d = per_layer.setdefault(layer, dict(cycles=0, valid=0, steps=0, tiles=0))
         d["cycles"] += cy; d["valid"] += av; d["steps"] += 1; d["tiles"] += k
     total = sum(d["cycles"] for d in per_layer.values())
-    meas = dict(test="T10", build=f"{NX}x{NY} tiles of {ROWS}x{COLS}, WPF {os.environ.get('NEO_WPF', '1')}, clk {CLK_PS} ps, aclk {ACLK_PS} ps",
+    meas = dict(test="T13", build=f"{NX}x{NY} tiles of {ROWS}x{COLS}, WPF {os.environ.get('NEO_WPF', '1')}, clk {CLK_PS} ps, aclk {ACLK_PS} ps",
                 steps=[dict(name=nm, cycles=cy, array_valid=av, tiles=k, tel={str(t.node): chk.tel.get((i, t.node)) for t in img.steps[i].tiles})
                        for i, (nm, cy, av, k) in enumerate(cyc)],
                 layers=per_layer, total_cycles=total, sim_ns=ns_, transactions=n)
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "measured_t10.json"), "w") as f:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "measured_t13.json"), "w") as f:
         json.dump(meas, f, indent=1)
-    dut._log.info(f"T10: the YOLOv8-m group (b0, b1, b2.c2f at a 12x12 crop; {len(img.steps)} commands, {sum(len(s.tiles) for s in img.steps)} tile "
+    dut._log.info(f"T13: the YOLOv8-m group (b0, b1, b2.c2f at a 12x12 crop; {len(img.steps)} commands, {sum(len(s.tiles) for s in img.steps)} tile "
                   f"programs, {n} transactions in {ns_:.0f} ns; {c_note}): output bit-exact against the integer executor; PTQ INT8 against "
                   f"FP32 on 5 inputs: output cos {out[1]:.5f}, SQNR {out[2]:.2f} dB, max |err| {out[3]:.2f} LSB; measured per layer (telemetry, "
                   f"the step's longest tile window) " + ", ".join(f"{k} {d['cycles']} cycles / {d['valid']} rows on {d['steps']} steps"
-                                                                  for k, d in per_layer.items()) + f"; {total} cycles in all -> measured_t10.json")
+                                                                  for k, d in per_layer.items()) + f"; {total} cycles in all -> measured_t13.json")
