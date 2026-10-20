@@ -1,0 +1,239 @@
+$ docker run --rm --init --name neo-pnr-bank_bist_wrap-floorplan-3370 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/bank_bist_wrap/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in floorplan
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth_canonicalize.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/logs/asap7/bank_bist_wrap/base/1_1_yosys_canonicalize.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_2_yosys.v
+Elapsed time: 0:00.04[h:]min:sec. CPU time: user 0.02 sys 0.01 (67%). Peak memory: 27584KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     0.75       26 N/A
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/logs/asap7/bank_bist_wrap/base/1_2_yosys.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_2_yosys.v
+Elapsed time: 0:00.03[h:]min:sec. CPU time: user 0.02 sys 0.01 (98%). Peak memory: 27224KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_2_yosys              .v            0        0     1.00       26 d13d1a0d7e
+1_2_yosys              .sdc                                       171695955a
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_1_floorplan floorplan
+Running floorplan.tcl, stage 2_1_floorplan
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/macros/fakeram7_32768x39_cm64_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_synth.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_synth.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+
+==========================================================================
+Floorplan check_setup
+--------------------------------------------------------------------------
+Warning: There is 1 input port missing set_input_delay.
+number instances in verilog is 7101
+[WARNING IFP-0028] Core area lower left (4.000, 4.000) snapped to (4.050, 4.050).
+[INFO IFP-0001] Added 2577 rows of 25628 site asap7sc7p5t.
+[INFO IFP-0100] Die BBox:  (  0.000  0.000 ) ( 1392.000 704.000 ) um
+[INFO IFP-0101] Core BBox: (  4.050  4.050 ) ( 1387.962 699.840 ) um
+[INFO IFP-0102] Core area:                       962912.130 um^2
+[INFO IFP-0103] Total instances area:            863527.042 um^2
+[INFO IFP-0104] Effective utilization:                0.897
+[INFO IFP-0105] Number of instances:                   7101
+source /OpenROAD-flow-scripts/flow/platforms/asap7/openRoad/make_tracks.tcl
+source /OpenROAD-flow-scripts/flow/platforms/asap7/fastroute.tcl
+set_dont_use "*x1p*_ASAP7* *xp*_ASAP7* SDF* ICG*"
+repair_tie_fanout -separation 0 asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120/TIELOx1_ASAP7_75t_R/L
+[INFO RSZ-0042] Inserted 39 tie TIELOx1_ASAP7_75t_R instances.
+repair_tie_fanout -separation 0 asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120/TIEHIx1_ASAP7_75t_R/H
+[INFO RSZ-0042] Inserted 660 tie TIEHIx1_ASAP7_75t_R instances.
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -setup -skip_last_gasp -sequence unbuffer,sizeup,swap,vt_swap -verbose
+[WARNING EST-0027] no estimated parasitics. Using wire load models.
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove 
+[INFO RSZ-0098] No setup violations found
+[INFO RSZ-0505] Runtime: 0.07s
+Default units for flow
+ time 1ps
+ capacitance 1fF
+ resistance 1kohm
+ voltage 1v
+ current 1mA
+ power 1pW
+ distance 1um
+   Layer   | Unit Resistance | Unit Capacitance 
+           |       (kohm/um) |          (fF/um)
+------------------------------------------------
+        M1 |        7.04e-02 |         1.00e-10
+        M2 |        2.97e-02 |         1.75e-01
+        M3 |        3.13e-02 |         1.56e-01
+        M4 |        1.80e-02 |         1.78e-01
+        M5 |        1.90e-02 |         1.64e-01
+        M6 |        1.19e-02 |         1.87e-01
+        M7 |        1.25e-02 |         1.63e-01
+        M8 |        8.45e-03 |         1.04e-01
+        M9 |        8.90e-03 |         9.28e-02
+       Pad |        0.00e+00 |         0.00e+00
+------------------------------------------------
+
+   Layer   | Via Resistance 
+           |         (kohm) 
+----------------------------
+        V1 |       1.72e-02 
+        V2 |       1.72e-02 
+        V3 |       1.72e-02 
+        V4 |       1.18e-02 
+        V5 |       1.18e-02 
+        V6 |       8.20e-03 
+        V7 |       8.20e-03 
+        V8 |       6.30e-03 
+        V9 |       6.30e-03 
+----------------------------
+Report metrics stage 2, floorplan final...
+
+==========================================================================
+floorplan final report_design_area
+--------------------------------------------------------------------------
+Design area 863557 um^2 90% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_1_floorplan.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_1_floorplan.sdc
+Elapsed time: 0:01.66[h:]min:sec. CPU time: user 1.68 sys 0.10 (107%). Peak memory: 235980KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_1_floorplan          .odb          1        2     1.07      230 b77a923be3
+2_1_floorplan          .sdc                                       bc1ca9fd8a
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_2_floorplan_macro macro_place
+Running macro_place.tcl, stage 2_2_floorplan_macro
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/macros/fakeram7_32768x39_cm64_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_1_floorplan.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+source /home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/bank_bist_wrap/macro_place.tcl
+macro_place.tcl: u_bank/u_mem/u_lane0 (fakeram7_32768x39_cm64_1w1r) at 24.05 6.05 R0 (row 0, column 0)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane0 placed. Bounding box (24.050um, 6.096um), (347.620um, 172.696um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane1 (fakeram7_32768x39_cm64_1w1r) at 367.62 6.05 R0 (row 0, column 1)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane1 placed. Bounding box (367.620um, 6.096um), (691.190um, 172.696um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane2 (fakeram7_32768x39_cm64_1w1r) at 711.1899999999999 6.05 R0 (row 0, column 2)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane2 placed. Bounding box (711.190um, 6.096um), (1034.760um, 172.696um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane3 (fakeram7_32768x39_cm64_1w1r) at 1054.76 6.05 R0 (row 0, column 3)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane3 placed. Bounding box (1054.760um, 6.096um), (1378.330um, 172.696um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane4 (fakeram7_32768x39_cm64_1w1r) at 24.05 176.65 R0 (row 1, column 0)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane4 placed. Bounding box (24.050um, 176.688um), (347.620um, 343.288um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane5 (fakeram7_32768x39_cm64_1w1r) at 367.62 176.65 R0 (row 1, column 1)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane5 placed. Bounding box (367.620um, 176.688um), (691.190um, 343.288um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane6 (fakeram7_32768x39_cm64_1w1r) at 711.1899999999999 176.65 R0 (row 1, column 2)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane6 placed. Bounding box (711.190um, 176.688um), (1034.760um, 343.288um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane7 (fakeram7_32768x39_cm64_1w1r) at 1054.76 176.65 R0 (row 1, column 3)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane7 placed. Bounding box (1054.760um, 176.688um), (1378.330um, 343.288um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane8 (fakeram7_32768x39_cm64_1w1r) at 24.05 347.25 R0 (row 2, column 0)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane8 placed. Bounding box (24.050um, 347.280um), (347.620um, 513.880um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane9 (fakeram7_32768x39_cm64_1w1r) at 367.62 347.25 R0 (row 2, column 1)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane9 placed. Bounding box (367.620um, 347.280um), (691.190um, 513.880um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane10 (fakeram7_32768x39_cm64_1w1r) at 711.1899999999999 347.25 R0 (row 2, column 2)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane10 placed. Bounding box (711.190um, 347.280um), (1034.760um, 513.880um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane11 (fakeram7_32768x39_cm64_1w1r) at 1054.76 347.25 R0 (row 2, column 3)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane11 placed. Bounding box (1054.760um, 347.280um), (1378.330um, 513.880um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane12 (fakeram7_32768x39_cm64_1w1r) at 24.05 517.8499999999999 R0 (row 3, column 0)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane12 placed. Bounding box (24.050um, 517.872um), (347.620um, 684.472um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane13 (fakeram7_32768x39_cm64_1w1r) at 367.62 517.8499999999999 R0 (row 3, column 1)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane13 placed. Bounding box (367.620um, 517.872um), (691.190um, 684.472um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane14 (fakeram7_32768x39_cm64_1w1r) at 711.1899999999999 517.8499999999999 R0 (row 3, column 2)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane14 placed. Bounding box (711.190um, 517.872um), (1034.760um, 684.472um). Orientation R0
+macro_place.tcl: u_bank/u_mem/u_lane15 (fakeram7_32768x39_cm64_1w1r) at 1054.76 517.8499999999999 R0 (row 3, column 3)
+[INFO MPL-0035] Macro u_bank/u_mem/u_lane15 placed. Bounding box (1054.760um, 517.872um), (1378.330um, 684.472um). Orientation R0
+rtl_macro_placer -max_num_level 2 -min_channel_size "20 20" -pin_aware_channels -min_ar 0.33 -area_weight 0.1 -wirelength_weight 100.0 -outline_weight 100.0 -boundary_weight 50.0 -notch_weight 50.0 -report_directory /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/objects/asap7/bank_bist_wrap/base/rtlmp -fence_lx 0.0 -fence_ly 0.0 -fence_ux 0.0 -fence_uy 0.0 -target_util 0.6
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane0.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane1.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane10.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane11.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane12.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane13.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane14.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane15.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane2.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane3.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane4.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane5.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane6.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane7.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane8.
+[INFO MPL-0062] Found fixed macro u_bank/u_mem/u_lane9.
+[INFO MPL-0017] No unfixed macros.
+[INFO MPL-0013] Skipping macro placement.
+[INFO MPL-0500] Runtime: 0.00s
+Design area 863557 um^2 90% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_2_floorplan_macro.odb
+Elapsed time: 0:01.00[h:]min:sec. CPU time: user 0.91 sys 0.08 (99%). Peak memory: 182536KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_2_floorplan_macro    .odb          1        1     0.99      178 38a6d98d8e
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_3_floorplan_tapcell tapcell
+Running tapcell.tcl, stage 2_3_floorplan_tapcell
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/macros/fakeram7_32768x39_cm64_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_2_floorplan_macro.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+Tap and End Cap cell insertion
+  TAP Cell          : TAPCELL_ASAP7_75t_R
+  ENDCAP Cell       : TAPCELL_ASAP7_75t_R
+  Halo Around Macro : 2 2
+  TAP Cell Distance : 25
+[INFO ODB-0303] The initial 2577 rows (66043356 sites) were cut with 16 shapes for a total of 12689 rows (4693852 sites).
+[INFO TAP-0004] Inserted 25378 endcaps.
+[INFO TAP-0005] Inserted 1402 tapcells.
+Design area 864338 um^2 90% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_3_floorplan_tapcell.odb
+Elapsed time: 0:01.05[h:]min:sec. CPU time: user 0.95 sys 0.09 (99%). Peak memory: 200392KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_3_floorplan_tapcell  .odb          1        1     0.99      195 9d336809ab
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_4_floorplan_pdn pdn
+Running pdn.tcl, stage 2_4_floorplan_pdn
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/macros/fakeram7_32768x39_cm64_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_3_floorplan_tapcell.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+[WARNING PDN-1051] No instances found for grid (CORE_macro_grid_2).
+[INFO PDN-0001] Inserting grid: top
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane0
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane1
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane10
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane11
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane12
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane13
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane14
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane15
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane2
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane3
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane4
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane5
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane6
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane7
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane8
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_bank/u_mem/u_lane9
+[INFO PDN-0500] Runtime: 4.45s
+Design area 864338 um^2 90% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_4_floorplan_pdn.odb
+Elapsed time: 0:05.76[h:]min:sec. CPU time: user 5.55 sys 0.20 (99%). Peak memory: 400932KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_4_floorplan_pdn      .odb          5        6     1.00      391 b9e2739426
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_4_floorplan_pdn.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_floorplan.odb
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_1_floorplan.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/2_floorplan.sdc

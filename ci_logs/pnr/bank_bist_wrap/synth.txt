@@ -1,0 +1,15 @@
+10:42:55 tools: {'yosys': 'Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)', 'sta': '3.1.0'}
+10:42:55 library asap7 SS, period 1250.0 ps, output /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out; macro model: FakeRAM2.0 7 nm (ORFS asap7/fakeram.cfg): 0.042 um2/bit, 218 ps access, 50 ps setup/hold
+10:42:55 units: ['sram_bank', 'mbist', 'bank_bist_wrap']
+10:42:55 mbist: yosys (mbist {'AW': 19, 'WORDS': 524288, 'LANES': 16})
+10:42:55 sram_bank: yosys (sram_bank {'DEPTH': 524288, 'LANES': 16, 'DV_HOOKS': 0})
+10:43:02 sram_bank: yosys done in 7 s: 3,745 cells, 534 um2
+10:43:02 bank_bist_wrap: yosys (bank_bist_wrap {'DEPTH': 524288, 'AW': 19, 'BIST_WORDS': 524288, 'LANES': 16, 'DV_HOOKS': 0})
+10:43:02 mbist: yosys done in 7 s: 955 cells, 114 um2
+10:43:03 bank_bist_wrap: yosys done in 1 s: 1,815 cells, 330 um2
+10:43:03 macros: ['neo_mem_sp_w624_d32768_g16']
+10:43:04 mbist: sta done in 1 s (exit 0; wns 273.06934600491013 ps, min period 976.9345746915329 ps)
+10:43:04 sram_bank: sta done in 1 s (exit 0; wns 205.802209430564 ps, min period 823.5943303766296 ps)
+10:43:05 bank_bist_wrap: sta done in 1 s (exit 0; wns 12.024825627763903 ps, min period 1237.9761565792244 ps)
+10:43:05 done in 10 s: /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/synth_results.json
+10:43:05 GATES: all passed (every unit synthesized, no latch, no multiply-driven net, the hierarchy consistent, the PE counts, DV_HOOKS = 0 clean, every clock gate mapped onto the library's ICG cell as declared, every timing run complete)

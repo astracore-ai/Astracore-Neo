@@ -1,0 +1,670 @@
+$ docker run --rm --init --name neo-pnr-bank_bist_wrap-cts-3370 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/bank_bist_wrap/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in cts
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth_canonicalize.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/logs/asap7/bank_bist_wrap/base/1_1_yosys_canonicalize.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_2_yosys.v
+Elapsed time: 0:00.03[h:]min:sec. CPU time: user 0.02 sys 0.01 (98%). Peak memory: 27660KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_1_yosys_canonicalize               0        0     1.00       27 N/A
+/OpenROAD-flow-scripts/flow/scripts/synth.sh /OpenROAD-flow-scripts/flow/scripts/synth.tcl /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/logs/asap7/bank_bist_wrap/base/1_2_yosys.log
+exec cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_2_yosys.v
+exec touch -r /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/1_netlist.v /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/1_2_yosys.v
+Elapsed time: 0:00.03[h:]min:sec. CPU time: user 0.01 sys 0.02 (98%). Peak memory: 27508KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+1_2_yosys              .v            0        0     1.00       26 d13d1a0d7e
+1_2_yosys              .sdc                                       171695955a
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 4_1_cts cts
+Running cts.tcl, stage 4_1_cts
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/in/macros/fakeram7_32768x39_cm64_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/3_place.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/3_place.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+[INFO CTS-0050] Root buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0051] Sink buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0052] The following clock buffers will be used for CTS:
+                    BUFx24_ASAP7_75t_R
+[INFO CTS-0049] Characterization buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0007] Net "clk" found for clock "clk".
+[INFO CTS-0011]  Clock net "clk" for macros has 16 sinks.
+[INFO CTS-0011]  Clock net "clk_regs" for registers has 644 sinks.
+[INFO CTS-0008] TritonCTS found 2 clock nets.
+[INFO CTS-0097] Characterization used 1 buffer(s) types.
+[INFO CTS-0201] 16 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk.
+[INFO CTS-0028]  Total number of sinks: 16.
+[INFO CTS-0029]  Macro  sinks will be clustered in groups of up to 4 and with maximum cluster diameter of 647.1 um.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 4 and clustering diameter of 647.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 4.
+[INFO CTS-0024]  Normalized sink region: [(145.072, 130.68), (654.064, 383.409)].
+[INFO CTS-0025]     Width:  508.9926.
+[INFO CTS-0026]     Height: 252.7289.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 2
+    Sub-region size: 254.4963 X 252.7289
+[INFO CTS-0034]     Segment length (rounded): 128.
+ Level 2
+    Direction: Vertical
+    Sinks per sub-region: 1
+    Sub-region size: 254.4963 X 126.3644
+[INFO CTS-0034]     Segment length (rounded): 64.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 4.
+[INFO CTS-0201] 16 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_regs.
+[INFO CTS-0028]  Total number of sinks: 644.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 132.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 58.
+[INFO CTS-0024]  Normalized sink region: [(14.9668, 25.3551), (770.542, 508.732)].
+[INFO CTS-0025]     Width:  755.5749.
+[INFO CTS-0026]     Height: 483.3767.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 29
+    Sub-region size: 377.7874 X 483.3767
+[INFO CTS-0034]     Segment length (rounded): 188.
+ Level 2
+    Direction: Vertical
+    Sinks per sub-region: 15
+    Sub-region size: 377.7874 X 241.6884
+[INFO CTS-0034]     Segment length (rounded): 120.
+ Level 3
+    Direction: Horizontal
+    Sinks per sub-region: 8
+    Sub-region size: 188.8937 X 241.6884
+[INFO CTS-0034]     Segment length (rounded): 94.
+ Level 4
+    Direction: Vertical
+    Sinks per sub-region: 4
+    Sub-region size: 188.8937 X 120.8442
+[INFO CTS-0034]     Segment length (rounded): 60.
+ Level 5
+    Direction: Horizontal
+    Sinks per sub-region: 2
+    Sub-region size: 94.4469 X 120.8442
+[INFO CTS-0034]     Segment length (rounded): 48.
+ Level 6
+    Direction: Vertical
+    Sinks per sub-region: 1
+    Sub-region size: 94.4469 X 60.4221
+[INFO CTS-0034]     Segment length (rounded): 30.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 58.
+[INFO CTS-0018]     Created 21 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 8.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 8.
+[INFO CTS-0015]     Created 21 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:4, 4:4..
+[INFO CTS-0017]     Max level of the clock tree: 2.
+[INFO CTS-0018]     Created 256 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 19.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 19.
+[INFO CTS-0015]     Created 256 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:49, 2:11, 3:7, 4:2, 5:4, 7:2, 8:2, 9:3, 10:1, 11:2, 12:1, 13:2, 14:6, 15:1, 16:1, 17:4, 18:5, 20:2, 21:1, 22:2, 24:1, 25:1, 28:1..
+[INFO CTS-0017]     Max level of the clock tree: 6.
+[INFO CTS-0098] Clock net "clk"
+[INFO CTS-0099]  Sinks 16
+[INFO CTS-0100]  Leaf buffers 4
+[INFO CTS-0101]  Average sink wire length 1643.43 um
+[INFO CTS-0102]  Path depth 8 - 8
+[INFO CTS-0207]  Dummy loads inserted 0
+[INFO CTS-0098] Clock net "clk_regs"
+[INFO CTS-0099]  Sinks 651
+[INFO CTS-0100]  Leaf buffers 58
+[INFO CTS-0101]  Average sink wire length 903.73 um
+[INFO CTS-0102]  Path depth 18 - 19
+[INFO CTS-0207]  Dummy loads inserted 7
+[INFO RSZ-0047] Found 32 long wires.
+[INFO RSZ-0048] Inserted 69 buffers in 32 nets.
+[INFO CTS-0033] Balancing latency for clock clk
+[INFO CTS-0036]  inserted 6 delay buffers
+[INFO CTS-0037] Total number of delay buffers: 6
+[INFO CTS-0500] Runtime: 0.57s
+estimate_parasitics -placement
+detailed_placement
+[INFO DPL-0006] Core area: 962912.13 um^2
+[INFO DPL-0007] Movable instances area: 1926.91 um^2
+[INFO DPL-0008] Fixed instances area within core: 863289.10 um^2
+[INFO DPL-0009] Utilization: 89.9%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (2 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 38604 cells
+[INFO DPL-0393]   height 618 row(s): 16 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |       1204 |       106 |      1098
+        1 |        539 |        47 |       492
+        2 |        369 |        33 |       336
+        3 |        262 |        20 |       242
+        4 |        219 |        17 |       202
+        5 |        164 |        16 |       148
+        6 |        135 |         9 |       126
+        7 |         78 |         8 |        70
+        8 |         30 |         4 |        26
+        9 |         18 |         2 |        16
+       10 |         31 |         5 |        26
+       20 |          6 |         2 |         4
+       21 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 21.
+[INFO DPL-0500] Runtime: 3.13s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                2625
+total displacement      16987.0 u
+average displacement        0.4 u
+max displacement          164.1 u
+original HPWL          432732.3 u
+legalized HPWL         435094.2 u
+delta HPWL                    1 %
+
+estimate_parasitics -placement
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove BufferMove CloneMove SplitLoadMove 
+[INFO RSZ-0094] Found 1165 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 1165 out of 1165 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -2377.740 | -1281644.5 |   1165 | u_bist/mism_q_reg/D
+      10* |       0 |       5 |        2 |      0 |     2 |    +0.0% | -2324.283 | -1266309.0 |   1165 | rdata[215]
+      20* |       0 |      15 |        2 |      0 |     2 |    +0.0% | -2306.446 | -1266019.9 |   1165 | rdata[217]
+      30* |       0 |      25 |        2 |      0 |     2 |    +0.0% | -2279.062 | -1265799.4 |   1165 | rdata[213]
+      40* |       0 |      35 |        2 |      0 |     2 |    +0.0% | -2272.218 | -1265430.0 |   1165 | rdata[218]
+      50* |       0 |      41 |        5 |      0 |     5 |    +0.0% | -2260.715 | -1264793.5 |   1165 | u_bist/mism_q_reg/D
+      60* |       3 |      47 |        6 |      0 |     5 |    +0.0% | -2299.061 | -1264763.2 |   1165 | u_bist/mism_q_reg/D
+      70* |      10 |      49 |        7 |      0 |     5 |    -0.0% | -2559.915 | -1265388.8 |   1165 | u_bist/mism_q_reg/D
+      80* |      14 |      50 |       13 |      0 |     5 |    -0.0% | -2563.828 | -1265416.1 |   1165 | u_bist/mism_q_reg/D
+      90* |      19 |      50 |       18 |      0 |     5 |    -0.0% | -2563.828 | -1265416.1 |   1165 | u_bist/mism_q_reg/D
+     100* |      24 |      50 |       23 |      0 |     5 |    -0.0% | -2563.828 | -1265416.1 |   1165 | u_bist/mism_q_reg/D
+     106* |       1 |      45 |        6 |      0 |     5 |    +0.0% | -2258.746 | -1264659.9 |   1165 | u_bist/mism_q_reg/D
+     110* |       1 |      45 |        7 |      0 |     7 |    +0.0% | -2258.746 | -1264434.2 |   1165 | u_bist/mism_q_reg/D
+     120* |       1 |      46 |       11 |      1 |    11 |    +0.0% | -2258.746 | -1264233.6 |   1165 | u_bist/mism_q_reg/D
+     130* |       1 |      49 |       13 |      1 |    16 |    +0.0% | -2258.746 | -1264066.0 |   1165 | u_bist/mism_q_reg/D
+     140* |       1 |      49 |       18 |      1 |    21 |    +0.0% | -2258.746 | -1263874.6 |   1165 | u_bist/mism_q_reg/D
+     141* |       1 |      49 |       19 |      1 |    21 |    +0.0% | -2258.746 | -1263854.5 |   1165 | u_bist/mism_q_reg/D
+     143* |       1 |      49 |       19 |      1 |    21 |    +0.0% | -2258.746 | -1263854.5 |   1165 | u_bist/mism_q_reg/D
+     147* |       1 |      50 |       20 |      1 |    22 |    +0.0% | -2258.746 | -1263907.0 |   1165 | u_bist/mism_q_reg/D
+     150* |       1 |      51 |       20 |      1 |    23 |    +0.0% | -2258.746 | -1263911.4 |   1165 | u_bist/mism_q_reg/D
+     150* |       1 |      51 |       20 |      1 |    23 |    +0.0% | -2258.746 | -1263911.4 |   1165 | u_bist/mism_q_reg/D
+     153* |       1 |      52 |       20 |      1 |    24 |    +0.0% | -2258.746 | -1263935.1 |   1165 | u_bist/mism_q_reg/D
+     156* |       1 |      53 |       20 |      1 |    25 |    +0.0% | -2258.746 | -1263942.1 |   1165 | u_bist/mism_q_reg/D
+     159* |       1 |      54 |       20 |      1 |    26 |    +0.0% | -2258.746 | -1263949.1 |   1165 | u_bist/mism_q_reg/D
+     160* |       1 |      54 |       20 |      1 |    26 |    +0.0% | -2258.746 | -1263949.1 |   1165 | u_bist/mism_q_reg/D
+     166* |       1 |      58 |       21 |      1 |    27 |    +0.0% | -2258.746 | -1263943.4 |   1165 | u_bist/mism_q_reg/D
+     170* |       1 |      58 |       24 |      1 |    28 |    +0.0% | -2258.746 | -1263872.8 |   1165 | u_bist/mism_q_reg/D
+     180* |       1 |      61 |       27 |      1 |    32 |    +0.0% | -2258.746 | -1263329.5 |   1165 | u_bist/mism_q_reg/D
+     190* |       1 |      65 |       29 |      2 |    35 |    +0.0% | -2258.746 | -1263276.5 |   1165 | u_bist/mism_q_reg/D
+     200* |       1 |      66 |       32 |      2 |    41 |    +0.0% | -2258.746 | -1263197.4 |   1165 | u_bist/mism_q_reg/D
+     210* |       1 |      66 |       39 |      2 |    44 |    +0.0% | -2258.746 | -1263163.0 |   1165 | u_bist/mism_q_reg/D
+     217* |       1 |      66 |       43 |      2 |    47 |    +0.0% | -2258.746 | -1263056.8 |   1165 | u_bist/mism_q_reg/D
+     220* |       1 |      68 |       43 |      2 |    47 |    +0.0% | -2258.746 | -1263050.5 |   1165 | u_bist/mism_q_reg/D
+     225* |       1 |      70 |       43 |      2 |    48 |    +0.0% | -2258.746 | -1263045.8 |   1165 | u_bist/mism_q_reg/D
+     230* |       1 |      74 |       43 |      2 |    48 |    +0.0% | -2258.746 | -1263033.5 |   1165 | u_bist/mism_q_reg/D
+     232* |       1 |      74 |       43 |      2 |    48 |    +0.0% | -2258.746 | -1263033.5 |   1165 | u_bist/mism_q_reg/D
+     239* |       1 |      78 |       43 |      2 |    49 |    +0.0% | -2258.746 | -1263021.9 |   1165 | u_bist/mism_q_reg/D
+     240* |       1 |      78 |       43 |      2 |    49 |    +0.0% | -2258.746 | -1263021.9 |   1165 | u_bist/mism_q_reg/D
+     249* |       1 |      84 |       43 |      2 |    51 |    +0.0% | -2258.746 | -1262879.9 |   1165 | u_bist/mism_q_reg/D
+     250* |       1 |      84 |       43 |      2 |    51 |    +0.0% | -2258.746 | -1262879.9 |   1165 | u_bist/mism_q_reg/D
+     258* |       1 |      89 |       44 |      2 |    53 |    +0.0% | -2258.746 | -1262859.4 |   1165 | u_bist/mism_q_reg/D
+     260* |       1 |      90 |       44 |      2 |    53 |    +0.0% | -2258.746 | -1262852.2 |   1165 | u_bist/mism_q_reg/D
+     266* |       1 |      94 |       44 |      2 |    53 |    +0.0% | -2258.746 | -1262840.6 |   1165 | u_bist/mism_q_reg/D
+     270* |       1 |      97 |       44 |      2 |    53 |    +0.0% | -2258.746 | -1262812.1 |   1165 | u_bist/mism_q_reg/D
+     273* |       1 |      98 |       45 |      2 |    53 |    +0.0% | -2258.746 | -1262812.0 |   1165 | u_bist/mism_q_reg/D
+     280* |       1 |     103 |       45 |      2 |    54 |    +0.0% | -2258.746 | -1262792.9 |   1165 | u_bist/mism_q_reg/D
+     281* |       1 |     103 |       45 |      2 |    54 |    +0.0% | -2258.746 | -1262792.9 |   1165 | u_bist/mism_q_reg/D
+     289* |       1 |     108 |       45 |      2 |    54 |    +0.0% | -2258.746 | -1262773.1 |   1165 | u_bist/mism_q_reg/D
+     290* |       1 |     108 |       45 |      2 |    54 |    +0.0% | -2258.746 | -1262773.1 |   1165 | u_bist/mism_q_reg/D
+     296* |       1 |     112 |       45 |      2 |    55 |    +0.0% | -2258.746 | -1262744.2 |   1165 | u_bist/mism_q_reg/D
+     300* |       1 |     115 |       45 |      2 |    55 |    +0.0% | -2258.746 | -1262731.2 |   1165 | u_bist/mism_q_reg/D
+     304* |       1 |     117 |       45 |      2 |    57 |    +0.0% | -2258.746 | -1262725.5 |   1165 | u_bist/mism_q_reg/D
+     310* |       1 |     121 |       46 |      2 |    57 |    +0.0% | -2258.746 | -1262887.8 |   1165 | u_bist/mism_q_reg/D
+     314* |       1 |     118 |       45 |      2 |    57 |    +0.0% | -2258.746 | -1262718.8 |   1165 | u_bist/mism_q_reg/D
+     320* |       1 |     121 |       46 |      2 |    58 |    +0.0% | -2258.746 | -1262727.5 |   1165 | u_bist/mism_q_reg/D
+     320* |       1 |     121 |       45 |      2 |    58 |    +0.0% | -2258.746 | -1262711.4 |   1165 | u_bist/mism_q_reg/D
+     328* |       1 |     124 |       47 |      2 |    59 |    +0.0% | -2258.746 | -1262716.8 |   1165 | u_bist/mism_q_reg/D
+     330* |       1 |     125 |       47 |      2 |    59 |    +0.0% | -2258.746 | -1262699.9 |   1165 | u_bist/mism_q_reg/D
+     336* |       1 |     129 |       47 |      2 |    60 |    +0.0% | -2258.746 | -1262665.4 |   1165 | u_bist/mism_q_reg/D
+     340* |       1 |     132 |       47 |      2 |    60 |    +0.0% | -2258.746 | -1262640.2 |   1165 | u_bist/mism_q_reg/D
+     346* |       1 |     134 |       50 |      2 |    62 |    +0.0% | -2258.746 | -1262627.1 |   1165 | u_bist/mism_q_reg/D
+     350* |       1 |     137 |       50 |      2 |    62 |    +0.0% | -2258.746 | -1262601.4 |   1165 | u_bist/mism_q_reg/D
+     354* |       1 |     138 |       51 |      2 |    63 |    +0.0% | -2258.746 | -1262608.2 |   1165 | u_bist/mism_q_reg/D
+     360* |       1 |     142 |       51 |      2 |    64 |    +0.0% | -2258.746 | -1262591.4 |   1165 | u_bist/mism_q_reg/D
+     364* |       1 |     142 |       51 |      2 |    64 |    +0.0% | -2258.746 | -1262591.4 |   1165 | u_bist/mism_q_reg/D
+     370* |       1 |     145 |       52 |      2 |    65 |    +0.0% | -2258.746 | -1262564.9 |   1165 | u_bist/mism_q_reg/D
+     375* |       1 |     149 |       52 |      2 |    66 |    +0.0% | -2258.746 | -1262522.6 |   1165 | u_bist/mism_q_reg/D
+     380* |       1 |     152 |       52 |      2 |    67 |    +0.0% | -2258.746 | -1262498.1 |   1165 | u_bist/mism_q_reg/D
+     382* |       1 |     153 |       52 |      2 |    68 |    +0.0% | -2258.746 | -1262496.4 |   1165 | u_bist/mism_q_reg/D
+     390* |       1 |     157 |       54 |      2 |    69 |    +0.0% | -2258.746 | -1262489.5 |   1165 | u_bist/mism_q_reg/D
+     390* |       1 |     157 |       53 |      2 |    69 |    +0.0% | -2258.746 | -1262470.6 |   1165 | u_bist/mism_q_reg/D
+     400* |       1 |     163 |       55 |      2 |    70 |    +0.0% | -2258.746 | -1262487.0 |   1165 | u_bist/mism_q_reg/D
+     402* |       1 |     160 |       54 |      2 |    70 |    +0.0% | -2258.746 | -1262443.2 |   1165 | u_bist/mism_q_reg/D
+     410* |       1 |     165 |       54 |      2 |    72 |    +0.0% | -2258.746 | -1262315.4 |   1165 | u_bist/mism_q_reg/D
+     419* |       1 |     166 |       54 |      2 |    72 |    +0.0% | -2258.746 | -1262286.9 |   1165 | u_bist/mism_q_reg/D
+     420* |       1 |     166 |       54 |      2 |    72 |    +0.0% | -2258.746 | -1262286.9 |   1165 | u_bist/mism_q_reg/D
+     430* |       1 |     172 |       56 |      2 |    74 |    +0.0% | -2258.746 | -1262439.9 |   1165 | u_bist/mism_q_reg/D
+     433* |       1 |     169 |       55 |      2 |    73 |    +0.0% | -2258.746 | -1262269.0 |   1165 | u_bist/mism_q_reg/D
+     440* |       1 |     172 |       57 |      2 |    74 |    +0.0% | -2258.746 | -1262516.0 |   1165 | u_bist/mism_q_reg/D
+     447* |       1 |     172 |       56 |      2 |    74 |    +0.0% | -2258.746 | -1262251.8 |   1165 | u_bist/mism_q_reg/D
+     450* |       1 |     174 |       56 |      2 |    74 |    +0.0% | -2258.746 | -1262239.2 |   1165 | u_bist/mism_q_reg/D
+     460* |       1 |     180 |       57 |      3 |    76 |    +0.0% | -2258.746 | -1262434.9 |   1165 | u_bist/mism_q_reg/D
+     460* |       1 |     175 |       56 |      2 |    75 |    +0.0% | -2258.746 | -1262236.4 |   1165 | u_bist/mism_q_reg/D
+     470* |       1 |     181 |       58 |      2 |    76 |    +0.0% | -2258.746 | -1262391.0 |   1165 | u_bist/mism_q_reg/D
+     474* |       1 |     178 |       57 |      2 |    76 |    +0.0% | -2258.746 | -1262219.5 |   1165 | u_bist/mism_q_reg/D
+     480* |       1 |     181 |       58 |      2 |    77 |    +0.0% | -2258.746 | -1262468.9 |   1165 | u_bist/mism_q_reg/D
+     487* |       1 |     181 |       57 |      2 |    77 |    +0.0% | -2258.746 | -1262204.8 |   1165 | u_bist/mism_q_reg/D
+     490* |       1 |     183 |       57 |      2 |    77 |    +0.0% | -2258.746 | -1262193.0 |   1165 | u_bist/mism_q_reg/D
+     500* |       1 |     189 |       59 |      3 |    78 |    +0.0% | -2258.746 | -1262385.2 |   1165 | u_bist/mism_q_reg/D
+     501* |       1 |     184 |       58 |      2 |    78 |    +0.0% | -2258.746 | -1262187.9 |   1165 | u_bist/mism_q_reg/D
+     510* |       1 |     190 |       59 |      2 |    79 |    +0.0% | -2258.746 | -1262345.4 |   1165 | u_bist/mism_q_reg/D
+     514* |       1 |     187 |       58 |      2 |    79 |    +0.0% | -2258.746 | -1262173.8 |   1165 | u_bist/mism_q_reg/D
+     520* |       1 |     190 |       59 |      2 |    80 |    +0.0% | -2258.746 | -1262424.1 |   1165 | u_bist/mism_q_reg/D
+     525* |       1 |     190 |       58 |      2 |    80 |    +0.0% | -2258.746 | -1262159.9 |   1165 | u_bist/mism_q_reg/D
+     530* |       1 |     193 |       58 |      2 |    81 |    +0.0% | -2258.746 | -1262143.4 |   1165 | u_bist/mism_q_reg/D
+     539* |       1 |     193 |       58 |      2 |    81 |    +0.0% | -2258.746 | -1262143.4 |   1165 | u_bist/mism_q_reg/D
+     540* |       1 |     193 |       58 |      2 |    81 |    +0.0% | -2258.746 | -1262143.4 |   1165 | u_bist/mism_q_reg/D
+     550* |       1 |     201 |       58 |      2 |    83 |    +0.0% | -2258.746 | -1262093.9 |   1165 | u_bist/mism_q_reg/D
+     555* |       1 |     201 |       58 |      2 |    84 |    +0.0% | -2258.746 | -1262081.9 |   1165 | u_bist/mism_q_reg/D
+     560* |       1 |     205 |       58 |      2 |    84 |    +0.0% | -2258.746 | -1261956.8 |   1165 | u_bist/mism_q_reg/D
+     565* |       1 |     206 |       58 |      2 |    85 |    +0.0% | -2258.746 | -1261954.0 |   1165 | u_bist/mism_q_reg/D
+     570* |       1 |     209 |       58 |      2 |    86 |    +0.0% | -2258.746 | -1261939.4 |   1165 | u_bist/mism_q_reg/D
+     572* |       1 |     209 |       58 |      2 |    86 |    +0.0% | -2258.746 | -1261939.4 |   1165 | u_bist/mism_q_reg/D
+     580* |       1 |     213 |       60 |      2 |    87 |    +0.0% | -2258.746 | -1262283.1 |   1165 | u_bist/mism_q_reg/D
+     582* |       1 |     213 |       59 |      2 |    87 |    +0.0% | -2258.746 | -1261880.9 |   1165 | u_bist/mism_q_reg/D
+     590* |       1 |     217 |       61 |      2 |    88 |    +0.0% | -2258.746 | -1261897.5 |   1165 | u_bist/mism_q_reg/D
+     591* |       1 |     216 |       60 |      2 |    88 |    +0.0% | -2258.746 | -1261855.4 |   1165 | u_bist/mism_q_reg/D
+     599* |       1 |     219 |       60 |      2 |    89 |    +0.0% | -2258.746 | -1261840.6 |   1165 | u_bist/mism_q_reg/D
+     600* |       1 |     219 |       60 |      2 |    89 |    +0.0% | -2258.746 | -1261840.6 |   1165 | u_bist/mism_q_reg/D
+     608* |       1 |     222 |       60 |      2 |    89 |    +0.0% | -2258.746 | -1261815.8 |   1165 | u_bist/mism_q_reg/D
+     610* |       1 |     223 |       60 |      2 |    89 |    +0.0% | -2258.746 | -1261807.0 |   1165 | u_bist/mism_q_reg/D
+     616* |       1 |     225 |       60 |      2 |    90 |    +0.0% | -2258.746 | -1261801.5 |   1165 | u_bist/mism_q_reg/D
+     620* |       1 |     228 |       60 |      2 |    90 |    +0.0% | -2258.746 | -1261776.6 |   1165 | u_bist/mism_q_reg/D
+     626* |       1 |     228 |       61 |      2 |    91 |    +0.0% | -2258.746 | -1261775.5 |   1165 | u_bist/mism_q_reg/D
+     630* |       1 |     230 |       61 |      2 |    92 |    +0.0% | -2258.746 | -1261765.2 |   1165 | u_bist/mism_q_reg/D
+     634* |       1 |     231 |       63 |      2 |    93 |    +0.0% | -2258.746 | -1262330.4 |   1165 | u_bist/mism_q_reg/D
+     640* |       1 |     234 |       63 |      2 |    95 |    +0.0% | -2258.746 | -1262313.9 |   1165 | u_bist/mism_q_reg/D
+     640* |       1 |     234 |       63 |      2 |    95 |    +0.0% | -2258.746 | -1262313.9 |   1165 | u_bist/mism_q_reg/D
+     647* |       1 |     237 |       64 |      2 |    97 |    +0.0% | -2258.746 | -1262295.4 |   1165 | u_bist/mism_q_reg/D
+     650* |       1 |     238 |       64 |      2 |    98 |    +0.0% | -2258.746 | -1262288.5 |   1165 | u_bist/mism_q_reg/D
+     654* |       1 |     240 |       65 |      2 |    99 |    +0.0% | -2258.746 | -1262276.1 |   1165 | u_bist/mism_q_reg/D
+     660* |       1 |     243 |       66 |      2 |   100 |    +0.0% | -2258.746 | -1262243.8 |   1165 | u_bist/mism_q_reg/D
+     666* |       1 |     247 |       67 |      2 |   100 |    +0.0% | -2258.746 | -1262282.4 |   1165 | u_bist/mism_q_reg/D
+     670* |       1 |     249 |       67 |      2 |   101 |    +0.0% | -2258.746 | -1262265.2 |   1165 | u_bist/mism_q_reg/D
+     674* |       1 |     251 |       68 |      2 |   101 |    +0.0% | -2258.746 | -1262257.0 |   1165 | u_bist/mism_q_reg/D
+     680* |       1 |     254 |       69 |      2 |   102 |    +0.0% | -2258.746 | -1262231.4 |   1165 | u_bist/mism_q_reg/D
+     684* |       1 |     255 |       69 |      2 |   102 |    +0.0% | -2258.746 | -1262237.0 |   1165 | u_bist/mism_q_reg/D
+     690* |       1 |     258 |       70 |      2 |   103 |    +0.0% | -2258.746 | -1262218.6 |   1165 | u_bist/mism_q_reg/D
+     691* |       1 |     258 |       70 |      2 |   103 |    +0.0% | -2258.746 | -1262218.6 |   1165 | u_bist/mism_q_reg/D
+     700* |       1 |     266 |       70 |      2 |   103 |    +0.0% | -2258.746 | -1262060.5 |   1165 | u_bist/mism_q_reg/D
+     710* |       1 |     271 |       71 |      3 |   106 |    +0.0% | -2258.746 | -1261978.2 |   1165 | u_bist/mism_q_reg/D
+     720* |       2 |     271 |       74 |      3 |   112 |    +0.0% | -2258.746 | -1261466.2 |   1165 | u_bist/mism_q_reg/D
+     725* |       2 |     271 |       76 |      3 |   115 |    +0.0% | -2258.746 | -1261519.5 |   1165 | u_bist/mism_q_reg/D
+     730* |       2 |     274 |       76 |      3 |   116 |    +0.0% | -2258.746 | -1261505.8 |   1165 | u_bist/mism_q_reg/D
+     732* |       2 |     275 |       76 |      3 |   116 |    +0.0% | -2258.746 | -1261449.1 |   1165 | u_bist/mism_q_reg/D
+     740* |       2 |     282 |       76 |      3 |   116 |    +0.0% | -2258.746 | -1261405.6 |   1165 | u_bist/mism_q_reg/D
+     743* |       2 |     282 |       76 |      3 |   116 |    +0.0% | -2258.746 | -1261405.6 |   1165 | u_bist/mism_q_reg/D
+     750* |       2 |     288 |       76 |      3 |   116 |    +0.0% | -2258.746 | -1261372.2 |   1165 | u_bist/mism_q_reg/D
+     755* |       2 |     289 |       77 |      3 |   117 |    +0.0% | -2258.746 | -1261360.0 |   1165 | u_bist/mism_q_reg/D
+     760* |       2 |     293 |       77 |      3 |   117 |    +0.0% | -2258.746 | -1261325.4 |   1165 | u_bist/mism_q_reg/D
+     769* |       2 |     296 |       77 |      3 |   117 |    +0.0% | -2258.746 | -1261316.5 |   1165 | u_bist/mism_q_reg/D
+     770* |       2 |     296 |       77 |      3 |   117 |    +0.0% | -2258.746 | -1261316.5 |   1165 | u_bist/mism_q_reg/D
+     780* |       2 |     304 |       78 |      3 |   118 |    +0.0% | -2258.746 | -1261394.2 |   1165 | u_bist/mism_q_reg/D
+     784* |       2 |     303 |       77 |      3 |   117 |    +0.0% | -2258.746 | -1261273.9 |   1165 | u_bist/mism_q_reg/D
+     790* |       2 |     308 |       77 |      3 |   117 |    +0.0% | -2258.746 | -1261248.5 |   1165 | u_bist/mism_q_reg/D
+     795* |       2 |     310 |       77 |      3 |   117 |    +0.0% | -2258.746 | -1261230.5 |   1165 | u_bist/mism_q_reg/D
+     800* |       2 |     314 |       77 |      3 |   117 |    +0.0% | -2258.746 | -1261195.4 |   1165 | u_bist/mism_q_reg/D
+     807* |       2 |     317 |       78 |      3 |   118 |    +0.0% | -2258.746 | -1261184.6 |   1165 | u_bist/mism_q_reg/D
+     810* |       2 |     319 |       78 |      3 |   118 |    +0.0% | -2258.746 | -1261166.6 |   1165 | u_bist/mism_q_reg/D
+     820* |       2 |     325 |       80 |      3 |   120 |    +0.0% | -2258.746 | -1261216.8 |   1165 | u_bist/mism_q_reg/D
+     822* |       2 |     324 |       79 |      3 |   119 |    +0.0% | -2258.746 | -1261138.8 |   1165 | u_bist/mism_q_reg/D
+     830* |       2 |     331 |       79 |      3 |   119 |    +0.0% | -2258.746 | -1261095.9 |   1165 | u_bist/mism_q_reg/D
+     837* |       2 |     331 |       79 |      3 |   119 |    +0.0% | -2258.746 | -1261095.9 |   1165 | u_bist/mism_q_reg/D
+     840* |       2 |     333 |       79 |      3 |   119 |    +0.0% | -2258.746 | -1261077.2 |   1165 | u_bist/mism_q_reg/D
+     850* |       2 |     336 |       84 |      3 |   121 |    +0.0% | -2258.746 | -1261097.9 |   1165 | u_bist/mism_q_reg/D
+     852* |       2 |     335 |       82 |      3 |   121 |    +0.0% | -2258.746 | -1261136.0 |   1165 | u_bist/mism_q_reg/D
+     860* |       2 |     340 |       83 |      3 |   122 |    +0.0% | -2258.746 | -1261090.5 |   1165 | u_bist/mism_q_reg/D
+     865* |       2 |     340 |       83 |      3 |   122 |    +0.0% | -2258.746 | -1261090.5 |   1165 | u_bist/mism_q_reg/D
+     870* |       2 |     344 |       83 |      3 |   122 |    +0.0% | -2258.746 | -1261053.1 |   1165 | u_bist/mism_q_reg/D
+     879* |       2 |     347 |       83 |      3 |   122 |    +0.0% | -2258.746 | -1261042.5 |   1165 | u_bist/mism_q_reg/D
+     880* |       2 |     347 |       83 |      3 |   122 |    +0.0% | -2258.746 | -1261042.5 |   1165 | u_bist/mism_q_reg/D
+     890* |       2 |     352 |       86 |      3 |   124 |    +0.0% | -2258.746 | -1261012.4 |   1165 | u_bist/mism_q_reg/D
+     891* |       2 |     350 |       84 |      3 |   123 |    +0.0% | -2258.746 | -1261009.9 |   1165 | u_bist/mism_q_reg/D
+     900* |       2 |     354 |       86 |      3 |   125 |    +0.0% | -2258.746 | -1260928.8 |   1165 | u_bist/mism_q_reg/D
+     906* |       2 |     354 |       85 |      3 |   124 |    +0.0% | -2258.746 | -1260970.8 |   1165 | u_bist/mism_q_reg/D
+     910* |       2 |     357 |       85 |      3 |   124 |    +0.0% | -2258.746 | -1260951.9 |   1165 | u_bist/mism_q_reg/D
+     920* |       2 |     363 |       87 |      3 |   126 |    +0.0% | -2258.746 | -1260888.6 |   1165 | u_bist/mism_q_reg/D
+     929* |       3 |     366 |       89 |      4 |   128 |    +0.0% | -2258.746 | -1260916.1 |   1165 | u_bist/mism_q_reg/D
+     930* |       3 |     366 |       89 |      4 |   128 |    +0.0% | -2258.746 | -1260916.1 |   1165 | u_bist/mism_q_reg/D
+     940* |       3 |     374 |       89 |      4 |   130 |    +0.0% | -2258.746 | -1260868.0 |   1165 | u_bist/mism_q_reg/D
+     940* |       3 |     373 |       89 |      4 |   128 |    +0.0% | -2258.746 | -1260867.4 |   1165 | u_bist/mism_q_reg/D
+     950* |       3 |     381 |       89 |      4 |   129 |    +0.0% | -2258.746 | -1260821.4 |   1165 | u_bist/mism_q_reg/D
+     951* |       3 |     380 |       89 |      4 |   128 |    +0.0% | -2258.746 | -1260817.8 |   1165 | u_bist/mism_q_reg/D
+     960* |       3 |     387 |       89 |      4 |   129 |    +0.0% | -2258.746 | -1260771.4 |   1165 | u_bist/mism_q_reg/D
+     967* |       3 |     387 |       90 |      4 |   129 |    +0.0% | -2258.746 | -1260768.1 |   1165 | u_bist/mism_q_reg/D
+     970* |       3 |     389 |       90 |      4 |   129 |    +0.0% | -2258.746 | -1260750.1 |   1165 | u_bist/mism_q_reg/D
+     980* |       3 |     395 |       92 |      4 |   131 |    +0.0% | -2258.746 | -1260846.4 |   1165 | u_bist/mism_q_reg/D
+     983* |       3 |     394 |       91 |      4 |   130 |    +0.0% | -2258.746 | -1260718.1 |   1165 | u_bist/mism_q_reg/D
+     990* |       3 |     400 |       91 |      4 |   130 |    +0.0% | -2258.746 | -1260678.2 |   1165 | u_bist/mism_q_reg/D
+     999* |       3 |     401 |       92 |      4 |   131 |    +0.0% | -2258.746 | -1260668.6 |   1165 | u_bist/mism_q_reg/D
+    1000* |       3 |     401 |       92 |      4 |   131 |    +0.0% | -2258.746 | -1260668.6 |   1165 | u_bist/mism_q_reg/D
+    1009* |       3 |     404 |       93 |      4 |   133 |    +0.0% | -2258.746 | -1260648.2 |   1165 | u_bist/mism_q_reg/D
+    1010* |       3 |     404 |       93 |      4 |   133 |    +0.0% | -2258.746 | -1260648.2 |   1165 | u_bist/mism_q_reg/D
+    1020* |       3 |     412 |       93 |      4 |   135 |    +0.0% | -2258.746 | -1260601.5 |   1165 | u_bist/mism_q_reg/D
+    1020* |       3 |     411 |       93 |      4 |   133 |    +0.0% | -2258.746 | -1260598.9 |   1165 | u_bist/mism_q_reg/D
+    1030* |       3 |     418 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260548.8 |   1165 | u_bist/mism_q_reg/D
+    1036* |       3 |     418 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260548.8 |   1165 | u_bist/mism_q_reg/D
+    1040* |       3 |     421 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260528.4 |   1165 | u_bist/mism_q_reg/D
+    1050* |       3 |     428 |       95 |      4 |   136 |    +0.0% | -2258.746 | -1260604.8 |   1165 | u_bist/mism_q_reg/D
+    1051* |       3 |     425 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260499.2 |   1165 | u_bist/mism_q_reg/D
+    1060* |       3 |     432 |       94 |      4 |   135 |    +0.0% | -2258.746 | -1260451.6 |   1165 | u_bist/mism_q_reg/D
+    1067* |       3 |     432 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260449.9 |   1165 | u_bist/mism_q_reg/D
+    1070* |       3 |     434 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260434.2 |   1165 | u_bist/mism_q_reg/D
+    1080* |       3 |     442 |       94 |      4 |   136 |    +0.0% | -2258.746 | -1260511.0 |   1165 | u_bist/mism_q_reg/D
+    1084* |       3 |     440 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260511.0 |   1165 | u_bist/mism_q_reg/D
+    1090* |       3 |     445 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260490.2 |   1165 | u_bist/mism_q_reg/D
+    1099* |       3 |     447 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260472.6 |   1165 | u_bist/mism_q_reg/D
+    1100* |       3 |     447 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260472.6 |   1165 | u_bist/mism_q_reg/D
+    1100* |       3 |     447 |       94 |      4 |   134 |    +0.0% | -2258.746 | -1260472.6 |   1165 | u_bist/mism_q_reg/D
+    1110* |       3 |     455 |       94 |      4 |   135 |    +0.0% | -2258.746 | -1260420.5 |   1165 | u_bist/mism_q_reg/D
+    1117* |       3 |     455 |       95 |      4 |   135 |    +0.0% | -2258.746 | -1260417.9 |   1165 | u_bist/mism_q_reg/D
+    1120* |       3 |     457 |       95 |      4 |   135 |    +0.0% | -2258.746 | -1260399.8 |   1165 | u_bist/mism_q_reg/D
+    1130* |       3 |     465 |       96 |      4 |   136 |    +0.0% | -2258.746 | -1260366.0 |   1165 | u_bist/mism_q_reg/D
+    1136* |       3 |     465 |       96 |      4 |   136 |    +0.0% | -2258.746 | -1260366.0 |   1165 | u_bist/mism_q_reg/D
+    1140* |       3 |     468 |       96 |      4 |   136 |    +0.0% | -2258.746 | -1260346.0 |   1165 | u_bist/mism_q_reg/D
+    1150* |       3 |     474 |       99 |      4 |   137 |    +0.0% | -2258.746 | -1260249.0 |   1165 | u_bist/mism_q_reg/D
+    1154* |       3 |     472 |       97 |      4 |   137 |    +0.0% | -2258.746 | -1260315.9 |   1165 | u_bist/mism_q_reg/D
+    1160* |       3 |     477 |       97 |      4 |   137 |    +0.0% | -2258.746 | -1260263.0 |   1165 | u_bist/mism_q_reg/D
+    1170* |       3 |     481 |      101 |      4 |   140 |    +0.0% | -2258.746 | -1260333.2 |   1165 | u_bist/mism_q_reg/D
+    1179* |       4 |     482 |      105 |      4 |   143 |    +0.0% | -2258.746 | -1260003.9 |   1165 | u_bist/mism_q_reg/D
+    1180* |       4 |     482 |      105 |      4 |   143 |    +0.0% | -2258.746 | -1260003.9 |   1165 | u_bist/mism_q_reg/D
+    1190* |       4 |     490 |      106 |      4 |   144 |    +0.0% | -2258.746 | -1260166.6 |   1165 | u_bist/mism_q_reg/D
+    1199* |       4 |     495 |      107 |      4 |   147 |    +0.0% | -2258.746 | -1260165.0 |   1165 | u_bist/mism_q_reg/D
+    1200* |       4 |     495 |      107 |      4 |   147 |    +0.0% | -2258.746 | -1260165.0 |   1165 | u_bist/mism_q_reg/D
+    1210* |       4 |     503 |      108 |      4 |   148 |    +0.0% | -2258.746 | -1260126.2 |   1165 | u_bist/mism_q_reg/D
+    1210* |       4 |     502 |      108 |      4 |   148 |    +0.0% | -2258.746 | -1260122.9 |   1165 | u_bist/mism_q_reg/D
+    1220* |       4 |     510 |      108 |      4 |   149 |    +0.0% | -2258.746 | -1260085.9 |   1165 | u_bist/mism_q_reg/D
+    1225* |       4 |     509 |      108 |      4 |   149 |    +0.0% | -2258.746 | -1260082.8 |   1165 | u_bist/mism_q_reg/D
+    1230* |       4 |     513 |      108 |      4 |   149 |    +0.0% | -2258.746 | -1260046.0 |   1165 | u_bist/mism_q_reg/D
+    1240* |       4 |     519 |      110 |      4 |   151 |    +0.0% | -2258.746 | -1260134.6 |   1165 | u_bist/mism_q_reg/D
+    1242* |       4 |     518 |      109 |      4 |   150 |    +0.0% | -2258.746 | -1260035.0 |   1165 | u_bist/mism_q_reg/D
+    1250* |       4 |     525 |      109 |      4 |   150 |    +0.0% | -2258.746 | -1259984.9 |   1165 | u_bist/mism_q_reg/D
+    1260* |       4 |     529 |      112 |      4 |   153 |    +0.0% | -2258.746 | -1259975.9 |   1165 | u_bist/mism_q_reg/D
+    1260* |       4 |     527 |      110 |      4 |   151 |    +0.0% | -2258.746 | -1259983.1 |   1165 | u_bist/mism_q_reg/D
+    1270* |       4 |     532 |      111 |      4 |   154 |    +0.0% | -2258.746 | -1259850.1 |   1165 | u_bist/mism_q_reg/D
+    1280* |       4 |     534 |      116 |      4 |   158 |    +0.0% | -2258.746 | -1259167.8 |   1165 | u_bist/mism_q_reg/D
+    1290* |       4 |     538 |      119 |      4 |   161 |    +0.0% | -2258.746 | -1259080.8 |   1165 | u_bist/mism_q_reg/D
+    1290* |       4 |     535 |      116 |      4 |   158 |    +0.0% | -2258.746 | -1259170.5 |   1165 | u_bist/mism_q_reg/D
+    1300* |       4 |     541 |      118 |      4 |   159 |    +0.0% | -2258.746 | -1259174.6 |   1165 | u_bist/mism_q_reg/D
+    1304* |       4 |     541 |      117 |      4 |   159 |    +0.0% | -2258.746 | -1259156.5 |   1165 | u_bist/mism_q_reg/D
+    1310* |       4 |     545 |      117 |      4 |   160 |    +0.0% | -2258.746 | -1259127.2 |   1165 | u_bist/mism_q_reg/D
+    1315* |       4 |     546 |      117 |      4 |   160 |    +0.0% | -2258.746 | -1259128.2 |   1165 | u_bist/mism_q_reg/D
+    1320* |       4 |     550 |      117 |      4 |   160 |    +0.0% | -2258.746 | -1259090.2 |   1165 | u_bist/mism_q_reg/D
+    1330* |       4 |     557 |      118 |      4 |   162 |    +0.0% | -2258.746 | -1259007.9 |   1165 | u_bist/mism_q_reg/D
+    1333* |       4 |     555 |      117 |      4 |   162 |    +0.0% | -2258.746 | -1258936.6 |   1165 | u_bist/mism_q_reg/D
+    1340* |       4 |     559 |      118 |      4 |   163 |    +0.0% | -2258.746 | -1258895.1 |   1165 | u_bist/mism_q_reg/D
+    1349* |       4 |     559 |      118 |      4 |   163 |    +0.0% | -2258.746 | -1258895.1 |   1165 | u_bist/mism_q_reg/D
+    1350* |       4 |     559 |      118 |      4 |   163 |    +0.0% | -2258.746 | -1258895.1 |   1165 | u_bist/mism_q_reg/D
+    1360* |       4 |     566 |      120 |      4 |   164 |    +0.0% | -2258.746 | -1259022.0 |   1165 | u_bist/mism_q_reg/D
+    1364* |       4 |     563 |      118 |      4 |   164 |    +0.0% | -2258.746 | -1258856.5 |   1165 | u_bist/mism_q_reg/D
+    1370* |       4 |     567 |      118 |      4 |   165 |    +0.0% | -2258.746 | -1258819.5 |   1165 | u_bist/mism_q_reg/D
+    1378* |       4 |     568 |      118 |      4 |   165 |    +0.0% | -2258.746 | -1258816.6 |   1165 | u_bist/mism_q_reg/D
+    1380* |       4 |     569 |      118 |      4 |   165 |    +0.0% | -2258.746 | -1258796.2 |   1165 | u_bist/mism_q_reg/D
+    1390* |       4 |     576 |      121 |      4 |   166 |    +0.0% | -2258.746 | -1258830.1 |   1165 | u_bist/mism_q_reg/D
+    1392* |       4 |     575 |      118 |      4 |   166 |    +0.0% | -2258.746 | -1258642.0 |   1165 | u_bist/mism_q_reg/D
+    1400* |       4 |     580 |      119 |      4 |   167 |    +0.0% | -2258.746 | -1258846.9 |   1165 | u_bist/mism_q_reg/D
+    1406* |       4 |     580 |      118 |      4 |   167 |    +0.0% | -2258.746 | -1258599.4 |   1165 | u_bist/mism_q_reg/D
+    1410* |       4 |     583 |      118 |      4 |   167 |    +0.0% | -2258.746 | -1258579.0 |   1165 | u_bist/mism_q_reg/D
+    1420* |       4 |     590 |      119 |      4 |   169 |    +0.0% | -2258.746 | -1258502.6 |   1165 | u_bist/mism_q_reg/D
+    1430* |       4 |     591 |      123 |      4 |   174 |    +0.0% | -2258.746 | -1257723.5 |   1165 | u_bist/mism_q_reg/D
+    1440* |       5 |     592 |      127 |      4 |   178 |    +0.0% | -2258.746 | -1257967.8 |   1165 | u_bist/mism_q_reg/D
+    1446* |       4 |     588 |      119 |      4 |   168 |    +0.0% | -2258.746 | -1258490.4 |   1165 | u_bist/mism_q_reg/D
+    1450* |       4 |     591 |      119 |      4 |   168 |    +0.0% | -2258.746 | -1258469.8 |   1165 | u_bist/mism_q_reg/D
+    1460* |       4 |     598 |      120 |      4 |   170 |    +0.0% | -2258.746 | -1258394.8 |   1165 | u_bist/mism_q_reg/D
+    1470* |       5 |     601 |      126 |      4 |   170 |    +0.0% | -2258.746 | -1257609.1 |   1165 | u_bist/mism_q_reg/D
+    1473* |       4 |     598 |      120 |      4 |   169 |    +0.0% | -2258.746 | -1258374.2 |   1165 | u_bist/mism_q_reg/D
+    1480* |       4 |     604 |      120 |      4 |   169 |    +0.0% | -2258.746 | -1258332.8 |   1165 | u_bist/mism_q_reg/D
+    1490* |       4 |     608 |      124 |      4 |   171 |    +0.0% | -2258.746 | -1258056.2 |   1165 | u_bist/mism_q_reg/D
+    1499* |       5 |     612 |      128 |      4 |   171 |    +0.0% | -2258.746 | -1257775.5 |   1165 | u_bist/mism_q_reg/D
+    1500* |       5 |     612 |      128 |      4 |   171 |    +0.0% | -2258.746 | -1257775.5 |   1165 | u_bist/mism_q_reg/D
+    1510* |       5 |     620 |      129 |      4 |   172 |    +0.0% | -2258.746 | -1257736.2 |   1165 | u_bist/mism_q_reg/D
+    1511* |       5 |     621 |      129 |      4 |   172 |    +0.0% | -2258.746 | -1257740.4 |   1165 | u_bist/mism_q_reg/D
+    1520* |       5 |     628 |      129 |      4 |   173 |    +0.0% | -2258.746 | -1257700.0 |   1165 | u_bist/mism_q_reg/D
+    1523* |       5 |     628 |      129 |      4 |   172 |    +0.0% | -2258.746 | -1257699.2 |   1165 | u_bist/mism_q_reg/D
+    1530* |       5 |     634 |      129 |      4 |   172 |    +0.0% | -2258.746 | -1257658.6 |   1165 | u_bist/mism_q_reg/D
+    1540* |       5 |     640 |      132 |      4 |   173 |    +0.0% | -2258.746 | -1257696.6 |   1165 | u_bist/mism_q_reg/D
+    1541* |       5 |     637 |      130 |      4 |   173 |    +0.0% | -2258.746 | -1257617.2 |   1165 | u_bist/mism_q_reg/D
+    1550* |       5 |     644 |      130 |      4 |   174 |    +0.0% | -2258.746 | -1257577.5 |   1165 | u_bist/mism_q_reg/D
+    1558* |       5 |     644 |      131 |      4 |   174 |    +0.0% | -2258.746 | -1257574.2 |   1165 | u_bist/mism_q_reg/D
+    1560* |       5 |     645 |      131 |      4 |   174 |    +0.0% | -2258.746 | -1257574.5 |   1165 | u_bist/mism_q_reg/D
+    1570* |       5 |     653 |      132 |      4 |   175 |    +0.0% | -2258.746 | -1257546.2 |   1165 | u_bist/mism_q_reg/D
+    1572* |       5 |     651 |      131 |      4 |   175 |    +0.0% | -2258.746 | -1257534.8 |   1165 | u_bist/mism_q_reg/D
+    1580* |       5 |     658 |      131 |      4 |   175 |    +0.0% | -2258.746 | -1257494.4 |   1165 | u_bist/mism_q_reg/D
+    1589* |       5 |     658 |      132 |      4 |   176 |    +0.0% | -2258.746 | -1257493.1 |   1165 | u_bist/mism_q_reg/D
+    1590* |       5 |     658 |      132 |      4 |   176 |    +0.0% | -2258.746 | -1257493.1 |   1165 | u_bist/mism_q_reg/D
+    1600* |       5 |     667 |      132 |      4 |   177 |    +0.0% | -2258.746 | -1257461.6 |   1165 | u_bist/mism_q_reg/D
+    1602* |       5 |     668 |      133 |      4 |   177 |    +0.0% | -2258.746 | -1257497.9 |   1165 | u_bist/mism_q_reg/D
+    1610* |       5 |     675 |      133 |      4 |   177 |    +0.0% | -2258.746 | -1257457.4 |   1165 | u_bist/mism_q_reg/D
+    1618* |       5 |     677 |      134 |      4 |   178 |    +0.0% | -2258.746 | -1257464.9 |   1165 | u_bist/mism_q_reg/D
+    1620* |       5 |     678 |      134 |      4 |   178 |    +0.0% | -2258.746 | -1257465.4 |   1165 | u_bist/mism_q_reg/D
+    1630* |       5 |     686 |      135 |      4 |   179 |    +0.0% | -2258.746 | -1257432.2 |   1165 | u_bist/mism_q_reg/D
+    1634* |       5 |     684 |      135 |      4 |   179 |    +0.0% | -2258.746 | -1257423.0 |   1165 | u_bist/mism_q_reg/D
+    1640* |       5 |     688 |      135 |      4 |   180 |    +0.0% | -2258.746 | -1257383.9 |   1165 | u_bist/mism_q_reg/D
+    1648* |       5 |     688 |      135 |      4 |   180 |    +0.0% | -2258.746 | -1257383.9 |   1165 | u_bist/mism_q_reg/D
+    1650* |       5 |     689 |      135 |      4 |   180 |    +0.0% | -2258.746 | -1257347.1 |   1165 | u_bist/mism_q_reg/D
+    1660* |       5 |     690 |      138 |      4 |   186 |    +0.0% | -2258.746 | -1257548.6 |   1165 | u_bist/mism_q_reg/D
+    1669* |       5 |     691 |      141 |      4 |   190 |    +0.0% | -2258.746 | -1257313.2 |   1165 | u_bist/mism_q_reg/D
+    1670* |       5 |     691 |      141 |      4 |   190 |    +0.0% | -2258.746 | -1257313.2 |   1165 | u_bist/mism_q_reg/D
+    1675* |       5 |     692 |      142 |      4 |   192 |    +0.0% | -2258.746 | -1257301.5 |   1165 | u_bist/mism_q_reg/D
+    1680* |       5 |     695 |      142 |      4 |   193 |    +0.0% | -2258.746 | -1257264.5 |   1165 | u_bist/mism_q_reg/D
+    1686* |       5 |     696 |      147 |      4 |   193 |    +0.0% | -2258.746 | -1257479.0 |   1165 | u_bist/mism_q_reg/D
+    1690* |       5 |     699 |      147 |      4 |   193 |    +0.0% | -2258.746 | -1257444.4 |   1165 | u_bist/mism_q_reg/D
+    1692* |       5 |     700 |      147 |      4 |   194 |    +0.0% | -2258.746 | -1257440.8 |   1165 | u_bist/mism_q_reg/D
+    1698* |       5 |     701 |      148 |      4 |   196 |    +0.0% | -2258.746 | -1257425.0 |   1165 | u_bist/mism_q_reg/D
+    1700* |       5 |     702 |      148 |      4 |   196 |    +0.0% | -2258.746 | -1257406.5 |   1165 | u_bist/mism_q_reg/D
+    1700* |       5 |     702 |      148 |      4 |   196 |    +0.0% | -2258.746 | -1257406.5 |   1165 | u_bist/mism_q_reg/D
+    1706* |       5 |     703 |      149 |      4 |   198 |    +0.0% | -2258.746 | -1257395.2 |   1165 | u_bist/mism_q_reg/D
+    1710* |       5 |     703 |      151 |      4 |   199 |    +0.0% | -2258.746 | -1257386.4 |   1165 | u_bist/mism_q_reg/D
+    1713* |       5 |     704 |      151 |      4 |   200 |    +0.0% | -2258.746 | -1257384.1 |   1165 | u_bist/mism_q_reg/D
+    1720* |       5 |     709 |      151 |      4 |   201 |    +0.0% | -2258.746 | -1257352.9 |   1165 | u_bist/mism_q_reg/D
+    1725* |       5 |     710 |      151 |      4 |   201 |    +0.0% | -2258.746 | -1257366.6 |   1165 | u_bist/mism_q_reg/D
+    1730* |       5 |     713 |      151 |      4 |   202 |    +0.0% | -2258.746 | -1257331.1 |   1165 | u_bist/mism_q_reg/D
+    1734* |       5 |     714 |      152 |      4 |   202 |    +0.0% | -2258.746 | -1257325.5 |   1165 | u_bist/mism_q_reg/D
+    1740* |       5 |     717 |      153 |      4 |   203 |    +0.0% | -2258.746 | -1257287.4 |   1165 | u_bist/mism_q_reg/D
+    1745* |       5 |     718 |      153 |      4 |   203 |    +0.0% | -2258.746 | -1257284.9 |   1165 | u_bist/mism_q_reg/D
+    1750* |       5 |     722 |      153 |      4 |   203 |    +0.0% | -2258.746 | -1257246.8 |   1165 | u_bist/mism_q_reg/D
+    1760* |       5 |     730 |      154 |      4 |   204 |    +0.0% | -2258.746 | -1257273.4 |   1165 | u_bist/mism_q_reg/D
+    1762* |       5 |     728 |      153 |      4 |   204 |    +0.0% | -2258.746 | -1257203.9 |   1165 | u_bist/mism_q_reg/D
+    1770* |       5 |     735 |      153 |      4 |   204 |    +0.0% | -2258.746 | -1257162.9 |   1165 | u_bist/mism_q_reg/D
+    1780* |       5 |     742 |      155 |      4 |   205 |    +0.0% | -2258.746 | -1257263.2 |   1165 | u_bist/mism_q_reg/D
+    1781* |       5 |     735 |      153 |      4 |   204 |    +0.0% | -2258.746 | -1257162.9 |   1165 | u_bist/mism_q_reg/D
+    1786* |       5 |     736 |      153 |      4 |   206 |    +0.0% | -2258.746 | -1257159.0 |   1165 | u_bist/mism_q_reg/D
+    1790* |       5 |     739 |      153 |      4 |   206 |    +0.0% | -2258.746 | -1257144.0 |   1165 | u_bist/mism_q_reg/D
+    1800* |       5 |     747 |      154 |      4 |   207 |    +0.0% | -2258.746 | -1257195.5 |   1165 | u_bist/mism_q_reg/D
+    1800* |       5 |     743 |      153 |      4 |   206 |    +0.0% | -2258.746 | -1257118.6 |   1165 | u_bist/mism_q_reg/D
+    1800* |       5 |     743 |      153 |      4 |   206 |    +0.0% | -2258.746 | -1257118.6 |   1165 | u_bist/mism_q_reg/D
+    final |       5 |     743 |      153 |      4 |   206 |    +0.0% | -2258.746 | -1257118.6 |   1154 | u_bist/mism_q_reg/D
+------------------------------------------------------------------------------------------------------------------------------
+[INFO RSZ-0059] Removed 5 buffers.
+[INFO RSZ-0045] Inserted 153 buffers, 1 to split loads.
+[INFO RSZ-0051] Resized 743 instances: 743 up, 0 up match, 0 down, 0 VT
+[INFO RSZ-0043] Swapped pins on 206 instances.
+[INFO RSZ-0049] Cloned 4 instances.
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 4.71s
+[INFO RSZ-0046] Found 347 endpoints with hold violations.
+Iteration | Resized | Buffers | Cloned Gates |   Area   |   WNS   |   TNS   | Endpoint
+--------------------------------------------------------------------------------------
+        0 |       0 |       0 |            0 |    +0.0% | -613.675 | -117016.781 | u_bank/u_mem/u_lane6/wdata[12]
+       10 |       0 |      32 |            0 |    +0.0% | -592.654 | -116044.742 | u_bank/u_mem/u_lane6/wdata[23]
+       20 |       0 |      72 |            0 |    +0.0% | -568.911 | -114568.359 | u_bank/u_mem/u_lane14/wdata[23]
+       30 |       0 |     100 |            0 |    +0.0% | -559.013 | -113845.195 | u_bank/u_mem/u_lane6/wdata[29]
+       40 |       0 |     117 |            0 |    +0.0% | -559.013 | -113350.992 | u_bank/u_mem/u_lane6/wdata[29]
+       50 |       0 |     141 |            0 |    +0.0% | -559.013 | -112490.883 | u_bank/u_mem/u_lane6/wdata[29]
+       60 |       0 |     178 |            0 |    +0.0% | -559.013 | -111120.273 | u_bank/u_mem/u_lane6/wdata[29]
+       70 |       0 |     217 |            0 |    +0.0% | -559.013 | -109873.789 | u_bank/u_mem/u_lane6/wdata[29]
+       80 |       0 |     259 |            0 |    +0.0% | -559.013 | -108633.305 | u_bank/u_mem/u_lane6/wdata[29]
+       90 |       0 |     296 |            0 |    +0.0% | -559.013 | -107092.852 | u_bank/u_mem/u_lane6/wdata[29]
+      100 |       0 |     320 |            0 |    +0.0% | -559.013 | -104782.352 | u_bank/u_mem/u_lane6/wdata[29]
+      110 |       0 |     374 |            0 |    +0.0% | -559.013 | -102028.789 | u_bank/u_mem/u_lane6/wdata[29]
+      120 |       0 |     423 |            0 |    +0.0% | -559.013 | -99760.734 | u_bank/u_mem/u_lane6/wdata[29]
+      130 |       0 |     458 |            0 |    +0.0% | -559.013 | -98106.953 | u_bank/u_mem/u_lane6/wdata[29]
+      140 |       0 |     501 |            0 |    +0.0% | -559.013 | -96553.461 | u_bank/u_mem/u_lane6/wdata[29]
+      150 |       0 |     533 |            0 |    +0.0% | -559.013 | -94907.195 | u_bank/u_mem/u_lane6/wdata[29]
+      160 |       0 |     567 |            0 |    +0.0% | -559.013 | -92617.719 | u_bank/u_mem/u_lane6/wdata[29]
+      170 |       0 |     584 |            0 |    +0.0% | -559.013 | -91095.617 | u_bank/u_mem/u_lane6/wdata[29]
+      180 |       0 |     610 |            0 |    +0.0% | -559.013 | -88943.242 | u_bank/u_mem/u_lane6/wdata[29]
+      190 |       0 |     640 |            0 |    +0.0% | -559.013 | -87225.523 | u_bank/u_mem/u_lane6/wdata[29]
+      200 |       0 |     663 |            0 |    +0.0% | -559.013 | -86238.703 | u_bank/u_mem/u_lane6/wdata[29]
+      210 |       0 |     676 |            0 |    +0.0% | -559.013 | -85363.172 | u_bank/u_mem/u_lane6/wdata[29]
+      220 |       0 |     763 |            0 |    +0.0% | -559.013 | -83791.031 | u_bank/u_mem/u_lane6/wdata[29]
+      230 |       0 |     826 |            0 |    +0.0% | -559.013 | -81065.203 | u_bank/u_mem/u_lane6/wdata[29]
+      240 |       0 |     886 |            0 |    +0.0% | -559.013 | -78275.227 | u_bank/u_mem/u_lane6/wdata[29]
+      250 |       0 |     950 |            0 |    +0.0% | -559.013 | -75792.453 | u_bank/u_mem/u_lane6/wdata[29]
+      260 |       0 |    1004 |            0 |    +0.0% | -559.013 | -73153.641 | u_bank/u_mem/u_lane6/wdata[29]
+      270 |       0 |    1062 |            0 |    +0.0% | -559.013 | -71322.992 | u_bank/u_mem/u_lane6/wdata[29]
+      280 |       0 |    1104 |            0 |    +0.0% | -559.013 | -69364.570 | u_bank/u_mem/u_lane6/wdata[29]
+      290 |       0 |    1129 |            0 |    +0.0% | -559.013 | -67987.289 | u_bank/u_mem/u_lane6/wdata[29]
+      300 |       0 |    1143 |            0 |    +0.0% | -559.013 | -67659.344 | u_bank/u_mem/u_lane6/wdata[29]
+      310 |       0 |    1161 |            0 |    +0.0% | -559.013 | -67408.117 | u_bank/u_mem/u_lane6/wdata[29]
+      320 |       0 |    1171 |            0 |    +0.0% | -559.013 | -67281.266 | u_bank/u_mem/u_lane6/wdata[29]
+      330 |       0 |    1181 |            0 |    +0.0% | -559.013 | -67203.070 | u_bank/u_mem/u_lane6/wdata[29]
+      340 |       0 |    1191 |            0 |    +0.0% | -559.013 | -67154.898 | u_bank/u_mem/u_lane6/wdata[29]
+      350 |       0 |    1205 |            0 |    +0.0% | -532.990 | -66913.570 | u_bank/u_mem/u_lane14/wdata[13]
+      360 |       0 |    1243 |            0 |    +0.0% | -492.929 | -65947.383 | u_bank/u_mem/u_lane6/wdata[26]
+      370 |       0 |    1289 |            0 |    +0.0% | -488.549 | -64757.004 | u_bank/u_mem/u_lane14/wdata[15]
+      380 |       0 |    1335 |            0 |    +0.0% | -488.549 | -63441.797 | u_bank/u_mem/u_lane14/wdata[15]
+      390 |       0 |    1407 |            0 |    +0.0% | -488.549 | -61473.516 | u_bank/u_mem/u_lane14/wdata[15]
+      400 |       0 |    1447 |            0 |    +0.0% | -488.549 | -60629.547 | u_bank/u_mem/u_lane14/wdata[15]
+      410 |       0 |    1483 |            0 |    +0.0% | -488.549 | -59652.500 | u_bank/u_mem/u_lane14/wdata[15]
+      420 |       0 |    1513 |            0 |    +0.0% | -488.549 | -58928.578 | u_bank/u_mem/u_lane14/wdata[15]
+      430 |       0 |    1584 |            0 |    +0.0% | -488.549 | -57437.289 | u_bank/u_mem/u_lane14/wdata[15]
+      440 |       0 |    1662 |            0 |    +0.0% | -488.549 | -55096.059 | u_bank/u_mem/u_lane14/wdata[15]
+      450 |       0 |    1732 |            0 |    +0.0% | -488.549 | -53202.148 | u_bank/u_mem/u_lane14/wdata[15]
+      460 |       0 |    1792 |            0 |    +0.0% | -488.549 | -51570.707 | u_bank/u_mem/u_lane14/wdata[15]
+      470 |       0 |    1846 |            0 |    +0.0% | -488.549 | -50314.801 | u_bank/u_mem/u_lane14/wdata[15]
+      480 |       0 |    1928 |            0 |    +0.0% | -488.549 | -48678.148 | u_bank/u_mem/u_lane14/wdata[15]
+      490 |       0 |    2028 |            0 |    +0.0% | -488.549 | -46198.492 | u_bank/u_mem/u_lane14/wdata[15]
+      500 |       0 |    2115 |            0 |    +0.0% | -488.549 | -42789.801 | u_bank/u_mem/u_lane14/wdata[15]
+      510 |       0 |    2236 |            0 |    +0.0% | -488.549 | -39839.234 | u_bank/u_mem/u_lane14/wdata[15]
+      520 |       0 |    2341 |            0 |    +0.0% | -488.549 | -37659.051 | u_bank/u_mem/u_lane14/wdata[15]
+      530 |       0 |    2441 |            0 |    +0.0% | -488.549 | -36468.586 | u_bank/u_mem/u_lane14/wdata[15]
+      540 |       0 |    2477 |            0 |    +0.0% | -488.549 | -35949.660 | u_bank/u_mem/u_lane14/wdata[15]
+      550 |       0 |    2491 |            0 |    +0.0% | -488.549 | -35579.898 | u_bank/u_mem/u_lane14/wdata[15]
+      560 |       0 |    2509 |            0 |    +0.0% | -480.419 | -35238.211 | u_bank/u_mem/u_lane14/wdata[18]
+      570 |       0 |    2552 |            0 |    +0.0% | -404.202 | -34356.473 | u_bank/u_mem/u_lane2/raddr[11]
+      580 |       0 |    2637 |            0 |    +0.0% | -404.202 | -32280.959 | u_bank/u_mem/u_lane2/raddr[11]
+      590 |       0 |    2684 |            0 |    +0.0% | -404.202 | -31353.090 | u_bank/u_mem/u_lane2/raddr[11]
+      600 |       0 |    2748 |            0 |    +0.0% | -404.202 | -30318.816 | u_bank/u_mem/u_lane2/raddr[11]
+      610 |       0 |    2817 |            0 |    +0.0% | -404.202 | -29271.756 | u_bank/u_mem/u_lane2/raddr[11]
+      620 |       0 |    2929 |            0 |    +0.0% | -404.202 | -26650.350 | u_bank/u_mem/u_lane2/raddr[11]
+      630 |       0 |    3058 |            0 |    +0.0% | -404.202 | -24758.119 | u_bank/u_mem/u_lane2/raddr[11]
+      640 |       0 |    3194 |            0 |    +0.0% | -404.202 | -22476.812 | u_bank/u_mem/u_lane2/raddr[11]
+      650 |       0 |    3310 |            0 |    +0.0% | -404.202 | -20531.104 | u_bank/u_mem/u_lane2/raddr[11]
+      660 |       0 |    3430 |            0 |    +0.0% | -404.202 | -18499.818 | u_bank/u_mem/u_lane2/raddr[11]
+      670 |       0 |    3533 |            0 |    +0.0% | -404.202 | -15907.108 | u_bank/u_mem/u_lane2/raddr[11]
+      680 |       0 |    3649 |            0 |    +0.0% | -404.202 | -14525.666 | u_bank/u_mem/u_lane2/raddr[11]
+      690 |       0 |    3736 |            0 |    +0.0% | -404.202 | -12783.068 | u_bank/u_mem/u_lane2/raddr[11]
+      700 |       0 |    3788 |            0 |    +0.0% | -404.202 | -11719.407 | u_bank/u_mem/u_lane2/raddr[11]
+      710 |       0 |    3809 |            0 |    +0.0% | -404.202 | -11367.593 | u_bank/u_mem/u_lane2/raddr[11]
+      720 |       0 |    3814 |            0 |    +0.0% | -404.202 | -11271.563 | u_bank/u_mem/u_lane2/raddr[11]
+      730 |       0 |    3836 |            0 |    +0.0% | -404.202 | -10749.768 | u_bank/u_mem/u_lane2/raddr[11]
+      740 |       0 |    3919 |            0 |    +0.0% | -404.202 | -8591.598 | u_bank/u_mem/u_lane2/raddr[11]
+      750 |       0 |    4013 |            0 |    +0.0% | -404.202 | -6676.978 | u_bank/u_mem/u_lane2/raddr[11]
+      760 |       0 |    4107 |            0 |    +0.0% | -404.202 | -4597.681 | u_bank/u_mem/u_lane2/raddr[11]
+      770 |       0 |    4146 |            0 |    +0.0% | -404.202 | -3541.084 | u_bank/u_mem/u_lane2/raddr[11]
+      780 |       0 |    4166 |            0 |    +0.0% | -404.202 | -3184.099 | u_bank/u_mem/u_lane2/raddr[11]
+      780 |       0 |    4166 |            0 |    +0.0% | -404.202 | -3184.099 | u_bank/u_mem/u_lane2/raddr[11]
+      790 |       0 |    4206 |            0 |    +0.0% | -404.202 | -2279.274 | u_bank/u_mem/u_lane2/raddr[11]
+      800 |       0 |    4232 |            0 |    +0.0% | -404.202 | -1770.494 | u_bank/u_mem/u_lane2/raddr[11]
+      810 |       0 |    4242 |            0 |    +0.0% | -404.202 | -1638.113 | u_bank/u_mem/u_lane2/raddr[11]
+      820 |       0 |    4249 |            0 |    +0.0% | -400.475 | -1483.098 | u_bank/u_mem/u_lane2/raddr[13]
+      830 |       0 |    4283 |            0 |    +0.0% | -221.668 | -684.999 | u_bank/u_mem/u_lane2/raddr[10]
+    final |       0 |    4316 |            0 |    +0.0% |   0.011 |   0.000 | u_bank/u_mem/u_lane14/wdata[29]
+--------------------------------------------------------------------------------------
+[INFO RSZ-0032] Inserted 4316 hold buffers.
+[INFO RSZ-0506] Runtime: 3.06s
+Took 8 seconds: repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+detailed_placement
+[INFO DPL-0006] Core area: 962912.13 um^2
+[INFO DPL-0007] Movable instances area: 2276.59 um^2
+[INFO DPL-0008] Fixed instances area within core: 863289.10 um^2
+[INFO DPL-0009] Utilization: 89.9%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (2 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 43072 cells
+[INFO DPL-0393]   height 618 row(s): 16 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |      26240 |      3044 |     14724
+        1 |      18436 |      1992 |      9956
+        2 |      11092 |      1792 |      8014
+        3 |       8303 |      1587 |      6376
+        4 |       6977 |      1395 |      5375
+        5 |       5335 |      1203 |      4065
+        6 |       4289 |      1013 |      3220
+        7 |       3469 |       865 |      2583
+        8 |       2826 |       744 |      2076
+        9 |       2595 |       681 |      1911
+       10 |       2224 |       616 |      1608
+       20 |        426 |       148 |       278
+       30 |        116 |        36 |        80
+       39 |          8 |         2 |         6
+[WARNING DPL-0700] Negotiation phase 1: violations stuck at 8 for 3 consecutive iterations.
+Using old diamond search for 2 remaining illegal cells.
+diamond recovery: recovered 1/2 stuck cells.
+Negotiation phase 2: isolation point active, 1000 iterations.
+      400 |          0 |         0 |         0
+Negotiation phase 2 converged at iteration 0.
+[INFO DPL-0500] Runtime: 3.15s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves               27349
+total displacement       6155.4 u
+average displacement        0.1 u
+max displacement            6.7 u
+original HPWL          438261.1 u
+legalized HPWL         442314.6 u
+delta HPWL                    1 %
+
+estimate_parasitics -placement
+Report metrics stage 4, cts final...
+
+==========================================================================
+cts final report_design_area
+--------------------------------------------------------------------------
+Design area 865566 um^2 90% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/4_1_cts.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/4_cts.sdc
+Elapsed time: 0:19.83[h:]min:sec. CPU time: user 20.77 sys 2.75 (118%). Peak memory: 3742684KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+4_1_cts                .odb         19       24     1.19     3654 0744c321db
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/4_1_cts.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/bank_bist_wrap/orfs/results/asap7/bank_bist_wrap/base/4_cts.odb
