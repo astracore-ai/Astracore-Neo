@@ -46,6 +46,7 @@ module tile_dma #(
   // program memory outside this module (prog_mem, SECDED), read at pc_out
   output logic [PAW-1:0] pc_out,
   input  logic [63:0]   ins_in,
+  output logic          fetch,          // drop 0.44: ins_in is taken this cycle (prog_mem's ECC flag qualifier)
   input  logic          prog_start,
   output logic          fsm_err,        // state register outside the legal set
   output logic          prog_done,
@@ -95,6 +96,7 @@ module tile_dma #(
     else if (state == S_FETCH)                                 pc_nx = pc + 1;
   end
   assign pc_out  = pc_nx;
+  assign fetch   = (state == S_FETCH);
   assign fsm_err = (state > S_WAITNTF);
 
   assign op       = ins[63:60];

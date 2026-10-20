@@ -580,7 +580,7 @@ def main():
     cause_wd = mesh.reg_read(0, REG_ERR_CAUSE)
     pin_wd = mesh.err_pin[0].v
     ok8 = (np.array_equal(got, ref16) and (cause_st & (1 << 2)) and pin_st == 1 and cause_clr == 0 and cause_run == 0 and pin_run == 0
-           and (cause_wd >> 16) & 1 == 1 and pin_wd == 1 and (status & 1) == 1)
+           and (cause_wd >> 22) & 1 == 1 and pin_wd == 1 and (status & 1) == 1)   # the watchdog: cause bit 22 since drop 0.44
     print(f"  M8: register-driven tile: self-test dummy run raised cause 0x{cause_st:05x} and the error pin ({pin_st}); clear -> 0x{cause_clr:05x}; "
           f"real run (16-channel conv) through the same registers {'bit-exact' if np.array_equal(got, ref16) else 'MISMATCH'} with cause 0x{cause_run:05x}, pin {pin_run}, STATUS 0x{status:x}; "
           f"watchdog left un-kicked -> cause 0x{cause_wd:05x}, pin {pin_wd} -> {'PASS' if ok8 else 'FAIL'} ({time.time() - t0:.0f} s)")

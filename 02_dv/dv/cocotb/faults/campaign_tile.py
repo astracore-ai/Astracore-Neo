@@ -33,7 +33,8 @@ N = NX * NY
 LANES = 16
 BANK_ROWS = int(os.environ.get("NEO_BANK_DEPTH", "4096")) // LANES
 CAUSES = ["parity_err", "crc_err", "array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "ecc_ue", "ecc_ce", "wbuf_ce",
-          "wbuf_ue", "rq_tbl_perr", "lost_err", "fetch_timeout", "bist_fail", "prog_ce", "ctrl_path_err", "iso_err", "watchdog"]
+          "wbuf_ue", "rq_tbl_perr", "lost_err", "fetch_timeout", "bist_fail", "prog_ce", "ctrl_path_err", "iso_err",
+          "abuf_ce", "abuf_ue", "act_perr", "drain_ovf", "watchdog"]                           # drop 0.44 (S1): bits 18 .. 21
 REG_WD_CTRL, REG_WD_KICK = 0x07, 0x08
 
 

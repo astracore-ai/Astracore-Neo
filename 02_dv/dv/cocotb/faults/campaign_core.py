@@ -25,7 +25,8 @@ from neo_golden import direct_conv, bits, sbits
 from faults.common import Injector, Fault, StateKeeper, classify, CsvOut, Budget, load_state_items
 
 ROWS, COLS, WCW, CIN = tc.ROWS, tc.COLS, tc.WCW, tc.CIN
-FLAGS = ["array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "rq_tbl_perr", "wbuf_ce", "wbuf_ue"]
+FLAGS = ["array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "rq_tbl_perr", "wbuf_ce", "wbuf_ue",
+         "abuf_ce", "abuf_ue", "act_perr"]                                                     # drop 0.44 (S1)
 LEAVES = ["u_dp.u_feeder.u_mem.mem", "u_wbuf.u_mem.mem", "u_dp.u_acc.u_mem.mem"]
 
 
@@ -53,7 +54,7 @@ class CoreRig:
                 h[i].value = 0
         for name in ("abuf_we", "wbuf_we", "go", "err_clear", "fault_inject", "ctrl_fault_inject", "rq_tbl_we", "rq_relu", "ext_valid",
                      "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "dv_wbuf_flip", "dv_wbuf_addr", "dv_wbuf_lane",
-                     "dv_wbuf_mask", "abuf_we2", "wbuf_we2", "cfg_sparse"):
+                     "dv_wbuf_mask", "abuf_we2", "wbuf_we2", "cfg_sparse", "dv_abuf_flip", "dv_abuf_addr", "dv_abuf_lane", "dv_abuf_mask"):
             getattr(dut, name).value = 0
         dut.rst_n.value = 0
         for _ in range(3):

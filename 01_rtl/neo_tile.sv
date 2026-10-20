@@ -28,6 +28,13 @@
 //   table-parity cause (tbl_perr: the requant tables and the vector unit's), so the cause register keeps its layout.
 //   The DMA engines see the NIC's drain_busy: a DRAIN_WR waits for the previous drain message to complete, so one program
 //   can run several GO / WAIT_DONE pairs (an attention round's key tiles) each with its own drain.
+//   Drop 0.44 (S1): four causes more -- abuf_ce / abuf_ue (the activation buffer's SECDED, act_feeder.sv), act_perr (the
+//   activation path's byte parity at the array's row inputs, neo_mac_core.sv) and drain_ovf (a row pushed into the full
+//   drain FIFO, tile_nic.sv) at cause bits 18 .. 21, the watchdog at 22 (host_if's ERR_MASK / ERR_CAUSE 23 bits wide;
+//   STATUS bits 17 .. 20); the link packer's check of the NIC's beat parity (link_pack.sv) joins the parity cause (bit 0)
+//   beside the router's; the MBIST engine's illegal-state check is in bist_fail (mbist.sv); the index / first lines'
+//   parity is in the ctrl cause (neo_mac_core_v02.sv). The weight buffer's and the program memory's ECC flags are
+//   qualified by a real read (the shadow-load strobe, the DMA's fetch), as the bank's were: arrays power up random.
 module neo_tile #(
   parameter int XW = 2, YW = 2, NX = 2, NY = 2,
   parameter int WPF = 1,                     // words per link flit (drop 0.25): 1 as simulated before, 32 = the 1024-bit links
@@ -72,7 +79,7 @@ module neo_tile #(
   output logic          prog_done,
   output logic          drain_busy,
   output logic          done,
-  output logic          parity_err,
+  output logic          parity_err,           // the router's (always on); drop 0.44: pk_perr below is the packer's check
   output logic          crc_err,
   output logic          array_abft_sticky,
   output logic          acc_abft_sticky,
@@ -86,6 +93,11 @@ module neo_tile #(
   output logic          rq_tbl_perr,
   output logic          lost_err,
   output logic          fetch_timeout,
+  output logic          abuf_ce,              // drop 0.44: the activation buffer's SECDED corrected / uncorrectable
+  output logic          abuf_ue,
+  output logic          act_perr,             // drop 0.44: the activation path's byte parity failed at the array
+  output logic          pk_perr,              // drop 0.44: the link packer received a beat of odd parity from the NIC
+  output logic          drain_ovf,            // drop 0.44: a row was pushed into the full drain FIFO
   // drop 0.43, lockstep: the last drain message's CRC and the count of drain messages (tile_nic.sv)
   output logic [15:0]   drain_crc_last,
   output logic [15:0]   drain_msg_cnt,
@@ -115,6 +127,9 @@ module neo_tile #(
   logic                  err_pin_t, prog_done_t, drain_busy_t, done_t, crc_err_t, array_abft_sticky_t, acc_abft_sticky_t;
   logic                  ctrl_err_sticky_t, seq_err_sticky_t, rq_err_sticky_t, ecc_ce_t, ecc_ue_t, wbuf_ce_t, wbuf_ue_t, rq_tbl_perr_t;
   logic                  lost_err_t, fetch_timeout_t;
+  logic                  abuf_ce_t, abuf_ue_t, act_perr_t, drain_ovf_t;   // drop 0.44
+  logic                  pk_perr_t;                             // drop 0.44: the packer's check of the NIC's beat parity
+  logic                  parity_err_t;                          // the parity cause: the router's sticky or the packer's
   logic [15:0]           drain_crc_last_t, drain_msg_cnt_t;
   logic [38:0]           dv_bd_rdata_t;
   logic [31:0]           dv_obs_t;
@@ -137,7 +152,7 @@ module neo_tile #(
   logic [IDXW-1:0]       rbuf_waddr;
   logic                  vec_err_sticky, vec_perr_sticky, seq_err_core, rq_tbl_perr_core;
   logic signed [7:0]     rq_tbl_zp;
-  logic [18:0]           err_mask, err_cause;
+  logic [22:0]           err_mask, err_cause;    // drop 0.44: 22 causes and the watchdog
   logic [3:0]            partition;
   logic [15:0]           prio;                 // drop 0.43: the router's priority map (host_if 0x0C)
   logic [4:0]            rt_stage_en;          // drop 0.43: the router's output stages' clock enables
@@ -149,7 +164,7 @@ module neo_tile #(
   logic                  tel_snap, tel_clear;
   logic [31:0]           tel_rdata;
   logic [23:0]           wd_window;
-  logic [17:0]           tile_flags;
+  logic [21:0]           tile_flags;
 
   // router <-> NIC local port
   logic          r_in_valid  [5];
@@ -211,7 +226,9 @@ module neo_tile #(
   logic [FWB-1:0] nic_tx_flit, nic_rx_flit;
   link_packer #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_pack (
     .clk(clk_t), .rst_n(rst_n), .core_valid(nic_tx_valid), .core_flit(nic_tx_flit), .core_ready(nic_tx_ready),
-    .link_valid(pk_link_valid), .link_flit(pk_link_flit), .link_ready(r_in_ready[4]));
+    .link_valid(pk_link_valid), .link_flit(pk_link_flit), .link_ready(r_in_ready[4]),
+    .err_clear(err_clear), .perr_sticky(pk_perr_t));
+  assign parity_err_t = parity_err | pk_perr_t;
   link_unpacker #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_unpack (
     .clk(clk_t), .rst_n(rst_n), .link_valid(r_out_valid[4]), .link_flit(r_out_flit[4]), .link_ready(up_link_ready),
     .core_valid(nic_rx_valid), .core_flit(nic_rx_flit), .core_ready(nic_rx_ready));
@@ -266,13 +283,15 @@ module neo_tile #(
   logic [PAW-1:0] dma_pc, dma_pc_d;
   logic [63:0] dma_ins;
   logic        prog_ce, prog_ue, dma_fsm_err, dma_fsm_err_d;
+  logic        dma_fetch, dma_fetch_d;         // drop 0.44: the engines take the word on rdata (the ECC flags' qualifier)
   prog_mem #(.DEPTH(PDEPTH), .AW(PAW), .DV_HOOKS(DV_HOOKS)) u_prog (
-                   .clk(clk_t), .rst_n(rst_n), .we(prog_we), .waddr(prog_waddr), .wdata(prog_wdata), .raddr(dma_pc), .rdata(dma_ins),
+                   .clk(clk_t), .rst_n(rst_n), .we(prog_we), .waddr(prog_waddr), .wdata(prog_wdata), .raddr(dma_pc),
+                   .rd_q(dma_fetch || dma_fetch_d), .rdata(dma_ins),
                    .err_clear(err_clear), .prog_ce_sticky(prog_ce), .prog_ue_sticky(prog_ue),
                    .dv_fi_flip(dv_prog_flip), .dv_fi_idx(dv_fi_idx[PAW-1:0]), .dv_fi_mask(dv_fi_mask[38:0]));
   tile_dma #(.XW(XW), .YW(YW), .PDEPTH(PDEPTH), .PAW(PAW), .DV_HOOKS(DV_HOOKS)) u_dma (
     .clk(clk_t), .rst_n(rst_n),
-    .pc_out(dma_pc), .ins_in(dma_ins), .prog_start(prog_start), .fsm_err(dma_fsm_err),
+    .pc_out(dma_pc), .ins_in(dma_ins), .fetch(dma_fetch), .prog_start(prog_start), .fsm_err(dma_fsm_err),
     .prog_done(prog_done_t), .prog_busy(prog_busy),
     .cmd_valid(cmd_valid), .cmd_op(cmd_op), .cmd_x(cmd_x), .cmd_y(cmd_y), .cmd_addr(cmd_addr), .cmd_len(cmd_len),
     .cmd_base(cmd_base), .cmd_int8(cmd_int8), .cmd_busy(cmd_busy),
@@ -286,7 +305,7 @@ module neo_tile #(
   logic        dma_err, dma_err_sticky, cfg_err, cfg_err_sticky, ctrl_path_err, iso_err;
   tile_dma #(.XW(XW), .YW(YW), .PDEPTH(PDEPTH), .PAW(PAW), .DV_HOOKS(DV_HOOKS)) u_dma_dup (
     .clk(clk_t), .rst_n(rst_n),
-    .pc_out(dma_pc_d), .ins_in(dma_ins), .prog_start(prog_start), .fsm_err(dma_fsm_err_d),
+    .pc_out(dma_pc_d), .ins_in(dma_ins), .fetch(dma_fetch_d), .prog_start(prog_start), .fsm_err(dma_fsm_err_d),
     .prog_done(d_prog_done), .prog_busy(d_prog_busy),
     .cmd_valid(d_cmd_valid), .cmd_op(d_cmd_op), .cmd_x(d_cmd_x), .cmd_y(d_cmd_y), .cmd_addr(d_cmd_addr), .cmd_len(d_cmd_len),
     .cmd_base(d_cmd_base), .cmd_int8(d_cmd_int8), .cmd_busy(cmd_busy),
@@ -324,6 +343,7 @@ module neo_tile #(
     .cmd_base(cmd_base), .cmd_int8(cmd_int8), .cmd_busy(cmd_busy), .drain_busy(drain_busy_t),
     .crc_err_sticky(crc_err_t), .err_clear(err_clear), .rdy_seen(rdy_seen), .rdy_clear(rdy_clear), .ntf_busy(ntf_busy),
     .partition(partition), .iso_err_sticky(iso_err), .lost_err_sticky(lost_err_t), .fetch_timeout_sticky(fetch_timeout_t),
+    .drain_ovf_sticky(drain_ovf_t),
     .dv_tx_hold(dv_tx_hold), .cg_en(nic_cg_en), .tel_drain(nic_drain), .drain_crc_last(drain_crc_last_t), .drain_msg_cnt(drain_msg_cnt_t));
 
   host_if #(.IDXW(IDXW), .PAW(PAW), .DV_HOOKS(DV_HOOKS)) u_host (
@@ -338,12 +358,14 @@ module neo_tile #(
     .bist_start(bist_start), .bist_active(bist_active), .bist_done(bist_done), .bist_fail(bist_fail), .bist_fail_ce(bist_fail_ce),
     .bist_fail_addr(20'(bist_fail_addr)),        // 20-bit field: a 512K-word bank needs 19 (drop 0.22; the 16-bit field went negative at BAW = 19)
     .prog_done(prog_done_t), .drain_busy(drain_busy_t), .core_done(done_t),
-    .flags({ecc_ce_t, ecc_ue_t, rq_err_sticky_t, seq_err_sticky_t, ctrl_err_sticky_t, acc_abft_sticky_t, array_abft_sticky_t, crc_err_t, parity_err}),
+    .flags({drain_ovf_t, act_perr_t, abuf_ue_t, abuf_ce_t,
+            ecc_ce_t, ecc_ue_t, rq_err_sticky_t, seq_err_sticky_t, ctrl_err_sticky_t, acc_abft_sticky_t, array_abft_sticky_t, crc_err_t, parity_err_t}),
     .dv_cfg_flip(dv_cfg_flip), .dv_cfg_idx(dv_fi_idx[4:0]), .dv_cfg_mask(dv_fi_mask[15:0]));
 
-  assign tile_flags = {iso_err, ctrl_path_err, prog_ce, bist_fail, fetch_timeout_t, lost_err_t, rq_tbl_perr_t, wbuf_ue_t, wbuf_ce_t, ecc_ce_t, ecc_ue_t, rq_err_sticky_t,
-                       seq_err_sticky_t, ctrl_err_sticky_t, acc_abft_sticky_t, array_abft_sticky_t, crc_err_t, parity_err};
-  esm #(.NFLAGS(18)) u_esm (
+  assign tile_flags = {drain_ovf_t, act_perr_t, abuf_ue_t, abuf_ce_t,
+                       iso_err, ctrl_path_err, prog_ce, bist_fail, fetch_timeout_t, lost_err_t, rq_tbl_perr_t, wbuf_ue_t, wbuf_ce_t, ecc_ce_t, ecc_ue_t, rq_err_sticky_t,
+                       seq_err_sticky_t, ctrl_err_sticky_t, acc_abft_sticky_t, array_abft_sticky_t, crc_err_t, parity_err_t};
+  esm #(.NFLAGS(22)) u_esm (
     .clk(clk_t), .rst_n(rst_n), .flags(tile_flags), .mask(err_mask), .err_clear(err_clear),
     .wd_enable(wd_enable), .wd_window(wd_window), .wd_kick(wd_kick), .cause(err_cause), .err_pin(err_pin_t));
   // what the tile does not read (lint): the core's busy / state / ct_free_idx / unlatched acc_abft and its row marker, the
@@ -386,9 +408,11 @@ module neo_tile #(
     .seq_err_sticky(seq_err_core), .rq_err_sticky(rq_err_sticky_t),
     .wbuf_ce_sticky(wbuf_ce_t), .wbuf_ue_sticky(wbuf_ue_t), .rq_tbl_perr_sticky(rq_tbl_perr_core),
     .vec_err_sticky(vec_err_sticky), .vec_perr_sticky(vec_perr_sticky),
+    .abuf_ce_sticky(abuf_ce_t), .abuf_ue_sticky(abuf_ue_t), .act_perr_sticky(act_perr_t),
     .fault_inject(selftest_inject), .ctrl_fault_inject(1'b0), .seq_fault_inject(1'b0), .rq_fault_inject(1'b0), .rq_tbl_fault_inject(1'b0),
     .vec_ctrl_fault_inject(1'b0), .vec_tbl_fault_inject(1'b0),
     .dv_wbuf_flip(1'b0), .dv_wbuf_addr('0), .dv_wbuf_lane('0), .dv_wbuf_mask('0),    // the core's hooks are reached from the core-level test
+    .dv_abuf_flip(1'b0), .dv_abuf_addr('0), .dv_abuf_lane('0), .dv_abuf_mask('0),
     .cg_en(core_cg_en), .tel_ev(core_ev));
 
   // the telemetry (drop 0.43): the counters' events, bit 0 the cycle count (tile_telem.sv for the list)
@@ -417,33 +441,39 @@ module neo_tile #(
   // (the cells drive whole vectors, split by part-selects: neosim connects an output port to a signal and assigns no
   // concatenation)
   logic [16:0]  rt_iso_q;
-  logic [80:0]  st_iso_q;
+  logic [85:0]  st_iso_q;
   neo_iso #(.W(17), .CLAMP(0)) u_iso_rt (.iso_en(iso_en), .d({prio, err_clear}), .q(rt_iso_q));   // one class, no clear
   assign rt_prio      = rt_iso_q[16:1];
   assign rt_err_clear = rt_iso_q[0];
-  neo_iso #(.W(32 + 17 + 32), .CLAMP(0)) u_iso_st (.iso_en(iso_en),
+  neo_iso #(.W(32 + 22 + 32), .CLAMP(0)) u_iso_st (.iso_en(iso_en),
     .d({h_rdata_t, err_pin_t, prog_done_t, drain_busy_t, done_t, crc_err_t, array_abft_sticky_t, acc_abft_sticky_t, ctrl_err_sticky_t,
         seq_err_sticky_t, rq_err_sticky_t, ecc_ce_t, ecc_ue_t, wbuf_ce_t, wbuf_ue_t, rq_tbl_perr_t, lost_err_t, fetch_timeout_t,
+        abuf_ce_t, abuf_ue_t, act_perr_t, pk_perr_t, drain_ovf_t,
         drain_crc_last_t, drain_msg_cnt_t}),
     .q(st_iso_q));
-  assign h_rdata           = st_iso_q[80:49];
-  assign err_pin           = st_iso_q[48];
-  assign prog_done         = st_iso_q[47];
-  assign drain_busy        = st_iso_q[46];
-  assign done              = st_iso_q[45];
-  assign crc_err           = st_iso_q[44];
-  assign array_abft_sticky = st_iso_q[43];
-  assign acc_abft_sticky   = st_iso_q[42];
-  assign ctrl_err_sticky   = st_iso_q[41];
-  assign seq_err_sticky    = st_iso_q[40];
-  assign rq_err_sticky     = st_iso_q[39];
-  assign ecc_ce            = st_iso_q[38];
-  assign ecc_ue            = st_iso_q[37];
-  assign wbuf_ce           = st_iso_q[36];
-  assign wbuf_ue           = st_iso_q[35];
-  assign rq_tbl_perr       = st_iso_q[34];
-  assign lost_err          = st_iso_q[33];
-  assign fetch_timeout     = st_iso_q[32];
+  assign h_rdata           = st_iso_q[85:54];
+  assign err_pin           = st_iso_q[53];
+  assign prog_done         = st_iso_q[52];
+  assign drain_busy        = st_iso_q[51];
+  assign done              = st_iso_q[50];
+  assign crc_err           = st_iso_q[49];
+  assign array_abft_sticky = st_iso_q[48];
+  assign acc_abft_sticky   = st_iso_q[47];
+  assign ctrl_err_sticky   = st_iso_q[46];
+  assign seq_err_sticky    = st_iso_q[45];
+  assign rq_err_sticky     = st_iso_q[44];
+  assign ecc_ce            = st_iso_q[43];
+  assign ecc_ue            = st_iso_q[42];
+  assign wbuf_ce           = st_iso_q[41];
+  assign wbuf_ue           = st_iso_q[40];
+  assign rq_tbl_perr       = st_iso_q[39];
+  assign lost_err          = st_iso_q[38];
+  assign fetch_timeout     = st_iso_q[37];
+  assign abuf_ce           = st_iso_q[36];
+  assign abuf_ue           = st_iso_q[35];
+  assign act_perr          = st_iso_q[34];
+  assign pk_perr           = st_iso_q[33];
+  assign drain_ovf         = st_iso_q[32];
   assign drain_crc_last    = st_iso_q[31:16];
   assign drain_msg_cnt     = st_iso_q[15:0];
   // the testbench hooks pass straight out (DV_HOOKS = 0: the bank's tied-off pins and a constant -- nothing for a clamp)

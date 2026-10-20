@@ -314,6 +314,10 @@ cocotb_tiles:
 	-$(call timed,tile32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32
 	-$(call timed,core32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core32
 	-$(call timed,tile_sp) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_sp
+# drop 0.44 (S1, review finding 1): the randomised-reset builds -- the core's C17 and the mesh's M1 with every array and
+# unreset register random (the ECC flags qualified by a real read; silicon powers up random)
+	-$(call timed,core_xinit) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core_xinit
+	-$(call timed,tile_xinit) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_xinit
 # drop 0.43: the coverage builds one after another (run 196's step ran the four at once and peaked at 15.6 GB in one
 # process of the runner's 16 GB; runs 201 / 205 lost the runner there): each still compiles with the jobs above
 	-$(call timed,core_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core_cov
@@ -321,7 +325,7 @@ cocotb_tiles:
 	-$(call timed,tile8_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile8_cov
 	-$(call timed,tile32_cov) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32_cov
 	-$(MAKE) cocotb_coverage_report
-	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml dv/cocotb/results_tile_sp.xml
+	python3 dv/cocotb/check_results.py dv/cocotb/results.xml dv/cocotb/results_tile8.xml dv/cocotb/results_tile32.xml dv/cocotb/results_core32.xml dv/cocotb/results_tile_sp.xml dv/cocotb/results_core_xinit.xml dv/cocotb/results_tile_xinit.xml
 
 # the chip top (drop 0.42): neo_top's suite, one build run twice -- clk 1.0 ns / aclk 1.6 ns, then aclk == clk -- in its own build
 # directory (no clean: the tile suites' results stay); check_results.py fails the target on any failed or missing test
@@ -449,7 +453,8 @@ gls:
 # per block (dv/cocotb/faults/weights.json), FAULTS_WORKERS simulator processes per build, the whole campaign within
 # FAULTS_BUDGET_MIN minutes (0: no limit; each worker stops when its share has run out, every finished fault kept);
 # faults.csv, faults_report.md (per-block diagnostic coverage), undetected.md and faults_summary.json into ci_logs/faults/.
-# FMEDA v2 reads them: python3 safety/build_fmeda.py --v2 --faults ci_logs/faults --formal <formal_report.md>.
+# FMEDA v2 reads them: python3 safety/build_fmeda.py --v2 --faults ci_logs/faults --formal <formal_report.md>; FMEDA v3 (drop
+# 0.44, S1: the mechanisms of the safety closure measured, the base rates at the silicon leaves) the same with --v3.
 FAULTS_N ?= 300
 FAULTS_SEED ?= 1
 FAULTS_WORKERS ?= 2

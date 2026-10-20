@@ -55,9 +55,10 @@ module link_pack_fv #(
   logic           src_ready, lk_valid, lk_ready, snk_valid;
   logic [FWL-1:0] lk_flit;
   logic [FWB-1:0] snk_flit;
+  logic pk_perr;                                 // drop 0.44: the packer's beat-parity check (the source's beats are even: below)
   link_packer #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_pk (
     .clk(clk), .rst_n(rst_n), .core_valid(src_valid), .core_flit(src_flit), .core_ready(src_ready),
-    .link_valid(lk_valid), .link_flit(lk_flit), .link_ready(lk_ready));
+    .link_valid(lk_valid), .link_flit(lk_flit), .link_ready(lk_ready), .err_clear(1'b0), .perr_sticky(pk_perr));
   link_unpacker #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_up (
     .clk(clk), .rst_n(rst_n), .link_valid(lk_valid), .link_flit(lk_flit), .link_ready(lk_ready),
     .core_valid(snk_valid), .core_flit(snk_flit), .core_ready(snk_ready));

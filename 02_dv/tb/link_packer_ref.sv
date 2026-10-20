@@ -162,9 +162,10 @@ module link_packer_pair #(
   output logic           r_link_valid,
   output logic [FWL-1:0] r_link_flit
 );
+  logic n_perr;                                  // drop 0.44: the new packer's beat-parity check, not compared (the reference has none)
   link_packer #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_new (
     .clk(clk), .rst_n(rst_n), .core_valid(core_valid), .core_flit(core_flit), .core_ready(n_core_ready),
-    .link_valid(n_link_valid), .link_flit(n_link_flit), .link_ready(n_link_ready));
+    .link_valid(n_link_valid), .link_flit(n_link_flit), .link_ready(n_link_ready), .err_clear(1'b0), .perr_sticky(n_perr));
   link_packer_ref #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_ref (
     .clk(clk), .rst_n(rst_n), .core_valid(r_core_valid), .core_flit(r_core_flit), .core_ready(r_core_ready),
     .link_valid(r_link_valid), .link_flit(r_link_flit), .link_ready(r_link_ready));

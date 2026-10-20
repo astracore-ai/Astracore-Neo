@@ -85,6 +85,7 @@ module tile_mesh_cocotb #(
   logic          h_we_a [N], h_re_a [N], err_pin_a [N], prog_done_a [N], drain_busy_a [N], done_a [N], crc_err_a [N], parity_err_a [N];
   logic          array_abft_a [N], acc_abft_a [N], ctrl_err_a [N], seq_err_a [N], rq_err_a [N], ecc_ce_a [N], ecc_ue_a [N],
                  wbuf_ce_a [N], wbuf_ue_a [N], rq_tbl_perr_a [N], lost_err_a [N], fetch_timeout_a [N];
+  logic          abuf_ce_a [N], abuf_ue_a [N], act_perr_a [N], pk_perr_a [N], drain_ovf_a [N];   // drop 0.44: read through ERR_CAUSE
   logic [7:0]    h_addr_a [N];
   logic [31:0]   h_wdata_a [N], h_rdata_a [N];
   logic [31:0]   obs_a [N];
@@ -119,6 +120,7 @@ module tile_mesh_cocotb #(
     .array_abft_sticky(array_abft_a), .acc_abft_sticky(acc_abft_a), .ctrl_err_sticky(ctrl_err_a), .seq_err_sticky(seq_err_a),
     .rq_err_sticky(rq_err_a), .ecc_ce(ecc_ce_a), .ecc_ue(ecc_ue_a), .wbuf_ce(wbuf_ce_a), .wbuf_ue(wbuf_ue_a),
     .rq_tbl_perr(rq_tbl_perr_a), .lost_err(lost_err_a), .fetch_timeout(fetch_timeout_a),
+    .abuf_ce(abuf_ce_a), .abuf_ue(abuf_ue_a), .act_perr(act_perr_a), .pk_perr(pk_perr_a), .drain_ovf(drain_ovf_a),
     .drain_crc_last(dcrc_a), .drain_msg_cnt(dcnt_a),
     .dv_bd_node(bd_node), .dv_bd_we(bd_we), .dv_bd_addr(bd_addr), .dv_bd_wdata(bd_wdata), .dv_bd_rdata(bd_rdata),
     .dv_fi_node(fi_node), .dv_fi_sel(fi_sel), .dv_fi_en(fi_en), .dv_fi_idx(fi_idx), .dv_fi_mask(fi_mask),

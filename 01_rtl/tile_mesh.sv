@@ -38,6 +38,11 @@ module tile_mesh #(
   output logic          rq_tbl_perr       [NX*NY],
   output logic          lost_err          [NX*NY],
   output logic          fetch_timeout     [NX*NY],
+  output logic          abuf_ce           [NX*NY],     // drop 0.44: the activation buffer's SECDED, the activation path's
+  output logic          abuf_ue           [NX*NY],     //   parity, the packer's beat-parity check, the drain FIFO's overflow
+  output logic          act_perr          [NX*NY],
+  output logic          pk_perr           [NX*NY],
+  output logic          drain_ovf         [NX*NY],
   output logic [15:0]   drain_crc_last    [NX*NY],     // drop 0.43: each tile's last drain message's CRC and count (lockstep)
   output logic [15:0]   drain_msg_cnt     [NX*NY],
   // testbench hooks (drop 0.35; DV_HOOKS = 1): one tile at a time, selected by node index y * NX + x -- the bank backdoor
@@ -103,6 +108,7 @@ module tile_mesh #(
           .seq_err_sticky(seq_err_sticky[n]), .rq_err_sticky(rq_err_sticky[n]), .ecc_ce(ecc_ce[n]), .ecc_ue(ecc_ue[n]),
           .wbuf_ce(wbuf_ce[n]), .wbuf_ue(wbuf_ue[n]), .rq_tbl_perr(rq_tbl_perr[n]),
           .lost_err(lost_err[n]), .fetch_timeout(fetch_timeout[n]), .drain_crc_last(drain_crc_last[n]), .drain_msg_cnt(drain_msg_cnt[n]),
+          .abuf_ce(abuf_ce[n]), .abuf_ue(abuf_ue[n]), .act_perr(act_perr[n]), .pk_perr(pk_perr[n]), .drain_ovf(drain_ovf[n]),
           .dv_bd_we(dv_bd_we && (dv_bd_node == NW'(n))), .dv_bd_addr(dv_bd_addr[BAW-1:0]), .dv_bd_wdata(dv_bd_wdata), .dv_bd_rdata(dv_bd_rd[n]),
           .dv_fi_en(dv_fi_en && (dv_fi_node == NW'(n))), .dv_fi_sel(dv_fi_sel), .dv_fi_idx(dv_fi_idx), .dv_fi_mask(dv_fi_mask),
           .dv_rt_valid(dv_rv[n]), .dv_rt_flit4(dv_rf4[n]), .dv_obs(dv_obs[n]));

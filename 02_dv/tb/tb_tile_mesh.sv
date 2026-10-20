@@ -15,6 +15,7 @@ module tb_tile_mesh;
   logic        parity_err [N], crc_err [N], array_abft_sticky [N], acc_abft_sticky [N], ctrl_err_sticky [N];
   logic        seq_err_sticky [N], rq_err_sticky [N], ecc_ce [N], ecc_ue [N], wbuf_ce [N], wbuf_ue [N], rq_tbl_perr [N];
   logic        lost_err [N], fetch_timeout [N];
+  logic        abuf_ce [N], abuf_ue [N], act_perr [N], pk_perr [N], drain_ovf [N];   // drop 0.44 (read through the causes)
 
   localparam int FWL = 1 + 2 * (2 + 2) + 8 + 64;            // tile_mesh's link flit at its defaults (XW = YW = 2, WPF = 1)
   logic [38:0] dv_bd_rdata; logic [4:0] dv_rt_valid; logic [FWL-1:0] dv_rt_flit4;   // the testbench hooks (drop 0.35), tied off here
@@ -26,6 +27,7 @@ module tb_tile_mesh;
     .array_abft_sticky(array_abft_sticky), .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky), .ecc_ce(ecc_ce), .ecc_ue(ecc_ue),
     .wbuf_ce(wbuf_ce), .wbuf_ue(wbuf_ue), .rq_tbl_perr(rq_tbl_perr), .lost_err(lost_err), .fetch_timeout(fetch_timeout),
+    .abuf_ce(abuf_ce), .abuf_ue(abuf_ue), .act_perr(act_perr), .pk_perr(pk_perr), .drain_ovf(drain_ovf),
     .drain_crc_last(drain_crc_last), .drain_msg_cnt(drain_msg_cnt),
     .dv_bd_node('0), .dv_bd_we(1'b0), .dv_bd_addr('0), .dv_bd_wdata('0), .dv_bd_rdata(dv_bd_rdata),
     .dv_fi_node('0), .dv_fi_sel('0), .dv_fi_en(1'b0), .dv_fi_idx('0), .dv_fi_mask('0), .dv_rt_valid(dv_rt_valid), .dv_rt_flit4(dv_rt_flit4),

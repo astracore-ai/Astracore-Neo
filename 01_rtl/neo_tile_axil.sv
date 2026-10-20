@@ -25,6 +25,7 @@ module neo_tile_axil #(
   output logic          prog_done, drain_busy, done, parity_err, crc_err, array_abft_sticky, acc_abft_sticky,
   output logic          ctrl_err_sticky, seq_err_sticky, rq_err_sticky, ecc_ce, ecc_ue, wbuf_ce, wbuf_ue, rq_tbl_perr,
   output logic          lost_err, fetch_timeout,
+  output logic          abuf_ce, abuf_ue, act_perr, pk_perr, drain_ovf,        // drop 0.44
   // testbench hooks of the tile (drop 0.35), tied off when DV_HOOKS = 0
   input  logic          dv_bd_we, input logic [BAW-1:0] dv_bd_addr, input logic [38:0] dv_bd_wdata, output logic [38:0] dv_bd_rdata,
   input  logic          dv_fi_en, input logic [2:0] dv_fi_sel, input logic [19:0] dv_fi_idx, input logic [DWL-1:0] dv_fi_mask,
@@ -48,6 +49,7 @@ module neo_tile_axil #(
     .array_abft_sticky(array_abft_sticky), .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky), .ecc_ce(ecc_ce), .ecc_ue(ecc_ue),
     .wbuf_ce(wbuf_ce), .wbuf_ue(wbuf_ue), .rq_tbl_perr(rq_tbl_perr), .lost_err(lost_err), .fetch_timeout(fetch_timeout),
+    .abuf_ce(abuf_ce), .abuf_ue(abuf_ue), .act_perr(act_perr), .pk_perr(pk_perr), .drain_ovf(drain_ovf),
     .drain_crc_last(drain_crc_last), .drain_msg_cnt(drain_msg_cnt),
     .dv_bd_we(dv_bd_we), .dv_bd_addr(dv_bd_addr), .dv_bd_wdata(dv_bd_wdata), .dv_bd_rdata(dv_bd_rdata),
     .dv_fi_en(dv_fi_en), .dv_fi_sel(dv_fi_sel), .dv_fi_idx(dv_fi_idx), .dv_fi_mask(dv_fi_mask),

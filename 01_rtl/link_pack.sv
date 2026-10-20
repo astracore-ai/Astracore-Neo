@@ -39,6 +39,16 @@
 //   the link sees the same single-word flits, in the same order, as before drop 0.29.
 //   Unpacker: a flit of n words is presented as ceil(n / BW) beats of up to BW words (two per 32-word flit; one, as it is,
 //   when WPF <= BW); the interface holds a beat until it has consumed it.
+//   Drop 0.44 (S1) -- the packer checks the beat's parity. The NIC forms its beat's parity bit from stored bits (the
+//   drain FIFO row's beat parities and, since this drop, its index parity; the served bank row's word parities registered
+//   with the row), so a flipped or stuck bit of the FIFO's output register, of a FIFO cell or of the serve register makes
+//   the beat's parity odd -- but until now nobody looked: the packer recomputed the link flit's parity from the words it
+//   received and the end-to-end CRC is accumulated from the same words, so the receiver saw a consistent message (FMEDA
+//   v2: 13 undetected faults of tile_nic.macro / .sram / serve_row). The packer now checks ^core_flit == 0 on every beat
+//   it holds (g_merge: the registered beat, its parity bit registered with it, a 528-input XOR behind the input register;
+//   g_split: the beat as presented) and raises perr_sticky (the tile's parity cause, beside the router's), cleared by
+//   err_clear. The emitted flit's parity stays recomputed, so a bad beat still travels with a good link parity: the flag
+//   is the mechanism, not a drop.
 module link_packer #(
   parameter int XW = 2, YW = 2, BW = 16, WPF = 1,
   parameter int DWB = 32 + 32 * BW,                        // beat payload (interface side)
@@ -54,7 +64,9 @@ module link_packer #(
   output logic           core_ready,
   output logic           link_valid,
   output logic [FWL-1:0] link_flit,
-  input  logic           link_ready
+  input  logic           link_ready,
+  input  logic           err_clear,                       // drop 0.44
+  output logic           perr_sticky                      // drop 0.44: a beat received with odd parity since err_clear
 );
   localparam logic [2:0] T_RDRSP = 3'd2, T_WRDATA = 3'd4, T_PSUM = 3'd5;
   localparam int CWB = $clog2(BW + 1);                     // beat word count 0..BW
@@ -63,14 +75,19 @@ module link_packer #(
   localparam int BWL = $clog2(BW);                         // the low bits of a beat's count field (drop 0.41)
   localparam int VWB = 32 * BW;
   localparam int VWL = 32 * WPF;
-  logic unused_core_parity;                                // the flit's parity is the router's business (lint)
-  assign unused_core_parity = core_flit[FWB-1];
+  logic in_bad;                                            // drop 0.44: the beat held (or presented) has odd parity
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n)         perr_sticky <= 1'b0;
+    else if (err_clear) perr_sticky <= 1'b0;
+    else if (in_bad)    perr_sticky <= 1'b1;
+  end
 
   generate
     if (WPF >= BW) begin : g_merge
       // the input register (drop 0.42): the beat the pending logic below decides on, without its parity
       logic           iv;                                   // it holds a beat
       logic [FWB-2:0] ib;                                   // {head, type, tag, hdr, words} of that beat
+      logic           ipar;                                 // drop 0.44: its parity bit, registered with it (checked below)
       logic           i_ready;                              // the pending logic takes the registered beat this cycle
       logic [HW-1:0]  in_head;
       logic [2:0]     in_type;
@@ -92,8 +109,9 @@ module link_packer #(
       // the beat itself without reset (a plain flop: the reset flop's clock-to-output, behind the count field's fanout into
       // the merge arithmetic, was the unit's worst path): read only while iv, written with every beat taken
       always_ff @(posedge clk) begin
-        if (core_ready && core_valid) ib <= core_flit[FWB-2:0];
+        if (core_ready && core_valid) begin ib <= core_flit[FWB-2:0]; ipar <= core_flit[FWB-1]; end
       end
+      assign in_bad = iv && ((ipar ^ (^ib)) != 1'b0);       // drop 0.44: even parity over the whole beat as received
       // The pending flit lives in one of two word buffers (cur). A data beat that is taken is written, unconditionally,
       // into the pending buffer at word pend_cnt (where it goes if it merges) AND into the other buffer at word 0 (where
       // it goes if it starts the next flit); the merge decision then only picks the buffer (cur flips on a start) and the
@@ -227,6 +245,7 @@ module link_packer #(
       assign in_hdr   = core_flit[DWB-13 -: 20];
       assign in_words = core_flit[VWB-1:0];
       assign in_data  = (in_type == T_RDRSP) || (in_type == T_WRDATA) || (in_type == T_PSUM);
+      assign in_bad   = core_valid && ((^core_flit) != 1'b0);   // drop 0.44
       logic [CWB-1:0] in_n;                                 // words in the beat
       logic [CWB-1:0] idx;                                  // chunk of WPF words being sent
       logic [CWB-1:0] base, left, cn;

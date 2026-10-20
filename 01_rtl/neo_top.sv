@@ -225,6 +225,7 @@ module neo_top #(
             assign t_out_ready[p]         = o_ready[m][p];
           end
           logic t_done, t_parity, t_crc, t_aabft, t_cabft, t_ctrl, t_seq, t_rq, t_ece, t_eue, t_wce, t_wue, t_tbl, t_lost, t_tmo;
+          logic t_ace, t_aue, t_apr, t_pkp, t_dov;   // drop 0.44
           logic [38:0]    t_bd_rdata;
           logic [4:0]     t_rt_valid;
           logic [FWL-1:0] t_rt_flit4;
@@ -241,12 +242,13 @@ module neo_top #(
             .array_abft_sticky(t_aabft), .acc_abft_sticky(t_cabft), .ctrl_err_sticky(t_ctrl), .seq_err_sticky(t_seq),
             .rq_err_sticky(t_rq), .ecc_ce(t_ece), .ecc_ue(t_eue), .wbuf_ce(t_wce), .wbuf_ue(t_wue), .rq_tbl_perr(t_tbl),
             .lost_err(t_lost), .fetch_timeout(t_tmo), .drain_crc_last(t_dcrc[16*n +: 16]), .drain_msg_cnt(t_dcnt[16*n +: 16]),
+            .abuf_ce(t_ace), .abuf_ue(t_aue), .act_perr(t_apr), .pk_perr(t_pkp), .drain_ovf(t_dov),
             .dv_bd_we(1'b0), .dv_bd_addr('0), .dv_bd_wdata('0), .dv_bd_rdata(t_bd_rdata),
             .dv_fi_en(1'b0), .dv_fi_sel('0), .dv_fi_idx('0), .dv_fi_mask('0), .dv_rt_valid(t_rt_valid), .dv_rt_flit4(t_rt_flit4),
             .dv_obs(t_obs));
           logic unused_tile;                 // the tile's flags are read through its registers; the testbench hooks are off
           assign unused_tile = ^{t_done, t_parity, t_crc, t_aabft, t_cabft, t_ctrl, t_seq, t_rq, t_ece, t_eue, t_wce, t_wue, t_tbl,
-                                 t_lost, t_tmo, t_bd_rdata, t_rt_valid, t_rt_flit4, t_obs};
+                                 t_lost, t_tmo, t_ace, t_aue, t_apr, t_pkp, t_dov, t_bd_rdata, t_rt_valid, t_rt_flit4, t_obs};
         end else begin : g_bnode
           // ---- the bridge node of row y: a router, its local port into the bridge ----
           localparam int MEMY  = (y < N_MEM_BRIDGES) ? 1 : 0;
@@ -282,9 +284,13 @@ module neo_top #(
             link_unpacker #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_unpack (
               .clk(clk), .rst_n(rst_n), .link_valid(r_out_valid[4]), .link_flit(r_out_flit[4]), .link_ready(r_out_ready[4]),
               .core_valid(up_valid), .core_flit(up_flit), .core_ready(up_ready));
-            link_packer #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_pack (
-              .clk(clk), .rst_n(rst_n), .core_valid(pk_valid), .core_flit({1'b0, pk_flit}), .core_ready(pk_ready),
-              .link_valid(r_in_valid[4]), .link_flit(r_in_flit[4]), .link_ready(r_in_ready[4]));
+            logic pk_perr;                 // drop 0.44: the bridge presents no parity bit (the beat's parity is formed below), so
+            link_packer #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_pack (   // the packer's check is fed an even beat
+              .clk(clk), .rst_n(rst_n), .core_valid(pk_valid), .core_flit({^pk_flit, pk_flit}), .core_ready(pk_ready),
+              .link_valid(r_in_valid[4]), .link_flit(r_in_flit[4]), .link_ready(r_in_ready[4]),
+              .err_clear(rtr_clear[y]), .perr_sticky(pk_perr));
+            logic unused_pk_perr;          // (even by construction: the bridge's data has its CRC; the tiles' NICs form theirs from stored bits)
+            assign unused_pk_perr = pk_perr;
             logic unused_up_parity;          // the link parity was checked by the router; the bridge's data has its CRC
             assign unused_up_parity = up_flit[FB];
             // the crossing: one asynchronous FIFO of beats per direction

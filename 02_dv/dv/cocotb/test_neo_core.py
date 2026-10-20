@@ -17,7 +17,13 @@ the SiLU table, the constants and the requantizer's tables from compiler/neo_vec
 unit's buffer as the DMA's FETCH_A with arg 1 does), bit-exact against the convolution -> the unit's model -> the
 requantizer's model; C13, the unit's two flags through its fault hooks (the duplicated control, the table parity); C14,
 a layer norm over the row's own lanes (the output tile's COLS channels: both passes on the held row -- RELOAD) clipped
-by CLAMP, the compiler's in-row norm epilogue, bit-exact against the unit's and the requantizer's models."""
+by CLAMP, the compiler's in-row norm epilogue, bit-exact against the unit's and the requantizer's models.
+Drop 0.44 (S1): C15, the activation buffer's SECDED through its hook (a data bit and a check bit of stored lanes corrected
+on the way to the array, abuf_ce, bit-exact; two bits of one lane abuf_ue); C16, the registers the ABFT cannot see flipped
+in flight through the VPI -- the index / first delay lines (ctrl_err: the lines' parity), the skew chains and the feeder's
+row register and its parity bits (act_perr: the byte parity at the array's row inputs); C17 (the core_xinit build:
+--x-initial unique, +verilator+rand+reset+2): every ECC flag clear after reset with the arrays random and nothing written
+-- the weight buffer's and the activation buffer's flags are qualified by a real read (review finding 1) -- then C1 clean."""
 import os
 import cocotb
 from cocotb.clock import Clock
@@ -137,13 +143,22 @@ S_DRAIN = 5                                          # core_seq state while the 
 
 def handle(dut, path):
     """A signal of the core by its hierarchical path below the toplevel (C6's paths cross no generate index; an unpacked
-    array below one needs the fault campaign's two-step lookup, faults/common.py Injector.resolve)."""
-    return dut._id(path, extended=False)
+    array below one needs the fault campaign's two-step lookup, faults/common.py Injector.resolve -- C16's skew-chain
+    stages: a trailing [k] names the element of the array the path ends in)."""
+    if "[" not in path:
+        return dut._id(path, extended=False)
+    from faults.common import Injector
+    base, _, last = path.rpartition(".")
+    elem = []
+    if last.endswith("]"):
+        name, _, idx = last[:-1].partition("[")
+        elem, last = [int(idx)], name
+    return Injector(dut).handle(base + "." + last if base else last, elem)
 
 
 async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False, rq_fault=False, tbl_fault=False, wbuf_flips=(),
                    desc=None, psums=(), words=None, vpi_flip=None, vec=None, rbuf=None, rq_tables=None, collect=None,
-                   vec_fault=None):
+                   vec_fault=None, abuf_flips=()):
     """C1's run as a helper: reset, load the buffers, descriptor, go, collect the drained rows until done. The fault
     hooks (drop 0.36) mirror sim/run_conv_core.py: the feeder-control fault held for the first 40 cycles of the run
     (it hits valid rows), the sequencer fault while the drain runs, the requant-input fault while rows drain, the
@@ -159,7 +174,8 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     Drop 0.43 (C12-C14): vec = the vector unit's (address, data) writes, rbuf = its residual rows (INT8, written as entries
     0..), rq_tables = (mult, shift, zp) per column instead of the default tables; collect (a dict) receives the requantized
     rows ('rq') and the cycle of the sequencer's done ('seq_done'); vec_fault = 'ctrl' | 'tbl': the unit's hooks held over
-    the run. Returns (rows, cycles, M, wo)."""
+    the run. abuf_flips = [(entry, lane, mask)]: stored activation codewords XORed through the buffer's hook (drop 0.44).
+    Returns (rows, cycles, M, wo)."""
     cin = x.shape[0]
     cin_tiles = (cin + ROWS - 1) // ROWS
     h, w = x.shape[1], x.shape[2]
@@ -168,7 +184,8 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     M = ho * wo
     for name in ("abuf_we", "wbuf_we", "go", "err_clear", "fault_inject", "ctrl_fault_inject", "rq_tbl_we", "rq_relu", "ext_valid",
                  "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "dv_wbuf_flip", "dv_wbuf_addr", "dv_wbuf_lane", "dv_wbuf_mask",
-                 "cfg_sparse", "vec_we", "rbuf_we", "rbuf_we2", "vec_ctrl_fault_inject", "vec_tbl_fault_inject"):
+                 "cfg_sparse", "vec_we", "rbuf_we", "rbuf_we2", "vec_ctrl_fault_inject", "vec_tbl_fault_inject",
+                 "dv_abuf_flip", "dv_abuf_addr", "dv_abuf_lane", "dv_abuf_mask"):
         getattr(dut, name).value = 0
     dut.rst_n.value = 0
     for _ in range(3): await RisingEdge(dut.clk)
@@ -211,6 +228,12 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
         dut.dv_wbuf_flip.value = 1
         await RisingEdge(dut.clk)
         dut.dv_wbuf_flip.value = 0
+    for entry, lane, mask in abuf_flips:                             # the activation buffer's stored codewords (drop 0.44)
+        dut.dv_abuf_addr.value = entry; dut.dv_abuf_lane.value = lane; dut.dv_abuf_mask.value = mask
+        dut.dv_abuf_flip.value = 1                                   # held two cycles: the hook enables the datapath's gated clock,
+        await RisingEdge(dut.clk)                                    # whose first falling edge comes a cycle after the enable
+        await RisingEdge(dut.clk)
+        dut.dv_abuf_flip.value = 0
     for name, v in (("cfg_h", h), ("cfg_w", w), ("cfg_ho", ho), ("cfg_wo", wo), ("cfg_s", s), ("cfg_p", p), ("cfg_oy0", 0), ("cfg_oy_n", ho),
                     ("cfg_iy0", 0), ("cfg_k", k), ("cfg_ct_n", cin_tiles), ("cfg_tile_pixels", h * w), ("cfg_ct0", 0), ("cfg_ky0", 0),
                     ("cfg_kx0", 0), ("cfg_rn", cin_tiles * k * k), ("cfg_contrib_n", 0), ("cfg_regions_m1", 0xFFFF), ("tiles_ready", 0x7FFF)):
@@ -284,7 +307,8 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
 
 def flags(dut):
     return {n: int(getattr(dut, n + "_sticky").value) for n in ("array_abft", "acc_abft", "ctrl_err", "seq_err", "rq_err", "rq_tbl_perr",
-                                                                "wbuf_ce", "wbuf_ue", "vec_err", "vec_perr")}
+                                                                "wbuf_ce", "wbuf_ue", "vec_err", "vec_perr",
+                                                                "abuf_ce", "abuf_ue", "act_perr")}      # drop 0.44: the three new ones
 
 
 @cocotb.test()
@@ -627,3 +651,119 @@ async def c13_vec_fault_hooks(dut):
     dut._log.info("C13: the vector unit's control fault -> vec_err alone, its table fault -> vec_perr alone (rows unchanged): "
                   + "; ".join(f"{h}: {c} cycles, {n} rows" for h, (c, n) in seen.items()))
     fc.report("funcov_neo_core.yml")
+
+
+@cocotb.test()
+async def c15_abuf_ecc(dut):
+    """C15 (drop 0.44, S1): the activation buffer's SECDED through its hook. One bit of a stored codeword flipped -- a data
+    bit of entry 5's lane 0 (channel tile 0, pixel 5), a check bit of entry 40's last lane (tile 1, pixel 4) -- is
+    corrected on the way to the array: abuf_ce, the result bit-exact, nothing else (the ABFT silent: it would not have seen
+    the wrong byte). Two bits of one lane (entry 7) are uncorrectable: abuf_ue, the run completes (neosim's C13 pokes the
+    same cells directly)."""
+    start_clock(dut, "C15")
+    rng = np.random.default_rng(13)
+    x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
+    ref = direct_conv(x, wgt, 1, 1)
+    lpe = (ROWS * 8 + 31) // 32                           # the entry's lanes: 4 at 16 rows, 8 at 32
+    rows, cycles, M, wo = await run_conv(dut, x, wgt, abuf_flips=[(5, 0, 1 << 3), (40, lpe - 1, 1 << 35)])
+    got = np.zeros_like(ref)
+    for m in range(M):
+        for c in range(7):
+            got[c, m // wo, m % wo] = rows[m][c]
+    assert np.array_equal(got, ref), "C15: single-bit errors in the activation buffer were not corrected"
+    f = flags(dut)
+    assert f["abuf_ce"] == 1 and not any(v for n, v in f.items() if n != "abuf_ce"), f"C15 single-bit flags {f}"
+    fc.sample_flag("abuf_ce")
+    rows, cycles2, M, wo = await run_conv(dut, x, wgt, abuf_flips=[(7, 0, (1 << 3) | (1 << 9))])
+    f = flags(dut)
+    assert f["abuf_ue"] == 1 and len(rows) == M, f"C15 double-bit flags {f}, {len(rows)} rows"
+    fc.sample_flag("abuf_ue")
+    dut._log.info(f"C15: activation-buffer SECDED: a data bit and a check bit corrected on read (result bit-exact, abuf_ce, {cycles} cycles); "
+                  f"a double-bit lane error flagged uncorrectable (abuf_ue, run complete, {cycles2} cycles)")
+    fc.report("funcov_neo_core.yml")
+
+
+# C16: the registers the ABFT cannot see (drop 0.44, S1) -- (path, bit, the 1-bit condition under which the register holds a
+# row in use, the flag). LAT = the array's latency; the delay lines' last stage is consumed the cycle valid_out is high.
+def c16_targets():
+    lat = 2 * ROWS + COLS
+    return [
+        (f"u_dp.u_idx_dl.pipe[{lat - 1}]", 2, "u_dp.u_core.valid_out", "ctrl_err"),          # the row index as the accumulator takes it
+        (f"u_dp.u_first_dl.pipe[{lat - 1}]", 0, "u_dp.u_core.valid_out", "ctrl_err"),        # the overwrite flag
+        (f"u_dp.u_idx_dl.pipe[{lat // 2}]", 0, "u_dp.u_core.valid_out", "ctrl_err"),         # a stage in flight (consumed LAT/2 later)
+        (f"u_dp.u_ipar_dl.pipe[{lat - 1}]", 0, "u_dp.u_core.valid_out", "ctrl_err"),         # the parity bit itself
+        ("u_dp.u_feeder.x_vec_q", 5, "u_dp.u_feeder.valid_q2", "act_perr"),                  # the feeder's row register (row 0's byte 0)
+        ("u_dp.u_feeder.x_par_q", 0, "u_dp.u_feeder.valid_q2", "act_perr"),                  # its parity bit
+        ("u_dp.u_core.u_skew.g_pairs.g_pair[0].r_odd", 2, "u_dp.u_core.g_vskew[1].g_vd.u_vd.pipe[1]", "act_perr"),   # row 1's register
+        ("u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_da.pipe[2]", 11, "u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[3]", "act_perr"),  # a chain stage, consumed 8 cycles later by row 6
+        ("u_dp.u_core.u_skew.g_pairs.g_pair[3].g_next.u_pa.pipe[2]", 1, "u_dp.u_core.g_vskew[6].g_vd.u_vd.pipe[3]", "act_perr"),   # the parity chain
+    ]
+
+
+@cocotb.test()
+async def c16_act_path_flips(dut):
+    """C16 (drop 0.44, S1): a single-cycle upset of the registers the ABFT cannot see, injected through the VPI in a cycle
+    the register holds a row in use: the index / first delay lines of neo_mac_core_v02 (a wrong accumulator row or a wrong
+    overwrite flag -- the ABFT at drain cannot see a consistent row) raise ctrl_err through the lines' parity; the feeder's
+    row register and the skew chains (a wrong byte reaching every column and the check column alike) raise act_perr through
+    the byte parity checked at the array's row inputs. Every run completes with its rows drained; before this drop each of
+    these finished silently (FMEDA v2's undetected list: 79 skew flips, 41 index-line faults)."""
+    start_clock(dut, "C16")
+    rng = np.random.default_rng(16)
+    x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
+    ref = direct_conv(x, wgt, 1, 1)
+    seen = []
+    for path, bit, cond, flag in c16_targets():
+        rows, cycles, M, wo = await run_conv(dut, x, wgt, vpi_flip=(path, bit, cond))
+        f = flags(dut)
+        assert f[flag] == 1, f"C16 {path}[{bit}]: {flag} not raised ({f})"
+        assert len(rows) == M, f"C16 {path}: {len(rows)} rows drained, expected {M}"
+        got = np.zeros_like(ref)
+        for m in range(M):
+            for c in range(7):
+                got[c, m // wo, m % wo] = rows[m][c]
+        seen.append((path, "rows wrong" if not np.array_equal(got, ref) else "rows exact", ", ".join(n for n, v in f.items() if v)))
+        fc.sample_flag(flag)
+    dut._log.info("C16: every register of the activation path and the index lines flagged when upset in use -- "
+                  + "; ".join(f"{p}: {r}, flags {fl}" for p, r, fl in seen))
+    fc.report("funcov_neo_core.yml")
+
+
+@cocotb.test()
+async def c17_reset_flags_x(dut):
+    """C17 (drop 0.44, S1; review finding 1): with the model's arrays and unreset registers random (the core_xinit build:
+    --x-initial unique, +verilator+rand+reset+2 -- what silicon powers up with), every flag is clear after reset with
+    nothing written, stays clear for 200 idle cycles, and C1 then runs bit-exact with the flags clean. Before this drop the
+    weight buffer's lanes were decoded at the idle address every cycle, so wbuf_ue was set after every reset (a random
+    39-bit word is a valid codeword with probability 2^-7); the activation buffer's SECDED and the program memory's flags
+    are qualified by a real read the same way. On a build without the randomisation the test passes trivially."""
+    start_clock(dut, "C17")
+    for name in ("abuf_we", "wbuf_we", "go", "err_clear", "fault_inject", "ctrl_fault_inject", "rq_tbl_we", "rq_relu", "ext_valid",
+                 "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "dv_wbuf_flip", "dv_abuf_flip", "cfg_sparse", "vec_we",
+                 "rbuf_we", "rbuf_we2", "vec_ctrl_fault_inject", "vec_tbl_fault_inject", "abuf_we2", "wbuf_we2"):
+        getattr(dut, name).value = 0
+    dut.rst_n.value = 0
+    for _ in range(3):
+        await RisingEdge(dut.clk)
+    dut.rst_n.value = 1
+    for n in range(200):
+        await RisingEdge(dut.clk)
+        await ReadOnly()
+        f = flags(dut)
+        assert not any(f.values()), f"C17: a flag set {n} cycles after reset with nothing written: {f}"
+    await RisingEdge(dut.clk)
+    rng = np.random.default_rng(9)
+    x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
+    ref = direct_conv(x, wgt, 1, 1)
+    rows, cycles, M, wo = await run_conv(dut, x, wgt)
+    got = np.zeros_like(ref)
+    for m in range(M):
+        for c in range(7):
+            got[c, m // wo, m % wo] = rows[m][c]
+    f = flags(dut)
+    assert np.array_equal(got, ref) and not any(f.values()), f"C17: C1 after the random reset: flags {f}, rows {'exact' if np.array_equal(got, ref) else 'wrong'}"
+    dut._log.info(f"C17: every flag clear through 200 idle cycles after reset with the arrays random, then C1 bit-exact in {cycles} cycles, flags clean")
+
