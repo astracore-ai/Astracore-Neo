@@ -1,0 +1,70 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/6_1_fill.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/6_1_fill.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/6_final.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/6_final.sdc
+Deleted 0 routing obstructions
+[INFO RCX-0431] Defined process_corner X with ext_model_index 0
+[INFO RCX-0029] Defined extraction corner X
+[INFO RCX-0435] Reading extraction model file /OpenROAD-flow-scripts/flow/platforms/asap7/rcx_patterns.rules ...
+[INFO RCX-0436] RC segment generation noc_router (max_merge_res 50.0) ...
+[INFO RCX-0040] Final 1021828 rc segments
+[INFO RCX-0439] Coupling Cap extraction noc_router ...
+[INFO RCX-0440] Coupling threshhold is 0.1000 fF, coupling capacitance less than 0.1000 fF will be grounded.
+[INFO RCX-0442] 11% of 1082919 wires extracted
+[INFO RCX-0442] 20% of 1082919 wires extracted
+[INFO RCX-0442] 28% of 1082919 wires extracted
+[INFO RCX-0442] 37% of 1082919 wires extracted
+[INFO RCX-0442] 54% of 1082919 wires extracted
+[INFO RCX-0442] 64% of 1082919 wires extracted
+[INFO RCX-0442] 72% of 1082919 wires extracted
+[INFO RCX-0442] 78% of 1082919 wires extracted
+[INFO RCX-0442] 84% of 1082919 wires extracted
+[INFO RCX-0442] 100% of 1082919 wires extracted
+[INFO RCX-0045] Extract 115561 nets, 1136265 rsegs, 1136265 caps, 1700740 ccs
+[INFO RCX-0042] 100000 nets finished
+[INFO RCX-0443] 115561 nets finished
+IR drop analysis for power nets is skipped because PWR_NETS_VOLTAGES is undefined
+IR drop analysis for ground nets is skipped because GND_NETS_VOLTAGES is undefined
+Cell type report:                        Count       Area
+  Fill cell                             174835   23950.65
+  Tap cell                                4055     118.24
+  Tie cell                                5496     240.40
+  Clock buffer                            1712     640.97
+  Timing Repair Buffer                   16764    1353.30
+  Inverter                                8793     384.85
+  Clock inverter                           596     111.83
+  Clock gate cell                            5       1.31
+  Sequential cell                        16331    6032.71
+  Multi-Input combinational cell         60338    6676.84
+  Total                                 288925   39511.10
+Report metrics stage 6, finish...
+
+==========================================================================
+finish report_design_area
+--------------------------------------------------------------------------
+Design area 15560 um^2 39% utilization.
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/final_all.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/final_routing.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/final_placement.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/final_clocks.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/cts_default_clk.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/cts_default_clk_layout.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/final_resizer.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/final_congestion.webp.png
+[WARNING GUI-0010] File path does not end with a valid extension, new path is: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/final_worst_path.webp.png
+Elapsed time: 2:29.73[h:]min:sec. CPU time: user 192.42 sys 3.20 (130%). Peak memory: 2273388KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+6_report                           149      196     1.31     2220 N/A
