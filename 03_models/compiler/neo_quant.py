@@ -442,15 +442,16 @@ def self_check(verbose=True):
     graph, model, calib, rng = yolo_group_case()
     test = [{"x": rng.normal(0, 1.0, (1, 3, 12, 12))} for _ in range(2)]
     names = [q for q in graph.layers if q.kind == "conv"]
-    variants = [("INT8 percentile", dict(method="percentile")), ("INT8 mse", dict(method="mse")), ("INT8 max", dict(method="max")),
-                ("INT4 weights (the C2f convs)", dict(method="percentile", int4=[L.name for L in names if L.name.startswith("b2.")]))]
-    for tag, kw in variants:
+    variants = [("INT8 percentile", dict(method="percentile"), 0.999), ("INT8 mse", dict(method="mse"), 0.999), ("INT8 max", dict(method="max"), 0.999),
+                ("INT4 weights (the C2f convs)", dict(method="percentile", int4=[L.name for L in names if L.name.startswith("b2.")]), 0.98)]
+    for tag, kw, bar in variants:                                              # the bars of test_neo_onnx.py's Q5
         qn = quantize(graph, calib, **kw)
         rows, lines = accuracy_report(qn, test)
         out = [r for r in rows if r[4]][0]
         if verbose:
-            print(f"{tag}: output cos {out[1]:.5f}, SQNR {out[2]:.2f} dB, max |err| {out[3]:.2f} LSB; per layer min cos {min(r[1] for r in rows):.5f}")
-        ok = ok and out[1] > 0.99
+            print(f"{tag}: output cos {out[1]:.5f}, SQNR {out[2]:.2f} dB, max |err| {out[3]:.2f} LSB; per layer min cos {min(r[1] for r in rows):.5f}"
+                  f" ({'within' if out[1] > bar else 'BELOW'} the bar cos > {bar})")
+        ok = ok and out[1] > bar
     # the 2:4 path: the validator rejects the dense tensor, accepts the pruned one, the quantized result stays 2:4
     L = names[3]
     try:
