@@ -1,0 +1,172 @@
+
+==========================================================================
+floorplan final report_tns
+--------------------------------------------------------------------------
+tns max 0.00
+
+==========================================================================
+floorplan final report_wns
+--------------------------------------------------------------------------
+wns max 0.00
+
+==========================================================================
+floorplan final report_worst_slack
+--------------------------------------------------------------------------
+worst slack max 393.28
+
+==========================================================================
+floorplan final report_clock_min_period
+--------------------------------------------------------------------------
+clk period_min = 856.72 fmax = 1167.24
+
+==========================================================================
+floorplan final report_checks -path_delay min
+--------------------------------------------------------------------------
+Startpoint: g_merge.last_wp[11]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_merge.last_wp[11]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ g_merge.last_wp[11]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.45   41.73   81.77   81.77 ^ g_merge.last_wp[11]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         _01190_ (net)
+                 41.73    0.00   81.77 ^ _30115_/A1 (OAI21x1_ASAP7_75t_R)
+     1    0.44   10.00   16.53   98.30 v _30115_/Y (OAI21x1_ASAP7_75t_R)
+                                         _01760_ (net)
+                 10.00    0.00   98.30 v g_merge.last_wp[11]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                                 98.30   data arrival time
+
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                          0.00    0.00   clock reconvergence pessimism
+                                  0.00 ^ g_merge.last_wp[11]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                         16.22   16.22   library hold time
+                                 16.22   data required time
+-----------------------------------------------------------------------------
+                                 16.22   data required time
+                                -98.30   data arrival time
+-----------------------------------------------------------------------------
+                                 82.08   slack (MET)
+
+
+
+==========================================================================
+floorplan final report_checks -path_delay max
+--------------------------------------------------------------------------
+Startpoint: link_ready (input port clocked by clk)
+Endpoint: core_ready (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                        250.00  250.00 v input external delay
+     2    1.44    0.00    0.00  250.00 v link_ready (in)
+                                         link_ready (net)
+                  0.00    0.00  250.00 v _23825_/B (OR2x2_ASAP7_75t_R)
+     7    3.90   30.17   41.73  291.73 v _23825_/Y (OR2x2_ASAP7_75t_R)
+                                         _19765_ (net)
+                 30.17    0.00  291.73 v _23936_/C (MAJx2_ASAP7_75t_R)
+     1    0.49   14.32   44.69  336.42 v _23936_/Y (MAJx2_ASAP7_75t_R)
+                                         _19766_ (net)
+                 14.32    0.00  336.42 v _24047_/B (OR2x2_ASAP7_75t_R)
+     1    0.51   14.64   33.80  370.22 v _24047_/Y (OR2x2_ASAP7_75t_R)
+                                         _19767_ (net)
+                 14.64    0.00  370.22 v _24158_/A (BUFx2_ASAP7_75t_R)
+     9    4.98   31.79   41.41  411.63 v _24158_/Y (BUFx2_ASAP7_75t_R)
+                                         _19768_ (net)
+                 31.79    0.00  411.63 v _24269_/A (BUFx2_ASAP7_75t_R)
+    10    5.02   32.15   47.62  459.25 v _24269_/Y (BUFx2_ASAP7_75t_R)
+                                         _19769_ (net)
+                 32.15    0.00  459.25 v _24380_/A (BUFx2_ASAP7_75t_R)
+    10    4.92   31.68   47.47  506.72 v _24380_/Y (BUFx2_ASAP7_75t_R)
+                                         core_ready (net)
+                 31.68    0.00  506.72 v core_ready (out)
+                                506.72   data arrival time
+
+                  0.00 1250.00 1250.00   clock clk (rise edge)
+                          0.00 1250.00   clock network delay (ideal)
+                       -100.00 1150.00   clock uncertainty
+                          0.00 1150.00   clock reconvergence pessimism
+                       -250.00  900.00   output external delay
+                                900.00   data required time
+-----------------------------------------------------------------------------
+                                900.00   data required time
+                               -506.72   data arrival time
+-----------------------------------------------------------------------------
+                                393.28   slack (MET)
+
+
+
+==========================================================================
+floorplan final report_checks -unconstrained
+--------------------------------------------------------------------------
+Startpoint: link_ready (input port clocked by clk)
+Endpoint: core_ready (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                        250.00  250.00 v input external delay
+     2    1.44    0.00    0.00  250.00 v link_ready (in)
+                                         link_ready (net)
+                  0.00    0.00  250.00 v _23825_/B (OR2x2_ASAP7_75t_R)
+     7    3.90   30.17   41.73  291.73 v _23825_/Y (OR2x2_ASAP7_75t_R)
+                                         _19765_ (net)
+                 30.17    0.00  291.73 v _23936_/C (MAJx2_ASAP7_75t_R)
+     1    0.49   14.32   44.69  336.42 v _23936_/Y (MAJx2_ASAP7_75t_R)
+                                         _19766_ (net)
+                 14.32    0.00  336.42 v _24047_/B (OR2x2_ASAP7_75t_R)
+     1    0.51   14.64   33.80  370.22 v _24047_/Y (OR2x2_ASAP7_75t_R)
+                                         _19767_ (net)
+                 14.64    0.00  370.22 v _24158_/A (BUFx2_ASAP7_75t_R)
+     9    4.98   31.79   41.41  411.63 v _24158_/Y (BUFx2_ASAP7_75t_R)
+                                         _19768_ (net)
+                 31.79    0.00  411.63 v _24269_/A (BUFx2_ASAP7_75t_R)
+    10    5.02   32.15   47.62  459.25 v _24269_/Y (BUFx2_ASAP7_75t_R)
+                                         _19769_ (net)
+                 32.15    0.00  459.25 v _24380_/A (BUFx2_ASAP7_75t_R)
+    10    4.92   31.68   47.47  506.72 v _24380_/Y (BUFx2_ASAP7_75t_R)
+                                         core_ready (net)
+                 31.68    0.00  506.72 v core_ready (out)
+                                506.72   data arrival time
+
+                  0.00 1250.00 1250.00   clock clk (rise edge)
+                          0.00 1250.00   clock network delay (ideal)
+                       -100.00 1150.00   clock uncertainty
+                          0.00 1150.00   clock reconvergence pessimism
+                       -250.00  900.00   output external delay
+                                900.00   data required time
+-----------------------------------------------------------------------------
+                                900.00   data required time
+                               -506.72   data arrival time
+-----------------------------------------------------------------------------
+                                393.28   slack (MET)
+
+
+
+==========================================================================
+floorplan final report_power
+--------------------------------------------------------------------------
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power (Watts)
+----------------------------------------------------------------
+Sequential             5.73e-03   5.40e-04   1.99e-05   6.29e-03  39.6%
+Combinational          5.65e-03   3.90e-03   2.50e-05   9.58e-03  60.4%
+Clock                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Macro                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  1.14e-02   4.44e-03   4.50e-05   1.59e-02 100.0%
+                          71.7%      28.0%       0.3%

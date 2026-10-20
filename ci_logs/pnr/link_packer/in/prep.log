@@ -1,0 +1,59 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2026  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)
+
+-- Executing script file `prep.ys' --
+
+1. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib
+Imported 42 cell types from liberty file.
+
+2. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib
+Imported 37 cell types from liberty file.
+
+3. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib
+Imported 34 cell types from liberty file.
+
+4. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib
+Imported 56 cell types from liberty file.
+
+5. Executing Liberty frontend: /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+Imported 33 cell types from liberty file.
+
+6. Executing Verilog-2005 frontend: /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/link_packer/netlist.v
+Parsing Verilog input from `/home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/link_packer/netlist.v' to AST representation.
+Generating RTLIL representation for module `\link_packer'.
+Successfully finished Verilog frontend.
+
+7. Executing HIERARCHY pass (managing design hierarchy).
+
+7.1. Analyzing design hierarchy..
+Top module:  \link_packer
+
+7.2. Analyzing design hierarchy..
+Top module:  \link_packer
+Removed 0 unused modules.
+
+8. Executing SPLITNETS pass (splitting up multi-bit signals).
+
+9. Executing OPT_CLEAN pass (remove unused cells and wires).
+Finding unused cells or wires in module \link_packer..
+Removed 16 unused cells and 1143 unused wires.
+<suppressed ~1095 debug messages>
+
+10. Executing HILOMAP pass (mapping to constant drivers).
+
+11. Executing INSBUF pass (insert buffer cells for connected wires).
+14. Executing CHECK pass (checking for obvious problems).
+Checking module link_packer...
+Found and reported 0 problems.
+
+15. Executing Verilog backend.
+Dumping module `\link_packer'.
+
+End of script. Logfile hash: 53283a2cab, time: 2.61s, user: 2.58s, system: 0.16s, MEM: 229.17 MB peak
+Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)
+Time spent: 73% 2x read_verilog (1 sec), 9% 2x stat (0 sec), ...

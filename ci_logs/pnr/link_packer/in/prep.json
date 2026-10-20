@@ -1,0 +1,51 @@
+{
+ "unit": "link_packer",
+ "units": [
+  "link_packer"
+ ],
+ "period_ps": 1250.0,
+ "synth_period_ps": 1250.0,
+ "pdk": "asap7",
+ "corner": "SS",
+ "tools": {
+  "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)",
+  "sta": "3.1.0"
+ },
+ "macros": [],
+ "macro_pins_checked": 0,
+ "yosys_stat": {
+  "design": {
+   "num_cells": 24014,
+   "area_um2": 3284.524,
+   "macros": {},
+   "macro_area_um2": 0,
+   "stdcells": 24014,
+   "stdcell_area_um2": 3284.524
+  },
+  "modules": {
+   "link_packer": {
+    "cells": 24014,
+    "area_um2": 3284.524,
+    "own_cells": 24014
+   }
+  }
+ },
+ "synth": {
+  "link_packer": {
+   "instances": 1,
+   "own_cells": 24029,
+   "own_area_um2": 3286.30284,
+   "cells": 24029,
+   "cell_area_um2": 3286.30284,
+   "macro_area_um2": 0.0,
+   "wns_ps": 393.28163105640755,
+   "tns_ps": 0.0,
+   "min_period_ps": 854.7958320155232,
+   "worst_start": "link_ready",
+   "worst_end": "core_ready",
+   "worst_arrival_ps": 506.7,
+   "worst_slack_ps": 393.3
+  }
+ },
+ "seconds": 2.8
+}

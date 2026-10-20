@@ -1,0 +1,65 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/link_packer/orfs/results/asap7/link_packer/base/3_3_place_gp.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/link_packer/orfs/results/asap7/link_packer/base/2_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+estimate_parasitics -placement
+Perform buffer insertion and gate resizing...
+repair_design -verbose
+Iteration |   Area    | Resized | Buffers | Nets repaired | Remaining
+---------------------------------------------------------------------
+        0 |     +0.0% |       0 |       0 |             0 |     25106
+     1000 |     +0.0% |       0 |       0 |             0 |     24106
+     2000 |     +0.0% |       0 |       0 |             0 |     23106
+     3000 |     +0.0% |       0 |       0 |             0 |     22106
+     4000 |     +0.0% |       0 |       0 |             0 |     21106
+     5000 |     +0.0% |       0 |       0 |             0 |     20106
+     6000 |     +0.0% |       0 |       0 |             0 |     19106
+     7000 |     +0.0% |       0 |       0 |             0 |     18106
+     8000 |     +0.0% |       0 |       0 |             0 |     17106
+     9000 |     +0.0% |       1 |       1 |             1 |     16106
+    10000 |     +0.0% |       1 |       1 |             1 |     15106
+    11000 |     +0.0% |       1 |       2 |             2 |     14106
+    12000 |     +0.0% |       1 |       2 |             2 |     13106
+    13000 |     +0.0% |       1 |       2 |             2 |     12106
+    14000 |     +0.0% |       1 |       2 |             2 |     11106
+    15000 |     +0.0% |       1 |       2 |             2 |     10106
+    16000 |     +0.0% |       1 |       2 |             2 |      9106
+    17000 |     +0.0% |       1 |       2 |             2 |      8106
+    18000 |     +0.0% |       1 |       2 |             2 |      7106
+    19000 |     +0.0% |       1 |       2 |             2 |      6106
+    20000 |     +0.0% |       1 |       2 |             2 |      5106
+    21000 |     +0.0% |       1 |       2 |             2 |      4106
+    22000 |     +0.0% |       1 |       2 |             2 |      3106
+    23000 |     +0.0% |       1 |       2 |             2 |      2106
+    24000 |     +0.0% |       1 |       2 |             2 |      1106
+    25000 |     +0.0% |       1 |       2 |             2 |       106
+    final |     +0.0% |       1 |       2 |             2 |         0
+---------------------------------------------------------------------
+[INFO RSZ-0034] Found 2 slew violations.
+[INFO RSZ-0039] Resized 1 instances.
+[INFO RSZ-0038] Inserted 2 buffers in 2 nets.
+[INFO RSZ-0504] Runtime: 2.46s
+Floating nets: 
+Report metrics stage 3, resizer...
+
+==========================================================================
+resizer report_design_area
+--------------------------------------------------------------------------
+Design area 3321 um^2 56% utilization.
+Instance count before 25500, after 25502
+Pin count before 84879, after 84883
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/link_packer/orfs/results/asap7/link_packer/base/3_4_place_resized.odb
+Elapsed time: 0:14.00[h:]min:sec. CPU time: user 18.01 sys 0.32 (130%). Peak memory: 316128KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+3_4_place_resized      .odb         14       18     1.31      308 f05d5a64ff

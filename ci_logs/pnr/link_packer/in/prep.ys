@@ -1,0 +1,17 @@
+# link_packer: synth.py's netlists of the subtree (link_packer) for ORFS (07_ci/pnr/prep.py)
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/link_packer/netlist.v
+hierarchy -check -top link_packer
+splitnets
+opt_clean -purge
+hilomap -singleton -hicell TIEHIx1_ASAP7_75t_R H -locell TIELOx1_ASAP7_75t_R L
+insbuf -buf BUFx2_ASAP7_75t_R A Y
+tee -q -o check.txt check
+tee -q -o stat.txt stat -hierarchy -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+tee -q -o stat.json stat -json -hierarchy -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+check -assert -mapped
+write_verilog -noattr -noexpr -nohex -nodec 1_netlist.v
