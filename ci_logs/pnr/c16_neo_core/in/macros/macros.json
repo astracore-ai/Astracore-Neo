@@ -1,0 +1,447 @@
+{
+ "unit": "c16_neo_core",
+ "timing": {
+  "access_time_ns": 0.218,
+  "t_setup_ns": 0.05,
+  "t_hold_ns": 0.05,
+  "cycle_time_ns": 0.157,
+  "cap_input_pf": 0.005
+ },
+ "process": {
+  "tech_nm": 7,
+  "voltage": 0.7,
+  "metal_prefix": "M",
+  "metal_layer": "M4",
+  "pin_width_nm": 24,
+  "pin_pitch_nm": 48,
+  "metal_track_pitch_nm": 48,
+  "manufacturing_grid_nm": 1,
+  "contacted_poly_pitch_nm": 54,
+  "fin_pitch_nm": 27,
+  "column_mux_factor": 1,
+  "snap_width_nm": 190,
+  "snap_height_nm": 1400
+ },
+ "macros": [
+  {
+   "leaf": "neo_mem_rf_w256_d128_g2_rb1",
+   "macro": "fakeram7_128x256_g2_1w1r",
+   "W": 256,
+   "D": 128,
+   "G": 2,
+   "RB": 1,
+   "AW": 7,
+   "bits": 32768,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 537,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     2,
+     "input"
+    ],
+    [
+     "waddr",
+     7,
+     "input"
+    ],
+    [
+     "wdata",
+     256,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     7,
+     "input"
+    ],
+    [
+     "rb_data",
+     256,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     7,
+     "output"
+    ]
+   ],
+   "lef_width_um": 33.25,
+   "lef_height_um": 42.0,
+   "lef_area_um2": 1396.5,
+   "bitcell_area_um2": 1375.941,
+   "pin_limited": false,
+   "um2_per_bit": 0.04262,
+   "synth_model_um2": 2066.743,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_128x256_g2_1w1r.lef",
+   "lib": "fakeram7_128x256_g2_1w1r.lib",
+   "lef_bytes": 89124,
+   "lib_bytes": 15777
+  },
+  {
+   "leaf": "neo_mem_rf_w256_d32_g2_rb1",
+   "macro": "fakeram7_32x256_g2_1w1r",
+   "W": 256,
+   "D": 32,
+   "G": 2,
+   "RB": 1,
+   "AW": 5,
+   "bits": 8192,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 531,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     2,
+     "input"
+    ],
+    [
+     "waddr",
+     5,
+     "input"
+    ],
+    [
+     "wdata",
+     256,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     5,
+     "input"
+    ],
+    [
+     "rb_data",
+     256,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     5,
+     "output"
+    ]
+   ],
+   "lef_width_um": 33.25,
+   "lef_height_um": 26.6,
+   "lef_area_um2": 884.45,
+   "bitcell_area_um2": 848.816,
+   "pin_limited": true,
+   "um2_per_bit": 0.10797,
+   "synth_model_um2": 516.686,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_32x256_g2_1w1r.lef",
+   "lib": "fakeram7_32x256_g2_1w1r.lib",
+   "lef_bytes": 86274,
+   "lib_bytes": 15719
+  },
+  {
+   "leaf": "neo_mem_rf_w288_d64_g1_rb1",
+   "macro": "fakeram7_64x288_g1_1w1r",
+   "W": 288,
+   "D": 64,
+   "G": 1,
+   "RB": 1,
+   "AW": 6,
+   "bits": 18432,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 597,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     1,
+     "input"
+    ],
+    [
+     "waddr",
+     6,
+     "input"
+    ],
+    [
+     "wdata",
+     288,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     6,
+     "input"
+    ],
+    [
+     "rb_data",
+     288,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     6,
+     "output"
+    ]
+   ],
+   "lef_width_um": 37.43,
+   "lef_height_um": 29.4,
+   "lef_area_um2": 1100.442,
+   "bitcell_area_um2": 1073.163,
+   "pin_limited": true,
+   "um2_per_bit": 0.0597,
+   "synth_model_um2": 1162.543,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_64x288_g1_1w1r.lef",
+   "lib": "fakeram7_64x288_g1_1w1r.lib",
+   "lef_bytes": 96939,
+   "lib_bytes": 15480
+  },
+  {
+   "leaf": "neo_mem_rf_w33_d256_g1_rb1",
+   "macro": "fakeram7_256x33_g1_1w1r",
+   "W": 33,
+   "D": 256,
+   "G": 1,
+   "RB": 1,
+   "AW": 8,
+   "bits": 8448,
+   "instances": 9,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 93,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     1,
+     "input"
+    ],
+    [
+     "waddr",
+     8,
+     "input"
+    ],
+    [
+     "wdata",
+     33,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     8,
+     "input"
+    ],
+    [
+     "rb_data",
+     33,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     8,
+     "output"
+    ]
+   ],
+   "lef_width_um": 5.7,
+   "lef_height_um": 84.0,
+   "lef_area_um2": 478.8,
+   "bitcell_area_um2": 465.814,
+   "pin_limited": false,
+   "um2_per_bit": 0.05668,
+   "synth_model_um2": 532.832,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_256x33_g1_1w1r.lef",
+   "lib": "fakeram7_256x33_g1_1w1r.lib",
+   "lef_bytes": 25301,
+   "lib_bytes": 15476
+  },
+  {
+   "leaf": "neo_mem_rf_w390_d256_g2_rb1",
+   "macro": "fakeram7_256x390_g2_1w1r",
+   "W": 390,
+   "D": 256,
+   "G": 2,
+   "RB": 1,
+   "AW": 8,
+   "bits": 99840,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 808,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     2,
+     "input"
+    ],
+    [
+     "waddr",
+     8,
+     "input"
+    ],
+    [
+     "wdata",
+     390,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     8,
+     "input"
+    ],
+    [
+     "rb_data",
+     390,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     8,
+     "output"
+    ]
+   ],
+   "lef_width_um": 50.73,
+   "lef_height_um": 84.0,
+   "lef_area_um2": 4261.32,
+   "bitcell_area_um2": 4192.322,
+   "pin_limited": false,
+   "um2_per_bit": 0.04268,
+   "synth_model_um2": 6297.108,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_256x390_g2_1w1r.lef",
+   "lib": "fakeram7_256x390_g2_1w1r.lib",
+   "lef_bytes": 136968,
+   "lib_bytes": 15777
+  },
+  {
+   "leaf": "neo_mem_rf_w64_d64_g2_rb1",
+   "macro": "fakeram7_64x64_g2_1w1r",
+   "W": 64,
+   "D": 64,
+   "G": 2,
+   "RB": 1,
+   "AW": 6,
+   "bits": 4096,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 150,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     2,
+     "input"
+    ],
+    [
+     "waddr",
+     6,
+     "input"
+    ],
+    [
+     "wdata",
+     64,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     6,
+     "input"
+    ],
+    [
+     "rb_data",
+     64,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     6,
+     "output"
+    ]
+   ],
+   "lef_width_um": 8.36,
+   "lef_height_um": 21.0,
+   "lef_area_um2": 175.56,
+   "bitcell_area_um2": 171.993,
+   "pin_limited": false,
+   "um2_per_bit": 0.04286,
+   "synth_model_um2": 258.343,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_64x64_g2_1w1r.lef",
+   "lib": "fakeram7_64x64_g2_1w1r.lib",
+   "lef_bytes": 26253,
+   "lib_bytes": 15659
+  }
+ ]
+}

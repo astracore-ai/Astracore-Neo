@@ -1,0 +1,26 @@
+$ docker run --rm --init --name neo-pnr-c16_neo_core-run-4984 -u 1001:1001 -e HOME=/tmp -v /home/runner/work/Astracore-Neo/Astracore-Neo:/home/runner/work/Astracore-Neo/Astracore-Neo -w /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs openroad/orfs:26Q4-124-g3451ca1f5 make -f /OpenROAD-flow-scripts/flow/Makefile DESIGN_CONFIG=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/c16_neo_core/config.mk WORK_HOME=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs NEO_PNR_IN=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in RUN_SCRIPT=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr/neo_report.tcl RUN_LOG_NAME_STEM=7_neo_report NEO_REPORT_ODB=5_1_grt.odb NEO_REPORT_SDC=5_1_grt.sdc NEO_ACTIVITY_TCL=/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/activity.tcl run
+/usr/bin/python3 /OpenROAD-flow-scripts/flow/scripts/run_command.py --log /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/logs/asap7/c16_neo_core/base/7_neo_report.log --tee -- /OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad -exit -no_init -threads 4  -no_splash  /home/runner/work/Astracore-Neo/Astracore-Neo/pnr/neo_report.tcl
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/5_1_grt.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/5_1_grt.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+neo_report: physical (database)
+neo_report: timing: the propagated clock
+neo_report: timing: estimate_parasitics -placement
+neo_report: timing: the ten worst endpoints
+neo_report: timing: the violating endpoints
+neo_report: power: the flow's default activity
+neo_report: power: the recorded activity (/home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/activity.tcl)
+neo_report: done: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/reports/asap7/c16_neo_core/base/neo
+Elapsed time: 2:51.27[h:]min:sec. CPU time: user 211.31 sys 3.05 (125%). Peak memory: 3627232KB.
