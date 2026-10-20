@@ -101,6 +101,31 @@ not know — the picoseconds are the library's, the *paths* and the *shares* are
 here is a design item; one 20 % over is a question for the real library. Nangate45 (45 nm) is a second data point for the
 ratios, not a 2 GHz node.
 
+## Drop 0.44 (stream A4): the chip-top verdict, the two-port macros, the chip-top SDC, the GLS set
+
+- **A second verdict line** over the chip top's own units -- the bridge column's NIC, router, packer, unpacker and DMA at
+  the chip top's coordinate widths (`top_*`), the two bridge roles, `top_ctrl` and `mesh_ctrl` (`top_neo_tile` and
+  `neo_top` are PE-limited through the core): the smallest swept period at which every one is clean, the largest minimum
+  period among them, and the chip's period on the proxy, the larger of the tile's and this (`sweep_verdict`'s `top`;
+  the report's first lines; the sweep table marks their PE-limited ones † as the tile's).
+- **Every memory leaf priced as a two-port array** (review finding 4): `MACRO_AREA_FACTOR` 1.5 × the single-port cell for
+  `neo_mem_sp` and every `neo_mem_rf` (2.0 × with both read ports), where drops 0.40-0.43 priced the registered-read
+  leaves at 1 ×; `09_synthesis/memories.md` has the reasoning and the figures. The tile's macro total moves from 0.970 to
+  1.455 mm² on ASAP7.
+- **The chip top's constraints** (review finding 9): the `neo_top` unit is timed under `TOP_SDC` -- the two clocks `clk` and
+  `aclk`, the resets, the AXI ports' budgets, and the three crossing structures' exceptions of
+  `08_ip_product/neo_top_integration.md` section 6 by the names the flattened `neo_top` gives them (the FIFOs' gray
+  pointers and entries, the register bus's held payloads as `set_max_delay -ignore_clock_latency`, every level
+  synchronizer's first flop as a false path) -- so the exceptions are exercised by every run. No `set_clock_groups`: OpenSTA
+  gives an asynchronous group precedence over `set_max_delay` (a path under both reports as "no paths"), so the crossings
+  are constrained by their exceptions alone, the note's second form. `python3 synth/synth.py --write-sdc 09_synthesis
+  --period 1250` regenerates the delivered `09_synthesis/constraints.sdc` (the tile, from `TILE_SDC` at the drop-0.43 ports)
+  and `09_synthesis/neo_top.sdc` in nanoseconds; edit the templates, not the files.
+- **The gate-level set** (`make gls`, `synth/gls.py`) grows by `tile_telem`, `host_if` and `c16_vec_unit` (the vector unit at
+  8 lanes with its 11 memory leaves): the RTL side takes the module's file and the files of every module it instantiates
+  (found by scanning `RTL_FILES`), and the netlist's black-boxed macros get a wrapper each around the behavioural leaf at
+  the macro's parameters (RBQ from the unit's `pre.json`), so both sides simulate the same array model.
+
 ## Running it
 
 CI: the `synth` job (`make synth`, `SYNTH_JOBS` from the runner's memory: 2 on 16 GB, 1 below 14 GB — the two largest units,
