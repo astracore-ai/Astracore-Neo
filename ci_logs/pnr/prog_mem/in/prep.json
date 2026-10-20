@@ -1,0 +1,51 @@
+{
+ "unit": "prog_mem",
+ "units": [
+  "prog_mem"
+ ],
+ "period_ps": 1250.0,
+ "synth_period_ps": 1250.0,
+ "pdk": "asap7",
+ "corner": "SS",
+ "tools": {
+  "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)",
+  "sta": "3.1.0"
+ },
+ "macros": [],
+ "macro_pins_checked": 0,
+ "yosys_stat": {
+  "design": {
+   "num_cells": 14083,
+   "area_um2": 1959.742,
+   "macros": {},
+   "macro_area_um2": 0,
+   "stdcells": 14083,
+   "stdcell_area_um2": 1959.742
+  },
+  "modules": {
+   "prog_mem": {
+    "cells": 14083,
+    "area_um2": 1959.742,
+    "own_cells": 14083
+   }
+  }
+ },
+ "synth": {
+  "prog_mem": {
+   "instances": 1,
+   "own_cells": 14082,
+   "own_area_um2": 1959.6978,
+   "cells": 14082,
+   "cell_area_um2": 1959.6978,
+   "macro_area_um2": 0.0,
+   "wns_ps": 101.98331109273268,
+   "tns_ps": 0.0,
+   "min_period_ps": null,
+   "worst_start": "raddr[0]",
+   "worst_end": "rdata[49]_reg",
+   "worst_arrival_ps": 1008.5,
+   "worst_slack_ps": 102.0
+  }
+ },
+ "seconds": 1.5
+}
