@@ -1,0 +1,30 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/in/macros/fakeram7_512x1068_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/in/macros/fakeram7_64x1024_g32_1w1a.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/2_2_floorplan_macro.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+Tap and End Cap cell insertion
+  TAP Cell          : TAPCELL_ASAP7_75t_R
+  ENDCAP Cell       : TAPCELL_ASAP7_75t_R
+  Halo Around Macro : 2 2
+  TAP Cell Distance : 25
+[INFO ODB-0303] The initial 1308 rows (8559552 sites) were cut with 2 shapes for a total of 1308 rows (5905240 sites).
+[INFO TAP-0004] Inserted 2616 endcaps.
+[INFO TAP-0005] Inserted 6115 tapcells.
+Design area 56861 um^2 46% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/2_3_floorplan_tapcell.odb
+Elapsed time: 0:01.42[h:]min:sec. CPU time: user 1.24 sys 0.17 (99%). Peak memory: 354860KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_3_floorplan_tapcell  .odb          1        1     0.99      346 db3e4f2333

@@ -1,0 +1,580 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/in/macros/fakeram7_512x1068_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/in/macros/fakeram7_64x1024_g32_1w1a.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/3_place.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/3_place.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+[INFO CTS-0050] Root buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0051] Sink buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0052] The following clock buffers will be used for CTS:
+                    BUFx24_ASAP7_75t_R
+[INFO CTS-0049] Characterization buffer is BUFx24_ASAP7_75t_R.
+[INFO CTS-0007] Net "clk" found for clock "clk".
+[INFO CTS-0011]  Clock net "clk" for macros has 2 sinks.
+[INFO CTS-0011]  Clock net "clk_regs" for registers has 9021 sinks.
+[INFO CTS-0011]  Clock net "clk_tx" for macros has 1 sinks.
+[INFO CTS-0011]  Clock net "clk_tx_regs" for registers has 1407 sinks.
+[INFO CTS-0011]  Clock net "clk_rx" for macros has 1 sinks.
+[INFO CTS-0011]  Clock net "clk_rx_regs" for registers has 7491 sinks.
+[INFO CTS-0008] TritonCTS found 6 clock nets.
+[INFO CTS-0097] Characterization used 1 buffer(s) types.
+[INFO CTS-0201] 2 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk.
+[INFO CTS-0028]  Total number of sinks: 2.
+[INFO CTS-0029]  Macro  sinks will be clustered in groups of up to 4 and with maximum cluster diameter of 333.2 um.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0023]  Original sink region: [(245493, 73461), (247412, 209454)].
+[INFO CTS-0024]  Normalized sink region: [(181.847, 54.4156), (183.268, 155.151)].
+[INFO CTS-0025]     Width:  1.4215.
+[INFO CTS-0026]     Height: 100.7356.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 1
+    Sub-region size: 1.4215 X 50.3678
+[INFO CTS-0034]     Segment length (rounded): 25.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 2.
+[INFO CTS-0201] 2 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_regs.
+[INFO CTS-0028]  Total number of sinks: 9021.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 19.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 487.
+[INFO CTS-0024]  Normalized sink region: [(87.6382, 142.69), (193.872, 261.312)].
+[INFO CTS-0025]     Width:  106.2338.
+[INFO CTS-0026]     Height: 118.6218.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 244
+    Sub-region size: 106.2338 X 59.3109
+[INFO CTS-0034]     Segment length (rounded): 30.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 122
+    Sub-region size: 53.1169 X 59.3109
+[INFO CTS-0034]     Segment length (rounded): 26.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 61
+    Sub-region size: 53.1169 X 29.6554
+[INFO CTS-0034]     Segment length (rounded): 14.
+ Level 4
+    Direction: Horizontal
+    Sinks per sub-region: 31
+    Sub-region size: 26.5585 X 29.6554
+[INFO CTS-0034]     Segment length (rounded): 14.
+ Level 5
+    Direction: Vertical
+    Sinks per sub-region: 16
+    Sub-region size: 26.5585 X 14.8277
+[INFO CTS-0034]     Segment length (rounded): 8.
+ Level 6
+    Direction: Horizontal
+    Sinks per sub-region: 8
+    Sub-region size: 13.2792 X 14.8277
+[INFO CTS-0034]     Segment length (rounded): 6.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 487.
+[INFO CTS-0201] 2 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_tx.
+[INFO CTS-0028]  Total number of sinks: 1.
+[INFO CTS-0029]  Macro  sinks will be clustered in groups of up to 4 and with maximum cluster diameter of 333.2 um.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0023]  Original sink region: [(141518, 274284), (141518, 274284)].
+[INFO CTS-0024]  Normalized sink region: [(104.828, 203.173), (104.828, 203.173)].
+[INFO CTS-0025]     Width:  0.0000.
+[INFO CTS-0026]     Height: 0.0000.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 1
+    Sub-region size: 0.0000 X 0.0000
+[INFO CTS-0034]     Segment length (rounded): 1.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 1.
+[INFO CTS-0201] 2 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_tx_regs.
+[INFO CTS-0028]  Total number of sinks: 1407.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 48.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 90.
+[INFO CTS-0024]  Normalized sink region: [(107.997, 62.7162), (260.127, 246.178)].
+[INFO CTS-0025]     Width:  152.1300.
+[INFO CTS-0026]     Height: 183.4614.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 45
+    Sub-region size: 152.1300 X 91.7307
+[INFO CTS-0034]     Segment length (rounded): 46.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 23
+    Sub-region size: 76.0650 X 91.7307
+[INFO CTS-0034]     Segment length (rounded): 38.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 12
+    Sub-region size: 76.0650 X 45.8654
+[INFO CTS-0034]     Segment length (rounded): 22.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 90.
+[INFO CTS-0201] 2 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_rx.
+[INFO CTS-0028]  Total number of sinks: 1.
+[INFO CTS-0029]  Macro  sinks will be clustered in groups of up to 4 and with maximum cluster diameter of 333.2 um.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0023]  Original sink region: [(135818, 102204), (135818, 102204)].
+[INFO CTS-0024]  Normalized sink region: [(100.606, 75.7067), (100.606, 75.7067)].
+[INFO CTS-0025]     Width:  0.0000.
+[INFO CTS-0026]     Height: 0.0000.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 1
+    Sub-region size: 0.0000 X 0.0000
+[INFO CTS-0034]     Segment length (rounded): 1.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 1.
+[INFO CTS-0201] 2 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk_rx_regs.
+[INFO CTS-0028]  Total number of sinks: 7491.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0204] A clustering solution was found from clustering size of 32 and max clustering diameter of 31.
+[INFO CTS-0205] Better solution may be possible if either -sink_clustering_size, -sink_clustering_max_diameter, or both options are omitted to enable automatic clustering.
+[INFO CTS-0019]  Total number of sinks after clustering: 391.
+[INFO CTS-0024]  Normalized sink region: [(105.253, 2.7363), (260.803, 105.318)].
+[INFO CTS-0025]     Width:  155.5505.
+[INFO CTS-0026]     Height: 102.5816.
+ Level 1
+    Direction: Horizontal
+    Sinks per sub-region: 196
+    Sub-region size: 77.7753 X 102.5816
+[INFO CTS-0034]     Segment length (rounded): 38.
+ Level 2
+    Direction: Vertical
+    Sinks per sub-region: 98
+    Sub-region size: 77.7753 X 51.2908
+[INFO CTS-0034]     Segment length (rounded): 26.
+ Level 3
+    Direction: Horizontal
+    Sinks per sub-region: 49
+    Sub-region size: 38.8876 X 51.2908
+[INFO CTS-0034]     Segment length (rounded): 20.
+ Level 4
+    Direction: Vertical
+    Sinks per sub-region: 25
+    Sub-region size: 38.8876 X 25.6454
+[INFO CTS-0034]     Segment length (rounded): 12.
+ Level 5
+    Direction: Horizontal
+    Sinks per sub-region: 13
+    Sub-region size: 19.4438 X 25.6454
+[INFO CTS-0034]     Segment length (rounded): 10.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 391.
+[INFO CTS-0018]     Created 3 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 2.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 2.
+[INFO CTS-0015]     Created 3 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:2..
+[INFO CTS-0017]     Max level of the clock tree: 1.
+[INFO CTS-0018]     Created 574 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 6.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 6.
+[INFO CTS-0015]     Created 574 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 3:1, 4:6, 5:8, 6:9, 7:10, 8:9, 9:8, 10:10, 11:6, 12:1, 13:1, 14:5, 15:13, 16:37, 17:65, 18:103, 19:112, 20:82, 21:42, 22:16, 23:5, 24:1, 25:1..
+[INFO CTS-0017]     Max level of the clock tree: 6.
+[INFO CTS-0018]     Created 2 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 2.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 2.
+[INFO CTS-0015]     Created 2 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:1..
+[INFO CTS-0017]     Max level of the clock tree: 1.
+[INFO CTS-0018]     Created 105 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 5.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 5.
+[INFO CTS-0015]     Created 105 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 6:2, 7:2, 8:4, 9:3, 10:3, 11:1, 12:5, 13:7, 14:8, 15:9, 16:14, 17:7, 18:15, 19:9, 20:5, 21:1, 22:2, 24:1..
+[INFO CTS-0017]     Max level of the clock tree: 3.
+[INFO CTS-0018]     Created 2 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 2.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 2.
+[INFO CTS-0015]     Created 2 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 1:1..
+[INFO CTS-0017]     Max level of the clock tree: 1.
+[INFO CTS-0018]     Created 438 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 6.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 6.
+[INFO CTS-0015]     Created 438 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 5:2, 6:1, 7:3, 8:5, 9:5, 10:12, 11:7, 12:12, 13:8, 14:8, 15:8, 16:16, 17:18, 18:26, 19:51, 20:85, 21:84, 22:44, 23:21, 24:6, 25:1..
+[INFO CTS-0017]     Max level of the clock tree: 5.
+[INFO CTS-0098] Clock net "clk"
+[INFO CTS-0099]  Sinks 2
+[INFO CTS-0100]  Leaf buffers 0
+[INFO CTS-0101]  Average sink wire length 334.65 um
+[INFO CTS-0102]  Path depth 2 - 2
+[INFO CTS-0207]  Dummy loads inserted 0
+[INFO CTS-0098] Clock net "clk_regs"
+[INFO CTS-0099]  Sinks 9453
+[INFO CTS-0100]  Leaf buffers 487
+[INFO CTS-0101]  Average sink wire length 130.20 um
+[INFO CTS-0102]  Path depth 5 - 6
+[INFO CTS-0207]  Dummy loads inserted 432
+[INFO CTS-0124] Clock net "clk_tx"
+[INFO CTS-0125]  Sinks 1
+[INFO CTS-0098] Clock net "clk_tx_regs"
+[INFO CTS-0099]  Sinks 1493
+[INFO CTS-0100]  Leaf buffers 90
+[INFO CTS-0101]  Average sink wire length 172.75 um
+[INFO CTS-0102]  Path depth 4 - 5
+[INFO CTS-0207]  Dummy loads inserted 86
+[INFO CTS-0124] Clock net "clk_rx"
+[INFO CTS-0125]  Sinks 1
+[INFO CTS-0098] Clock net "clk_rx_regs"
+[INFO CTS-0099]  Sinks 7859
+[INFO CTS-0100]  Leaf buffers 391
+[INFO CTS-0101]  Average sink wire length 147.73 um
+[INFO CTS-0102]  Path depth 5 - 6
+[INFO CTS-0207]  Dummy loads inserted 368
+[INFO RSZ-0047] Found 1 long wires.
+[INFO RSZ-0048] Inserted 1 buffers in 1 nets.
+[INFO CTS-0033] Balancing latency for clock clk
+[INFO CTS-0036]  inserted 22 delay buffers
+[INFO CTS-0037] Total number of delay buffers: 22
+[INFO CTS-0500] Runtime: 9.17s
+Took 9 seconds: clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+estimate_parasitics -placement
+detailed_placement
+[INFO DPL-0006] Core area: 124798.27 um^2
+[INFO DPL-0007] Movable instances area: 21780.46 um^2
+[INFO DPL-0008] Fixed instances area within core: 36717.61 um^2
+[INFO DPL-0009] Utilization: 46.9%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (3 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 168214 cells
+[INFO DPL-0393]   height 374 row(s): 1 cells
+[INFO DPL-0393]   height 618 row(s): 1 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |       5015 |       805 |      4210
+        1 |        239 |        31 |       208
+        2 |         19 |         3 |        16
+        3 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 3.
+[INFO DPL-0500] Runtime: 2.35s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves               65179
+total displacement      25122.5 u
+average displacement        0.1 u
+max displacement            3.1 u
+original HPWL         1585497.7 u
+legalized HPWL        1598964.7 u
+delta HPWL                    1 %
+
+estimate_parasitics -placement
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove BufferMove CloneMove SplitLoadMove 
+[INFO RSZ-0094] Found 3529 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 3529 out of 3529 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -792.760 | -1627521.2 |   3529 | cg_en[0]
+      10* |       0 |       3 |        1 |      0 |     5 |    +0.0% | -740.008 | -1627379.0 |   3529 | cg_en[0]
+      20* |       1 |       9 |        2 |      0 |     7 |    +0.0% | -708.423 | -1627325.1 |   3529 | tx_flit[564]
+      30* |       3 |      13 |        2 |      0 |    11 |    -0.0% | -685.424 | -1620375.8 |   3529 | tx_flit[564]
+      40* |       4 |      21 |        2 |      0 |    12 |    -0.0% | -677.305 | -1620196.9 |   3529 | wcbuf_wdata2[0]
+      50* |       4 |      30 |        3 |      0 |    12 |    +0.0% | -671.232 | -1616797.0 |   3529 | wbuf_wdata2[226]
+      60* |       4 |      40 |        3 |      0 |    12 |    +0.0% | -667.085 | -1606266.4 |   3529 | tx_flit[564]
+      68* |       4 |      42 |        3 |      0 |    13 |    +0.0% | -662.619 | -1606159.4 |   3529 | tx_flit[564]
+      70* |       4 |      43 |        3 |      0 |    13 |    +0.0% | -665.103 | -1606161.9 |   3529 | tx_flit[564]
+      70* |       4 |      42 |        3 |      0 |    13 |    +0.0% | -662.619 | -1606159.4 |   3529 | tx_flit[564]
+      80* |       4 |      46 |        7 |      0 |    14 |    +0.0% | -662.619 | -1595739.1 |   3529 | tx_flit[564]
+      90* |       4 |      54 |        8 |      0 |    15 |    +0.0% | -662.619 | -1593393.9 |   3529 | tx_flit[564]
+     100* |       4 |      59 |       10 |      2 |    16 |    +0.0% | -662.619 | -1587096.9 |   3529 | tx_flit[564]
+     110* |       4 |      65 |       16 |      2 |    17 |    +0.0% | -662.619 | -1583292.9 |   3529 | tx_flit[564]
+     120* |       4 |      72 |       18 |      4 |    17 |    +0.0% | -662.619 | -1576531.9 |   3529 | tx_flit[564]
+     130* |       4 |      77 |       23 |      5 |    18 |    +0.0% | -662.619 | -1581006.9 |   3529 | tx_flit[564]
+     132* |       4 |      65 |       15 |      2 |    17 |    +0.0% | -662.619 | -1583225.5 |   3529 | tx_flit[564]
+     140* |       4 |      69 |       17 |      2 |    18 |    +0.0% | -662.619 | -1582886.6 |   3529 | tx_flit[564]
+     150* |       4 |      77 |       19 |      3 |    18 |    +0.0% | -662.619 | -1587720.0 |   3529 | tx_flit[564]
+     160* |       4 |      86 |       24 |      3 |    18 |    +0.0% | -662.619 | -1578731.6 |   3529 | tx_flit[564]
+     170* |       4 |      93 |       33 |      3 |    18 |    +0.0% | -662.619 | -1577578.4 |   3529 | tx_flit[564]
+     180* |       4 |      99 |       38 |      4 |    18 |    +0.0% | -662.619 | -1576904.8 |   3529 | tx_flit[564]
+     190* |       4 |     104 |       39 |      7 |    19 |    +0.0% | -662.619 | -1577107.6 |   3529 | tx_flit[564]
+     200* |       4 |     107 |       47 |      7 |    19 |    +0.0% | -662.619 | -1580606.9 |   3529 | tx_flit[564]
+     210* |       4 |     113 |       50 |      8 |    20 |    +0.0% | -662.619 | -1573669.0 |   3529 | tx_flit[564]
+     220* |       4 |     120 |       52 |      8 |    21 |    +0.0% | -662.619 | -1572698.5 |   3529 | tx_flit[564]
+     224* |       4 |     114 |       51 |      8 |    20 |    +0.0% | -662.619 | -1573416.1 |   3529 | tx_flit[564]
+     230* |       4 |     116 |       53 |      8 |    21 |    +0.0% | -662.619 | -1573666.4 |   3529 | tx_flit[564]
+     240* |       4 |     125 |       54 |      8 |    21 |    +0.0% | -662.619 | -1571943.9 |   3529 | tx_flit[564]
+     241* |       4 |     116 |       52 |      8 |    21 |    +0.0% | -662.619 | -1573447.9 |   3529 | tx_flit[564]
+     250* |       4 |     118 |       55 |      9 |    23 |    +0.0% | -662.619 | -1573512.0 |   3529 | tx_flit[564]
+     260* |       4 |     127 |       57 |      9 |    23 |    +0.0% | -662.619 | -1571775.1 |   3529 | tx_flit[564]
+     262* |       4 |     119 |       55 |      9 |    23 |    +0.0% | -662.619 | -1573519.9 |   3529 | tx_flit[564]
+     270* |       4 |     125 |       55 |      9 |    24 |    +0.0% | -662.619 | -1573375.9 |   3529 | tx_flit[564]
+     280* |       4 |     132 |       58 |     10 |    25 |    +0.0% | -662.619 | -1573205.4 |   3529 | tx_flit[564]
+     290* |       4 |     139 |       66 |     10 |    25 |    +0.0% | -662.619 | -1572200.2 |   3529 | tx_flit[564]
+     300* |       4 |     147 |       72 |     10 |    25 |    +0.0% | -662.619 | -1568399.1 |   3529 | tx_flit[564]
+     308* |       4 |     152 |       73 |     11 |    26 |    +0.0% | -662.619 | -1568041.8 |   3529 | tx_flit[564]
+     310* |       4 |     153 |       73 |     11 |    26 |    +0.0% | -662.619 | -1568023.4 |   3529 | tx_flit[564]
+     319* |       4 |     155 |       74 |     11 |    27 |    +0.0% | -662.619 | -1567950.8 |   3529 | tx_flit[564]
+     320* |       4 |     155 |       74 |     11 |    27 |    +0.0% | -662.619 | -1567950.8 |   3529 | tx_flit[564]
+     330* |       4 |     162 |       79 |     11 |    28 |    +0.0% | -662.619 | -1568163.8 |   3529 | tx_flit[564]
+     340* |       4 |     167 |       82 |     13 |    28 |    +0.0% | -662.619 | -1567883.5 |   3529 | tx_flit[564]
+     344* |       4 |     167 |       81 |     13 |    28 |    +0.0% | -662.619 | -1567849.9 |   3529 | tx_flit[564]
+     350* |       4 |     171 |       83 |     13 |    28 |    +0.0% | -662.619 | -1567881.6 |   3529 | tx_flit[564]
+     351* |       4 |     168 |       81 |     13 |    28 |    +0.0% | -662.619 | -1567842.8 |   3529 | tx_flit[564]
+     360* |       4 |     172 |       82 |     14 |    30 |    +0.0% | -662.619 | -1569285.2 |   3529 | tx_flit[564]
+     370* |       5 |     179 |       83 |     14 |    31 |    +0.0% | -662.619 | -1568893.1 |   3529 | tx_flit[564]
+     380* |       5 |     181 |       94 |     15 |    32 |    +0.0% | -662.619 | -1571236.0 |   3529 | tx_flit[564]
+     382* |       5 |     181 |       92 |     14 |    32 |    +0.0% | -662.619 | -1568932.8 |   3529 | tx_flit[564]
+     390* |       5 |     187 |       94 |     14 |    32 |    +0.0% | -662.619 | -1566078.2 |   3529 | tx_flit[564]
+     400* |       5 |     196 |       94 |     14 |    33 |    +0.0% | -662.619 | -1565743.5 |   3529 | tx_flit[564]
+     410* |       5 |     201 |       97 |     16 |    33 |    +0.0% | -662.619 | -1570790.2 |   3529 | tx_flit[564]
+     420* |       5 |     209 |      101 |     16 |    33 |    +0.0% | -662.619 | -1571042.1 |   3529 | tx_flit[564]
+     430* |       5 |     215 |      107 |     16 |    34 |    +0.0% | -662.619 | -1570871.5 |   3529 | tx_flit[564]
+     440* |       5 |     221 |      113 |     17 |    34 |    +0.0% | -662.619 | -1570874.5 |   3529 | tx_flit[564]
+     450* |       5 |     228 |      114 |     17 |    36 |    +0.0% | -662.619 | -1571104.4 |   3529 | tx_flit[564]
+     450* |       5 |     221 |      112 |     16 |    34 |    +0.0% | -662.619 | -1570740.6 |   3529 | tx_flit[564]
+     460* |       5 |     227 |      114 |     16 |    35 |    +0.0% | -662.619 | -1570661.6 |   3529 | tx_flit[564]
+     470* |       5 |     231 |      117 |     16 |    38 |    +0.0% | -662.619 | -1570495.2 |   3529 | tx_flit[564]
+     480* |       6 |     236 |      121 |     16 |    38 |    +0.0% | -662.619 | -1572147.9 |   3529 | tx_flit[564]
+     490* |       6 |     243 |      123 |     16 |    39 |    +0.0% | -662.619 | -1571446.4 |   3529 | tx_flit[564]
+     493* |       5 |     230 |      116 |     16 |    38 |    +0.0% | -662.619 | -1570360.9 |   3529 | tx_flit[564]
+     500* |       5 |     234 |      118 |     16 |    39 |    +0.0% | -662.619 | -1570261.9 |   3529 | tx_flit[564]
+     510* |       5 |     241 |      120 |     17 |    40 |    +0.0% | -662.619 | -1569432.4 |   3529 | tx_flit[564]
+     517* |       5 |     241 |      120 |     17 |    40 |    +0.0% | -662.619 | -1569432.4 |   3529 | tx_flit[564]
+     520* |       5 |     242 |      120 |     17 |    41 |    +0.0% | -662.619 | -1569413.0 |   3529 | tx_flit[564]
+     530* |       5 |     249 |      123 |     17 |    41 |    +0.0% | -662.619 | -1571816.5 |   3529 | tx_flit[564]
+     530* |       5 |     246 |      120 |     17 |    41 |    +0.0% | -662.619 | -1569498.2 |   3529 | tx_flit[564]
+     540* |       5 |     253 |      122 |     17 |    41 |    +0.0% | -662.619 | -1568990.1 |   3529 | tx_flit[564]
+     550* |       5 |     261 |      124 |     17 |    41 |    +0.0% | -662.619 | -1569343.8 |   3529 | tx_flit[564]
+     560* |       5 |     267 |      128 |     17 |    41 |    +0.0% | -662.619 | -1568693.9 |   3529 | tx_flit[564]
+     570* |       5 |     273 |      133 |     17 |    41 |    +0.0% | -662.619 | -1569080.4 |   3529 | tx_flit[564]
+     575* |       5 |     256 |      122 |     17 |    41 |    +0.0% | -662.619 | -1568993.5 |   3529 | tx_flit[564]
+     580* |       5 |     258 |      124 |     17 |    41 |    +0.0% | -662.619 | -1569315.2 |   3529 | tx_flit[564]
+     582* |       5 |     256 |      122 |     17 |    41 |    +0.0% | -662.619 | -1568993.5 |   3529 | tx_flit[564]
+     590* |       5 |     260 |      125 |     17 |    41 |    +0.0% | -662.619 | -1569290.5 |   3529 | tx_flit[564]
+     593* |       5 |     259 |      123 |     17 |    41 |    +0.0% | -662.619 | -1568944.0 |   3529 | tx_flit[564]
+     600* |       6 |     262 |      124 |     17 |    42 |    +0.0% | -662.619 | -1569318.4 |   3529 | tx_flit[564]
+     605* |       6 |     262 |      123 |     17 |    42 |    +0.0% | -662.619 | -1568877.4 |   3529 | tx_flit[564]
+     610* |       6 |     266 |      123 |     17 |    42 |    +0.0% | -662.619 | -1568449.6 |   3529 | tx_flit[564]
+     620* |       6 |     275 |      123 |     18 |    42 |    +0.0% | -662.619 | -1558162.0 |   3529 | tx_flit[564]
+     630* |       6 |     285 |      123 |     18 |    42 |    +0.0% | -662.619 | -1554155.1 |   3529 | tx_flit[564]
+     640* |       6 |     295 |      123 |     18 |    42 |    +0.0% | -662.619 | -1553726.1 |   3529 | tx_flit[564]
+     650* |       6 |     301 |      129 |     18 |    43 |    +0.0% | -662.619 | -1553338.8 |   3529 | tx_flit[564]
+     660* |       6 |     304 |      137 |     19 |    43 |    +0.0% | -662.619 | -1549321.6 |   3529 | tx_flit[564]
+     670* |       6 |     311 |      140 |     20 |    43 |    +0.0% | -662.619 | -1547887.4 |   3529 | tx_flit[564]
+     680* |       6 |     320 |      140 |     21 |    43 |    +0.0% | -662.619 | -1547788.2 |   3529 | tx_flit[564]
+     690* |       6 |     323 |      147 |     23 |    44 |    +0.1% | -662.619 | -1547585.5 |   3529 | tx_flit[564]
+     700* |       6 |     331 |      149 |     23 |    44 |    +0.1% | -662.619 | -1550336.8 |   3529 | tx_flit[564]
+     710* |       6 |     336 |      156 |     23 |    44 |    +0.1% | -662.619 | -1547101.2 |   3529 | tx_flit[564]
+     716* |       6 |     329 |      148 |     23 |    44 |    +0.1% | -662.619 | -1545957.8 |   3529 | tx_flit[564]
+     720* |       6 |     331 |      148 |     23 |    45 |    +0.1% | -662.619 | -1545929.2 |   3529 | tx_flit[564]
+     730* |       6 |     334 |      153 |     24 |    46 |    +0.1% | -662.619 | -1548491.2 |   3529 | tx_flit[564]
+     732* |       6 |     333 |      151 |     24 |    45 |    +0.1% | -662.619 | -1546421.9 |   3529 | tx_flit[564]
+     740* |       6 |     338 |      152 |     24 |    46 |    +0.1% | -662.619 | -1546575.8 |   3529 | tx_flit[564]
+     750* |       6 |     345 |      154 |     24 |    47 |    +0.1% | -662.619 | -1546550.9 |   3529 | tx_flit[564]
+     760* |       6 |     355 |      154 |     24 |    47 |    +0.1% | -662.619 | -1546016.4 |   3529 | tx_flit[564]
+     770* |       6 |     365 |      154 |     24 |    47 |    +0.1% | -662.619 | -1545927.9 |   3529 | tx_flit[564]
+     780* |       6 |     370 |      159 |     25 |    47 |    +0.1% | -662.619 | -1546723.0 |   3529 | tx_flit[564]
+     790* |       6 |     377 |      161 |     25 |    48 |    +0.1% | -662.619 | -1546368.6 |   3529 | tx_flit[564]
+     800* |       6 |     383 |      166 |     25 |    49 |    +0.1% | -662.619 | -1548891.4 |   3529 | tx_flit[564]
+     810* |       6 |     390 |      169 |     25 |    49 |    +0.1% | -662.619 | -1548826.8 |   3529 | tx_flit[564]
+     814* |       6 |     392 |      170 |     25 |    49 |    +0.1% | -662.619 | -1548776.6 |   3529 | tx_flit[564]
+     820* |       6 |     396 |      170 |     25 |    50 |    +0.1% | -662.619 | -1548519.0 |   3529 | tx_flit[564]
+     830* |       6 |     404 |      171 |     25 |    51 |    +0.1% | -662.619 | -1548704.9 |   3529 | tx_flit[564]
+     840* |       6 |     410 |      177 |     26 |    51 |    +0.1% | -662.619 | -1548979.2 |   3529 | tx_flit[564]
+     846* |       6 |     406 |      174 |     25 |    51 |    +0.1% | -662.619 | -1548658.5 |   3529 | tx_flit[564]
+     850* |       6 |     408 |      174 |     25 |    52 |    +0.1% | -662.619 | -1548648.4 |   3529 | tx_flit[564]
+     860* |       6 |     414 |      176 |     26 |    53 |    +0.1% | -662.619 | -1547843.1 |   3529 | tx_flit[564]
+     868* |       6 |     420 |      176 |     26 |    54 |    +0.1% | -662.619 | -1547807.9 |   3529 | tx_flit[564]
+     870* |       6 |     420 |      176 |     26 |    55 |    +0.1% | -662.619 | -1547811.2 |   3529 | tx_flit[564]
+     880* |       6 |     429 |      177 |     26 |    55 |    +0.1% | -662.619 | -1547605.2 |   3529 | tx_flit[564]
+     890* |       6 |     439 |      177 |     26 |    55 |    +0.1% | -662.619 | -1547524.4 |   3529 | tx_flit[564]
+     900* |       6 |     448 |      178 |     26 |    55 |    +0.1% | -662.619 | -1551500.2 |   3529 | tx_flit[564]
+     910* |       6 |     454 |      183 |     27 |    55 |    +0.1% | -662.619 | -1551487.8 |   3529 | tx_flit[564]
+     919* |       6 |     443 |      177 |     26 |    55 |    +0.1% | -662.619 | -1547471.2 |   3529 | tx_flit[564]
+     920* |       6 |     443 |      177 |     26 |    55 |    +0.1% | -662.619 | -1547471.2 |   3529 | tx_flit[564]
+     930* |       6 |     452 |      177 |     26 |    56 |    +0.1% | -662.619 | -1547447.1 |   3529 | tx_flit[564]
+     940* |       6 |     460 |      182 |     26 |    57 |    +0.1% | -662.619 | -1547783.8 |   3529 | tx_flit[564]
+     950* |       6 |     468 |      183 |     27 |    57 |    +0.1% | -662.619 | -1547814.8 |   3529 | tx_flit[564]
+     960* |       6 |     474 |      187 |     27 |    58 |    +0.1% | -662.619 | -1547797.6 |   3529 | tx_flit[564]
+     962* |       6 |     469 |      183 |     27 |    57 |    +0.1% | -662.619 | -1547815.6 |   3529 | tx_flit[564]
+     970* |       6 |     474 |      186 |     28 |    57 |    +0.1% | -662.619 | -1547773.8 |   3529 | tx_flit[564]
+     980* |       6 |     483 |      186 |     28 |    58 |    +0.1% | -662.619 | -1547298.5 |   3529 | tx_flit[564]
+     990* |       7 |     492 |      186 |     28 |    58 |    +0.1% | -662.619 | -1547239.4 |   3529 | tx_flit[564]
+    1000* |       7 |     501 |      187 |     28 |    58 |    +0.1% | -662.619 | -1547826.4 |   3529 | tx_flit[564]
+    1010* |       7 |     507 |      193 |     28 |    59 |    +0.1% | -662.619 | -1547539.8 |   3529 | tx_flit[564]
+    1013* |       7 |     503 |      187 |     28 |    58 |    +0.1% | -662.619 | -1547831.0 |   3529 | tx_flit[564]
+    1020* |       7 |     508 |      187 |     28 |    59 |    +0.1% | -662.619 | -1547803.0 |   3529 | tx_flit[564]
+    1030* |       7 |     516 |      187 |     28 |    61 |    +0.1% | -662.619 | -1547754.2 |   3529 | tx_flit[564]
+    1036* |       7 |     517 |      187 |     29 |    61 |    +0.1% | -662.619 | -1547777.1 |   3529 | tx_flit[564]
+    1040* |       7 |     520 |      187 |     29 |    61 |    +0.1% | -662.619 | -1547781.0 |   3529 | tx_flit[564]
+    1050* |       7 |     526 |      189 |     29 |    63 |    +0.1% | -662.619 | -1547126.2 |   3529 | tx_flit[564]
+    1058* |       7 |     526 |      189 |     29 |    63 |    +0.1% | -662.619 | -1547126.2 |   3529 | tx_flit[564]
+    1060* |       7 |     527 |      189 |     29 |    63 |    +0.1% | -662.619 | -1547110.6 |   3529 | tx_flit[564]
+    1070* |       7 |     534 |      189 |     30 |    65 |    +0.1% | -662.619 | -1547311.1 |   3529 | tx_flit[564]
+    1077* |       7 |     533 |      189 |     30 |    64 |    +0.1% | -662.619 | -1547311.0 |   3529 | tx_flit[564]
+    1080* |       7 |     535 |      189 |     30 |    64 |    +0.1% | -662.619 | -1546864.2 |   3529 | tx_flit[564]
+    1090* |       7 |     544 |      190 |     30 |    64 |    +0.1% | -662.619 | -1546230.9 |   3529 | tx_flit[564]
+    1100* |       7 |     552 |      191 |     30 |    65 |    +0.1% | -662.619 | -1549667.5 |   3529 | tx_flit[564]
+    1100* |       7 |     544 |      190 |     30 |    64 |    +0.1% | -662.619 | -1546230.9 |   3529 | tx_flit[564]
+    1110* |       7 |     551 |      190 |     30 |    66 |    +0.1% | -662.619 | -1546196.2 |   3529 | tx_flit[564]
+    1120* |       7 |     559 |      191 |     31 |    66 |    +0.1% | -662.619 | -1547379.4 |   3529 | tx_flit[564]
+    1129* |       7 |     560 |      192 |     32 |    66 |    +0.1% | -662.619 | -1547381.9 |   3529 | tx_flit[564]
+    1130* |       7 |     560 |      192 |     32 |    66 |    +0.1% | -662.619 | -1547381.9 |   3529 | tx_flit[564]
+    1140* |       7 |     570 |      192 |     32 |    66 |    +0.1% | -662.619 | -1547151.9 |   3529 | tx_flit[564]
+    1150* |       7 |     578 |      193 |     32 |    67 |    +0.1% | -662.619 | -1547169.4 |   3529 | tx_flit[564]
+    1160* |       7 |     586 |      194 |     32 |    68 |    +0.1% | -662.619 | -1547104.2 |   3529 | tx_flit[564]
+    1170* |       7 |     595 |      194 |     32 |    69 |    +0.1% | -662.619 | -1547104.2 |   3529 | tx_flit[564]
+    1180* |       8 |     603 |      195 |     32 |    69 |    +0.1% | -662.619 | -1547081.2 |   3529 | tx_flit[564]
+    1180* |       8 |     603 |      195 |     32 |    69 |    +0.1% | -662.619 | -1547081.2 |   3529 | tx_flit[564]
+    1190* |       8 |     609 |      197 |     32 |    70 |    +0.1% | -662.619 | -1546431.1 |   3529 | tx_flit[564]
+    1199* |       8 |     611 |      199 |     32 |    71 |    +0.1% | -662.619 | -1546457.5 |   3529 | tx_flit[564]
+    1200* |       8 |     611 |      199 |     32 |    71 |    +0.1% | -662.619 | -1546457.5 |   3529 | tx_flit[564]
+    1210* |       8 |     620 |      199 |     32 |    72 |    +0.1% | -662.619 | -1546374.0 |   3529 | tx_flit[564]
+    1220* |       8 |     627 |      200 |     32 |    74 |    +0.1% | -662.619 | -1546607.0 |   3529 | tx_flit[564]
+    1224* |       8 |     625 |      199 |     32 |    73 |    +0.1% | -662.619 | -1546420.1 |   3529 | tx_flit[564]
+    1230* |       8 |     629 |      199 |     32 |    74 |    +0.1% | -662.619 | -1545620.9 |   3529 | tx_flit[564]
+    1240* |       8 |     639 |      199 |     32 |    74 |    +0.1% | -662.619 | -1544670.6 |   3529 | tx_flit[564]
+    1250* |       8 |     646 |      205 |     32 |    75 |    +0.1% | -662.619 | -1544454.6 |   3529 | tx_flit[564]
+    1260* |       9 |     651 |      211 |     32 |    75 |    +0.1% | -662.619 | -1544165.0 |   3529 | tx_flit[564]
+    1268* |       9 |     657 |      211 |     33 |    76 |    +0.1% | -662.619 | -1544143.9 |   3529 | tx_flit[564]
+    1270* |       9 |     658 |      211 |     33 |    76 |    +0.1% | -662.619 | -1544134.0 |   3529 | tx_flit[564]
+    1276* |       9 |     664 |      211 |     33 |    76 |    +0.1% | -662.619 | -1543751.2 |   3529 | tx_flit[564]
+    1280* |       9 |     666 |      212 |     33 |    76 |    +0.1% | -662.619 | -1543691.8 |   3529 | tx_flit[564]
+    1290* |       9 |     672 |      217 |     33 |    78 |    +0.1% | -662.619 | -1541826.0 |   3529 | tx_flit[564]
+    1300* |       9 |     676 |      221 |     35 |    78 |    +0.1% | -662.619 | -1542214.2 |   3529 | tx_flit[564]
+    1305* |       9 |     672 |      217 |     33 |    78 |    +0.1% | -662.619 | -1541826.0 |   3529 | tx_flit[564]
+    1310* |       9 |     674 |      218 |     33 |    79 |    +0.1% | -662.619 | -1541781.5 |   3529 | tx_flit[564]
+    1311* |       9 |     675 |      218 |     33 |    79 |    +0.1% | -662.619 | -1541779.9 |   3529 | tx_flit[564]
+    1320* |       9 |     683 |      218 |     33 |    79 |    +0.1% | -662.619 | -1541695.8 |   3529 | tx_flit[564]
+    1330* |       9 |     689 |      219 |     35 |    80 |    +0.1% | -662.619 | -1541733.4 |   3529 | tx_flit[564]
+    1340* |       9 |     694 |      222 |     37 |    81 |    +0.1% | -662.619 | -1543664.4 |   3529 | tx_flit[564]
+    1350* |       9 |     697 |      227 |     38 |    83 |    +0.1% | -662.619 | -1544142.4 |   3529 | tx_flit[564]
+    1350* |       9 |     697 |      226 |     38 |    82 |    +0.1% | -662.619 | -1543676.5 |   3529 | tx_flit[564]
+    1360* |       9 |     704 |      227 |     39 |    82 |    +0.1% | -662.619 | -1543694.1 |   3529 | tx_flit[564]
+    1370* |       9 |     709 |      234 |     39 |    83 |    +0.1% | -662.619 | -1544567.8 |   3529 | tx_flit[564]
+    1380* |       9 |     716 |      236 |     39 |    84 |    +0.1% | -662.619 | -1545119.2 |   3529 | tx_flit[564]
+    1390* |       9 |     723 |      239 |     39 |    84 |    +0.1% | -662.619 | -1545150.8 |   3529 | tx_flit[564]
+    1390* |       9 |     704 |      227 |     39 |    82 |    +0.1% | -662.619 | -1543694.1 |   3529 | tx_flit[564]
+    1400* |       9 |     710 |      229 |     39 |    83 |    +0.1% | -662.619 | -1543732.6 |   3529 | tx_flit[564]
+    1400* |       9 |     708 |      228 |     39 |    82 |    +0.1% | -662.619 | -1543670.2 |   3529 | tx_flit[564]
+    1410* |       9 |     712 |      232 |     40 |    83 |    +0.1% | -662.619 | -1546434.6 |   3529 | tx_flit[564]
+    1420* |       9 |     716 |      238 |     41 |    83 |    +0.1% | -662.619 | -1546402.0 |   3529 | tx_flit[564]
+    1429* |       9 |     723 |      240 |     41 |    83 |    +0.1% | -662.619 | -1545603.6 |   3529 | tx_flit[564]
+    1430* |       9 |     723 |      240 |     41 |    83 |    +0.1% | -662.619 | -1545603.6 |   3529 | tx_flit[564]
+    1440* |       9 |     732 |      241 |     41 |    83 |    +0.1% | -662.619 | -1545313.0 |   3529 | tx_flit[564]
+    1450* |       9 |     740 |      242 |     41 |    84 |    +0.1% | -662.619 | -1545352.9 |   3529 | tx_flit[564]
+    1458* |       9 |     739 |      241 |     41 |    83 |    +0.1% | -662.619 | -1545298.6 |   3529 | tx_flit[564]
+    1460* |       9 |     739 |      241 |     41 |    84 |    +0.1% | -662.619 | -1545277.9 |   3529 | tx_flit[564]
+    1470* |       9 |     747 |      243 |     41 |    84 |    +0.1% | -662.619 | -1544972.6 |   3529 | tx_flit[564]
+    1480* |       9 |     753 |      248 |     42 |    84 |    +0.1% | -662.619 | -1545187.6 |   3529 | tx_flit[564]
+    1490* |      10 |     758 |      254 |     42 |    85 |    +0.1% | -662.619 | -1545463.6 |   3529 | tx_flit[564]
+    1490* |      10 |     754 |      248 |     42 |    85 |    +0.1% | -662.619 | -1545052.0 |   3529 | tx_flit[564]
+    1500* |      10 |     761 |      249 |     42 |    86 |    +0.1% | -662.619 | -1544924.9 |   3529 | tx_flit[564]
+    1500* |      10 |     761 |      249 |     42 |    86 |    +0.1% | -662.619 | -1544924.9 |   3529 | tx_flit[564]
+    1500* |      10 |     761 |      249 |     42 |    86 |    +0.1% | -662.619 | -1544924.9 |   3529 | tx_flit[564]
+    final |      10 |     761 |      249 |     42 |    86 |    +0.1% | -662.619 | -1544924.9 |   3530 | tx_flit[564]
+------------------------------------------------------------------------------------------------------------------------------
+[INFO RSZ-0059] Removed 10 buffers.
+[INFO RSZ-0045] Inserted 249 buffers, 4 to split loads.
+[INFO RSZ-0051] Resized 761 instances: 761 up, 0 up match, 0 down, 0 VT
+[INFO RSZ-0043] Swapped pins on 86 instances.
+[INFO RSZ-0049] Cloned 42 instances.
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 88.14s
+[INFO RSZ-0033] No hold violations found.
+[INFO RSZ-0506] Runtime: 0.22s
+Took 89 seconds: repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+detailed_placement
+[INFO DPL-0006] Core area: 124798.27 um^2
+[INFO DPL-0007] Movable instances area: 21841.86 um^2
+[INFO DPL-0008] Fixed instances area within core: 36717.61 um^2
+[INFO DPL-0009] Utilization: 46.9%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (3 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 168495 cells
+[INFO DPL-0393]   height 374 row(s): 1 cells
+[INFO DPL-0393]   height 618 row(s): 1 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |        823 |       165 |       658
+        1 |         86 |        20 |        66
+        2 |         72 |        12 |        60
+        3 |         41 |         5 |        36
+        4 |         11 |         3 |         8
+        5 |         20 |         4 |        16
+        6 |         31 |         5 |        26
+        7 |         13 |         3 |        10
+        8 |         15 |         3 |        12
+        9 |         19 |         3 |        16
+       10 |         12 |         2 |        10
+       13 |         12 |         2 |        10
+[WARNING DPL-0700] Negotiation phase 1: violations stuck at 12 for 3 consecutive iterations.
+Using old diamond search for 2 remaining illegal cells.
+diamond recovery: recovered 1/2 stuck cells.
+Negotiation phase 2: isolation point active, 1000 iterations.
+      400 |          0 |         0 |         0
+Negotiation phase 2 converged at iteration 0.
+[INFO DPL-0500] Runtime: 2.96s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                9122
+total displacement        220.6 u
+average displacement        0.0 u
+max displacement            5.8 u
+original HPWL         1600923.1 u
+legalized HPWL        1601045.3 u
+delta HPWL                    0 %
+
+estimate_parasitics -placement
+Report metrics stage 4, cts final...
+
+==========================================================================
+cts final report_design_area
+--------------------------------------------------------------------------
+Design area 58559 um^2 47% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/4_1_cts.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/tile_nic/orfs/results/asap7/tile_nic/base/4_cts.sdc
+Elapsed time: 2:59.97[h:]min:sec. CPU time: user 409.93 sys 17.16 (237%). Peak memory: 1880452KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+4_1_cts                .odb        179      427     2.37     1836 9e2cd235b6

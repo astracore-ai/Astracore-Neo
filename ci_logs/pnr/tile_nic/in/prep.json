@@ -1,0 +1,195 @@
+{
+ "unit": "tile_nic",
+ "units": [
+  "tile_nic"
+ ],
+ "period_ps": 1250.0,
+ "synth_period_ps": 1250.0,
+ "pdk": "asap7",
+ "corner": "SS",
+ "tools": {
+  "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)",
+  "sta": "3.1.0"
+ },
+ "macros": [
+  {
+   "leaf": "neo_mem_rf_w1024_d64_g32_rb0",
+   "macro": "fakeram7_64x1024_g32_1w1a",
+   "W": 1024,
+   "D": 64,
+   "G": 32,
+   "RB": 0,
+   "AW": 6,
+   "bits": 65536,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 2093,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     32,
+     "input"
+    ],
+    [
+     "waddr",
+     6,
+     "input"
+    ],
+    [
+     "wdata",
+     1024,
+     "input"
+    ],
+    [
+     "ra_addr",
+     6,
+     "input"
+    ],
+    [
+     "ra_data",
+     1024,
+     "output"
+    ]
+   ],
+   "lef_width_um": 132.81,
+   "lef_height_um": 100.8,
+   "lef_area_um2": 13387.248,
+   "bitcell_area_um2": 13345.358,
+   "pin_limited": true,
+   "um2_per_bit": 0.20427,
+   "synth_model_um2": 4133.487,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_64x1024_g32_1w1a.lef",
+   "lib": "fakeram7_64x1024_g32_1w1a.lib",
+   "lef_bytes": 340058,
+   "lib_bytes": 11193
+  },
+  {
+   "leaf": "neo_mem_rf_w1068_d512_g1_rb1",
+   "macro": "fakeram7_512x1068_g1_1w1r",
+   "W": 1068,
+   "D": 512,
+   "G": 1,
+   "RB": 1,
+   "AW": 9,
+   "bits": 546816,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 2166,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     1,
+     "input"
+    ],
+    [
+     "waddr",
+     9,
+     "input"
+    ],
+    [
+     "wdata",
+     1068,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     9,
+     "input"
+    ],
+    [
+     "rb_data",
+     1068,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     9,
+     "output"
+    ]
+   ],
+   "lef_width_um": 138.51,
+   "lef_height_um": 166.6,
+   "lef_area_um2": 23075.766,
+   "bitcell_area_um2": 22961.023,
+   "pin_limited": false,
+   "um2_per_bit": 0.0422,
+   "synth_model_um2": 34488.779,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_512x1068_g1_1w1r.lef",
+   "lib": "fakeram7_512x1068_g1_1w1r.lib",
+   "lef_bytes": 361709,
+   "lib_bytes": 15594
+  }
+ ],
+ "macro_pins_checked": 2,
+ "yosys_stat": {
+  "design": {
+   "num_cells": 147655,
+   "area_um2": 56522.499,
+   "macros": {
+    "fakeram7_512x1068_g1_1w1r": 1,
+    "fakeram7_64x1024_g32_1w1a": 1
+   },
+   "macro_area_um2": 36463.014,
+   "stdcells": 147653,
+   "stdcell_area_um2": 20059.485
+  },
+  "modules": {
+   "tile_nic": {
+    "cells": 147655,
+    "area_um2": 56522.499,
+    "own_cells": 143461
+   },
+   "neo_mem_rf_w1068_d512_g1_rb1": {
+    "cells": 2138,
+    "area_um2": 23231.524,
+    "own_cells": 2138
+   },
+   "neo_mem_rf_w1024_d64_g32_rb0": {
+    "cells": 2056,
+    "area_um2": 13537.028,
+    "own_cells": 2056
+   }
+  }
+ },
+ "synth": {
+  "tile_nic": {
+   "instances": 1,
+   "own_cells": 143394,
+   "own_area_um2": 19749.1203,
+   "cells": 143394,
+   "cell_area_um2": 19749.1203,
+   "macro_area_um2": 38622.26534400001,
+   "wns_ps": 22.85305287480544,
+   "tns_ps": 0.0,
+   "min_period_ps": 1127.2050949670293,
+   "worst_start": "rx_flit[556]",
+   "worst_end": "st_md1[0]_reg",
+   "worst_arrival_ps": 1088.7,
+   "worst_slack_ps": 22.9
+  }
+ },
+ "seconds": 13.3
+}
