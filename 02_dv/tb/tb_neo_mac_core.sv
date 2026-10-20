@@ -339,6 +339,8 @@ module tb_neo_mac_core;
     else begin $display("T8 row parity: xpar_err_sticky=%0b abft_err_sticky=%0b -> FAIL", xpar_err_sticky, abft_err_sticky); fails++; end
     abft_clear = 1'b1; @(negedge clk); abft_clear = 1'b0; @(negedge clk);
     if (xpar_err_sticky) begin $display("T8 row parity: the sticky did not clear -> FAIL"); fails++; end
+    repeat (LAT + 8) @(negedge clk);          // the row streamed in leaves the array before the next test's scoreboard
+    clear_scoreboard();
 
     if (NCHK > 1) begin
       // ---- T6: the 2:4 sparse dataflow ----

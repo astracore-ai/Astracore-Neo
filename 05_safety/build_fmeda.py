@@ -9,6 +9,14 @@ build_fmeda.py -- AstraCore Neo FMEDA skeleton (ISO 26262-5 / -11 style), drop 0
       cited per row (formal_report.md from ci-logs-formal), SPFM / LFM / PMHF recomputed with v1's base failure rates
       (plus the weight buffer's storage, which v1 had no row for); writes neo_fmeda_v2.xlsx and fmeda_v2.md. The v2
       rows, their campaign selections and the reasons a row keeps v1's value are V2_ROWS / CHIP_SEL below.
+  build_fmeda.py --v3 --faults DIR [--formal formal_report.md] [--out DIR]
+      FMEDA v3 (drop 0.44, stream S1): the same rows and selections on the campaign run against the safety closure --
+      SECDED on the activation buffer, the activation path's byte parity, the index lines' parity, the packer's beat
+      parity check, the one-hot MBIST state -- with the SRAM base rates corrected to the silicon leaves of
+      09_synthesis/memories.md (V3_BASE: the activation buffer 1,024 x 624 bits with its check bits, the accumulator
+      512 x 1,056), the tile's NIC memories as a chip element v1 and v2 lacked (NIC_MEM_MBIT), a sensitivity with the
+      pipeline flops at the synthesized count (V3_FLOPS_MBIT), the per-mechanism table of S1_REGS and the before / after
+      of every block against v2 (read from neo_fmeda_v2.xlsx beside this file); writes neo_fmeda_v3.xlsx and fmeda_v3.md.
 
 Sheets
   Assumptions  base failure rates and areas (blue = inputs, yellow = assumptions to replace
@@ -477,6 +485,12 @@ CHIP_SEL = {
 }
 CHIP_PROOFS = {"Shared SRAM 128 MB, soft errors": ["ecc39"], "NoC and DMA engines": ["noc_router"]}
 CORES = 64
+# v3 (drop 0.44): the tile's NIC memories -- the drain FIFO's rows (behind stored parity: the beat parities and the index
+# parity, checked by the link packer) and the partial-sum rows under assembly (the check beat's ABFT at the owner) -- as a
+# chip element of 64 tiles, measured on the tile build's tile_nic.sram flips; v1 priced no NoC memory (the FIFO was flops)
+CHIP_V3 = [("Tile NIC memories (drain FIFO 512 x 1,069, partial-sum rows 64 x 1,024), soft errors", CORES, "=Assumptions!B35", 0.99, 0.0, 0.0,
+            "the drain row's beat and index parities stored at the push and checked by the link packer (drop 0.44, S1); a corrupted partial-sum row is seen by the owner's ABFT at drain")]
+CHIP_SEL_V3 = {"Tile NIC memories (drain FIFO 512 x 1,069, partial-sum rows 64 x 1,024), soft errors": (S("tile", ["tile_nic.sram"], TRANS), "measured")}
 # item 2 (drop 0.43): the comparator storage of drop 0.41 -- (the flop path's ending, the label, the FMEDA row carrying it)
 _FEED, _ACC, _SEQ = "Feeder address generator and run FSM", "Accumulator write/read control", "Sequencer, weight-buffer addressing"
 ITEM2_REGS = [
@@ -496,9 +510,65 @@ ITEM2_REGS = [
 ]
 
 
-def base_values():
-    """v1's Assumptions sheet as numbers (B4..B19 inputs, B22..B26 derived) and v2's weight buffer (B32, B33)"""
+# ---- FMEDA v3 (drop 0.44, stream S1) ----
+VER, DROP, STREAM = "v2", "0.43", "D2"           # set to v3 / 0.44 / S1 by --v3 (the v2 build stays reproducible)
+# the SRAM base rates at the silicon leaves (09_synthesis/memories.md; 2^20 bits per Mbit as v1 counts): the activation
+# buffer 1,024 words x 624 bits (the pair of SECDED-coded entries, drop 0.44; v1 counted 0.25 Mbit, its note's 4096 x 32 x 8
+# bit is 1 Mbit, the 512-bit word of drop 0.43 is 0.5), the accumulator 512 x 1,056 (COLS + 1 partial sums; v1 0.5)
+V3_BASE = {"B9": round(512 * 1056 / 2 ** 20, 4), "B10": round(1024 * 624 / 2 ** 20, 4)}
+V3_BASE_NOTE = {"B9": "v3: 512 rows x 1,056 bits (33 partial sums of 32 bits: memories.md acc_bank.u_mem) = 540,672 bits",
+                "B10": "v3: 1,024 pair words x 624 bits (two SECDED-coded entries of 8 lanes x 39, drop 0.44: memories.md act_feeder.u_mem) = 638,976 bits"}
+# the tile's NIC memories, which neither v1 nor v2 priced (the drain FIFO was flops until drop 0.40, a leaf since): the drain
+# FIFO 512 x 1,069 bits and the partial-sum rows 64 x 1,024 bits per tile (memories.md)
+NIC_MEM_MBIT = round((512 * 1069 + 64 * 1024) / 2 ** 20, 4)
+# the sensitivity on the pipeline and control flops (v1: 0.04 Mbit): the synthesized silicon core (neo_core at 32x32, NCHK = 4,
+# synth.py on the ASAP7 flow after drop 0.44) holds V3_FLOPS flops, of which the PEs' weight registers (B11: 1,024 data PEs x
+# 22 bits {w_q, w_sh with its index, sel_q} + 128 check PEs x 28) are 26,112 -- the rest is what B12 stands for
+V3_FLOPS = 233892                                # synth.py --blocks neo_core on the drop 0.44 RTL (ASAP7, the macros black-boxed)
+# the v2 result (fmeda_v2.md, run 192) the v3 metrics are compared with
+V2_RESULT = dict(core_spfm=0.95946, core_lfm=0.999999, core_pmhf=29.642, chip_spfm=0.99708, chip_lfm=0.9999993, chip_pmhf=1931.0)
+V2_UNDETECTED = 201
+# the mechanisms of drop 0.44 (S1): (label, the campaign selection -- a block, or a regex on the flop path)
+S1_REGS = [
+    ("activation buffer cells (SECDED, abuf_ce / abuf_ue)", dict(block="act_feeder.sram")),
+    ("activation buffer output register (the macro's rb_data, decoded behind it)", dict(re=r"u_feeder\.u_mem\.rb_data$")),
+    ("feeder row register x_vec_q (byte parity, act_perr)", dict(re=r"u_feeder\.x_vec_q$")),
+    ("feeder parity register x_par_q", dict(re=r"u_feeder\.x_par_q$")),
+    ("feeder second-stage control and its copies (valid / swap / idx / first _q2, _dq2: ctrl_err)", dict(re=r"u_feeder\.(valid|swap|idx|first)_d?q2$")),
+    ("skew chains, data (byte parity, act_perr)", dict(re=r"\.u_skew\..*(st1|r_even|r_odd|u_da\.pipe|u_db\.pipe)(\[\d+\])?$")),
+    ("skew chains, parity bits", dict(re=r"\.u_skew\..*(st1_p|r_even_p|r_odd_p|u_pa\.pipe|u_pb\.pipe)(\[\d+\])?$")),
+    ("index / first delay lines (parity, ctrl_err)", dict(re=r"\.(u_idx_dl|u_first_dl)\.pipe")),
+    ("index-line parity line", dict(re=r"\.u_ipar_dl\.pipe")),
+    ("drain FIFO output register (stored parity, the packer's check)", dict(re=r"u_dfifo\.rb_data$")),
+    ("drain FIFO cells", dict(re=r"u_dfifo\.mem")),
+    ("serve register serve_row (stored word parities, the packer's check)", dict(re=r"u_nic\.serve_row$")),
+    ("packer's beat and parity registers (ib, ipar, perr_sticky)", dict(re=r"u_pack\.(g_merge\.|g_split\.)?(ib|ipar|perr_sticky)$")),
+    ("MBIST state (one-hot, bist_fail)", dict(re=r"u_bist\.state$")),
+]
+
+
+def v2_campaign_table():
+    """v2's per-block campaign (neo_fmeda_v2.xlsx's Campaign sheet beside this file): {(build, block): (n, det, masked, dang)}"""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "neo_fmeda_v2.xlsx")
+    if not os.path.exists(path):
+        return {}
+    from openpyxl import load_workbook
+    ws = load_workbook(path, read_only=True)["Campaign"]
+    out = {}
+    for row in ws.iter_rows(min_row=4, values_only=True):
+        if row and row[0] in ("core", "tile") and row[1]:
+            out[(row[0], row[1])] = (int(row[2] or 0), int(row[3] or 0) + int(row[6] or 0), int(row[4] or 0), int(row[5] or 0) + int(row[7] or 0))
+    return out
+
+
+def base_values(over=None):
+    """v1's Assumptions sheet as numbers (B4..B19 inputs, B22..B26 derived) and v2's weight buffer (B32, B33); v3: the SRAM
+    leaves at the silicon sizes (V3_BASE); `over` replaces inputs (the flop-count sensitivity)"""
     v = {f"B{i}": row[1] for i, row in enumerate(ASSUMPTIONS, start=4)}
+    if VER == "v3":
+        v.update(V3_BASE)
+    if over:
+        v.update(over)
     v["B22"] = v["B4"] * v["B6"] / v["B5"]
     v["B23"] = v["B7"] * v["B9"]
     v["B24"] = v["B7"] * v["B10"]
@@ -506,6 +576,8 @@ def base_values():
     v["B26"] = v["B8"] * v["B12"]
     v["B32"] = WBUF_MBIT
     v["B33"] = v["B7"] * v["B32"]
+    v["B34"] = NIC_MEM_MBIT
+    v["B35"] = v["B7"] * v["B34"]
     return v
 
 
@@ -598,9 +670,9 @@ def proofs_text(proofs, formal):
                      for p in proofs)
 
 
-def v2_rows(faults, formal):
-    """the v2 rows with their numbers: λ (terms and value), the v1 fields, the campaign's statistics, DC used"""
-    bv = base_values()
+def v2_rows(faults, formal, over=None):
+    """the v2 / v3 rows with their numbers: λ (terms and value), the v1 fields, the campaign's statistics, DC used"""
+    bv = base_values(over)
     out = []
     for spec in V2_ROWS:
         r = dict(spec)
@@ -664,14 +736,15 @@ def chip_elements(faults, formal, core, mode):
     """[(name, count, λ_SR, F_safe, DC_RF, λ_SM, DC_L, mechanism, stats, basis)] -- v1's elements, the MAC core from
     `core` (core_metrics), the elements CHIP_SEL measures with their measured values in the v2 modes"""
     bv = base_values()
-    out = [("MAC core (from FMEDA_core_v2)", CORES, core["sr"], 0.0, 1 - core["rf"] / core["sr"], core["lat"], 0.0,
+    out = [(f"MAC core (from FMEDA_core_{VER})", CORES, core["sr"], 0.0, 1 - core["rf"] / core["sr"], core["lat"], 0.0,
             "residual and latent from the core sheet", None, "core sheet")]
-    for name, cnt, lam, dcrf, lsm, dcl, sm in CHIP_OTHER:
+    for name, cnt, lam, dcrf, lsm, dcl, sm in CHIP_OTHER + (CHIP_V3 if VER == "v3" else []):
         expr = lam.lstrip("=").replace("Assumptions!", "")
         lam_v = eval(re.sub(r"B(\d+)", lambda m: repr(bv["B" + m.group(1)]), expr))   # noqa: S307 (our own constant formulas)
         st, basis, fs, dc = None, "v1", 0.0, dcrf
-        if name in CHIP_SEL:
-            sel, use = CHIP_SEL[name]
+        csel = dict(CHIP_SEL, **CHIP_SEL_V3) if VER == "v3" else CHIP_SEL
+        if name in csel:
+            sel, use = csel[name]
             st = stats(select(faults, sel))
             if st and use == "measured" and mode != "v1":
                 if st["dc"] is not None:
@@ -748,18 +821,24 @@ def pc(x, nd=1):
 
 
 def build_v2(faults_path, formal_path, out_dir):
+    """the v2 (drop 0.43) or, with VER = "v3", the v3 (drop 0.44) workbook and report"""
     faults, meta, run = read_faults(faults_path)
     formal, formal_title = parse_formal(formal_path)
     rows = v2_rows(faults, formal)
     bv = base_values()
-    modes = [("v1", "v1 (claims)"), ("v2", "v2 measured"), ("nomask", "v2, no credit for masked faults"),
-             ("upper", "v2, 95 % upper bounds")]
+    modes = [("v1", "v1 (claims)"), ("v2", f"{VER} measured"), ("nomask", f"{VER}, no credit for masked faults"),
+             ("upper", f"{VER}, 95 % upper bounds")]
     core = {m: core_metrics(rows, m) for m, _ in modes}
     core_v1rows = core_metrics(rows, "v2", with_new=False)
     chips = {m: chip_metrics(chip_elements(faults, formal, core[m], m)) for m, _ in modes}
     chip_v1rows = chip_metrics(chip_elements(faults, formal, core_v1rows, "v2"))
-    xlsx = os.path.join(out_dir, "neo_fmeda_v2.xlsx")
-    md = os.path.join(out_dir, "fmeda_v2.md")
+    if VER == "v3":                                   # the flop-count sensitivity: the rows at the synthesized flop count
+        rows_f = v2_rows(faults, formal, over={"B11": round(26112 / 2 ** 20, 4), "B12": round((V3_FLOPS - 26112) / 2 ** 20, 4)})
+        core["flops"] = core_metrics(rows_f, "v2")
+        chips["flops"] = chip_metrics(chip_elements(faults, formal, core["flops"], "v2"))
+        modes.append(("flops", f"{VER}, synthesized flop count"))
+    xlsx = os.path.join(out_dir, f"neo_fmeda_{VER}.xlsx")
+    md = os.path.join(out_dir, f"fmeda_{VER}.md")
     write_v2_xlsx(xlsx, rows, faults, meta, run, formal, formal_title, core, chips, modes, bv)
     write_v2_md(md, rows, faults, meta, run, formal, formal_title, core, core_v1rows, chips, chip_v1rows, modes, bv)
     return xlsx, md, core, chips
@@ -770,15 +849,20 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
     # ---------------------------------------------------------------- Assumptions (v1's, plus the weight buffer)
     ws = wb.active
     ws.title = "Assumptions"
-    ws["A1"] = ("AstraCore Neo FMEDA v2 (drop 0.43): v1's base failure rates unchanged (rows 4-19, the derived rates 22-26); "
-                "row 32 adds the weight buffer's storage, which v1 had no row for. Blue = inputs; yellow = assumptions "
-                "to replace with foundry data (ISO 26262-11).")
+    ws["A1"] = (f"AstraCore Neo FMEDA {VER} (drop {DROP}): v1's base failure rates " +
+                ("unchanged (rows 4-19, the derived rates 22-26); " if VER == "v2" else
+                 "with the SRAM leaves at the silicon sizes of 09_synthesis/memories.md (rows 9 and 10, marked v3; the derived rates 22-26); ") +
+                "row 32 adds the weight buffer's storage, which v1 had no row for" +
+                ("" if VER == "v2" else "; row 34 the tile's NIC memories (drain FIFO, partial-sum rows), which no version priced") +
+                ". Blue = inputs; yellow = assumptions to replace with foundry data (ISO 26262-11).")
     ws["A1"].font = BOLD
     ws["A1"].alignment = WRAP
     ws.merge_cells("A1:D1")
     ws.row_dimensions[1].height = 48
     header(ws, 3, ["Parameter", "Value", "Unit", "Source / note"], [46, 14, 12, 70])
     for i, (p, v, u, s) in enumerate(ASSUMPTIONS, start=4):
+        if VER == "v3" and f"B{i}" in V3_BASE:
+            v, s = V3_BASE[f"B{i}"], f"{V3_BASE_NOTE[f'B{i}']} (v1: {v} Mbit -- {s})"
         ws.cell(row=i, column=1, value=p).font = BLACK
         c = ws.cell(row=i, column=2, value=v)
         c.font = BLUE
@@ -815,16 +899,35 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
     ws["B33"] = "=B7*B32"
     ws["B33"].number_format = "0.000"
     ws["C33"] = "FIT"
-    ws["A35"] = ("Observations, not changed here so that v2 compares with v1 like for like: the silicon activation buffer is "
-                 "ABUF_DEPTH 2048 x 32 bytes = 0.5 Mbit (v1: 0.25 Mbit, and its note's 4096 x 32 x 8 bit is 1 Mbit); the "
-                 "accumulator of the NCHK = 4 core is 512 x 36 x 32 bit = 0.5625 Mbit (v1: 0.5).")
-    ws["A35"].alignment = WRAP
-    ws.merge_cells("A35:D35")
-    ws.row_dimensions[35].height = 44
+    if VER == "v2":
+        ws["A35"] = ("Observations, not changed here so that v2 compares with v1 like for like: the silicon activation buffer is "
+                     "ABUF_DEPTH 2048 x 32 bytes = 0.5 Mbit (v1: 0.25 Mbit, and its note's 4096 x 32 x 8 bit is 1 Mbit); the "
+                     "accumulator of the NCHK = 4 core is 512 x 36 x 32 bit = 0.5625 Mbit (v1: 0.5).")
+        ws["A35"].alignment = WRAP
+        ws.merge_cells("A35:D35")
+        ws.row_dimensions[35].height = 44
+    else:
+        ws["A34"] = "Tile NIC memories per tile (v3 addition)"
+        ws["B34"] = NIC_MEM_MBIT
+        ws["B34"].font = BLUE
+        ws["B34"].fill = YELLOW
+        ws["C34"] = "Mbit"
+        ws["D34"] = "the drain FIFO 512 x 1,069 bits and the partial-sum rows 64 x 1,024 bits (memories.md): 612,864 bits; neither v1 nor v2 priced them (the FIFO was flops until drop 0.40)"
+        ws["D34"].alignment = WRAP
+        ws["A35"] = "Transient failure rate, tile NIC memories"
+        ws["B35"] = "=B7*B34"
+        ws["B35"].number_format = "0.000"
+        ws["C35"] = "FIT"
+        ws["A37"] = (f"Sensitivity, not applied to the rows: the synthesized silicon core (neo_core 32x32 NCHK = 4, drop 0.44) holds {V3_FLOPS:,} flops, "
+                     f"of which the PEs' weight registers are 26,112 (B11 0.0249 Mbit) and the rest {V3_FLOPS - 26112:,} = {(V3_FLOPS - 26112) / 2 ** 20:.4f} Mbit is what "
+                     f"B12 (v1: 0.04 Mbit) stands for; the Metrics sheet's last column recomputes the core and the chip with it.")
+        ws["A37"].alignment = WRAP
+        ws.merge_cells("A37:D37")
+        ws.row_dimensions[37].height = 44
 
     # ---------------------------------------------------------------- FMEDA_core_v2
-    fm = wb.create_sheet("FMEDA_core_v2")
-    fm["A1"] = ("FMEDA v2 (drop 0.43), one MAC core: v1's rows with the diagnostic coverage the fault campaign measured "
+    fm = wb.create_sheet(f"FMEDA_core_{VER}")
+    fm["A1"] = (f"FMEDA {VER} (drop {DROP}), one MAC core: v1's rows with the diagnostic coverage the fault campaign measured "
                 "(02_dv/dv/cocotb/faults/, the faults job). Per row: the faults that measure it (campaign selection), "
                 "their outcomes, F_safe = the bit-weighted fraction masked in the workload (no violation, ISO 26262's safe "
                 "faults), DC_RF = detected / (detected + dangerous), bit-weighted, with its 95 % Wilson interval. "
@@ -875,12 +978,12 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
     fm.freeze_panes = "C4"
 
     # ---------------------------------------------------------------- Metrics_v2
-    mt = wb.create_sheet("Metrics_v2")
-    mt["A1"] = "Hardware architectural metrics, one MAC core, v2 (formulas over FMEDA_core_v2) and the comparison with v1"
+    mt = wb.create_sheet(f"Metrics_{VER}")
+    mt["A1"] = f"Hardware architectural metrics, one MAC core, {VER} (formulas over FMEDA_core_{VER}) and the comparison with v1" + ("" if VER == "v2" else " and v2")
     mt["A1"].font = BOLD
     mt.merge_cells("A1:F1")
     header(mt, 3, ["Metric", "Value", "ASIL-B(D) target", "ASIL-D target", "Meets ASIL-B(D)?", "Meets ASIL-D?"], [44, 14, 16, 14, 16, 14])
-    F_ = "FMEDA_core_v2!"
+    F_ = f"FMEDA_core_{VER}!"
     mt["A4"], mt["B4"] = "Σ λ_SR (FIT)", f"={F_}$D${tot + 1}"
     mt["A5"], mt["B5"] = "Σ λ_SPF/RF (FIT)", f"={F_}$R${tot}"
     mt["A6"], mt["B6"] = "Σ λ_MPF,L (FIT)", f"={F_}$V${tot}"
@@ -898,9 +1001,11 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
             mt.cell(row=r_, column=c).number_format = "0.000%"
     for r_ in (4, 5, 6, 9):
         mt.cell(row=r_, column=2).number_format = "0.0000"
-    mt["A12"] = "Comparison (values computed by build_fmeda.py; the formulas above give the 'v2 measured' column)"
+    mt["A12"] = f"Comparison (values computed by build_fmeda.py; the formulas above give the '{VER} measured' column" + \
+                ("" if VER == "v2" else "; the v2 column is fmeda_v2.md's, run 192") + ")"
     mt["A12"].font = BOLD
-    header(mt, 13, ["Metric"] + [label for _, label in modes], [44, 18, 18, 22, 20])
+    vlabels = [label for _, label in modes] + (["v2 measured (drop 0.43)"] if VER == "v3" else [])
+    header(mt, 13, ["Metric"] + vlabels, [44, 18, 18, 22, 20, 22, 22])
     for j, (key, label) in enumerate([("spfm", "Core SPFM"), ("lfm", "Core LFM"), ("pmhf", "Core PMHF (FIT)"),
                                       ("rf", "Core Σ λ_SPF/RF (FIT)"), ("spfm_c", "Chip SPFM"), ("lfm_c", "Chip LFM"),
                                       ("pmhf_c", "Chip PMHF (FIT)")], start=14):
@@ -910,10 +1015,15 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
             v = src[key.replace("_c", "")]
             cell = mt.cell(row=j, column=k, value=v)
             cell.number_format = "0.000%" if key.startswith(("spfm", "lfm")) else "0.000"
+        if VER == "v3":
+            v2k = ("chip_" if key.endswith("_c") else "core_") + key.replace("_c", "")
+            if v2k in V2_RESULT:
+                cell = mt.cell(row=j, column=len(modes) + 2, value=V2_RESULT[v2k])
+                cell.number_format = "0.000%" if key.startswith(("spfm", "lfm")) else "0.000"
 
     # ---------------------------------------------------------------- Chip_rollup_v2
-    cr = wb.create_sheet("Chip_rollup_v2")
-    cr["A1"] = ("Chip-level roll-up v2: the MAC core from FMEDA_core_v2, the shared SRAM's permanent faults and the NoC / DMA "
+    cr = wb.create_sheet(f"Chip_rollup_{VER}")
+    cr["A1"] = (f"Chip-level roll-up {VER}: the MAC core from FMEDA_core_{VER}, the shared SRAM's permanent faults and the NoC / DMA "
                 "engines measured on the tile build (stuck-at faults: their λ is permanent), the shared SRAM's soft errors "
                 "with v1's coverage (its residual is v1's multi-bit assumption; the single-bit faults are the evidence), the "
                 "other elements as v1. λ_RF = λ_SR x (1 - F_safe) x (1 - DC_RF).")
@@ -930,10 +1040,10 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
         cr.cell(row=i, column=1, value=name)
         cr.cell(row=i, column=2, value=cnt).font = BLUE
         if i == 4:
-            cr.cell(row=i, column=3, value=f"=Metrics_v2!B4")
+            cr.cell(row=i, column=3, value=f"=Metrics_{VER}!B4")
             cr.cell(row=i, column=4, value=0)
-            cr.cell(row=i, column=5, value="=1-Metrics_v2!B5/Metrics_v2!B4")
-            cr.cell(row=i, column=6, value="=Metrics_v2!B6")
+            cr.cell(row=i, column=5, value=f"=1-Metrics_{VER}!B5/Metrics_{VER}!B4")
+            cr.cell(row=i, column=6, value=f"=Metrics_{VER}!B6")
             cr.cell(row=i, column=7, value=0)
         else:
             cr.cell(row=i, column=3, value=lam)
@@ -947,7 +1057,7 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
         cr.cell(row=i, column=11, value=f"=I{i}+J{i}*C{i}*{T}*0.000000001")
         txt = f"{basis}: {sm}"
         if st:
-            txt += (f" | campaign ({sel_text(CHIP_SEL[name][0])}): {st['n']} faults, {st['det']} detected, {st['masked']} masked, "
+            txt += (f" | campaign ({sel_text((dict(CHIP_SEL, **CHIP_SEL_V3) if VER == 'v3' else CHIP_SEL)[name][0])}): {st['n']} faults, {st['det']} detected, {st['masked']} masked, "
                     f"{st['dang']} dangerous; DC {pc(st['dc'])}" + (f" ({pc(st['dc_ci'][0])} .. {pc(st['dc_ci'][1])})" if st['dc_ci'] else ""))
         if name in CHIP_PROOFS:
             txt += " | " + proofs_text(CHIP_PROOFS[name], formal)
@@ -1011,7 +1121,7 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
         for c, v in enumerate([task, res, mode, tm, what, "; ".join(dict.fromkeys(cited.get(task, [])))], 1):
             fs_.cell(row=i, column=c, value=v).alignment = WRAP
     ev = wb.create_sheet("Evidence")
-    ev["A1"] = "Mechanism evidence: v1's fault-injection tests, and v2's (the campaign, C6)"
+    ev["A1"] = "Mechanism evidence: v1's fault-injection tests, and v2's (the campaign, C6)" + ("" if VER == "v2" else ", and v3's (drop 0.44: C15-C17, M26-M28, T8)")
     ev.append(["Mechanism", "Fault injected", "Test", "Log", "Drop"])
     for row in EVIDENCE_V1:
         ev.append(list(row))
@@ -1021,6 +1131,28 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
     ev.append(["The comparator storage of 0.41 (R7 / R10)", "a flip in each of the twelve registers 0.41's synchronous reads "
                "added behind the comparators (the port-B address latches, inb_q, a0_q, first_oq, w_load_q, ra0_q, the "
                "accumulate's stage-0 control)", "C6", "dv/cocotb (cocotb core)", "0.43"])
+    if VER == "v3":
+        for row in EVIDENCE_V3:
+            ev.append(list(row))
+        s1 = wb.create_sheet("S1_mechanisms")
+        s1["A1"] = "The mechanisms of drop 0.44 (S1) in the campaign: the registers and cells each one covers, their faults and outcomes"
+        s1["A1"].font = BOLD
+        header(s1, 3, ["Mechanism / registers", "Faults", "Detected", "Masked", "Dangerous", "Hang", "DC", "Latency median / max (cycles)"], [70, 8, 9, 8, 10, 7, 9, 22])
+        for i, (label, st) in enumerate(s1_table(faults), start=4):
+            vals = [label, st["n"], st["det"], st["masked"], st["dang"], st["hang"], st["dc"], st["lat"]]
+            for c, v in enumerate(vals, 1):
+                s1.cell(row=i, column=c, value=v)
+            s1.cell(row=i, column=7).number_format = "0.0%"
+        ba = wb.create_sheet("Before_after")
+        ba["A1"] = "Every block of both builds: v2's campaign (run 192, drop 0.43) against this one"
+        ba["A1"].font = BOLD
+        header(ba, 3, ["Build", "Block", "v2 faults", "v2 dangerous", "v2 DC", "v3 faults", "v3 dangerous", "v3 DC"], [8, 30, 10, 12, 9, 10, 12, 9])
+        for i, (cfg, blk, a, b) in enumerate(before_after(faults), start=4):
+            vals = [cfg, blk] + list(a) + list(b)
+            for c, v in enumerate(vals, 1):
+                ba.cell(row=i, column=c, value=v)
+            for c in (5, 8):
+                ba.cell(row=i, column=c).number_format = "0.0%"
     for col, wdt in (("A", 36), ("B", 60), ("C", 20), ("D", 52), ("E", 10)):
         ev.column_dimensions[col].width = wdt
     for sheet in wb.worksheets:
@@ -1032,12 +1164,77 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
     wb.save(path)
 
 
+EVIDENCE_V3 = [
+    ("Activation buffer SECDED (drop 0.44)", "a data bit and a check bit of stored lanes flipped (corrected, abuf_ce); two bits of one lane (abuf_ue)",
+     "C15 (cocotb core), C13 (neosim run_conv_core --late)", "dv/cocotb, sim/", "0.44"),
+    ("Activation path byte parity (drop 0.44)", "a flip of the feeder's row register, its parity bit, a skew chain stage, its parity chain (act_perr)",
+     "C16 (cocotb core), T8 (tb_neo_mac_core)", "dv/cocotb, tb/", "0.44"),
+    ("Index / first delay-line parity (drop 0.44)", "a flip of the lines' last stage, a stage in flight, the parity line (ctrl_err)", "C16", "dv/cocotb", "0.44"),
+    ("Link packer beat-parity check (drop 0.44)", "a bit of the drain FIFO's output register stuck through the drain (the parity cause from the packer, the CRC consistent)",
+     "M26 (cocotb tile)", "dv/cocotb", "0.44"),
+    ("Drain FIFO overflow flag (drop 0.44, review finding 3)", "GO, WAIT_DONE, GO, WAIT_DONE with no drain: 72 rows into the 64-row FIFO (drain_ovf)", "M27", "dv/cocotb", "0.44"),
+    ("MBIST one-hot state (drop 0.44)", "a second bit of the idle state set (bist_fail that cycle, the engine back to idle, a clean pass after)", "M28", "dv/cocotb", "0.44"),
+    ("ECC flags qualified by a real read (drop 0.44, review finding 1)", "the arrays and unreset registers random at reset (--x-initial unique, +verilator+rand+reset+2): no flag with nothing written",
+     "C17 (core_xinit), M1 (tile_xinit)", "dv/cocotb", "0.44"),
+]
+
+
+def _lat_text(lat):
+    lat = sorted(lat)
+    return f"{lat[len(lat) // 2]} / {lat[-1]}" if lat else "-"
+
+
+def s1_table(faults):
+    """[(label, stats)] over S1_REGS: the faults of each mechanism's registers / cells in both builds"""
+    out = []
+    for label, sel in S1_REGS:
+        if "block" in sel:
+            rs = [r for r in faults if r["outcome"] != "unresolved" and r["block"] == sel["block"]]
+        else:
+            pat = re.compile(sel["re"])
+            rs = [r for r in faults if r["outcome"] != "unresolved" and pat.search(r["flop"])]
+        det = sum(r["outcome"] in ("detected", "hang_detected") for r in rs)
+        dang = sum(r["outcome"] in ("dangerous", "hang") for r in rs)
+        lat = [int(r["latency"]) for r in rs if r["outcome"] in ("detected", "hang_detected") and r["latency"] not in ("", None)]
+        out.append((label, dict(n=len(rs), det=det, masked=sum(r["outcome"] == "masked" for r in rs), dang=dang,
+                                hang=sum(r["outcome"] in ("hang", "hang_detected") for r in rs),
+                                dc=(det / (det + dang)) if det + dang else None, lat=_lat_text(lat))))
+    return out
+
+
+def before_after(faults):
+    """[(build, block, (v2 n, dang, DC), (v3 n, dang, DC))] for every block of either campaign"""
+    v2 = v2_campaign_table()
+    v3 = block_table(faults)
+    out = []
+    for key in sorted(set(v2) | set(v3)):
+        a = v2.get(key)
+        b = v3.get(key)
+        ta = (a[0], a[3], (a[1] / (a[1] + a[3])) if a and (a[1] + a[3]) else None) if a else (0, 0, None)
+        tb = (b["n"], b["dang"] + b["hang"], b["dc"]) if b else (0, 0, None)
+        out.append((key[0], key[1], ta, tb))
+    return out
+
+
 def write_v2_md(path, rows, faults, meta, run, formal, formal_title, core, core_v1rows, chips, chip_v1rows, modes, bv):
-    L = ["# FMEDA v2 -- the diagnostic coverage measured (drop 0.43, stream D2)", ""]
-    L.append("Generated by `05_safety/build_fmeda.py --v2` from the fault campaign's `faults.csv` (the `faults` job, "
-             "`02_dv/dv/cocotb/faults/`) and the formal job's `formal_report.md`; the workbook is `neo_fmeda_v2.xlsx` "
-             "(sheets Assumptions, FMEDA_core_v2, Metrics_v2, Chip_rollup_v2, Campaign, Undetected, Formal, Evidence).")
+    if VER == "v2":
+        L = ["# FMEDA v2 -- the diagnostic coverage measured (drop 0.43, stream D2)", ""]
+    else:
+        L = ["# FMEDA v3 -- the safety closure measured (drop 0.44, stream S1)", ""]
+    L.append(f"Generated by `05_safety/build_fmeda.py --{VER}` from the fault campaign's `faults.csv` (the `faults` job, "
+             f"`02_dv/dv/cocotb/faults/`) and the formal job's `formal_report.md`; the workbook is `neo_fmeda_{VER}.xlsx` "
+             f"(sheets Assumptions, FMEDA_core_{VER}, Metrics_{VER}, Chip_rollup_{VER}, Campaign, Undetected, Formal, Evidence"
+             + ("" if VER == "v2" else ", S1_mechanisms, Before_after") + ").")
     L.append("")
+    if VER == "v3":
+        L.append("v3 is v2's method (the rows, their campaign selections, the estimator) applied to the RTL after the safety closure of "
+                 "drop 0.44: SECDED on the activation buffer (abuf_ce / abuf_ue), a parity bit per activation byte from the decoded "
+                 "buffer word through the feeder's row register and the skew chains to the array's row inputs (act_perr), a parity "
+                 "bit through the index / first delay lines (ctrl_err), the link packer's check of the NIC's beat parity (the parity "
+                 "cause: the drain FIFO's output register and cells, the serve register), the one-hot MBIST state (bist_fail), the "
+                 "drain FIFO's overflow flag (drain_ovf) and the ECC flags qualified by a real read. Two base rates change (below), "
+                 "one chip element is added, and the flop count of the synthesized core is a sensitivity.")
+        L.append("")
     L.append("## Inputs")
     L.append("")
     if run:
@@ -1056,7 +1253,7 @@ def write_v2_md(path, rows, faults, meta, run, formal, formal_title, core, core_
     L.append(f"- Formal: {formal_title or 'no report supplied'}" + (f" -- {sum(1 for v in formal.values() if v[0] == 'PASS')} of "
              f"{len(formal)} tasks PASS." if formal else "."))
     L.append("")
-    L.append("## Base failure rates (v1's, unchanged)")
+    L.append("## Base failure rates (v1's, unchanged)" if VER == "v2" else "## Base failure rates (v1's, the SRAM leaves at the silicon sizes)")
     L.append("")
     L.append(f"Die {bv['B4']} FIT over {bv['B5']} mm²; one MAC core {bv['B6']} mm², so λ_core = {bv['B22']:.4f} FIT "
              f"(permanent); SRAM soft errors {bv['B7']} FIT/Mbit, flip-flops {bv['B8']} FIT/Mbit; per core: accumulator "
@@ -1065,9 +1262,19 @@ def write_v2_md(path, rows, faults, meta, run, formal, formal_title, core, core_
              f"lifetime {bv['B13']:,} h; targets ASIL-B(D) {bv['B14']:.0%} / {bv['B15']:.0%} / {bv['B16']} FIT, ASIL-D "
              f"{bv['B17']:.0%} / {bv['B18']:.0%} / {bv['B19']} FIT (SPFM / LFM / PMHF). v2 adds one row v1 lacks: the weight "
              f"buffer's storage, {bv['B32']} Mbit at the silicon size ({bv['B33']:.1f} FIT; 1024 entries x 12 SECDED lanes of "
-             "the NCHK = 4 32x32 core). Not changed, so that v2 compares like for like (for v3): the silicon activation buffer "
-             "is 2048 x 32 B = 0.5 Mbit (v1 counts 0.25, and its note's 4096 x 32 x 8 bit is 1 Mbit); the NCHK = 4 "
-             "accumulator is 0.5625 Mbit (v1: 0.5).")
+             "the NCHK = 4 32x32 core). " +
+             ("Not changed, so that v2 compares like for like (for v3): the silicon activation buffer "
+              "is 2048 x 32 B = 0.5 Mbit (v1 counts 0.25, and its note's 4096 x 32 x 8 bit is 1 Mbit); the NCHK = 4 "
+              "accumulator is 0.5625 Mbit (v1: 0.5)." if VER == "v2" else
+              f"v3 changes two of them to the bits of the silicon leaves (09_synthesis/memories.md): the activation buffer "
+              f"{bv['B10']} Mbit = 1,024 pair words x 624 bits, the SECDED check bits included (v1 0.25, v2's note 0.5: the 512-bit "
+              f"word before the code), {bv['B24']:.1f} FIT; the accumulator {bv['B9']} Mbit = 512 rows x 1,056 bits (33 partial sums; "
+              f"v1 0.5, v2's note 0.5625 counted 36 words), {bv['B23']:.1f} FIT. v3 adds one chip element neither version priced: "
+              f"the tile's NIC memories, {bv['B34']} Mbit per tile (the drain FIFO 512 x 1,069 bits, the partial-sum rows 64 x 1,024), "
+              f"{bv['B35']:.1f} FIT per tile, measured on the tile build. Not applied to the rows, shown as the metrics' last column: "
+              f"the synthesized silicon core holds {V3_FLOPS:,} flops (synth.py, neo_core 32x32 NCHK = 4, drop 0.44) against v1's "
+              f"0.0576 Mbit of weight and pipeline registers -- with B11 = 26,112 weight-register bits and B12 = the other "
+              f"{V3_FLOPS - 26112:,} = {(V3_FLOPS - 26112) / 2 ** 20:.4f} Mbit, every transient flop row is {(V3_FLOPS - 26112) / 2 ** 20 / bv['B12']:.1f} x its v1 λ."))
     L.append("")
     L.append("## How a row is measured")
     L.append("")
@@ -1122,7 +1329,23 @@ def write_v2_md(path, rows, faults, meta, run, formal, formal_title, core, core_
     for key, label, fmt in (("spfm", "Chip SPFM", "p3"), ("lfm", "Chip LFM", "p5"), ("pmhf", "Chip PMHF (FIT)", "f1")):
         L.append(f"| {label} | " + " | ".join(fmt_v(chips[m][key], fmt) for m, _ in modes) + " |")
     L.append("")
-    L.append(f"v2 measured without the row v1 lacks (the weight buffer's storage): core SPFM {fmt_v(core_v1rows['spfm'], 'p3')}, "
+    if VER == "v3":
+        L.append("| v2 measured (drop 0.43, run 192) | " + " | ".join([fmt_v(V2_RESULT["core_spfm"], "p3"), fmt_v(V2_RESULT["core_lfm"], "p4"),
+                 fmt_v(V2_RESULT["core_pmhf"], "f3"), fmt_v(V2_RESULT["core_pmhf"], "f4"), fmt_v(V2_RESULT["chip_spfm"], "p3"),
+                 fmt_v(V2_RESULT["chip_lfm"], "p5"), fmt_v(V2_RESULT["chip_pmhf"], "f1")]) + " |")
+        L.append("")
+        L.append("(the row above is v2's result as one line; its columns are, in order, core SPFM, core LFM, core PMHF, core Σ λ_RF, chip SPFM, chip LFM, chip PMHF)")
+        L.append("")
+        tgt_ok = chips["v2"]["pmhf"] <= bv["B16"]
+        L.append(f"**The target: chip PMHF <= {bv['B16']} FIT with the measured coverage -- {VER} measured {fmt_v(chips['v2']['pmhf'], 'f1')} FIT, "
+                 f"{'met' if tgt_ok else 'NOT met'}** (v2: {V2_RESULT['chip_pmhf']:.1f} FIT); the no-credit-for-masked-faults sensitivity "
+                 f"{fmt_v(chips['nomask']['pmhf'], 'f1')} FIT, the 95 % upper bounds {fmt_v(chips['upper']['pmhf'], 'f1')} FIT, the synthesized "
+                 f"flop count {fmt_v(chips['flops']['pmhf'], 'f1')} FIT. Where the residual sits: " +
+                 "; ".join(f"{name} {CORES * core['v2']['rf'] if name.startswith('MAC core') else c * l * (1 - fs) * (1 - dc):.1f} FIT"
+                           for name, c, l, fs, dc, *_ in sorted(chip_elements(faults, formal, core["v2"], "v2"),
+                                                               key=lambda e: -(CORES * core["v2"]["rf"] if e[0].startswith("MAC core") else e[1] * e[2] * (1 - e[3]) * (1 - e[4])))[:4]) + ".")
+        L.append("")
+    L.append(f"{VER} measured without the row v1 lacks (the weight buffer's storage): core SPFM {fmt_v(core_v1rows['spfm'], 'p3')}, "
              f"PMHF {fmt_v(core_v1rows['pmhf'], 'f3')} FIT; chip PMHF {fmt_v(chip_v1rows['pmhf'], 'f1')} FIT. Chip = {CORES} cores "
              "plus v1's other elements (the shared SRAM's permanent faults and the NoC / DMA engines measured on the tile "
              "build; the SRAM's soft errors keep v1's 99.995 %: its residual is v1's multi-bit assumption, which a "
@@ -1154,14 +1377,35 @@ def write_v2_md(path, rows, faults, meta, run, formal, formal_title, core, core_
     byb = {}
     for r in bad:
         byb.setdefault((r["config"], r["block"]), []).append(r)
-    L.append(f"The undetected faults ({len(bad)} of {sum(1 for r in faults if r['outcome'] != 'unresolved')}), by block -- "
-             "the RTL items they point at (reported, not fixed: the brief limits D2's RTL changes to item 2):")
+    L.append(f"The undetected faults ({len(bad)} of {sum(1 for r in faults if r['outcome'] != 'unresolved')}" +
+             (f"; v2: {V2_UNDETECTED} of 6497" if VER == "v3" else "") + "), by block -- " +
+             ("the RTL items they point at (reported, not fixed: the brief limits D2's RTL changes to item 2):" if VER == "v2" else
+              "what is left after the safety closure:"))
     L.append("")
     for (cfg, blk), rs in sorted(byb.items(), key=lambda kv: -len(kv[1])):
         kinds = list(dict.fromkeys(re.sub(r"\[\d+\]", "[i]", r["flop"].split(".u_t.")[-1]) for r in rs))
         top = ", ".join("`" + k + "`" for k in kinds[:4]) + (" ..." if len(kinds) > 4 else "")
         L.append(f"- {cfg} / {blk}: {len(rs)} -- {top}")
     L.append("")
+    if VER == "v3":
+        L.append("## The mechanisms of drop 0.44 (S1) in the campaign")
+        L.append("")
+        L.append("The registers and cells each mechanism covers (both builds; the selections are S1_REGS in build_fmeda.py), their "
+                 "faults and outcomes. A flip of a stored parity bit is a detected fault whose result is right (a false alarm, "
+                 "counted as detected); a masked fault is one whose register held nothing in use.")
+        L.append("")
+        L.append("| Mechanism / registers | Faults | Detected | Masked | Dangerous | Hang | DC | Latency median / max (cycles) |")
+        L.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
+        for label, st in s1_table(faults):
+            L.append(f"| {label} | {st['n']} | {st['det']} | {st['masked']} | {st['dang']} | {st['hang']} | {pc(st['dc'])} | {st['lat']} |")
+        L.append("")
+        L.append("## Before / after, every block (v2's campaign of run 192 against this one)")
+        L.append("")
+        L.append("| Build | Block | v2 faults | v2 dangerous | v2 DC | v3 faults | v3 dangerous | v3 DC |")
+        L.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
+        for cfg, blk, a, b in before_after(faults):
+            L.append(f"| {cfg} | {blk} | {a[0]} | {a[1]} | {pc(a[2])} | {b[0]} | {b[1]} | {pc(b[2])} |")
+        L.append("")
     # item 2: the comparator storage of drop 0.41, register by register, and the row that carries it
     L.append("## The comparator storage of drop 0.41 (item 2)")
     L.append("")
@@ -1206,18 +1450,23 @@ def fmt_v(x, fmt):
 
 
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="the FMEDA workbook: v1 (no arguments) or v2 from the fault campaign (--v2)")
+    ap = argparse.ArgumentParser(description="the FMEDA workbook: v1 (no arguments), v2 (--v2) or v3 (--v3) from the fault campaign")
     ap.add_argument("--v2", action="store_true", help="FMEDA v2 from the fault campaign and the formal report")
+    ap.add_argument("--v3", action="store_true", help="FMEDA v3 (drop 0.44, S1): the safety closure measured, the silicon base rates")
     ap.add_argument("--faults", help="the faults job's output directory (faults.csv, faults_summary.json) or faults.csv")
     ap.add_argument("--formal", help="the formal job's formal_report.md")
     ap.add_argument("--out", default=os.path.dirname(os.path.abspath(__file__)), help="where the v2 outputs go")
     args = ap.parse_args()
-    if args.v2:
+    if args.v3:
+        VER, DROP, STREAM = "v3", "0.44", "S1"
+    if args.v2 or args.v3:
         if not args.faults:
-            raise SystemExit("build_fmeda.py --v2 needs --faults")
+            raise SystemExit(f"build_fmeda.py --{VER} needs --faults")
         xlsx, md, core, chips = build_v2(args.faults, args.formal, args.out)
-        print(f"{xlsx}\n{md}\ncore: SPFM v1 {core['v1']['spfm']:.4%} -> v2 {core['v2']['spfm']:.4%}, PMHF {core['v1']['pmhf']:.3f} -> "
-              f"{core['v2']['pmhf']:.3f} FIT; chip PMHF {chips['v1']['pmhf']:.1f} -> {chips['v2']['pmhf']:.1f} FIT")
+        print(f"{xlsx}\n{md}\ncore: SPFM v1 {core['v1']['spfm']:.4%} -> {VER} {core['v2']['spfm']:.4%}, PMHF {core['v1']['pmhf']:.3f} -> "
+              f"{core['v2']['pmhf']:.3f} FIT; chip PMHF {chips['v1']['pmhf']:.1f} -> {chips['v2']['pmhf']:.1f} FIT"
+              + (f" (v2: core PMHF {V2_RESULT['core_pmhf']}, chip PMHF {V2_RESULT['chip_pmhf']}; the target 100 FIT "
+                 f"{'met' if chips['v2']['pmhf'] <= 100 else 'NOT met'})" if VER == "v3" else ""))
     else:
         out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "neo_fmeda_skeleton.xlsx")
         print(build(out))

@@ -42,11 +42,12 @@ module requant_parity_fv #(
   endgenerate
   logic                out_valid, perr, cg_en;
   logic signed [7:0]   out_q [COLS];
+  logic [COLS-1:0] tbl_wrt;                   // drop 0.44 (unused here)
   requant #(.COLS(COLS), .PW(PW), .MW(MW)) u_dut (
     .clk(clk), .rst_n(rst_n), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
     .tbl_zp(tbl_zp), .relu(relu), .in_valid(in_valid), .in_acc(in_acc), .out_valid(out_valid), .out_q(out_q),
     .err_clear(err_clear), .tbl_perr_sticky(perr), .tbl_fault_inject(fault),   // out_valid / out_q: lockstep_requant's
-    .cg_en(cg_en));
+    .cg_en(cg_en), .tbl_wrt(tbl_wrt));
 
   logic [COLS-1:0] written = '0;
   logic            exp_perr = 1'b0;

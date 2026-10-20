@@ -52,7 +52,9 @@ module requant #(
   input  logic                 err_clear,
   output logic                 tbl_perr_sticky,
   input  logic                 tbl_fault_inject,   // DV: corrupt bit 0 of column 0's multiplier
-  output logic                 cg_en               // drop 0.43: the block's clock enable (observation)
+  output logic                 cg_en,              // drop 0.43: the block's clock enable (observation)
+  output logic [COLS-1:0]      tbl_wrt             // drop 0.44: column j's table entry has been written (neo_core's comparator
+                                                   // compares the outputs of written columns only: the tables are not reset)
 );
   localparam int BW   = PW + MW + 1;               // product width
   localparam int CTW  = 40;                        // c = 2^(shift-1) + zp * 2^shift: |zp * 2^31| <= 2^38
@@ -89,6 +91,9 @@ module requant #(
     end else if (tbl_we) begin
       wrt[tbl_addr] <= 1'b1;
     end
+  end
+  always_comb begin
+    for (int j = 0; j < COLS; j++) tbl_wrt[j] = wrt[j];
   end
   generate
     for (genvar j = 0; j < COLS; j++) begin : g_mp

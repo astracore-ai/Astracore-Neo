@@ -340,23 +340,28 @@ module neo_core #(
     end
   endgenerate
   logic rq_cg_en, rq_cg_en_d;                // the requantizers' clock enables (whole signals: neosim connects no output to a bit)
+  logic [COLS-1:0] rq_wrt, rq_wrt_d;         // drop 0.44: each copy's written table entries (the comparator's qualifier, compared too)
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq (
     .clk(clk), .rst_n(rst_n),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
     .in_valid(rq_in_valid), .in_acc(rq_in_p), .out_valid(rq_valid), .out_q(rq_q),
-    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_sticky), .tbl_fault_inject(rq_tbl_fault_inject), .cg_en(rq_cg_en));
+    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_sticky), .tbl_fault_inject(rq_tbl_fault_inject), .cg_en(rq_cg_en), .tbl_wrt(rq_wrt));
   logic rq_tbl_perr_d;
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq_dup (
     .clk(clk), .rst_n(rst_n),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
     .in_valid(rq_in_valid), .in_acc(rq_in), .out_valid(rq_valid_d), .out_q(rq_q_d),
-    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_d), .tbl_fault_inject(1'b0), .cg_en(rq_cg_en_d));
+    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_d), .tbl_fault_inject(1'b0), .cg_en(rq_cg_en_d), .tbl_wrt(rq_wrt_d));
   assign cg_en = {rq_cg_en_d, rq_cg_en, dp_en};
+  // drop 0.44 (review finding 1's rule): the tables are not reset, and the INT32 drain of a layer without tables runs the pair
+  // on whatever they hold (random in silicon), so the outputs are compared for the columns whose entry both copies have
+  // written -- an unwritten column's output is never a result -- and the written flags themselves are compared (a flipped
+  // flag in either copy is a mismatch)
   always_comb begin
-    rq_err = (rq_valid != rq_valid_d);
-    for (int j = 0; j < COLS; j++) if (rq_valid && (rq_q[j] != rq_q_d[j])) rq_err = 1'b1;
+    rq_err = (rq_valid != rq_valid_d) || (rq_wrt != rq_wrt_d);
+    for (int j = 0; j < COLS; j++) if (rq_valid && rq_wrt[j] && (rq_q[j] != rq_q_d[j])) rq_err = 1'b1;
   end
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)         rq_err_sticky <= 1'b0;
