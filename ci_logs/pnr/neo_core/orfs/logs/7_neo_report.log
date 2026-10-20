@@ -1,0 +1,19 @@
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_floorplan.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+neo_report: physical (database)
+neo_report: timing: the propagated clock
+neo_report: timing: estimate_parasitics -placement
+Elapsed time: 8:38.54[h:]min:sec. CPU time: user 465.97 sys 7.86 (91%). Peak memory: 7408952KB.

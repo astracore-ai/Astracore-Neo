@@ -1,0 +1,67 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_3_floorplan_tapcell.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+[WARNING PDN-1051] No instances found for grid (CORE_macro_grid_2).
+[INFO PDN-0001] Inserting grid: top
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_dp/u_feeder/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[0\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[10\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[11\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[12\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[13\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[14\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[15\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[16\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[17\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[18\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[19\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[1\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[20\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[21\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[22\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[23\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[24\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[25\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[26\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[27\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[28\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[29\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[2\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[30\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[31\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[3\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[4\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[5\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[6\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[7\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[8\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[9\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_luts/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_rbuf/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_dp/u_acc/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_rs/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_wbuf/u_mem/u_macro
+[INFO PDN-0500] Runtime: 11.94s
+Design area 345480 um^2 56% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_4_floorplan_pdn.odb
+Elapsed time: 1:19.66[h:]min:sec. CPU time: user 78.59 sys 1.06 (99%). Peak memory: 3253768KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_4_floorplan_pdn      .odb         79       80     1.00     3177 e88cf580b9

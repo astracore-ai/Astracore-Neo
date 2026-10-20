@@ -1,0 +1,53 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+source /home/runner/work/Astracore-Neo/Astracore-Neo/pnr/designs/neo_core/macro_place.tcl
+macro_place.tcl: u_dp/u_acc/u_mem/u_macro (fakeram7_512x1056_g1_1w1r) at 3.026 3.08 MY (left edge, pins inward)
+[INFO MPL-0035] Macro u_dp/u_acc/u_mem/u_macro placed. Bounding box (3.026um, 3.120um), (140.016um, 169.720um). Orientation MY
+macro_place.tcl: u_dp/u_feeder/u_mem/u_macro (fakeram7_1024x512_g2_1w1r) at 720.656 3.08 R0 (the feeder, right edge, pins inward)
+[INFO MPL-0035] Macro u_dp/u_feeder/u_mem/u_macro placed. Bounding box (720.656um, 3.120um), (787.156um, 334.920um). Orientation R0
+macro_place.tcl: u_wbuf/u_mem/u_macro (fakeram7_512x936_g2_1w1r) at 3.026 173.68 MY (left edge, pins inward)
+[INFO MPL-0035] Macro u_wbuf/u_mem/u_macro placed. Bounding box (3.026um, 173.712um), (124.436um, 340.312um). Orientation MY
+rtl_macro_placer -max_num_level 2 -min_channel_size "20 20" -pin_aware_channels -min_ar 0.33 -area_weight 0.1 -wirelength_weight 100.0 -outline_weight 100.0 -boundary_weight 50.0 -notch_weight 50.0 -report_directory /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/objects/asap7/neo_core/base/rtlmp -fence_lx 0.0 -fence_ly 0.0 -fence_ux 0.0 -fence_uy 0.0 -target_util 0.6
+[INFO MPL-0062] Found fixed macro u_dp/u_acc/u_mem/u_macro.
+[INFO MPL-0062] Found fixed macro u_dp/u_feeder/u_mem/u_macro.
+[INFO MPL-0062] Found fixed macro u_wbuf/u_mem/u_macro.
+Die Area: (0.00, 0.00) (790.16, 790.16),  Floorplan Area: (1.03, 1.08) (789.16, 788.94)
+	Number of std cell instances: 2111529
+	Area of std cell instances: 255700.31
+	Number of macros: 38
+	Macros to be placed: 35
+	Area of macros: 87893.32
+	Minimum channel (Width, Height): (20.00, 20.00)
+	Area of macros with halos: 53107.18
+	Area of std cell instances + Area of macros: 343593.62
+	Floorplan area: 620936.10
+	Design Utilization: 0.55
+	Floorplan Utilization: 0.48
+	Manufacturing Grid: 1
+
+[INFO MPL-0500] Runtime: 729.03s
+Took 729 seconds: rtl_macro_placer -max_num_level 2 -min_channel_size "20 20" -pin_aware_channels -min_ar 0.33 -area_weight 0.1 -wirelength_weight 100.0 -outline_weight 100.0 -boundary_weight 50.0 -notch_weight 50.0 -report_directory /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/objects/asap7/neo_core/base/rtlmp -fence_lx 0.0 -fence_ly 0.0 -fence_ux 0.0 -fence_uy 0.0 -target_util 0.6
+Design area 343594 um^2 55% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_2_floorplan_macro.odb
+Elapsed time: 12:20.18[h:]min:sec. CPU time: user 2743.04 sys 1.24 (370%). Peak memory: 3073520KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_2_floorplan_macro    .odb        740     2744     3.71     3001 25f8f93fdc

@@ -1,0 +1,157 @@
+
+==========================================================================
+global place report_tns
+--------------------------------------------------------------------------
+tns max -3173180672.00
+
+==========================================================================
+global place report_wns
+--------------------------------------------------------------------------
+wns max -366327.50
+
+==========================================================================
+global place report_worst_slack
+--------------------------------------------------------------------------
+worst slack max -366327.50
+
+==========================================================================
+global place report_clock_min_period
+--------------------------------------------------------------------------
+clk period_min = 367577.50 fmax = 2.72
+
+==========================================================================
+global place report_checks -path_delay min
+--------------------------------------------------------------------------
+Startpoint: u_vec/lut_we[5]_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_vec/g_lut[26].u_lutv/u_macro
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ u_vec/lut_we[5]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.59   27.21   72.15   72.15 ^ u_vec/lut_we[5]_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         u_vec/_006600_ (net)
+                 27.21    0.03   72.18 ^ u_vec/_443337_/A (INVx1_ASAP7_75t_R)
+     1    5.42   61.07   39.02  111.20 v u_vec/_443337_/Y (INVx1_ASAP7_75t_R)
+                                         u_vec/lut_we[5] (net)
+                 45.81    0.49  111.69 v u_vec/g_lut[26].u_lutv/u_macro/we (fakeram7_256x33_g1_1w1r)
+                                111.69   data arrival time
+
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                          0.00    0.00   clock reconvergence pessimism
+                                  0.00 ^ u_vec/g_lut[26].u_lutv/u_macro/clk (fakeram7_256x33_g1_1w1r)
+                         50.00   50.00   library hold time
+                                 50.00   data required time
+-----------------------------------------------------------------------------
+                                 50.00   data required time
+                               -111.69   data arrival time
+-----------------------------------------------------------------------------
+                                 61.69   slack (MET)
+
+
+
+==========================================================================
+global place report_checks -path_delay max
+--------------------------------------------------------------------------
+Startpoint: w_load_q_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/w_out[13]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ w_load_q_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.63   46.80   89.73   89.73 v w_load_q_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         _0498_[0] (net)
+                 46.80    0.06   89.78 v _0953_/A (INVx1_ASAP7_75t_R)
+ 24064 27171.16 428897.62 149741.12 149830.91 ^ _0953_/Y (INVx1_ASAP7_75t_R)
+                                         w_load_q (net)
+               449011.00 50203.61 200034.52 ^ u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_2235_/B (NAND2x1_ASAP7_75t_R)
+     1   34.53 91470.98 156737.69 356772.22 v u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_2235_/Y (NAND2x1_ASAP7_75t_R)
+                                         u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_0252_ (net)
+               91471.46   96.01 356868.22 v u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_2247_/B (OA21x2_ASAP7_75t_R)
+     1    0.82 9335.97 9649.85 366518.06 v u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_2247_/Y (OA21x2_ASAP7_75t_R)
+                                         u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_0235_ (net)
+               9335.97    0.06 366518.12 v u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/w_out[13]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                               366518.12   data arrival time
+
+                  0.00 1250.00 1250.00   clock clk (rise edge)
+                          0.00 1250.00   clock network delay (ideal)
+                       -100.00 1150.00   clock uncertainty
+                          0.00 1150.00   clock reconvergence pessimism
+                               1150.00 ^ u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/w_out[13]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                       -959.38  190.62   library setup time
+                                190.62   data required time
+-----------------------------------------------------------------------------
+                                190.62   data required time
+                               -366518.12   data arrival time
+-----------------------------------------------------------------------------
+                               -366327.50   slack (VIOLATED)
+
+
+
+==========================================================================
+global place report_checks -unconstrained
+--------------------------------------------------------------------------
+Startpoint: w_load_q_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/w_out[13]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ w_load_q_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     2    1.63   46.80   89.73   89.73 v w_load_q_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         _0498_[0] (net)
+                 46.80    0.06   89.78 v _0953_/A (INVx1_ASAP7_75t_R)
+ 24064 27171.16 428897.62 149741.12 149830.91 ^ _0953_/Y (INVx1_ASAP7_75t_R)
+                                         w_load_q (net)
+               449011.00 50203.61 200034.52 ^ u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_2235_/B (NAND2x1_ASAP7_75t_R)
+     1   34.53 91470.98 156737.69 356772.22 v u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_2235_/Y (NAND2x1_ASAP7_75t_R)
+                                         u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_0252_ (net)
+               91471.46   96.01 356868.22 v u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_2247_/B (OA21x2_ASAP7_75t_R)
+     1    0.82 9335.97 9649.85 366518.06 v u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_2247_/Y (OA21x2_ASAP7_75t_R)
+                                         u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/_0235_ (net)
+               9335.97    0.06 366518.12 v u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/w_out[13]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                               366518.12   data arrival time
+
+                  0.00 1250.00 1250.00   clock clk (rise edge)
+                          0.00 1250.00   clock network delay (ideal)
+                       -100.00 1150.00   clock uncertainty
+                          0.00 1150.00   clock reconvergence pessimism
+                               1150.00 ^ u_dp/u_core/u_array/g_row[0].g_col[35].g_check.u_pe/w_out[13]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                       -959.38  190.62   library setup time
+                                190.62   data required time
+-----------------------------------------------------------------------------
+                                190.62   data required time
+                               -366518.12   data arrival time
+-----------------------------------------------------------------------------
+                               -366327.50   slack (VIOLATED)
+
+
+
+==========================================================================
+global place report_power
+--------------------------------------------------------------------------
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power (Watts)
+----------------------------------------------------------------
+Sequential             1.74e-02   9.88e-04   5.05e-04   1.89e-02  15.2%
+Combinational          7.34e-03   1.29e-02   2.69e-03   2.30e-02  18.5%
+Clock                  9.02e-07   7.11e-05   1.02e-08   7.20e-05   0.1%
+Macro                  7.75e-02   0.00e+00   4.90e-03   8.24e-02  66.3%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  1.02e-01   1.40e-02   8.09e-03   1.24e-01 100.0%
+                          82.2%      11.3%       6.5%

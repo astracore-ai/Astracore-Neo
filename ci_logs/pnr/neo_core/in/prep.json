@@ -1,0 +1,740 @@
+{
+ "unit": "neo_core",
+ "units": [
+  "acc_bank",
+  "mac_pe",
+  "mac_pe_chk",
+  "systolic_array",
+  "neo_mac_core",
+  "act_feeder",
+  "neo_mac_core_v02",
+  "requant",
+  "core_seq",
+  "vec_unit",
+  "wbuf_mem",
+  "neo_core"
+ ],
+ "period_ps": 1250.0,
+ "synth_period_ps": 1250.0,
+ "pdk": "asap7",
+ "corner": "SS",
+ "tools": {
+  "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)",
+  "sta": "3.1.0"
+ },
+ "macros": [
+  {
+   "leaf": "neo_mem_rf_w1056_d512_g1_rb1",
+   "macro": "fakeram7_512x1056_g1_1w1r",
+   "W": 1056,
+   "D": 512,
+   "G": 1,
+   "RB": 1,
+   "AW": 9,
+   "bits": 540672,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 2142,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     1,
+     "input"
+    ],
+    [
+     "waddr",
+     9,
+     "input"
+    ],
+    [
+     "wdata",
+     1056,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     9,
+     "input"
+    ],
+    [
+     "rb_data",
+     1056,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     9,
+     "output"
+    ]
+   ],
+   "lef_width_um": 136.99,
+   "lef_height_um": 166.6,
+   "lef_area_um2": 22822.534,
+   "bitcell_area_um2": 22703.034,
+   "pin_limited": false,
+   "um2_per_bit": 0.04221,
+   "synth_model_um2": 34101.264,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_512x1056_g1_1w1r.lef",
+   "lib": "fakeram7_512x1056_g1_1w1r.lib",
+   "lef_bytes": 357873,
+   "lib_bytes": 15594
+  },
+  {
+   "leaf": "neo_mem_rf_w33_d256_g1_rb1",
+   "macro": "fakeram7_256x33_g1_1w1r",
+   "W": 33,
+   "D": 256,
+   "G": 1,
+   "RB": 1,
+   "AW": 8,
+   "bits": 8448,
+   "instances": 33,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 93,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     1,
+     "input"
+    ],
+    [
+     "waddr",
+     8,
+     "input"
+    ],
+    [
+     "wdata",
+     33,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     8,
+     "input"
+    ],
+    [
+     "rb_data",
+     33,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     8,
+     "output"
+    ]
+   ],
+   "lef_width_um": 5.7,
+   "lef_height_um": 84.0,
+   "lef_area_um2": 478.8,
+   "bitcell_area_um2": 465.814,
+   "pin_limited": false,
+   "um2_per_bit": 0.05668,
+   "synth_model_um2": 532.832,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_256x33_g1_1w1r.lef",
+   "lib": "fakeram7_256x33_g1_1w1r.lib",
+   "lef_bytes": 25301,
+   "lib_bytes": 15476
+  },
+  {
+   "leaf": "neo_mem_rf_w512_d1024_g2_rb1",
+   "macro": "fakeram7_1024x512_g2_1w1r",
+   "W": 512,
+   "D": 1024,
+   "G": 2,
+   "RB": 1,
+   "AW": 10,
+   "bits": 524288,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 1058,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     2,
+     "input"
+    ],
+    [
+     "waddr",
+     10,
+     "input"
+    ],
+    [
+     "wdata",
+     512,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     10,
+     "input"
+    ],
+    [
+     "rb_data",
+     512,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     10,
+     "output"
+    ]
+   ],
+   "lef_width_um": 66.5,
+   "lef_height_um": 331.8,
+   "lef_area_um2": 22064.7,
+   "bitcell_area_um2": 22015.063,
+   "pin_limited": false,
+   "um2_per_bit": 0.04209,
+   "synth_model_um2": 33067.893,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_1024x512_g2_1w1r.lef",
+   "lib": "fakeram7_1024x512_g2_1w1r.lib",
+   "lef_bytes": 209814,
+   "lib_bytes": 15838
+  },
+  {
+   "leaf": "neo_mem_rf_w512_d256_g2_rb1",
+   "macro": "fakeram7_256x512_g2_1w1r",
+   "W": 512,
+   "D": 256,
+   "G": 2,
+   "RB": 1,
+   "AW": 8,
+   "bits": 131072,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 1052,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     2,
+     "input"
+    ],
+    [
+     "waddr",
+     8,
+     "input"
+    ],
+    [
+     "wdata",
+     512,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     8,
+     "input"
+    ],
+    [
+     "rb_data",
+     512,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     8,
+     "output"
+    ]
+   ],
+   "lef_width_um": 66.5,
+   "lef_height_um": 84.0,
+   "lef_area_um2": 5586.0,
+   "bitcell_area_um2": 5503.766,
+   "pin_limited": false,
+   "um2_per_bit": 0.04262,
+   "synth_model_um2": 8266.973,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_256x512_g2_1w1r.lef",
+   "lib": "fakeram7_256x512_g2_1w1r.lib",
+   "lef_bytes": 174947,
+   "lib_bytes": 15777
+  },
+  {
+   "leaf": "neo_mem_rf_w64_d512_g2_rb1",
+   "macro": "fakeram7_512x64_g2_1w1r",
+   "W": 64,
+   "D": 512,
+   "G": 2,
+   "RB": 1,
+   "AW": 9,
+   "bits": 32768,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 159,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     2,
+     "input"
+    ],
+    [
+     "waddr",
+     9,
+     "input"
+    ],
+    [
+     "wdata",
+     64,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     9,
+     "input"
+    ],
+    [
+     "rb_data",
+     64,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     9,
+     "output"
+    ]
+   ],
+   "lef_width_um": 8.36,
+   "lef_height_um": 166.6,
+   "lef_area_um2": 1392.776,
+   "bitcell_area_um2": 1375.941,
+   "pin_limited": false,
+   "um2_per_bit": 0.0425,
+   "synth_model_um2": 2066.743,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_512x64_g2_1w1r.lef",
+   "lib": "fakeram7_512x64_g2_1w1r.lib",
+   "lef_bytes": 46075,
+   "lib_bytes": 15717
+  },
+  {
+   "leaf": "neo_mem_rf_w936_d512_g2_rb1",
+   "macro": "fakeram7_512x936_g2_1w1r",
+   "W": 936,
+   "D": 512,
+   "G": 2,
+   "RB": 1,
+   "AW": 9,
+   "bits": 479232,
+   "instances": 1,
+   "lanes": 1,
+   "column_mux": 1,
+   "pins": 1903,
+   "functional_pins": [
+    [
+     "clk",
+     1,
+     "input"
+    ],
+    [
+     "we",
+     2,
+     "input"
+    ],
+    [
+     "waddr",
+     9,
+     "input"
+    ],
+    [
+     "wdata",
+     936,
+     "input"
+    ],
+    [
+     "rb_en",
+     1,
+     "input"
+    ],
+    [
+     "rb_addr",
+     9,
+     "input"
+    ],
+    [
+     "rb_data",
+     936,
+     "output"
+    ],
+    [
+     "rb_addr_q",
+     9,
+     "output"
+    ]
+   ],
+   "lef_width_um": 121.41,
+   "lef_height_um": 166.6,
+   "lef_area_um2": 20226.906,
+   "bitcell_area_um2": 20123.143,
+   "pin_limited": false,
+   "um2_per_bit": 0.04221,
+   "synth_model_um2": 30226.121,
+   "synth_factor": 1.5,
+   "access_ps": 218.0,
+   "setup_hold_ps": 50.0,
+   "lef": "fakeram7_512x936_g2_1w1r.lef",
+   "lib": "fakeram7_512x936_g2_1w1r.lib",
+   "lef_bytes": 319915,
+   "lib_bytes": 15778
+  }
+ ],
+ "macro_pins_checked": 38,
+ "yosys_stat": {
+  "design": {
+   "num_cells": 2013352,
+   "area_um2": 343153.264,
+   "macros": {
+    "fakeram7_1024x512_g2_1w1r": 1,
+    "fakeram7_256x33_g1_1w1r": 33,
+    "fakeram7_256x512_g2_1w1r": 1,
+    "fakeram7_512x1056_g1_1w1r": 1,
+    "fakeram7_512x64_g2_1w1r": 1,
+    "fakeram7_512x936_g2_1w1r": 1
+   },
+   "macro_area_um2": 87893.316,
+   "stdcells": 2013314,
+   "stdcell_area_um2": 255259.948
+  },
+  "modules": {
+   "neo_core": {
+    "cells": 2013352,
+    "area_um2": 343153.264,
+    "own_cells": 531
+   },
+   "wbuf_mem": {
+    "cells": 8417,
+    "area_um2": 21173.906,
+    "own_cells": 6543
+   },
+   "vec_unit": {
+    "cells": 267244,
+    "area_um2": 54415.268,
+    "own_cells": 263844
+   },
+   "core_seq": {
+    "cells": 2679,
+    "area_um2": 319.652,
+    "own_cells": 2679
+   },
+   "requant": {
+    "cells": 111548,
+    "area_um2": 12245.057,
+    "own_cells": 111548
+   },
+   "neo_mac_core_v02": {
+    "cells": 1508706,
+    "area_um2": 242356.042,
+    "own_cells": 1921
+   },
+   "act_feeder": {
+    "cells": 9150,
+    "area_um2": 23054.055,
+    "own_cells": 8124
+   },
+   "neo_mac_core": {
+    "cells": 1478303,
+    "area_um2": 193576.633,
+    "own_cells": 73720
+   },
+   "systolic_array": {
+    "cells": 1404583,
+    "area_um2": 178663.568,
+    "own_cells": 39
+   },
+   "mac_pe_chk": {
+    "cells": 1509,
+    "area_um2": 179.582,
+    "own_cells": 1509
+   },
+   "mac_pe": {
+    "cells": 1183,
+    "area_um2": 152.026,
+    "own_cells": 1183
+   },
+   "acc_bank": {
+    "cells": 19332,
+    "area_um2": 25319.403,
+    "own_cells": 17218
+   },
+   "neo_mem_rf_w936_d512_g2_rb1": {
+    "cells": 1874,
+    "area_um2": 20363.419,
+    "own_cells": 1874
+   },
+   "neo_mem_rf_w64_d512_g2_rb1": {
+    "cells": 130,
+    "area_um2": 1402.151,
+    "own_cells": 130
+   },
+   "neo_mem_rf_w512_d256_g2_rb1": {
+    "cells": 1026,
+    "area_um2": 5660.693,
+    "own_cells": 1026
+   },
+   "neo_mem_rf_w512_d1024_g2_rb1": {
+    "cells": 1026,
+    "area_um2": 22139.393,
+    "own_cells": 1026
+   },
+   "neo_mem_rf_w33_d256_g1_rb1": {
+    "cells": 68,
+    "area_um2": 483.655,
+    "own_cells": 68
+   },
+   "neo_mem_rf_w1056_d512_g1_rb1": {
+    "cells": 2114,
+    "area_um2": 22976.543,
+    "own_cells": 2114
+   }
+  }
+ },
+ "synth": {
+  "acc_bank": {
+   "instances": 1,
+   "own_cells": 18242,
+   "own_area_um2": 2474.5176,
+   "cells": 18242,
+   "cell_area_um2": 2474.5176,
+   "macro_area_um2": 34101.264384,
+   "wns_ps": 60.75473481932638,
+   "tns_ps": 0.0,
+   "min_period_ps": 1189.2444729863118,
+   "worst_start": "fwd1_reg",
+   "worst_end": "u_mem",
+   "worst_arrival_ps": 1039.2,
+   "worst_slack_ps": 60.8
+  },
+  "mac_pe": {
+   "instances": 1024,
+   "own_cells": 1253,
+   "own_area_um2": 159.30108,
+   "cells": 1253,
+   "cell_area_um2": 159.30108,
+   "macro_area_um2": 0.0,
+   "wns_ps": -9.965694975763745,
+   "tns_ps": -16.838086547956646,
+   "min_period_ps": 829.04990880451,
+   "worst_start": "x_in[12]",
+   "worst_end": "prod_q[14]_reg",
+   "worst_arrival_ps": 1123.3,
+   "worst_slack_ps": -10.0
+  },
+  "mac_pe_chk": {
+   "instances": 128,
+   "own_cells": 1694,
+   "own_area_um2": 198.98784,
+   "cells": 1694,
+   "cell_area_um2": 198.98784,
+   "macro_area_um2": 0.0,
+   "wns_ps": 11.60449518896126,
+   "tns_ps": 0.0,
+   "min_period_ps": 968.3448082193107,
+   "worst_start": "x_in[7]",
+   "worst_end": "g_half.ph_q[12]_reg",
+   "worst_arrival_ps": 1103.7,
+   "worst_slack_ps": 11.6
+  },
+  "systolic_array": {
+   "instances": 1,
+   "own_cells": 38,
+   "own_area_um2": 2.7702,
+   "cells": 1499942,
+   "cell_area_um2": 188597.51964,
+   "macro_area_um2": 0.0,
+   "wns_ps": -9.965667220188019,
+   "tns_ps": -1364.4267992226703,
+   "min_period_ps": 1121.1642169228528,
+   "worst_start": "x_in[1004]",
+   "worst_end": "g_row[0].g_col[0].g_data.u_pe",
+   "worst_arrival_ps": 250.0,
+   "worst_slack_ps": -10.0
+  },
+  "neo_mac_core": {
+   "instances": 1,
+   "own_cells": 73840,
+   "own_area_um2": 14983.19532,
+   "cells": 1573782,
+   "cell_area_um2": 203580.71496,
+   "macro_area_um2": 0.0,
+   "wns_ps": -9.965667220188019,
+   "tns_ps": -42.63833747570845,
+   "min_period_ps": 1109.951828090661,
+   "worst_start": "x_in[12]",
+   "worst_end": "u_array",
+   "worst_arrival_ps": 250.0,
+   "worst_slack_ps": -10.0
+  },
+  "act_feeder": {
+   "instances": 1,
+   "own_cells": 8761,
+   "own_area_um2": 987.066,
+   "cells": 8761,
+   "cell_area_um2": 987.066,
+   "macro_area_um2": 33067.892736,
+   "wns_ps": 132.22833991733177,
+   "tns_ps": 0.0,
+   "min_period_ps": 908.7191603434958,
+   "worst_start": "cfg_ct[2]",
+   "worst_end": "s1_d[10]_reg",
+   "worst_arrival_ps": 983.4,
+   "worst_slack_ps": 132.2
+  },
+  "neo_mac_core_v02": {
+   "instances": 1,
+   "own_cells": 1920,
+   "own_area_um2": 405.9072,
+   "cells": 1602705,
+   "cell_area_um2": 207448.20576,
+   "macro_area_um2": 67169.15712,
+   "wns_ps": -71.52103937692202,
+   "tns_ps": -1056.0895533650817,
+   "min_period_ps": 1321.5276860050217,
+   "worst_start": "u_feeder",
+   "worst_end": "u_core",
+   "worst_arrival_ps": 314.6,
+   "worst_slack_ps": -71.5
+  },
+  "requant": {
+   "instances": 2,
+   "own_cells": 111546,
+   "own_area_um2": 12244.96926,
+   "cells": 111546,
+   "cell_area_um2": 12244.96926,
+   "macro_area_um2": 0.0,
+   "wns_ps": 170.24759448063028,
+   "tns_ps": 0.0,
+   "min_period_ps": 952.5351723612395,
+   "worst_start": "in_acc[255]",
+   "worst_end": "ra1[375]_reg",
+   "worst_arrival_ps": 943.7,
+   "worst_slack_ps": 170.2
+  },
+  "core_seq": {
+   "instances": 2,
+   "own_cells": 2993,
+   "own_area_um2": 355.3875,
+   "cells": 2993,
+   "cell_area_um2": 355.3875,
+   "macro_area_um2": 0.0,
+   "wns_ps": 161.93113581453724,
+   "tns_ps": 0.0,
+   "min_period_ps": 798.0973359510925,
+   "worst_start": "ext_fire",
+   "worst_end": "red_last_reg",
+   "worst_arrival_ps": 950.0,
+   "worst_slack_ps": 161.9
+  },
+  "vec_unit": {
+   "instances": 1,
+   "own_cells": 291042,
+   "own_area_um2": 34935.22548,
+   "cells": 291042,
+   "cell_area_um2": 34935.22548,
+   "macro_area_um2": 27917.180928,
+   "wns_ps": 34.30455933036204,
+   "tns_ps": 0.0,
+   "min_period_ps": 1215.7020071240138,
+   "worst_start": "lc_sa[384]_reg",
+   "worst_end": "bsq[0][263]_reg",
+   "worst_arrival_ps": 1108.0,
+   "worst_slack_ps": 34.3
+  },
+  "wbuf_mem": {
+   "instances": 1,
+   "own_cells": 6541,
+   "own_area_um2": 810.40014,
+   "cells": 6541,
+   "cell_area_um2": 810.40014,
+   "macro_area_um2": 30226.120704,
+   "wns_ps": 120.08882825066581,
+   "tns_ps": 0.0,
+   "min_period_ps": 870.2235604326751,
+   "worst_start": "u_mem",
+   "worst_end": "rdata[106]",
+   "worst_arrival_ps": 779.9,
+   "worst_slack_ps": 120.1
+  },
+  "neo_core": {
+   "instances": 1,
+   "own_cells": 526,
+   "own_area_um2": 78.32376,
+   "cells": 2129892,
+   "cell_area_um2": 268472.86866,
+   "macro_area_um2": 125312.458752,
+   "wns_ps": 9.749590063156946,
+   "tns_ps": 0.0,
+   "min_period_ps": 1240.24854580858,
+   "worst_start": "u_dp",
+   "worst_end": "u_seq",
+   "worst_arrival_ps": 402.2,
+   "worst_slack_ps": 9.7
+  }
+ },
+ "seconds": 69.4
+}
