@@ -1368,3 +1368,199 @@ repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -ve
        0* |       0 |       0 |        0 |      0 |     0 |    +0.0% |  -58.822 |     -198.5 |      5 | stage_en[0]
       10* |       0 |       2 |        3 |      0 |     4 |    +0.0% |  -55.262 |     -189.7 |      5 | stage_en[0]
       13* |       0 |       3 |        6 |      0 |     4 |    +0.0% |  -53.244 |     -171.5 |      5 | stage_en[0]
+      20* |       0 |       5 |        9 |      0 |     6 |    +0.0% |  -53.244 |     -148.4 |      5 | stage_en[0]
+      23* |       0 |       6 |       10 |      0 |     7 |    +0.0% |  -53.244 |     -144.8 |      5 | stage_en[0]
+      30* |       0 |       9 |       10 |      0 |    10 |    +0.0% |  -53.281 |     -139.1 |      5 | stage_en[0]
+      30* |       0 |       7 |       10 |      0 |     7 |    +0.0% |  -53.244 |     -143.4 |      5 | stage_en[0]
+      37* |       0 |       8 |       12 |      0 |    10 |    +0.0% |  -53.244 |     -137.7 |      5 | stage_en[0]
+      40* |       0 |       8 |       13 |      0 |    11 |    +0.0% |  -53.244 |     -136.4 |      5 | stage_en[0]
+      45* |       0 |       8 |       15 |      0 |    14 |    +0.0% |  -53.244 |     -135.2 |      5 | stage_en[0]
+      45* |       0 |       8 |       15 |      0 |    14 |    +0.0% |  -53.244 |     -135.2 |      5 | stage_en[0]
+    final |       0 |       8 |       15 |      0 |    14 |    +0.0% |  -53.244 |     -135.2 |      5 | stage_en[0]
+------------------------------------------------------------------------------------------------------------------------------
+[INFO RSZ-0040] Inserted 15 buffers.
+[INFO RSZ-0051] Resized 8 instances: 8 up, 0 up match, 0 down, 0 VT
+[INFO RSZ-0043] Swapped pins on 14 instances.
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 24.59s
+[INFO RSZ-0033] No hold violations found.
+[INFO RSZ-0506] Runtime: 0.89s
+Took 26 seconds: repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+global_route -start_incremental
+detailed_placement
+[INFO DPL-0006] Core area: 39511.10 um^2
+[INFO DPL-0007] Movable instances area: 15442.20 um^2
+[INFO DPL-0008] Fixed instances area within core: 118.24 um^2
+[INFO DPL-0009] Utilization: 39.4%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 114090 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |         38 |        10 |        28
+        1 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 1.
+[INFO DPL-0500] Runtime: 1.09s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                 519
+total displacement          6.3 u
+average displacement        0.0 u
+max displacement            0.9 u
+original HPWL          754051.7 u
+legalized HPWL         754059.5 u
+delta HPWL                    0 %
+
+check_placement -verbose
+global_route -end_incremental -resistance_aware -congestion_report_file /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/congestion_post_repair_timing.rpt
+estimate_parasitics -global_routing
+repair_timing -setup -sequence "vt_swap reroute" -skip_last_gasp -repair_tns 0 -verbose
+[INFO RSZ-0100] Repair move sequence: RerouteMove 
+[INFO RSZ-0094] Found 5 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 1 out of 5 (0.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% |  -53.244 |     -134.7 |      5 | stage_en[0]
+       1* |       0 |       0 |        0 |      0 |     0 |    +0.0% |  -53.244 |     -134.7 |      5 | stage_en[0]
+       1* |       0 |       0 |        0 |      0 |     0 |    +0.0% |  -53.244 |     -134.7 |      5 | stage_en[0]
+    final |       0 |       0 |        0 |      0 |     0 |    +0.0% |  -53.244 |     -134.7 |      5 | stage_en[0]
+------------------------------------------------------------------------------------------------------------------------------
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 8.10s
+Took 8 seconds: repair_timing -setup -sequence "vt_swap reroute" -skip_last_gasp -repair_tns 0 -verbose
+Repair antennas...
+[WARNING GRT-0246] No diode with LEF class CORE ANTENNACELL found.
+[INFO ANT-0002] Found 0 net violations.
+[INFO ANT-0001] Found 0 pin violations.
+Estimate parasitics...
+estimate_parasitics -global_routing
+Report metrics stage 5, global route...
+
+==========================================================================
+global route report_design_area
+--------------------------------------------------------------------------
+Design area 15560 um^2 39% utilization.
+[INFO FLW-0007] clock clk period 1250.000000
+[INFO FLW-0008] Clock clk period 1238.081
+[INFO FLW-0009] Clock clk slack -53.244
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/updated_clks.sdc
+[INFO FLW-0011] Path endpoint path count 28269
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/5_1_grt.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/5_1_grt.sdc
+Elapsed time: 13:36.00[h:]min:sec. CPU time: user 2841.36 sys 7.90 (349%). Peak memory: 2455364KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+5_1_grt                .odb        816     2849     3.49     2397 88f41c4fb0
+5_1_grt                .sdc                                       bae3bfb924
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 5_2_route detail_route
+Running detail_route.tcl, stage 5_2_route
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/5_1_grt.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/5_1_grt.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+detailed_route -output_drc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/reports/asap7/noc_router/base/5_route_drc.rpt -output_maze /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/noc_router/orfs/results/asap7/noc_router/base/maze.log -droute_end_iter 64 -verbose 1 -drc_report_iter_step 5
+[INFO DRT-0149] Reading tech and libs.
+
+Units:                1000
+Number of layers:     21
+Number of macros:     212
+Number of vias:       14
+Number of viarulegen: 11
+
+[INFO DRT-0150] Reading design.
+
+Design:                   noc_router
+Die area:                 ( 0 0 ) ( 200862 200862 )
+Number of track patterns: 32
+Number of DEF vias:       0
+Number of components:     114090
+Number of terminals:      11905
+Number of snets:          2
+Number of nets:           115561
+
+[INFO DRT-0167] List of default vias:
+  Layer V2
+    default via: VIA23
+  Layer V3
+    default via: VIA34
+  Layer V4
+    default via: VIA45
+  Layer V5
+    default via: VIA56
+  Layer V6
+    default via: VIA67
+  Layer V7
+    default via: VIA78
+  Layer V8
+    default via: VIA89
+  Layer V9
+    default via: VIA9Pad
+[INFO DRT-0162] Library cell analysis.
+[INFO DRT-0163] Instance analysis.
+  Complete 100000 instances.
+[INFO DRT-0164] Number of unique instances = 266.
+[INFO DRT-0168] Init region query.
+[INFO DRT-0018]   Complete 100000 insts.
+[INFO DRT-0020]   Complete 10000 terms.
+[INFO DRT-0024]   Complete Active.
+[INFO DRT-0024]   Complete V0.
+[INFO DRT-0024]   Complete M1.
+[INFO DRT-0024]   Complete V1.
+[INFO DRT-0024]   Complete M2.
+[INFO DRT-0024]   Complete V2.
+[INFO DRT-0024]   Complete M3.
+[INFO DRT-0024]   Complete V3.
+[INFO DRT-0024]   Complete M4.
+[INFO DRT-0024]   Complete V4.
+[INFO DRT-0024]   Complete M5.
+[INFO DRT-0024]   Complete V5.
+[INFO DRT-0024]   Complete M6.
+[INFO DRT-0024]   Complete V6.
+[INFO DRT-0024]   Complete M7.
+[INFO DRT-0024]   Complete V7.
+[INFO DRT-0024]   Complete M8.
+[INFO DRT-0024]   Complete V8.
+[INFO DRT-0024]   Complete M9.
+[INFO DRT-0024]   Complete V9.
+[INFO DRT-0024]   Complete Pad.
+[INFO DRT-0033] Active shape region query size = 0.
+[INFO DRT-0033] V0 shape region query size = 0.
+[INFO DRT-0033] M1 shape region query size = 2161578.
+[INFO DRT-0033] V1 shape region query size = 4283347.
+[INFO DRT-0033] M2 shape region query size = 105201.
+[INFO DRT-0033] V2 shape region query size = 81807.
+[INFO DRT-0033] M3 shape region query size = 81807.
+[INFO DRT-0033] V3 shape region query size = 54538.
+[INFO DRT-0033] M4 shape region query size = 60415.
+[INFO DRT-0033] V4 shape region query size = 54538.
+[INFO DRT-0033] M5 shape region query size = 36107.
+[INFO DRT-0033] V5 shape region query size = 5476.
+[INFO DRT-0033] M6 shape region query size = 2886.
+[INFO DRT-0033] V6 shape region query size = 0.
+[INFO DRT-0033] M7 shape region query size = 0.
+[INFO DRT-0033] V7 shape region query size = 0.
+[INFO DRT-0033] M8 shape region query size = 0.
+[INFO DRT-0033] V8 shape region query size = 0.
+[INFO DRT-0033] M9 shape region query size = 0.
+[INFO DRT-0033] V9 shape region query size = 0.
+[INFO DRT-0033] Pad shape region query size = 0.
+[INFO DRT-0165] Start pin access.
+[INFO DRT-0076]   Complete 1000 pins.
+[INFO DRT-0078]   Complete 1412 pins.
+[INFO DRT-0079]   Complete 100 unique inst patterns.
+[INFO DRT-0079]   Complete 200 unique inst patterns.
+[INFO DRT-0081]   Complete 266 unique inst patterns.
+[INFO DRT-0082]   Complete 10000 groups.
