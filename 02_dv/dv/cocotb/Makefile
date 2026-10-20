@@ -24,8 +24,8 @@
 # SVA (drop 0.44, review #10): SVA=1 (the default) compiles ../sva/neo_sva.sv + bind_all.sv with --assert into every build, so
 # the bound assertions fire during the suites (a failure stops the simulation and fails the test); SVA=0 leaves them out --
 # the fault campaign's builds (an injected flip may break a handshake by design), the coverage builds (at the memory limit) and
-# the two hierarchical mesh8 builds (Verilator's --hierarchical takes no bind into a hier_block: run 228's hdl-mesh8 failed in
-# hier_verilation with the set on; the same RTL is covered by the flat tile build's suite)
+# the two hierarchical mesh8 builds (a bind set into a hier_block is untried in Verilator's hierarchical flow, and the mesh8
+# RTL is the flat tile build's, where the set runs)
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)

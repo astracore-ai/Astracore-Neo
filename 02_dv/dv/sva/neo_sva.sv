@@ -13,8 +13,8 @@
 //   change only in cycles their enable is on, so the latencies hold in those clocks too.
 //   Checked once by breaking the RTL on purpose (the brief's proof that the set fires): cdc_fifo's write pointer sent as
 //   binary instead of gray fails p_wgray_one_bit in the chip top's T2 within the first host write.
-//   Subset of SVA Verilator 5.020 supports: |->, |=>, ##n, $past, $stable, $onehot0, $countones, disable iff; no
-//   repetition operators, no local variables in sequences.
+//   Subset of SVA Verilator 5.020 supports: |->, |=>, $past, $stable, $onehot0, $countones, disable iff; no ## cycle
+//   delays in sequences (a latency is written with $past), no repetition operators, no local variables in sequences.
 /* verilator lint_off DECLFILENAME */        // several checker modules in one file by design
 
 // ---- valid / ready: a presented transfer is held with its payload until it is taken ----------------------------------
@@ -165,7 +165,8 @@ module core_seq_sva (input logic clk, rst_n, done, rd_en, input logic [2:0] stat
 endmodule
 
 module requant_sva (input logic clk, rst_n, in_valid, out_valid);
-  p_latency: assert property (@(posedge clk) disable iff (!rst_n) in_valid |-> ##3 out_valid)
+  // (written with $past: Verilator 5.020 takes no ## cycle delay in a sequence -- run 228's build error; 5.053 does)
+  p_latency: assert property (@(posedge clk) disable iff (!rst_n) $past(in_valid, 3) |-> out_valid)
     else $error("requant: a row did not come out three cycles after it went in");
   p_no_spurious: assert property (@(posedge clk) disable iff (!rst_n) out_valid |-> $past(in_valid, 3))
     else $error("requant: a row came out that did not go in three cycles before");
