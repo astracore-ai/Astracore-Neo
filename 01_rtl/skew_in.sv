@@ -17,6 +17,13 @@
 //   The row is packed (it was an unpacked array of bytes): Verilator 5.020 does not re-evaluate logic computed from the
 //   elements of an unpacked array a testbench writes (the four-byte buses of row 0 and of the chains' inputs held their
 //   reset values in tb_neo_mac_core, the settle-only scheduling of drop 0.40's lesson); from a packed vector it does.
+//   Drop 0.44 (S1) -- a parity bit per byte travels with the bytes. FMEDA v2 found the chains' registers undetected (79
+//   flips: a wrong byte reaches every column and the check column alike, so the ABFT is blind to it). The feeder forms one
+//   even-parity bit per byte of x_vec from the decoded buffer word (x_par, registered with the row); each byte's bit goes
+//   through the same stages as the byte -- the pair's first register, the two chains, the rows' own registers, with the
+//   same sparse / dense selects -- and leaves beside the row bus (p_row[i], one bit per byte), where neo_mac_core checks
+//   every byte of a valid row against its bit. Cost: one flop per byte of the chains (NB = 4: 527 x 4 = 2,108 flops at
+//   ROWS = 32 beside the 16,864 data flops; NB = 1: 992 beside 7,936). The data registers and their names are unchanged.
 module skew_in #(
   parameter int ROWS   = 32,
   parameter int XW     = 8,
@@ -27,9 +34,11 @@ module skew_in #(
   input  logic                 clk,
   input  logic                 rst_n,
   input  logic [XB*XW-1:0]     x_vec,          // unskewed: one activation row in one cycle, byte c at [c*XW +: XW]
+  input  logic [XB-1:0]        x_par,          // drop 0.44: even parity of byte c of x_vec
   input  logic                 sparse,         // NB = 4: the layer is 2:4 sparse (a descriptor bit, static during a layer)
   input  logic                 s_in,           // swap token, one cycle before row 0 of a tile
   output logic [NB*XW-1:0]     x_row [ROWS],   // skewed row buses: row i delayed by i*PE_LAT cycles
+  output logic [NB-1:0]        p_row [ROWS],   // drop 0.44: the parity bit of each byte of x_row[i], skewed with it
   output logic                 s_row [ROWS]
 );
   // the swap token: one bit per row
@@ -50,8 +59,12 @@ module skew_in #(
       for (genvar i = 0; i < ROWS; i++) begin : g_row
         if (i == 0) begin : g_r0
           assign x_row[i] = x_vec[0 +: XW];
+          assign p_row[i] = x_par[0 +: 1];
         end else begin : g_rn
+          logic signed [0:0] pq;
           delay_line #(.W(XW), .DEPTH(i*PE_LAT)) u_dl (.clk(clk), .rst_n(rst_n), .d(x_vec[i*XW +: XW]), .q(x_row[i]));
+          delay_line #(.W(1),  .DEPTH(i*PE_LAT)) u_dp (.clk(clk), .rst_n(rst_n), .d(x_par[i +: 1]), .q(pq));
+          assign p_row[i] = pq;
         end
       end
       logic unused_sparse;
@@ -59,36 +72,58 @@ module skew_in #(
     end else begin : g_pairs
       localparam int GW = 4 * XW;                   // a group: four bytes
       assign x_row[0] = x_vec[0 +: GW];             // row 0 as presented
+      assign p_row[0] = x_par[0 +: 4];
       for (genvar g = 0; g < ROWS / 2; g++) begin : g_pair
         logic [GW-1:0] st1;                         // the chain's first register: the pair's group (sparse) or its two channels (dense)
         logic [GW-1:0] tap_b;                       // the chain at delay (2g + 1)*PE_LAT - 1
         logic [GW-1:0] r_odd;                       // row 2g + 1's last register
+        logic [3:0]    st1_p, tap_bp, r_odd_p;      // drop 0.44: the parity bits beside each of them
         always_ff @(posedge clk or negedge rst_n) begin
           if (!rst_n)      st1 <= '0;
           else if (sparse) st1 <= x_vec[4*g*XW +: GW];
           else             st1 <= {{(2*XW){1'b0}}, x_vec[2*g*XW +: 2*XW]};
         end
+        always_ff @(posedge clk or negedge rst_n) begin
+          if (!rst_n)      st1_p <= '0;
+          else if (sparse) st1_p <= x_par[4*g +: 4];
+          else             st1_p <= {2'b00, x_par[2*g +: 2]};
+        end
         if (g == 0 && PE_LAT == 2) begin : g_first
           // row 1 at delay PE_LAT: the first register, then row 1's own
-          assign tap_b = st1;
+          assign tap_b  = st1;
+          assign tap_bp = st1_p;
         end else if (g == 0) begin : g_first_long
           delay_line #(.W(GW), .DEPTH(PE_LAT-2)) u_db (.clk(clk), .rst_n(rst_n), .d(st1), .q(tap_b));
+          delay_line #(.W(4),  .DEPTH(PE_LAT-2)) u_pb (.clk(clk), .rst_n(rst_n), .d(st1_p), .q(tap_bp));
         end else begin : g_next
           logic [GW-1:0] tap_a;                     // the chain at delay 2g*PE_LAT - 1
           logic [GW-1:0] r_even;                    // row 2g's own register
+          logic [3:0]    tap_ap, r_even_p;
           delay_line #(.W(GW), .DEPTH(2*g*PE_LAT-2)) u_da (.clk(clk), .rst_n(rst_n), .d(st1), .q(tap_a));
           delay_line #(.W(GW), .DEPTH(PE_LAT))       u_db (.clk(clk), .rst_n(rst_n), .d(tap_a), .q(tap_b));
+          delay_line #(.W(4),  .DEPTH(2*g*PE_LAT-2)) u_pa (.clk(clk), .rst_n(rst_n), .d(st1_p), .q(tap_ap));
+          delay_line #(.W(4),  .DEPTH(PE_LAT))       u_pb (.clk(clk), .rst_n(rst_n), .d(tap_ap), .q(tap_bp));
           always_ff @(posedge clk or negedge rst_n) begin
             if (!rst_n) r_even <= '0;
             else        r_even <= sparse ? tap_a : {{(3*XW){1'b0}}, tap_a[XW-1:0]};
           end
+          always_ff @(posedge clk or negedge rst_n) begin
+            if (!rst_n) r_even_p <= '0;
+            else        r_even_p <= sparse ? tap_ap : {3'b000, tap_ap[0]};
+          end
           assign x_row[2*g] = r_even;
+          assign p_row[2*g] = r_even_p;
         end
         always_ff @(posedge clk or negedge rst_n) begin
           if (!rst_n) r_odd <= '0;
           else        r_odd <= sparse ? tap_b : {{(3*XW){1'b0}}, tap_b[2*XW-1:XW]};
         end
+        always_ff @(posedge clk or negedge rst_n) begin
+          if (!rst_n) r_odd_p <= '0;
+          else        r_odd_p <= sparse ? tap_bp : {3'b000, tap_bp[1]};
+        end
         assign x_row[2*g+1] = r_odd;
+        assign p_row[2*g+1] = r_odd_p;
       end
     end
   endgenerate

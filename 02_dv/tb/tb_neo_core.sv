@@ -31,6 +31,7 @@ module tb_neo_core;
   logic signed [15:0]    cfg_ct0, cfg_ky0, cfg_kx0, cfg_rn, cfg_contrib_n, cfg_regions_m1, tiles_ready, cfg_oy0, cfg_oy_n, cfg_iy0;
   logic                  seq_err_sticky, rq_err_sticky, seq_fault_inject, rq_fault_inject, rq_tbl_fault_inject;
   logic                  wbuf_ce_sticky, wbuf_ue_sticky, rq_tbl_perr_sticky, vec_err_sticky, vec_perr_sticky;
+  logic                  abuf_ce_sticky, abuf_ue_sticky, act_perr_sticky;   // drop 0.44
   logic                  ext_valid, ext_ready, reduce_ready, ct_free;
   logic [IDXW-1:0]       ext_idx;
   logic signed [PW-1:0]  ext_y [COLS];
@@ -79,6 +80,8 @@ module tb_neo_core;
     .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject),
     .seq_fault_inject(seq_fault_inject), .rq_fault_inject(rq_fault_inject), .rq_tbl_fault_inject(rq_tbl_fault_inject),
     .dv_wbuf_flip(1'b0), .dv_wbuf_addr('0), .dv_wbuf_lane('0), .dv_wbuf_mask('0),          // the weight-buffer hook (drop 0.37), tied off
+    .dv_abuf_flip(1'b0), .dv_abuf_addr('0), .dv_abuf_lane('0), .dv_abuf_mask('0),          // the activation-buffer hook (drop 0.44), tied off
+    .abuf_ce_sticky(abuf_ce_sticky), .abuf_ue_sticky(abuf_ue_sticky), .act_perr_sticky(act_perr_sticky),
     .wbuf_ce_sticky(wbuf_ce_sticky), .wbuf_ue_sticky(wbuf_ue_sticky), .rq_tbl_perr_sticky(rq_tbl_perr_sticky),
     .cg_en(cg_en), .tel_ev(tel_ev));                                                     // drop 0.43: observation, unused here
 
@@ -225,7 +228,8 @@ module tb_neo_core;
     repeat (5) @(negedge clk);       // the last row's ABFT verdict (+2) and its sticky, the requant's three stages (drop 0.41)
 
     if (out_row == M && acc_verdicts == M && mismatches == 0 && acc_flags == 0 && !array_abft_sticky && !acc_abft_sticky
-        && !ctrl_err_sticky && !seq_err_sticky && !rq_err_sticky && !vec_err_sticky && !vec_perr_sticky)
+        && !ctrl_err_sticky && !seq_err_sticky && !rq_err_sticky && !vec_err_sticky && !vec_perr_sticky
+        && !abuf_ce_sticky && !abuf_ue_sticky && !act_perr_sticky)
       $display("RESULT: ALL PASS (%0d rows drained, %0d ABFT verdicts, no mismatches, no error flags)", out_row, acc_verdicts);
     else
       $display("RESULT: FAIL (rows=%0d/%0d verdicts=%0d mismatches=%0d acc_flags=%0d sticky array/acc/ctrl=%0b/%0b/%0b)",

@@ -34,6 +34,11 @@
 //   subtraction and a 16-bit compare in front of f_start (an output to the feeder and the lockstep comparator: 1,110 ps,
 //   the unit's one endpoint over 1,250 ps); ct_rel = ct - cfg_ct0 is now a register kept beside ct (0 at go, +1 when the
 //   enumeration steps to the next channel tile), so f_start is the compare alone. Cycle for cycle the same sequencer.
+//   Drop 0.44 (S1) -- the feeder presents its rows one cycle later (its SECDED-decoded word registered, act_feeder.sv):
+//   token at T+3, row m at T+4+m, f_busy low first at B = T+M+4; PE(i, j) adopts at the edge ending T+3+PE_LAT*i+j, the
+//   last PE at T+3+LAT-PE_LAT; row m is written at the end of T+5+m+LAT = B+LAT for the last row, as before relative to B.
+//   The constants stand: the shadow load's first shift at T+LAT+4 is still after the last adoption (the margin 3 -> 2
+//   cycles), the drain wait counts from B, the run-to-run start binds on f_busy. Every run costs one cycle more.
 module core_seq #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,

@@ -36,7 +36,8 @@ if ENABLED:
 
     @CoverPoint("neo.flag", xf=lambda f: f, bins=["parity", "crc", "array_abft", "acc_abft", "ctrl", "seq", "rq", "ecc_ue", "ecc_ce", "wbuf_ce",
                                                      "wbuf_ue", "tbl_perr", "lost", "timeout", "bist_fail", "prog_ce", "ctrl_path", "iso", "watchdog",
-                                                     "vec_err", "vec_perr"])
+                                                     "vec_err", "vec_perr",
+                                                     "abuf_ce", "abuf_ue", "act_perr", "drain_ovf", "pk_perr"])   # drop 0.44
     def sample_flag(f): pass
 
     @CoverPoint("neo.vec.op", xf=lambda o: o, bins=["END", "EMIT", "ADD_ROW", "MUL_SCALE", "CLAMP", "LUT", "RED", "BSUB", "BMUL", "SQR",

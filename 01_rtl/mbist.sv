@@ -13,6 +13,12 @@
 //   flops), whether any mismatched (mism_q) and the row (row_q); the cycle after records the first failure (fail,
 //   fail_ce, fail_addr) from those registers. The March sequence and its cycle count are unchanged; done rises one cycle
 //   after the last check (chk_q: a registered check is still to be recorded), so fail is final when done is seen.
+//   Drop 0.44 (S1) -- the state one-hot, with an illegal-state check. FMEDA v2 found a stuck bit of the binary state
+//   undetected: bit 0 stuck at 1 turned S_IDLE into S_W, the engine took the bank's ports and wrote the background over
+//   the rows while the tile served another tile's fetch -- a legitimate-looking March run, done and no fail. The five
+//   states are now one bit each; a state with no bit or more than one set (st_bad) raises fail in that cycle, keeps the
+//   bank's ports (we / re) off and returns the engine to S_IDLE, so a stuck or flipped state bit is the MBIST cause on the
+//   tile's error pin (bist_fail) the cycle it takes effect. The March sequence, its cycle count and the ports are unchanged.
 module mbist #(
   parameter int AW    = 12,                  // word address width (fail_addr)
   parameter int WORDS = 4096,                // words tested, a multiple of LANES
@@ -40,8 +46,10 @@ module mbist #(
   input  logic [LANES-1:0] ce_lane,          // lanes the bank corrected on this read: a stuck or weak bit, reported as a fault
   output logic             fail_ce           // the failure was found by the ECC rather than by data mismatch
 );
-  localparam logic [2:0] S_IDLE = 3'd0, S_W = 3'd1, S_R = 3'd2, S_CHK = 3'd3, S_DONE = 3'd4;
-  logic [2:0]    state;
+  localparam logic [4:0] S_IDLE = 5'b00001, S_W = 5'b00010, S_R = 5'b00100, S_CHK = 5'b01000, S_DONE = 5'b10000;   // one-hot (drop 0.44)
+  logic [4:0]    state;
+  logic [4:0]    state_m1;        // state - 1: zero bits below the lowest set bit
+  logic          st_bad;          // no bit or more than one bit set
   logic [3:0]    elem;            // 0..5 for background 0, 6..11 for background 0x55
   localparam int IW = RAW + 1;    // idx width: 0..ROWS
   logic [IW-1:0] idx;             // position within the element (rows)
@@ -72,12 +80,14 @@ module mbist #(
       default: begin has_write = 1'b0; exp_rd = bg; end          // up: r0
     endcase
   end
-  assign addr   = up ? idx[RAW-1:0] : RAW'(ROWS - 1 - 32'(idx));
-  assign active = (state != S_IDLE) && (state != S_DONE);
-  assign done   = (state == S_DONE) && !chk_q;
-  assign re     = (state == S_R);
-  assign rrow   = addr;
-  assign we     = (state == S_W);
+  assign addr     = up ? idx[RAW-1:0] : RAW'(ROWS - 1 - 32'(idx));
+  assign state_m1 = state - 5'd1;
+  assign st_bad   = (state == 5'd0) || ((state & state_m1) != 5'd0);
+  assign active   = (state != S_IDLE) && (state != S_DONE) && !st_bad;   // (an illegal state leaves the bank's ports to the tile)
+  assign done     = (state == S_DONE) && !chk_q;
+  assign re       = (state == S_R) && !st_bad;
+  assign rrow     = addr;
+  assign we       = (state == S_W) && !st_bad;
   assign wrow   = addr;
   assign wmask  = '1;
   assign wdata  = {LANES{wr_val}};
@@ -99,6 +109,7 @@ module mbist #(
       if (chk_q && (hit_q != '0) && !fail) begin
         fail <= 1'b1; fail_ce <= !mism_q; fail_addr <= AW'(row_q) * AW'(LANES) + AW'(first_lane);
       end
+      if (st_bad) fail <= 1'b1;                                // drop 0.44: an illegal state is a failure of the engine itself
       case (state)
         S_IDLE: if (start) begin elem <= '0; idx <= '0; fail <= 1'b0; fail_ce <= 1'b0; fail_addr <= '0; state <= has_read ? S_R : S_W; end
         S_R:    state <= S_CHK;                                  // rdata valid next cycle
@@ -118,7 +129,7 @@ module mbist #(
           end else begin idx <= idx + 1; state <= has_read ? S_R : S_W; end
         end
         S_DONE: if (start) begin elem <= '0; idx <= '0; fail <= 1'b0; fail_ce <= 1'b0; state <= S_W; end
-        default: state <= S_IDLE;
+        default: state <= S_IDLE;                                // an illegal state (st_bad): back to idle, fail raised above
       endcase
     end
   end

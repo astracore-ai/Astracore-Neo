@@ -225,6 +225,8 @@ module tile_nic #(
   output logic                  iso_err_sticky,      // a flit from another partition arrived and was dropped
   output logic                  lost_err_sticky,     // word count at the CRC flit differed from the words received
   output logic                  fetch_timeout_sticky, // a fetch response did not complete within FETCH_TIMEOUT cycles
+  output logic                  drain_ovf_sticky,    // drop 0.44: a row was pushed into a full drain FIFO (DFD rows unsent: GO after GO
+                                                     // without a drain between) -- the row overwrote the oldest unsent one
   input  logic                  dv_tx_hold,          // testbench hook (drop 0.35; DV_HOOKS = 1): the transmit engine held in
                                                      // X_SERVE_RD at every falling edge while high -- a dead server
   // drop 0.43: observation -- the two halves' clock enables {transmit, receive}, and the telemetry's drain cycles (the
@@ -929,14 +931,19 @@ module tile_nic #(
   // starts and continues on dfifo_vis.
   // Drop 0.42: the row carries the parity of each of its beats (bpar, formed at the push), so the parity of the flit that
   // carries a beat needs no XOR tree over the beat's words behind the beat's select
+  // Drop 0.44 (S1): the row's index carries its parity too (ipar, formed at the push), so the PSUM flit's tag -- the index as
+  // read -- is covered by a stored bit like the words: the whole of the leaf's output register is then behind stored
+  // parity, and link_packer's check of the beat (drop 0.44) sees any bit of it flipped or stuck.
   localparam int NDB  = (COLS + BW) / BW;                  // beats of an INT32 row of COLS + 1 words (3 at 32x32, 1 at 16x8)
   localparam int DBW  = (NDB > 1) ? $clog2(NDB) : 1;
-  localparam int DFWD = NDB + IDXW + (COLS + 1) * PW;      // a FIFO row: {bpar[NDB], idx, word[COLS] .. word[0]}
+  localparam int DFWD = NDB + 1 + IDXW + (COLS + 1) * PW;  // a FIFO row: {bpar[NDB], ipar, idx, word[COLS] .. word[0]}
   logic [DFWD-1:0]      dfifo_wrow, dfifo_head;            // the row written on a push; the row at the read pointer (registered read)
   logic [DFWD-1:0]      unused_dfifo_ra, unused_dfifo_bd;  // the leaf's unused read ports (port A tied off, no hooks here)
   logic [IDXW-1:0]      dfifo_head_idx;
+  logic                 dfifo_head_ipar;                   // the head row's index parity (drop 0.44)
   logic [NDB-1:0]       dfifo_head_bpar;                   // the head row's beat parities
   localparam int DFW = $clog2(DFD);                       // pointer width from the depth (drop 0.21)
+  localparam int DFCW = DFW + 1;                          // the counts' width (drop 0.44: the full-FIFO compare)
   logic [DFW-1:0]       unused_dfifo_bq;                   // the leaf's port-B address readback (RBQ = 0: zero; drop 0.43)
   logic [DFW-1:0]       dfifo_wr;
   logic [DFW-1:0]       dfifo_rd;
@@ -1136,8 +1143,9 @@ module tile_nic #(
       if (drain_ent) dfifo_wrow[(COLS / 4) * PW +: WCW] = f3_chk;
     end
     dfifo_wrow[(COLS + 1) * PW +: IDXW] = IDXW'(drain_sent) + IDXW'(dfifo_np - dfifo_nq);   // rows sent + rows in the FIFO: rows arrive in order 0..M-1 (the index wraps)
+    dfifo_wrow[(COLS + 1) * PW + IDXW] = ^dfifo_wrow[(COLS + 1) * PW +: IDXW];                // the index's parity (drop 0.44)
     for (int w = 0; w <= COLS; w++)
-      dfifo_wrow[(COLS + 1) * PW + IDXW + w / BW] = dfifo_wrow[(COLS + 1) * PW + IDXW + w / BW] ^ (^dfifo_wrow[w * PW +: PW]);
+      dfifo_wrow[(COLS + 1) * PW + IDXW + 1 + w / BW] = dfifo_wrow[(COLS + 1) * PW + IDXW + 1 + w / BW] ^ (^dfifo_wrow[w * PW +: PW]);
   end
   assign d_pop        = (tx_state == X_DRAIN_WORD) && tx_fire && d_row_done;
   assign dfifo_rd_nxt = !d_pop ? dfifo_rd : (dfifo_rd == DFW'(DFD - 1)) ? '0 : dfifo_rd + 1;
@@ -1151,8 +1159,9 @@ module tile_nic #(
   always_comb begin
     for (int w = 0; w <= COLS; w++) dfifo_head_w[w] = dfifo_head[w * PW +: PW];
     for (int w = COLS + 1; w < NDB * BW; w++) dfifo_head_w[w] = 32'd0;
-    dfifo_head_idx = dfifo_head[(COLS + 1) * PW +: IDXW];
-    dfifo_head_bpar = dfifo_head[(COLS + 1) * PW + IDXW +: NDB];
+    dfifo_head_idx  = dfifo_head[(COLS + 1) * PW +: IDXW];
+    dfifo_head_ipar = dfifo_head[(COLS + 1) * PW + IDXW];
+    dfifo_head_bpar = dfifo_head[(COLS + 1) * PW + IDXW + 1 +: NDB];
   end
   logic [15:0] tx_crc;
   logic [15:0] tx_crc_next;
@@ -1222,6 +1231,8 @@ module tile_nic #(
   // row's beat parity from the FIFO -- where one XOR tree over the 560 bits followed the words' select
   logic [BW-1:0] sc_wp;                                   // parity of serve_cur's word j
   logic          tw_par;                                  // parity of tx_words
+  logic          tg_par;                                  // parity of tx_tag: a PSUM beat's from the FIFO's stored bit (drop 0.44)
+  assign tg_par = ((tx_state == X_DRAIN_WORD) && drain_mode_psum) ? dfifo_head_ipar : (^tx_tag);
   always_comb begin
     for (int j = 0; j < BW; j++) begin
       b_wp[j]  = ^b_rdata[32 * j +: 32];
@@ -1239,7 +1250,7 @@ module tile_nic #(
       default: ;
     endcase
   end
-  assign tx_flit = {^{tx_dy, tx_dx, my_y, my_x, 4'd0, partition, tx_type, tx_tag, tx_hdr} ^ tw_par, tx_body};
+  assign tx_flit = {^{tx_dy, tx_dx, my_y, my_x, 4'd0, partition, tx_type, tx_hdr} ^ tg_par ^ tw_par, tx_body};
 
   // the flit's way out (drop 0.43): to the link, or -- a beat or the CRC flit of the serve of this tile's own fetch -- into
   // the loopback register, which hands it to the RX stage ahead of the link's beat (lb_take: the stage takes it this cycle).
@@ -1294,6 +1305,7 @@ module tile_nic #(
       drain_rows <= '0; drain_sent <= '0; drain_armed <= 1'b0;
       drain_crc_last <= '0; drain_msg_cnt <= '0;
       drain_tr <= 1'b0; drain_ent <= 1'b0; drain_pad <= 1'b0; drain_stride <= '0; drain_grow <= '0; drain_hdr_pend <= 1'b0;
+      drain_ovf_sticky <= 1'b0;
       tr_in <= '0; tr_out <= '0; tr_or <= 1'b0; tr_out_or <= 1'b0; tr_out_v <= 1'b0;
     end else begin
       // commands
@@ -1323,7 +1335,11 @@ module tile_nic #(
       if (cmd_valid && cmd_op == 3'd5) begin
         ntf_pending <= 1'b1; ntf_x <= cmd_x; ntf_y <= cmd_y;
       end
-      // drain FIFO push (no backpressure: sized for a full accumulator drain); the row itself goes into the leaf below
+      // drain FIFO push (no backpressure: sized for a full accumulator drain); the row itself goes into the leaf below.
+      // Drop 0.44 (S1, review finding 3): a push while the FIFO holds DFD unsent rows (a GO after a GO with no drain
+      // between, or more rows than ACC_ROWS before they are sent) overwrites the oldest unsent row: drain_ovf_sticky
+      if (err_clear) drain_ovf_sticky <= 1'b0;
+      if (drain_push && ((dfifo_np - dfifo_nq) == DFCW'(DFD))) drain_ovf_sticky <= 1'b1;
       if (drain_push) begin
         dfifo_wr <= (dfifo_wr == DFW'(DFD - 1)) ? '0 : dfifo_wr + 1;
       end

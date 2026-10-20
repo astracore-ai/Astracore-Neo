@@ -19,6 +19,7 @@
 #                               # and host bridge, row 1: an unused position), the AXI4-Lite control plane, clk 1.0 ns and aclk 1.6 ns
 #   make -C dv/cocotb top_sync  # the same build again with aclk == clk (both 1.0 ns, the same edges): the design does not depend on the ratio
 #   make -C dv/cocotb faults_tile / faults_core   # drop 0.43: the fault campaign's drivers (faults/; run by faults/run_faults.py)
+#   make -C dv/cocotb core_xinit / tile_xinit     # drop 0.44: C19 and M1 with every array and unreset register random (XINIT = 1)
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -110,6 +111,13 @@ ifneq ($(TRACE_VCD),)
   EXTRA_ARGS += --trace --trace-max-width 4096
   SIM_ARGS += --trace --trace-file $(TRACE_VCD)
 endif
+# XINIT=1 (drop 0.44, S1; review finding 1): every variable the RTL does not reset -- the memory leaves' arrays, the packer's
+# beat registers, the port-B latches -- starts random (--x-initial unique at build, +verilator+rand+reset+2 at run), as
+# silicon powers up; the xinit targets below run the tests that assert the flags stay clear through it
+ifeq ($(XINIT),1)
+  EXTRA_ARGS += --x-initial unique
+  PLUSARGS += +verilator+rand+reset+2
+endif
 ifeq ($(VCOV),1)
   EXTRA_ARGS += --coverage --coverage-line --coverage-toggle
   export NEO_FUNCOV=1
@@ -151,6 +159,13 @@ core:
 	$(MAKE) TARGET=core NCHK=4 SIM_BUILD=sim_build_core COCOTB_RESULTS_FILE=results_core.xml
 core32:
 	$(MAKE) TARGET=core $(SILICON) NCHK=4 SIM_BUILD=sim_build_core32 COCOTB_RESULTS_FILE=results_core32.xml
+# drop 0.44 (S1): the randomised-reset builds -- C19 on the core (the ECC flags after reset with the arrays random, then C1),
+# M1 on the tile mesh (the program memory's flags and every cause clean through a layer)
+XINIT_TILE_TESTS ?= m1_fetch_compute_writeback
+core_xinit:
+	$(MAKE) TARGET=core NCHK=4 XINIT=1 TESTCASE=c19_reset_flags_x SIM_BUILD=sim_build_core_xinit COCOTB_RESULTS_FILE=results_core_xinit.xml
+tile_xinit:
+	$(MAKE) TARGET=tile XINIT=1 TESTCASE=$(XINIT_TILE_TESTS) SIM_BUILD=sim_build_tile_xinit COCOTB_RESULTS_FILE=results_tile_xinit.xml
 tile:
 	$(MAKE) TARGET=tile
 # tile_sp (drop 0.42): the 2x2 mesh of 16x8 sparse-capable cores (NCHK = 4) -- M20, a 2:4 sparse program compiled by
@@ -232,4 +247,5 @@ coverage_report:                   # the report of the coverage builds run (drop
 	@echo "coverage_report.md written; annotated sources in coverage_annotated/"
 clean::
 	rm -rf sim_build_faults_tile sim_build_faults_core results_faults_*.xml
+	rm -rf sim_build_core_xinit sim_build_tile_xinit results_core_xinit.xml results_tile_xinit.xml
 	rm -rf sim_build_core sim_build_core32 sim_build_tile8 sim_build_tile32 sim_build_tile_sp sim_build_mesh8 sim_build_mesh8s sim_build_vroot sim_build_cov_* results_core.xml results_core32.xml results_tile8.xml results_tile32.xml results_tile_sp.xml results_mesh8.xml results_mesh8s.xml results_cov_*.xml funcov_*.yml coverage_*.dat coverage.dat coverage_report.md coverage_annotated sim_build_top results_top.xml results_top_sync.xml

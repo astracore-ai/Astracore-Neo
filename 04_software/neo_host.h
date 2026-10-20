@@ -40,6 +40,32 @@
 #define NEO_REG_PARTITION 0x0B
 #define NEO_REG_PRIO 0x0C          /* drop 0.43: the tile's router priority map, bit p = partition p is the high class */
 
+/* STATUS (0x01) flag bits and the ERR_CAUSE / ERR_MASK (0x06 / 0x05) cause bits (drop 0.44: the cause register is 23 bits,
+ * the watchdog moved from bit 18 to 22; abuf_ce / abuf_ue are the activation buffer's SECDED (corrected / uncorrectable),
+ * act_perr the activation path's byte parity at the array's row inputs, drain_ovf a row pushed into the full drain FIFO). */
+#define NEO_ST_PROG_DONE   (1u << 0)
+#define NEO_ST_DRAIN_BUSY  (1u << 1)
+#define NEO_ST_DONE        (1u << 2)
+#define NEO_ST_PARITY      (1u << 8)
+#define NEO_ST_CRC         (1u << 9)
+#define NEO_ST_ARRAY_ABFT  (1u << 10)
+#define NEO_ST_ACC_ABFT    (1u << 11)
+#define NEO_ST_CTRL        (1u << 12)
+#define NEO_ST_SEQ         (1u << 13)
+#define NEO_ST_RQ          (1u << 14)
+#define NEO_ST_ECC_UE      (1u << 15)
+#define NEO_ST_ECC_CE      (1u << 16)
+#define NEO_ST_ABUF_CE     (1u << 17)   /* drop 0.44 */
+#define NEO_ST_ABUF_UE     (1u << 18)
+#define NEO_ST_ACT_PERR    (1u << 19)
+#define NEO_ST_DRAIN_OVF   (1u << 20)
+enum { NEO_CAUSE_PARITY, NEO_CAUSE_CRC, NEO_CAUSE_ARRAY_ABFT, NEO_CAUSE_ACC_ABFT, NEO_CAUSE_CTRL, NEO_CAUSE_SEQ, NEO_CAUSE_RQ,
+       NEO_CAUSE_ECC_UE, NEO_CAUSE_ECC_CE, NEO_CAUSE_WBUF_CE, NEO_CAUSE_WBUF_UE, NEO_CAUSE_TBL_PERR, NEO_CAUSE_LOST,
+       NEO_CAUSE_TIMEOUT, NEO_CAUSE_BIST_FAIL, NEO_CAUSE_PROG_CE, NEO_CAUSE_CTRL_PATH, NEO_CAUSE_ISO,
+       NEO_CAUSE_ABUF_CE, NEO_CAUSE_ABUF_UE, NEO_CAUSE_ACT_PERR, NEO_CAUSE_DRAIN_OVF,   /* drop 0.44 */
+       NEO_CAUSE_WATCHDOG, NEO_NCAUSE };
+#define NEO_CAUSE_MASK ((1u << NEO_NCAUSE) - 1u)
+
 /* Tile telemetry (drop 0.43; host_if 0x40 .. 0x4C, 01_rtl/tile_telem.sv): 32-bit saturating counters read as snapshots.
  * TEL_CTRL w: bit 0 snapshot (every counter into its snapshot at one edge), bit 1 clear (the counters restart at 0; both
  * at once close one window and open the next); r: [15:8] the number of counters. TEL(k) r: counter k's snapshot. */

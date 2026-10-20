@@ -34,6 +34,10 @@
 //   vec_perr_sticky (its table parity) are new flags. The unit runs on the core's clock; its busy is in the core's busy,
 //   so the gated datapath clock (above) runs while the unit reads the accumulator, and the requantizers' clock enables
 //   follow their input valid, the unit's rows included.
+//   Drop 0.44 (S1): three flags from the datapath -- abuf_ce / abuf_ue (the activation buffer's SECDED, act_feeder.sv) and
+//   act_perr (the activation path's byte parity, checked at the array's row inputs: neo_mac_core.sv); the index / first
+//   delay lines' parity check is in ctrl_err (neo_mac_core_v02.sv); the activation buffer's stored-lane hook (dv_abuf_*,
+//   DV_HOOKS = 1) beside the weight buffer's. The feeder presents its rows one cycle later (every run one cycle longer).
 module neo_core #(
   parameter int ROWS       = 32,
   parameter int COLS       = 32,
@@ -141,6 +145,9 @@ module neo_core #(
   output logic                  rq_tbl_perr_sticky,   // requantization table parity
   output logic                  vec_err_sticky,       // drop 0.43: the vector unit's duplicated control disagrees (R7)
   output logic                  vec_perr_sticky,      // drop 0.43: a vector-unit table entry failed its parity on use (R10)
+  output logic                  abuf_ce_sticky,       // drop 0.44: activation buffer SECDED: corrected / uncorrectable
+  output logic                  abuf_ue_sticky,
+  output logic                  act_perr_sticky,      // drop 0.44: a row's byte reached the array with the wrong parity
   // DV only
   input  logic                  fault_inject,
   input  logic                  ctrl_fault_inject,
@@ -153,6 +160,10 @@ module neo_core #(
   input  logic [WAW-1:0]        dv_wbuf_addr,
   input  logic [3:0]            dv_wbuf_lane,
   input  logic [38:0]           dv_wbuf_mask,
+  input  logic                  dv_abuf_flip,         // drop 0.44 (DV_HOOKS = 1): a stored activation codeword's lane XOR a mask
+  input  logic [AW-1:0]         dv_abuf_addr,
+  input  logic [3:0]            dv_abuf_lane,
+  input  logic [38:0]           dv_abuf_mask,
   // drop 0.43: observation -- the clock enables {requant duplicate, requant, datapath} and the telemetry events
   // {feeder stall, array valid}
   output logic [2:0]            cg_en,
@@ -189,7 +200,7 @@ module neo_core #(
   wbuf_mem #(.COLS(COLS), .WW(WW), .WCW(WCW), .DEPTH(WBUF_DEPTH), .WAW(WAW), .NCHK(NCHK), .DV_HOOKS(DV_HOOKS)) u_wbuf (
     .clk(clk), .rst_n(rst_n), .we(wbuf_we), .waddr(wbuf_waddr), .wdata(wbuf_wdata), .wcdata(wcbuf_wdata),
     .we2(wbuf_we2), .wdata2(wbuf_wdata2), .wcdata2(wcbuf_wdata2),
-    .raddr(w_raddr), .rdata(w_in), .rcdata(wc_in), .raddr_q(w_raddr_q),
+    .raddr(w_raddr), .rd_q(w_load_q), .rdata(w_in), .rcdata(wc_in), .raddr_q(w_raddr_q),
     .err_clear(err_clear), .ecc_ce_sticky(wbuf_ce_sticky), .ecc_ue_sticky(wbuf_ue_sticky),
     .dv_fi_flip(dv_wbuf_flip), .dv_fi_addr(dv_wbuf_addr), .dv_fi_lane(dv_wbuf_lane), .dv_fi_mask(dv_wbuf_mask));
 
@@ -250,7 +261,15 @@ module neo_core #(
     if (!rst_n) busy_q <= '0;
     else        busy_q <= {busy_q[2:0], busy};
   end
-  assign dp_en = busy || (busy_q != 4'd0) || abuf_we || abuf_we2 || err_clear || !rst_n;
+  logic       dv_dp_en;                      // drop 0.44: the activation buffer's hook keeps the datapath's clock on (DV_HOOKS = 1 only:
+  generate                                   // the silicon core's hook ports drive nothing, the synthesis job's DV_HOOKS gate)
+    if (DV_HOOKS != 0) begin : g_dv_dp
+      assign dv_dp_en = dv_abuf_flip;
+    end else begin : g_nodv_dp
+      assign dv_dp_en = 1'b0;
+    end
+  endgenerate
+  assign dp_en = busy || (busy_q != 4'd0) || abuf_we || abuf_we2 || err_clear || !rst_n || dv_dp_en;
   neo_icg u_icg_dp (.clk(clk), .en(dp_en), .te(1'b0), .gclk(clk_dp));
 
   // the vector unit (drop 0.43): the accumulator's drain port is the sequencer's during its drain and the unit's after it
@@ -283,7 +302,7 @@ module neo_core #(
 
   neo_mac_core_v02 #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .WCW(WCW), .ACC_ROWS(ACC_ROWS),
                      .ABUF_DEPTH(ABUF_DEPTH), .IDXW(IDXW), .AW(AW), .PE_LAT(PE_LAT), .NCHK(NCHK),
-                     .FAULT_ROW(FAULT_ROW), .FAULT_COL(FAULT_COL)) u_dp (
+                     .FAULT_ROW(FAULT_ROW), .FAULT_COL(FAULT_COL), .DV_HOOKS(DV_HOOKS)) u_dp (
     .clk(clk_dp), .rst_n(rst_n),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(abuf_we2), .abuf_wdata2(abuf_wdata2),
     .cfg_h(cfg_h), .cfg_w(cfg_w), .cfg_ho(cfg_ho), .cfg_wo(cfg_wo), .cfg_oy0(cfg_oy0), .cfg_oy_n(cfg_oy_n), .cfg_iy0(cfg_iy0),
@@ -295,7 +314,10 @@ module neo_core #(
     .abft_clear(err_clear), .array_abft_err(array_abft_err), .array_abft_err_valid(array_abft_err_valid), .array_abft_sticky(array_abft_sticky),
     .acc_abft_err(acc_abft_err), .acc_abft_err_valid(acc_abft_err_valid), .acc_abft_sticky(acc_abft_sticky),
     .ctrl_err(ctrl_err), .ctrl_err_sticky(ctrl_err_sticky), .acc_ctrl_err(acc_ctrl_err),
-    .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject), .arr_valid(arr_valid));
+    .abuf_ce_sticky(abuf_ce_sticky), .abuf_ue_sticky(abuf_ue_sticky), .act_perr_sticky(act_perr_sticky),
+    .fault_inject(fault_inject), .ctrl_fault_inject(ctrl_fault_inject),
+    .dv_abuf_flip(dv_abuf_flip), .dv_abuf_addr(dv_abuf_addr), .dv_abuf_lane(dv_abuf_lane), .dv_abuf_mask(dv_abuf_mask),
+    .arr_valid(arr_valid));
   assign tel_ev = {(state_dbg == 3'd1 || state_dbg == 3'd2 || state_dbg == 3'd3) && !arr_valid, arr_valid};
 
   // requantization, duplicated with a comparator (R10); the fault hook corrupts the primary's input only. Drop 0.43: the
@@ -318,23 +340,28 @@ module neo_core #(
     end
   endgenerate
   logic rq_cg_en, rq_cg_en_d;                // the requantizers' clock enables (whole signals: neosim connects no output to a bit)
+  logic [COLS-1:0] rq_wrt, rq_wrt_d;         // drop 0.44: each copy's written table entries (the comparator's qualifier, compared too)
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq (
     .clk(clk), .rst_n(rst_n),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
     .in_valid(rq_in_valid), .in_acc(rq_in_p), .out_valid(rq_valid), .out_q(rq_q),
-    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_sticky), .tbl_fault_inject(rq_tbl_fault_inject), .cg_en(rq_cg_en));
+    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_sticky), .tbl_fault_inject(rq_tbl_fault_inject), .cg_en(rq_cg_en), .tbl_wrt(rq_wrt));
   logic rq_tbl_perr_d;
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq_dup (
     .clk(clk), .rst_n(rst_n),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
     .in_valid(rq_in_valid), .in_acc(rq_in), .out_valid(rq_valid_d), .out_q(rq_q_d),
-    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_d), .tbl_fault_inject(1'b0), .cg_en(rq_cg_en_d));
+    .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_d), .tbl_fault_inject(1'b0), .cg_en(rq_cg_en_d), .tbl_wrt(rq_wrt_d));
   assign cg_en = {rq_cg_en_d, rq_cg_en, dp_en};
+  // drop 0.44 (review finding 1's rule): the tables are not reset, and the INT32 drain of a layer without tables runs the pair
+  // on whatever they hold (random in silicon), so the outputs are compared for the columns whose entry both copies have
+  // written -- an unwritten column's output is never a result -- and the written flags themselves are compared (a flipped
+  // flag in either copy is a mismatch)
   always_comb begin
-    rq_err = (rq_valid != rq_valid_d);
-    for (int j = 0; j < COLS; j++) if (rq_valid && (rq_q[j] != rq_q_d[j])) rq_err = 1'b1;
+    rq_err = (rq_valid != rq_valid_d) || (rq_wrt != rq_wrt_d);
+    for (int j = 0; j < COLS; j++) if (rq_valid && rq_wrt[j] && (rq_q[j] != rq_q_d[j])) rq_err = 1'b1;
   end
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)         rq_err_sticky <= 1'b0;

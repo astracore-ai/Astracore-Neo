@@ -71,7 +71,7 @@ falling edge, the design samples it at the next rising edge.
 import os
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ReadOnly, ClockCycles
+from cocotb.triggers import RisingEdge, ReadOnly, ReadWrite, ClockCycles
 import numpy as np
 from neo_golden import (pack_words, direct_conv, ecc_encode, ins, bits, sbits, OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR,
                         OP_DRAIN_PSUM, OP_GO, OP_WAIT_FREE, OP_WAIT_DONE, OP_END)
@@ -95,6 +95,7 @@ REG_CFG_BASE, REG_CFG_M = 0x10, 0x24
 REG_RQ_TBL, REG_RQ_ADDR, REG_RQ_RELU = 0x30, 0x31, 0x32
 REG_VEC_ADDR, REG_VEC_DATA = 0x38, 0x39                              # drop 0.43: the vector unit's tables and program
 CAUSE_PROG_CE, CAUSE_CTRL_PATH, CAUSE_ISO, CAUSE_TIMEOUT, CAUSE_LOST, CAUSE_BIST = 15, 16, 17, 13, 12, 14
+CAUSE_PARITY, CAUSE_ABUF_CE, CAUSE_ABUF_UE, CAUSE_ACT_PERR, CAUSE_DRAIN_OVF, CAUSE_WD = 0, 18, 19, 20, 21, 22   # drop 0.44 (S1): bits 18 .. 21, the watchdog 22
 CFG_ORDER = ["cfg_h", "cfg_w", "cfg_ho", "cfg_wo", "cfg_oy0", "cfg_oy_n", "cfg_iy0", "cfg_s", "cfg_p", "cfg_k", "cfg_ct_n", "cfg_ct0",
              "cfg_ky0", "cfg_kx0", "cfg_rn", "cfg_contrib_n", "cfg_tile_pixels", "cfg_regions_m1",
              "cfg_flags"]                                    # 0x22 (drop 0.42): bit 0 the layer is 2:4 sparse
@@ -759,7 +760,7 @@ async def m8_registers_selftest_watchdog(dut):
     await mesh.reg_write(0, REG_WD_CTRL, (600 << 8) | 1)
     await mesh.tick(650)
     c_wd = await mesh.reg_read(0, REG_ERR_CAUSE)
-    assert (c_wd >> 18) & 1 == 1 and mesh.pins()[0] == 1, f"M8 watchdog cause 0x{c_wd:05x} pin {mesh.pins()[0]}"
+    assert (c_wd >> CAUSE_WD) & 1 == 1 and mesh.pins()[0] == 1, f"M8 watchdog cause 0x{c_wd:06x} pin {mesh.pins()[0]}"
     fc.sample_flag("watchdog")
     dut._log.info("M8: self-test raised the ABFT causes and the pin, clear, real run clean, watchdog expiry flagged")
 
@@ -1480,3 +1481,123 @@ async def m14_bank_contention(dut):
     first, last = min(done_at.values()), max(done_at.values())
     dut._log.info(f"M14: {n_req} maximal fetches ({MAX_FETCH_WORDS} words each) queued at one bank: first done at {first} clocks, last at {last}, "
                   f"{last / (n_req * MAX_FETCH_WORDS):.3f} clocks per word, no cause raised (FETCH_TIMEOUT {FETCH_TIMEOUT})")
+
+
+def tile_sig(dut, n, path):
+    """A signal below tile n of the mesh (u_mesh.g_y[y].g_x[x].u_t.<path>) through the fault campaign's two-step lookup
+    (faults/common.py Injector.resolve: a path through generate scopes); a trailing [k] names the element of an array."""
+    from faults.common import Injector
+    full = f"u_mesh.g_y[{n // NX}].g_x[{n % NX}].u_t.{path}"
+    base, _, last = full.rpartition(".")
+    elem = []
+    if last.endswith("]"):
+        name, _, idx = last[:-1].partition("[")
+        elem, last = [int(idx)], name
+    return Injector(dut).handle(base + "." + last, elem)
+
+
+@cocotb.test()
+async def m29_packer_beat_parity(dut):
+    """M29 (drop 0.44, S1): the NIC's drain beat corrupted after its parity was formed. A bit of the drain FIFO's output
+    register (the leaf's rb_data: word 3 bit 7 of the row) is held at 1 through tile (0,0)'s drain of M1's result -- a
+    stuck bit of the macro's output register, FMEDA v2's 6 undetected faults of tile_nic.macro. The beat's parity bit comes
+    from the parity stored with the row at the push, so the beat the NIC presents has odd parity; the link packer now checks
+    it (pk_perr, the tile's parity cause) where before it recomputed the link flit's parity from the words it received and
+    the end-to-end CRC, accumulated from the same register, matched: the receiver saw a consistent message and the rows in
+    bank (1,0) were silently wrong. Expected: the parity cause and the pin at tile 0 from the packer (the router's own
+    parity sticky stays clear), no CRC cause anywhere, the run complete."""
+    mesh = await setup(dut)
+    x, wgt, ref, act, wts = conv_data()
+    await mesh.load_bank(N11, act, wts)
+    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
+    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
+    prog += fetch_weights(1, 1) + [ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+    await mesh.program(0, prog)
+    await mesh.start([0])
+    reg = tile_sig(dut, 0, "u_nic.u_dfifo.rb_data")
+    bit, forced, n = 3 * 32 + 7, 0, 0
+    while True:                                                   # the campaign's stuck-at: forced after every edge while the drain runs
+        await RisingEdge(dut.clk)
+        await ReadWrite()
+        if mesh.drain_busy(0):
+            v = int(reg.value)
+            if not (v >> bit) & 1:
+                reg.value = v | (1 << bit)
+                forced += 1
+        if mesh.prog_done(0) and not mesh.drain_busy(0):
+            break
+        n += 1
+        assert n < 60000, "M29: the program did not finish"
+    await mesh.tick(40)
+    c = await mesh.causes()
+    pk = int(tile_sig(dut, 0, "pk_perr_t").value)
+    assert (c[0] >> CAUSE_PARITY) & 1 == 1 and pk == 1 and mesh.status("parity_err", 0) == 0 and mesh.pins()[0] == 1, \
+        f"M29: parity cause expected from the packer at tile 0: causes {causes_str(c)}, pk_perr {pk}, router parity {mesh.status('parity_err', 0)}"
+    assert all((v >> 1) & 1 == 0 for v in c) and all(c[k] == 0 for k in range(1, mesh.N)), f"M29: unexpected causes {causes_str(c)}"
+    got = to_image(await mesh.read_rows(N10, R0, 36), ref, 36)
+    wrong = int((got != ref).sum())
+    fc.sample_flag("pk_perr")
+    fc.sample_flag("parity")
+    dut._log.info(f"M29: a stuck bit of the drain FIFO's output register ({forced} cycles forced): the packer's beat-parity check raised the "
+                  f"parity cause and the pin at tile 0 (the router's sticky clear, no CRC cause: the CRC covered the corrupted data); "
+                  f"{wrong} of {ref.size} result values wrong in bank (1,0)")
+
+
+@cocotb.test()
+async def m30_drain_fifo_overflow(dut):
+    """M30 (drop 0.44, S1; review finding 3): a program that runs GO, WAIT_DONE, GO, WAIT_DONE with no DRAIN_WR between --
+    72 rows pushed into the drain FIFO of DFD = ACC_ROWS = 64 rows and never sent. The 65th push overwrites the oldest
+    unsent row; before this drop silently (the DMA holds DRAIN_WR on drain_busy, not GO). Expected: the drain_ovf cause and
+    the pin at tile 0, nothing else, the program complete."""
+    mesh = await setup(dut)
+    x, wgt, ref, act, wts = conv_data()
+    await mesh.load_bank(N11, act, wts)
+    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
+    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
+    prog += fetch_weights(1, 1) + [ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+    await mesh.program(0, prog)
+    await mesh.start([0])
+    n = await mesh.wait_prog(0)
+    await mesh.tick(10)
+    c = await mesh.causes()
+    assert c[0] == (1 << CAUSE_DRAIN_OVF) and mesh.pins()[0] == 1 and all(c[k] == 0 for k in range(1, mesh.N)), \
+        f"M30: drain_ovf alone expected at tile 0: causes {causes_str(c)}, pins {mesh.pins()}"
+    fc.sample_flag("drain_ovf")
+    dut._log.info(f"M30: two GOs with no drain between (72 rows into the 64-row drain FIFO): drain_ovf cause and pin at tile 0 in {n} clocks, "
+                  f"the other causes clean")
+
+
+@cocotb.test()
+async def m28_mbist_state_fault(dut):
+    """M28 (drop 0.44, S1): a bit of the MBIST engine's state register flipped while the engine is idle (tile (1,1), whose
+    bank serves the mesh). The state is one-hot since this drop: the bit S_W set beside S_IDLE is an illegal state, which
+    raises bist_fail that cycle, keeps the bank's ports with the tile and returns the engine to idle -- before this drop
+    (a binary state) the same bit turned S_IDLE into S_W and the engine wrote the March background over the bank while it
+    served, a legitimate-looking run with no cause (FMEDA v2: tile / mbist, 2 faults). Expected: the bist_fail cause and the
+    pin at tile (1,1), the engine idle again (MBIST status: not active), a clean March pass afterwards."""
+    mesh = await setup(dut)
+    st = tile_sig(dut, N11, "u_bank.u_bist.state")
+    await RisingEdge(dut.clk)
+    await ReadWrite()
+    v = int(st.value)
+    assert v == 1, f"M28: the engine is not idle (state 0x{v:x})"
+    st.value = v | 0b00010                                         # S_W set beside S_IDLE
+    await mesh.tick(3)
+    c = await mesh.causes()
+    bist = await mesh.reg_read(N11, REG_MBIST)
+    assert (c[N11] >> CAUSE_BIST) & 1 == 1 and mesh.pins()[N11] == 1 and all(c[k] == 0 for k in range(mesh.N) if k != N11), \
+        f"M28: bist_fail expected at tile (1,1): causes {causes_str(c)}"
+    assert int(st.value) == 1 and (bist & 1) == 0, f"M28: the engine did not return to idle (state 0x{int(st.value):x}, MBIST 0x{bist:08x})"
+    await mesh.reg_write(N11, REG_MBIST, 1)                        # the start clears the engine's fail (a level into the cause register),
+    await mesh.tick(2)                                             # then the cause is cleared
+    await mesh.clear_errors(N11)
+    n = 0
+    while not (await mesh.reg_read(N11, REG_MBIST) & 2):
+        n += 1
+        assert n < 4000, "M28: the March pass after the fault did not finish"
+    bist = await mesh.reg_read(N11, REG_MBIST)
+    c = await mesh.causes()
+    assert (bist & 0xE) == 0x2 and c[N11] == 0, f"M28: the March pass after the fault: status 0x{bist:08x} cause 0x{c[N11]:06x}"
+    fc.sample_flag("bist_fail")
+    dut._log.info("M28: an illegal MBIST state (two bits set) raised bist_fail and the pin at tile (1,1) in the cycle it appeared; "
+                  "the engine returned to idle and a clean March pass followed")

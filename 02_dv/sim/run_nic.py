@@ -534,8 +534,9 @@ module link_pair #(parameter int XW = 2, YW = 2, BW = 16, WPF = 1,
   input logic in_valid, input logic [FWB-1:0] in_flit, output logic in_ready,
   output logic out_valid, output logic [FWB-1:0] out_flit, input logic out_ready,
   output logic l_valid, output logic [FWL-1:0] l_flit, output logic l_ready);
+  logic p_perr;
   link_packer #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_p (.clk(clk), .rst_n(rst_n), .core_valid(in_valid), .core_flit(in_flit),
-    .core_ready(in_ready), .link_valid(l_valid), .link_flit(l_flit), .link_ready(l_ready));
+    .core_ready(in_ready), .link_valid(l_valid), .link_flit(l_flit), .link_ready(l_ready), .err_clear(1'b0), .perr_sticky(p_perr));
   link_unpacker #(.XW(XW), .YW(YW), .BW(BW), .WPF(WPF)) u_u (.clk(clk), .rst_n(rst_n), .link_valid(l_valid), .link_flit(l_flit),
     .link_ready(l_ready), .core_valid(out_valid), .core_flit(out_flit), .core_ready(out_ready));
 endmodule

@@ -60,12 +60,25 @@ module tb_neo_mac_core;
   logic                  abft_err_valid;
   logic                  abft_err_sticky;
   logic                  fault_inject;
+  // drop 0.44: the row's byte parities (the feeder forms them from the decoded buffer word), here from x_in, with one bit
+  // inverted while par_fault for T12; the array's row-input check (xpar_err_sticky) must stay clear otherwise
+  logic [XB-1:0]         x_par_ok, x_par;
+  logic                  par_fault;
+  logic                  xpar_err, xpar_err_sticky;
+  genvar pc;
+  generate
+    for (pc = 0; pc < XB; pc++) begin : g_xpar
+      assign x_par_ok[pc] = ^x_in[pc*XW +: XW];
+    end
+  endgenerate
+  assign x_par = x_par_ok ^ {{(XB-1){1'b0}}, par_fault};
 
   neo_mac_core #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .NCHK(NCHK),
                  .FAULT_ROW(FR), .FAULT_COL(FC)) dut (
     .clk(clk), .rst_n(rst_n), .w_load(w_load), .w_in(w_in), .wc_in(wc_in),
-    .x_in(x_in), .valid_in(valid_in), .swap_in(swap_in), .sparse(sparse), .y(y), .y_chk(y_chk), .valid_out(valid_out),
+    .x_in(x_in), .x_par(x_par), .valid_in(valid_in), .swap_in(swap_in), .sparse(sparse), .y(y), .y_chk(y_chk), .valid_out(valid_out),
     .abft_clear(abft_clear), .abft_err(abft_err), .abft_err_valid(abft_err_valid), .abft_err_sticky(abft_err_sticky),
+    .xpar_err(xpar_err), .xpar_err_sticky(xpar_err_sticky),
     .fault_inject(fault_inject));
 
   // ---------------- golden vectors ----------------
@@ -174,7 +187,7 @@ module tb_neo_mac_core;
 
   // ---------------- drivers ----------------
   task automatic idle_inputs();
-    w_load = 1'b0; wc_in = '0; valid_in = 1'b0; swap_in = 1'b0; fault_inject = 1'b0; abft_clear = 1'b0; sparse = 1'b0;
+    w_load = 1'b0; wc_in = '0; valid_in = 1'b0; swap_in = 1'b0; fault_inject = 1'b0; abft_clear = 1'b0; sparse = 1'b0; par_fault = 1'b0;
     for (int j = 0; j < COLS; j++) w_in[j] = '0;
     x_in = '0;
   endtask
@@ -288,8 +301,8 @@ module tb_neo_mac_core;
     // ---- T1: clean dataflow ----
     clear_scoreboard();
     stream_rows(-1, 1'b0);
-    if (out_row == M && err_row == M && mismatches == 0 && err_rows == 0 && !abft_err_sticky) begin
-      $display("T1 dataflow  : %0d rows x %0d outputs + check column match golden, 0 ABFT flags -> PASS", M, COLS);
+    if (out_row == M && err_row == M && mismatches == 0 && err_rows == 0 && !abft_err_sticky && !xpar_err_sticky) begin
+      $display("T1 dataflow  : %0d rows x %0d outputs + check column match golden, 0 ABFT flags, row parity clean -> PASS", M, COLS);
     end else begin
       $display("T1 dataflow  : rows=%0d/%0d verdicts=%0d mismatches=%0d err_rows=%0d sticky=%0b -> FAIL (first mismatch row %0d col %0d delta %0d)",
                out_row, M, err_row, mismatches, err_rows, abft_err_sticky, first_mm_row, first_mm_col, first_mm_delta);
@@ -315,6 +328,19 @@ module tb_neo_mac_core;
     @(negedge clk);
     if (!abft_err_sticky) $display("T3 clear     : abft_err_sticky cleared -> PASS");
     else begin $display("T3 clear     : abft_err_sticky still set -> FAIL"); fails++; end
+
+    // ---- T12 (drop 0.44): a byte of a valid row presented with the wrong parity bit -> xpar_err_sticky, nothing on ABFT ----
+    @(negedge clk);
+    x_in = {XB*XW/8{8'h5a}}; valid_in = 1'b1; par_fault = 1'b1;
+    @(negedge clk);
+    valid_in = 1'b0; par_fault = 1'b0;
+    repeat (3) @(negedge clk);
+    if (xpar_err_sticky && !abft_err_sticky) $display("T12 row parity: byte 0 of a valid row with its parity bit inverted -> xpar_err_sticky, ABFT silent -> PASS");
+    else begin $display("T12 row parity: xpar_err_sticky=%0b abft_err_sticky=%0b -> FAIL", xpar_err_sticky, abft_err_sticky); fails++; end
+    abft_clear = 1'b1; @(negedge clk); abft_clear = 1'b0; @(negedge clk);
+    if (xpar_err_sticky) begin $display("T12 row parity: the sticky did not clear -> FAIL"); fails++; end
+    repeat (LAT + 8) @(negedge clk);          // the row streamed in leaves the array before the next test's scoreboard
+    clear_scoreboard();
 
     if (NCHK > 1) begin
       // ---- T6: the 2:4 sparse dataflow ----

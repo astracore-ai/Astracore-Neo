@@ -448,14 +448,15 @@ jobs:
         run: |
           set -o pipefail
           make faults FAULTS_N=$FAULTS_N FAULTS_SEED=$FAULTS_SEED FAULTS_WORKERS=4 FAULTS_BUDGET_MIN=$FAULTS_BUDGET_MIN 2>&1 | tee ci_logs/faults/faults.txt
-      # FMEDA v2 from this campaign (05_safety/build_fmeda.py --v2): the proofs from the latest formal report on ci-logs-formal
-      - name: FMEDA v2 from this campaign
+      # FMEDA v3 from this campaign (05_safety/build_fmeda.py --v3; drop 0.44, S1): the proofs from the latest formal report on
+      # ci-logs-formal; v2 (--v2) stays reproducible as the drop 0.43 baseline
+      - name: FMEDA v3 from this campaign
         if: ${{ !cancelled() }}
         run: |
           set -o pipefail
           pip install openpyxl >/dev/null
           git fetch -q origin ci-logs-formal && git show FETCH_HEAD:ci_logs/formal/formal_report.md > ci_logs/faults/formal_report.md || true
-          python3 safety/build_fmeda.py --v2 --faults ci_logs/faults --formal ci_logs/faults/formal_report.md --out ci_logs/faults 2>&1 | tee ci_logs/faults/fmeda.txt
+          python3 safety/build_fmeda.py --v3 --faults ci_logs/faults --formal ci_logs/faults/formal_report.md --out ci_logs/faults 2>&1 | tee ci_logs/faults/fmeda.txt
       - name: publish logs
         if: always()
         run: |

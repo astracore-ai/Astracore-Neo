@@ -4,7 +4,8 @@
 //     0x00 CTRL      w: bit0 prog_start (pulse), bit1 err_clear (pulse)
 //     0x01 STATUS    r: bit0 prog_done, bit1 drain_busy, bit2 core done (latched since last start),
 //                       bit8 parity, bit9 crc, bit10 array_abft, bit11 acc_abft, bit12 ctrl, bit13 seq,
-//                       bit14 rq, bit15 ecc_ue, bit16 ecc_ce
+//                       bit14 rq, bit15 ecc_ue, bit16 ecc_ce; drop 0.44: bit17 abuf_ce, bit18 abuf_ue, bit19 act_perr,
+//                       bit20 drain_ovf
 //     0x02 PROG_ADDR w: program entry index (0..31; 32 entries since drop 0.22)
 //     0x03 PROG_LO   w: low 32 bits of the entry
 //     0x04 PROG_HI   w: high 32 bits; writing it commits the 64-bit entry at PROG_ADDR
@@ -17,8 +18,8 @@
 //                       5 K; [7:0] the entry) -- drop 0.43, stream C2: the drain path's block after RQ_*, clear of the
 //                       telemetry window at 0x40 (stream B2)
 //     0x39 VEC_DATA  w: the 32-bit entry at VEC_ADDR, then VEC_ADDR + 1 (a table loads with one write per entry)
-//     0x05 ERR_MASK  w: bit i masks cause i from err_pin (bit 16 = watchdog)
-//     0x06 ERR_CAUSE r: latched causes (bit 16 = watchdog)
+//     0x05 ERR_MASK  w: bit i masks cause i from err_pin (bit 22 = watchdog since drop 0.44; 18 before)
+//     0x06 ERR_CAUSE r: latched causes (bit 22 = watchdog)
 //     0x07 WD_CTRL   w: bit0 enable, [31:8] window in cycles
 //     0x08 WD_KICK   w: any write kicks the watchdog
 //     0x09 SELFTEST  w: bit0 asserts the core's fault-injection hook (checker self-test on a dummy run)
@@ -33,7 +34,8 @@
 //                       utilization = 0x42 / 0x41), 0x43 feeder stall, 0x44 fetch wait, 0x45 drain, 0x46..0x4A link stall of
 //                       router output N, E, S, W, L, 0x4B bank read busy, 0x4C bank write busy (tile_telem.sv)
 //   The descriptor registers are kept twice and compared every cycle (cfg_err): a corrupted descriptor is a
-//   control-path fault the datapath checks cannot see. Causes: bits 0-17 (see neo_tile), bit 18 = watchdog.
+//   control-path fault the datapath checks cannot see. Causes: bits 0-21 (see neo_tile), bit 22 = watchdog (drop 0.44:
+//   bits 18 .. 21 are abuf_ce, abuf_ue, act_perr, drain_ovf; the watchdog was bit 18).
 //   Timing: writes take effect one cycle after the bus cycle (CTRL pulses are one cycle wide); a read
 //   issued in the cycle after a CTRL clear still returns the pre-clear state; after CTRL.start the DMA
 //   engine leaves its done state two cycles later (poll STATUS.prog_done low, then high); the same holds
@@ -69,8 +71,8 @@ module host_if #(
   output logic [11:0] vec_addr,
   output logic [31:0] vec_wdata,
   // error signaling and self-test
-  output logic [18:0] err_mask,
-  input  logic [18:0] err_cause,
+  output logic [22:0] err_mask,
+  input  logic [22:0] err_cause,
   output logic [3:0]  partition,
   output logic [15:0] prio,               // drop 0.43: the router's priority map (0x0C)
   output logic        tel_snap,           // drop 0.43: telemetry snapshot / clear (TEL_CTRL, one-cycle pulses)
@@ -91,7 +93,7 @@ module host_if #(
   input  logic        prog_done,
   input  logic        drain_busy,
   input  logic        core_done,
-  input  logic [8:0]  flags,           // parity, crc, array, acc, ctrl, seq, rq, ecc_ue, ecc_ce
+  input  logic [12:0] flags,           // parity, crc, array, acc, ctrl, seq, rq, ecc_ue, ecc_ce, abuf_ce, abuf_ue, act_perr, drain_ovf (0.44)
   // testbench hook (drop 0.35; DV_HOOKS = 1): cfg[dv_cfg_idx] XOR dv_cfg_mask (the primary copy only) at the falling edge
   input  logic        dv_cfg_flip,
   input  logic [4:0]  dv_cfg_idx,
@@ -123,7 +125,7 @@ module host_if #(
           8'h02: prog_waddr <= h_wdata[PAW-1:0];
           8'h03: prog_lo <= h_wdata;
           8'h04: begin prog_wdata <= {h_wdata, prog_lo}; prog_we <= 1'b1; end
-          8'h05: err_mask <= h_wdata[18:0];
+          8'h05: err_mask <= h_wdata[22:0];
           8'h0B: partition <= h_wdata[3:0];
           8'h0C: prio <= h_wdata[15:0];
           8'h40: begin tel_snap <= h_wdata[0]; tel_clear <= h_wdata[1]; end
@@ -144,10 +146,10 @@ module host_if #(
       end
       if (h_re) begin
         case (h_addr)
-          8'h01: h_rdata <= {15'd0, flags[8], flags[7:0], 5'd0, done_latched, drain_busy, prog_done};
+          8'h01: h_rdata <= {11'd0, flags[12:9], flags[8], flags[7:0], 5'd0, done_latched, drain_busy, prog_done};
           8'h02: h_rdata <= 32'(prog_waddr);
-          8'h05: h_rdata <= {13'd0, err_mask};
-          8'h06: h_rdata <= {13'd0, err_cause};
+          8'h05: h_rdata <= {9'd0, err_mask};
+          8'h06: h_rdata <= {9'd0, err_cause};
           8'h0B: h_rdata <= {28'd0, partition};
           8'h0C: h_rdata <= {16'd0, prio};
           8'h0A: h_rdata <= {bist_fail_addr, 8'd0, bist_fail_ce, bist_fail, bist_done, bist_active};

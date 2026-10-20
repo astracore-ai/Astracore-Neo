@@ -79,6 +79,31 @@
 //   cycle and, in the cycle a row is presented (valid_q), inb_q / a0_q against inb_dq / a0_dq and the leaf's latched
 //   address (neo_mem_rf RBQ = 1: rb_addr_q, the word rb_data shows) against addr_dq. A flip in any of them raises ctrl_err
 //   in the cycle the row is presented.
+//
+//   Drop 0.44 (S1) -- SECDED on the buffer, and the row presented from a register with a parity bit per byte.
+//   FMEDA v2 measured the buffer's cells at 0 % coverage (28.5 of the core's 29.6 FIT): a flipped activation byte reaches
+//   every column of the array and the check column alike, so the ABFT is blind to it by design. The leaf now holds a pair
+//   of coded entries, each entry as LPE = ceil(ROWS * XW / 32) lanes of (39,32) SECDED codewords as wbuf_mem stores its
+//   entries (ROWS = 32: 8 lanes per entry, 624 bits per pair word against 512, + 22 %; 16 x 8: 4 lanes, 312 bits). The
+//   DMA's write encodes each entry's lanes on the beat (2 x LPE encoders, one set per entry of the pair); the read decodes
+//   every lane of the pair word behind the registered port (2 x LPE decoders: the entry select and the sparse mode's
+//   upper entry both read decoded data) -- a single flipped bit of a lane is corrected on the way to the array (abuf_ce,
+//   sticky), two are detected (abuf_ue, sticky), each flag taken from the lanes the presented row uses (the selected
+//   entry; both in sparse mode) in the cycle a row inside the tile is presented, so a padding row's read of word 0 and the
+//   other entry of a dense pair raise nothing until they are used.
+//   The decode (~400 ps behind the macro's 218 on the ASAP7 SS proxy) does not fit in front of row 0's product stage
+//   (the macro's read, the entry select and the PE's 8 x 8 multiply were one path: neo_mac_core_v02 at 1,262 ps), so
+//   the decoded row is registered: x_vec, valid, swap, row_idx and first leave one cycle later than in drop 0.41 --
+//   swap at T+3, row m at T+4+m, busy low the cycle after the last row (B = T+M+4). The sequencer's constants hold (its
+//   shadow-load strobe still follows the last PE's adoption by two cycles, and the drain wait is counted from B), so
+//   every run costs one cycle more and nothing else moves: the accounting is in the drop log.
+//   The register that now holds the row (x_vec_q, XB bytes) is behind the code: a parity bit per byte (x_par, formed
+//   from the decoded and zeroed byte) is registered with it and travels through skew_in's chains to the array's row
+//   inputs, where neo_mac_core checks each byte of a valid row against its bit (act_perr) -- the same blind spot
+//   closed for the skew pipes (FMEDA v2: 79 undetected flips) and for this register. The duplicate mirrors the new
+//   stage (valid, swap, row index, first) and the comparator checks it like the stage before it.
+//   DV_HOOKS = 1: dv_fi_* flips a stored lane of the pair word at the falling edge (wbuf_mem's hook; the campaign's
+//   injector reaches the cells directly).
 module act_feeder #(
   parameter int ROWS       = 32,
   parameter int XW         = 8,
@@ -86,7 +111,8 @@ module act_feeder #(
   parameter int AW         = $clog2(ABUF_DEPTH),
   parameter int IDXW       = 9,
   parameter int NCHK       = 1,                       // the core's check columns: 4 = the sparse-capable core (drop 0.42)
-  parameter int XB         = (NCHK > 1) ? 2 * ROWS : ROWS   // bytes presented per row (derived)
+  parameter int XB         = (NCHK > 1) ? 2 * ROWS : ROWS,  // bytes presented per row (derived)
+  parameter int DV_HOOKS   = 0                        // 1: the stored-lane fault hook below exists (drop 0.44); 0: silicon, tied off
 )(
   input  logic                 clk,
   input  logic                 rst_n,
@@ -118,6 +144,7 @@ module act_feeder #(
   output logic                 busy,
   // stream out
   output logic [XB*XW-1:0]     x_vec,          // byte c at [c*XW +: XW]: dense, the entry in bytes 0..ROWS-1; sparse, the pair word
+  output logic [XB-1:0]        x_par,          // drop 0.44: even parity of byte c of x_vec, registered with it (checked at the array)
   output logic                 valid,
   output logic                 swap,
   output logic [IDXW-1:0]      row_idx,
@@ -126,16 +153,29 @@ module act_feeder #(
   input  logic                 ctrl_clear,
   output logic                 ctrl_err,
   output logic                 ctrl_err_sticky,
-  input  logic                 ctrl_fault_inject
+  input  logic                 ctrl_fault_inject,
+  output logic                 ecc_ce_sticky,  // drop 0.44: a lane of a presented row was corrected (abuf_ce)
+  output logic                 ecc_ue_sticky,  // ... or found uncorrectable (abuf_ue); both cleared by ctrl_clear
+  // testbench hook (drop 0.44; DV_HOOKS = 1): lane dv_fi_lane of the entry at dv_fi_addr XOR dv_fi_mask at the falling edge
+  // while dv_fi_flip -- a stored-codeword fault for the ECC flags (wbuf_mem's hook)
+  input  logic                 dv_fi_flip,
+  input  logic [AW-1:0]        dv_fi_addr,
+  input  logic [3:0]           dv_fi_lane,
+  input  logic [38:0]          dv_fi_mask
 );
   logic unused_cfg;                                 // the layer's output height is not needed here: cfg_oy0 / cfg_oy_n bound the run;
   assign unused_cfg = ^{cfg_ho, cfg_tile_pixels};   // of the tile size only the bits below AW reach the address (modulo 2^AW) (lint)
   localparam int EWB = ROWS * XW;                   // one entry: ROWS channels
-  localparam int BWD = 2 * EWB;                     // one word of the leaf: the pair of entries
-  logic [BWD-1:0] pair_wdata, pair_rdata;           // the leaf's write word and the pair read (port B, one cycle after the address)
+  localparam int LPE = (EWB + 31) / 32;             // drop 0.44: SECDED lanes per entry (8 at ROWS = 32, 4 at 16)
+  localparam int PWE = LPE * 32;                    // the entry padded to whole lanes (= EWB when ROWS * XW is a multiple of 32)
+  localparam int EWC = LPE * 39;                    // one coded entry
+  localparam int CW  = 2 * EWC;                     // one word of the leaf: the pair of coded entries (624 bits at ROWS = 32)
+  localparam int BWD = 2 * PWE;                     // the pair decoded, padded: entry e at [e*PWE +: PWE]
+  logic [CW-1:0]  pair_wdata, pair_rdata;           // the leaf's write word and the pair read (port B, one cycle after the address)
   logic [1:0]     pair_we;
+  logic [BWD-1:0] pair_fix;                         // the pair decoded (every lane corrected)
   logic [EWB-1:0] ent_rd;                           // the entry read (the delayed addr[0] selects it inside the pair)
-  logic [BWD-1:0] unused_ra, unused_bd;             // the leaf's unused read ports (port A tied off, no hooks here)
+  logic [CW-1:0]  unused_ra, unused_bd;             // the leaf's unused read ports (port A tied off, no backdoor here)
   logic [AW-2:0]  rb_addr_q;                        // drop 0.43: the leaf's latched port-B address (the pair now on pair_rdata)
   logic           sp;                               // drop 0.42: a sparse layer (NCHK = 4 only): addresses doubled, the pair presented
   generate
@@ -211,6 +251,16 @@ module act_feeder #(
   logic                 first_oq;
   logic                 inb_q;
   logic                 a0_q;                       // addr[0] of the row read: the entry inside the pair
+  // drop 0.44: the second stage -- the row decoded, selected and zeroed, registered with a parity bit per byte, and the
+  // control that travels with it
+  logic [XB*XW-1:0]     x_vec_d;                    // the row as presented next cycle (decoded entry, zeroed outside the tile)
+  logic [XB-1:0]        x_par_d;                    // its byte parities
+  logic [XB*XW-1:0]     x_vec_q;
+  logic [XB-1:0]        x_par_q;
+  logic                 valid_q2;
+  logic                 swap_q2;
+  logic [IDXW-1:0]      idx_q2;
+  logic                 first_q2;
 
   assign valid_g  = running && !tok;
   assign row_end  = (ox == cfg_wo - 1);
@@ -219,42 +269,126 @@ module act_feeder #(
   assign addr     = addr_raw ^ {{(AW-1){1'b0}}, ctrl_fault_inject};
   assign arow_nx  = arow + sw;
 
-  assign busy    = running || valid_q;              // out_pending: the last row is still in the output register
-  assign swap    = swap_q;
-  assign valid   = valid_q;
-  assign row_idx = idx_q;
-  assign first   = first_oq;
+  assign busy    = running || valid_q || valid_q2;  // out_pending: the last row is still in the output stages
+  assign swap    = swap_q2;
+  assign valid   = valid_q2;
+  assign row_idx = idx_q2;
+  assign first   = first_q2;
+  assign x_vec   = x_vec_q;
+  assign x_par   = x_par_q;
 
   // the leaf (drop 0.40): abuf_we writes the entry abuf_waddr[0] of the pair abuf_waddr[AW-1:1], abuf_we2 the pair's
   // upper entry in the same cycle (the upper entry takes abuf_we2's data when both address it, as before). The two
   // entries are packed in their own blocks, each variable with exactly one driver and a default (the pack / unpack
   // pattern of wbuf_mem: a loop that assigns slices of one vector from an unpacked array port is what every simulator
   // evaluates alike). Drop 0.41: read on port B (registered), port A tied off.
-  logic [EWB-1:0] ent_w, ent_w2;                    // the two entries packed
+  logic [PWE-1:0] ent_w, ent_w2;                    // the two entries packed, padded to whole lanes (drop 0.44)
+  logic [EWC-1:0] coded, coded2;                    // the two entries after coding
+  logic [5:0]     wp   [LPE], wp2  [LPE];
+  logic           wop  [LPE], wop2 [LPE];
+  logic [38:0]    rcw  [2*LPE];                     // the pair's lanes as read
+  logic [31:0]    rfix [2*LPE];                     // ... corrected
+  logic           ce   [2*LPE];
+  logic           ue   [2*LPE];
+  always_comb begin
+    ent_w = '0;
+    for (int c = 0; c < ROWS; c++) ent_w[c*XW +: XW] = abuf_wdata[c];
+  end
+  always_comb begin
+    ent_w2 = '0;
+    for (int c = 0; c < ROWS; c++) ent_w2[c*XW +: XW] = abuf_wdata2[c];
+  end
   generate
-    for (genvar c = 0; c < ROWS; c++) begin : g_pack
-      assign ent_w[c*XW +: XW]  = abuf_wdata[c];
-      assign ent_w2[c*XW +: XW] = abuf_wdata2[c];
+    for (genvar l = 0; l < LPE; l++) begin : g_enc
+      ecc39_enc u_enc  (.d(ent_w[l*32 +: 32]),  .p(wp[l]),  .op(wop[l]));
+      ecc39_enc u_enc2 (.d(ent_w2[l*32 +: 32]), .p(wp2[l]), .op(wop2[l]));
+      assign coded[39*l +: 39]  = {wop[l],  wp[l],  ent_w[l*32 +: 32]};
+      assign coded2[39*l +: 39] = {wop2[l], wp2[l], ent_w2[l*32 +: 32]};
+    end
+    for (genvar l = 0; l < 2*LPE; l++) begin : g_dec           // every lane of the pair word decoded behind the read
+      assign rcw[l] = pair_rdata[39*l +: 39];
+      ecc39_dec u_dec (.d(rcw[l][31:0]), .p(rcw[l][37:32]), .op(rcw[l][38]), .d_out(rfix[l]), .ce(ce[l]), .ue(ue[l]));
+      assign pair_fix[32*l +: 32] = rfix[l];
     end
   endgenerate
-  assign pair_wdata = {abuf_we2 ? ent_w2 : ent_w, ent_w};
+  assign pair_wdata = {abuf_we2 ? coded2 : coded, coded};
   assign pair_we    = {abuf_we2 || (abuf_we && abuf_waddr[0]), abuf_we && !abuf_waddr[0]};
-  neo_mem_rf #(.W(BWD), .D(ABUF_DEPTH/2), .G(2), .RB(1), .RBQ(1), .DV_HOOKS(0)) u_mem (
+  // the fault hook (DV_HOOKS = 1): lane dv_fi_lane of entry dv_fi_addr[0] XOR dv_fi_mask, as a word-wide flip of the pair;
+  // at DV_HOOKS = 0 the leaf's hook ports are constants and nothing of this exists
+  logic [CW-1:0]    fi_mask_w;
+  logic [AW-2:0]    fi_pair;
+  logic             fi_en;
+  generate
+    if (DV_HOOKS != 0) begin : g_dvd
+      logic [31:0] fi_shift;
+      assign fi_shift  = 32'd39 * (32'(LPE) * 32'(dv_fi_addr[0]) + 32'(dv_fi_lane));
+      assign fi_mask_w = CW'(dv_fi_mask) << fi_shift;
+      assign fi_en     = dv_fi_flip && (32'(dv_fi_lane) < LPE);
+      assign fi_pair   = dv_fi_addr[AW-1:1];
+    end else begin : g_nodvd
+      assign fi_mask_w = '0; assign fi_en = 1'b0; assign fi_pair = '0;
+      logic unused_dv;
+      assign unused_dv = ^{dv_fi_flip, dv_fi_addr, dv_fi_lane, dv_fi_mask};
+    end
+  endgenerate
+  neo_mem_rf #(.W(CW), .D(ABUF_DEPTH/2), .G(2), .RB(1), .RBQ(1), .DV_HOOKS(DV_HOOKS)) u_mem (
     .clk(clk),
     .we(pair_we), .waddr(abuf_waddr[AW-1:1]), .wdata(pair_wdata),
     .ra_addr('0), .ra_data(unused_ra),
     .rb_en(valid_g), .rb_addr(addr[AW-1:1]), .rb_data(pair_rdata), .rb_addr_q(rb_addr_q),
     .bd_we('0), .bd_addr('0), .bd_wdata('0), .bd_rdata(unused_bd),
-    .fi_en(1'b0), .fi_or(1'b0), .fi_addr('0), .fi_mask('0));
-  assign ent_rd = a0_q ? pair_rdata[BWD-1:EWB] : pair_rdata[EWB-1:0];
+    .fi_en(fi_en), .fi_or(1'b0), .fi_addr(fi_pair), .fi_mask(fi_mask_w));
+  assign ent_rd = a0_q ? pair_fix[PWE +: EWB] : pair_fix[0 +: EWB];
   generate
     for (genvar c = 0; c < ROWS; c++) begin : g_out
-      assign x_vec[c*XW +: XW] = (valid_q && inb_q) ? ent_rd[c*XW +: XW] : '0;
+      assign x_vec_d[c*XW +: XW] = (valid_q && inb_q) ? ent_rd[c*XW +: XW] : '0;
     end
     for (genvar c = ROWS; c < XB; c++) begin : g_out_hi      // NCHK = 4: the pair's upper entry, in sparse mode only
-      assign x_vec[c*XW +: XW] = (valid_q && inb_q && sp) ? pair_rdata[c*XW +: XW] : '0;
+      assign x_vec_d[c*XW +: XW] = (valid_q && inb_q && sp) ? pair_fix[PWE + (c-ROWS)*XW +: XW] : '0;
+    end
+    for (genvar c = 0; c < XB; c++) begin : g_par            // the parity bit of each byte presented (drop 0.44)
+      assign x_par_d[c] = ^x_vec_d[c*XW +: XW];
+    end
+    if (PWE > EWB) begin : g_pad                            // lanes padded above the entry: the pad bits read back as zero
+      logic unused_pad;
+      assign unused_pad = ^{pair_fix[BWD-1:PWE+EWB], pair_fix[PWE-1:EWB]};
     end
   endgenerate
+  // the ECC flags (drop 0.44): the lanes the presented row uses -- the selected entry, both entries in sparse mode -- in the
+  // cycle a row inside the tile is presented (a padding row reads word 0 and uses nothing of it)
+  logic any_ce, any_ue, row_used;
+  assign row_used = valid_q && inb_q;
+  always_comb begin
+    any_ce = 1'b0; any_ue = 1'b0;
+    for (int l = 0; l < 2*LPE; l++) begin
+      if (row_used && (sp || (a0_q ? (l >= LPE) : (l < LPE)))) begin
+        any_ce = any_ce | ce[l];
+        any_ue = any_ue | ue[l];
+      end
+    end
+  end
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      ecc_ce_sticky <= 1'b0; ecc_ue_sticky <= 1'b0;
+    end else begin
+      if (ctrl_clear) begin ecc_ce_sticky <= 1'b0; ecc_ue_sticky <= 1'b0; end
+      if (any_ce) ecc_ce_sticky <= 1'b1;
+      if (any_ue) ecc_ue_sticky <= 1'b1;
+    end
+  end
+  // the second stage: the row and its byte parities, the control travelling with them
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      x_vec_q <= '0; x_par_q <= '0; valid_q2 <= 1'b0; swap_q2 <= 1'b0; idx_q2 <= '0; first_q2 <= 1'b0;
+    end else begin
+      x_vec_q  <= x_vec_d;
+      x_par_q  <= x_par_d;
+      valid_q2 <= valid_q;
+      swap_q2  <= swap_q;
+      idx_q2   <= idx_q;
+      first_q2 <= first_oq;
+    end
+  end
 
   // the primary's tree operands: digit k of the per-run operand selects 0, x, 2x or 3x of the static factor x (shifted by
   // 2k); tree 0 adds kx - p (as kx + ~p, the +1 in the carry row's free bit 0 below), tree 1 adds q
@@ -384,6 +518,11 @@ module act_feeder #(
   logic                 inb_dq;                     // inb_q
   logic                 a0_dq;                      // a0_q
   logic [AW-2:0]        addr_dq;                    // the generated pair address, registered with the duplicate's valid: the leaf's rb_addr_q
+  // drop 0.44: the duplicate's copies of the second stage (the row's control as presented)
+  logic                 valid_dq2;
+  logic                 swap_dq2;
+  logic [IDXW-1:0]      idx_dq2;
+  logic                 first_dq2;
 
   assign valid_gd  = running_d && !tok_d;
   assign row_end_d = (ox_d == cfg_wo - 1);
@@ -490,12 +629,24 @@ module act_feeder #(
       if (valid_gd) addr_dq <= addr_d[AW-1:1];
     end
   end
+  always_ff @(posedge clk or negedge rst_n) begin   // drop 0.44: the second stage's copies
+    if (!rst_n) begin
+      valid_dq2 <= 1'b0; swap_dq2 <= 1'b0; idx_dq2 <= '0; first_dq2 <= 1'b0;
+    end else begin
+      valid_dq2 <= valid_dq;
+      swap_dq2  <= swap_dq;
+      idx_dq2   <= idx_dq;
+      first_dq2 <= first_doq;
+    end
+  end
 
-  // drop 0.43: first_oq every cycle; inb_q, a0_q and the leaf's latched address in the cycle the row is presented
+  // drop 0.43: first_oq every cycle; inb_q, a0_q and the leaf's latched address in the cycle the row is presented;
+  // drop 0.44: the second stage (the control as presented) against its copies every cycle
   assign ctrl_err = (valid_q != valid_dq) || (swap_q != swap_dq) || (idx_q != idx_dq) ||
                     (valid_g && ((addr != addr_d) || (inb != inb_d))) ||
                     (first_oq != first_doq) ||
-                    (valid_q && ((inb_q != inb_dq) || (a0_q != a0_dq) || (rb_addr_q != addr_dq)));
+                    (valid_q && ((inb_q != inb_dq) || (a0_q != a0_dq) || (rb_addr_q != addr_dq))) ||
+                    (valid_q2 != valid_dq2) || (swap_q2 != swap_dq2) || (idx_q2 != idx_dq2) || (first_q2 != first_dq2);
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n)          ctrl_err_sticky <= 1'b0;

@@ -26,6 +26,10 @@
 //   RBQ = 1: rb_addr_q) above ra0_q -- for the core's lockstep comparator (neo_core compares it with the duplicate
 //   sequencer's w_raddr delayed by one cycle). A wrong entry read is a valid codeword of another row, so the SECDED lanes
 //   cannot see it, and the ABFT check weight travels with its row, so the check column cannot either.
+//   Drop 0.44 (S1, review finding 1): the ECC flags only on a real read. The port is enabled every cycle, so the lanes of
+//   whatever word the idle address names were decoded every cycle and set the stickies; in silicon the array powers up
+//   random (a random 39-bit word is a valid codeword with probability 2^-7), so wbuf_ue was set after every reset. rd_q
+//   (neo_core's w_load_q: the cycle the entry read for a shadow load is on rdata) now qualifies the flags.
 module wbuf_mem #(
   parameter int COLS  = 32,
   parameter int WW    = 8,
@@ -48,6 +52,7 @@ module wbuf_mem #(
   input  logic [WW+IW-1:0]      wdata2 [COLS],
   input  logic [NCHK*WCW-1:0]   wcdata2,
   input  logic [WAW-1:0]        raddr,
+  input  logic                  rd_q,                     // drop 0.44: the entry on rdata is a real read (the flags' qualifier)
   output logic [WW+IW-1:0]      rdata [COLS],
   output logic [NCHK*WCW-1:0]   rcdata,
   output logic [WAW-1:0]        raddr_q,                  // drop 0.43: the address of the entry on rdata / rcdata (the leaf's latch, ra0_q)
@@ -184,8 +189,8 @@ module wbuf_mem #(
     end else begin
       ra0_q <= raddr[0];
       if (err_clear) begin ecc_ce_sticky <= 1'b0; ecc_ue_sticky <= 1'b0; end
-      if (any_ce) ecc_ce_sticky <= 1'b1;        // the read happens every cycle: flags follow any read, one cycle after its address
-      if (any_ue) ecc_ue_sticky <= 1'b1;
+      if (rd_q && any_ce) ecc_ce_sticky <= 1'b1;   // the port reads every cycle; the flags follow the reads the core makes (drop 0.44)
+      if (rd_q && any_ue) ecc_ue_sticky <= 1'b1;
     end
   end
 endmodule
