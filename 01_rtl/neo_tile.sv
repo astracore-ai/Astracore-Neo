@@ -20,6 +20,10 @@
 //   clock still off, clock on, iso off). Nothing is retained: a tile comes back from reset and re-loads its program,
 //   descriptor and tables.
 //   In a tile_mesh tile_clk_en = 1, iso_en = 0 and router_rst_n = rst_n (the tile of drop 0.42).
+//   Drop 0.44 (review #8), test mode: test_en (the scan shift's test enable, a port of neo_top and of every wrapper, tied 0
+//   in every testbench) reaches the te pin of all twelve neo_icg of the tile -- the domain's, the datapath's, the two
+//   requantizers', the NIC's two, the router's five, the two DMA engines' -- so a DFT flow forces every gated clock on from
+//   one pin; mesh_ctrl makes the generated tile resets follow rst_n directly while it is high. Nothing else changes with it.
 //   Drop 0.43, dual-tile lockstep: drain_crc_last / drain_msg_cnt, the NIC's last drain message's CRC and its message
 //   count, for the control plane's comparison of a lockstep pair (top_ctrl.sv / mesh_ctrl.sv).
 //   Drop 0.43 (stream C2): the core's vector unit -- its tables written through host_if's VEC_ADDR / VEC_DATA, its residual
@@ -50,6 +54,7 @@ module neo_tile #(
   input  logic          router_rst_n,          // drop 0.43: the router's reset -- the mesh's, so a fused / sleeping tile forwards
   input  logic          tile_clk_en,           // drop 0.43: the switchable domain's clock enable (1: running)
   input  logic          iso_en,                // drop 0.43: its outputs isolated (clamped) toward the router and the control plane
+  input  logic          test_en,               // drop 0.44 (review #8): test mode (scan shift) -- every clock gate of the tile forced on
   input  logic [XW-1:0] my_x,          // this tile's mesh coordinates (drop 0.35): strapped by tile_mesh from the generate indices,
   input  logic [YW-1:0] my_y,          // so every tile is one and the same module (parameters MY_X / MY_Y made 64 distinct modules)
   // mesh links (router ports 0..3 = N, E, S, W), packed: port p is bit p / bits [p*FWL +: FWL] (drop 0.35: no unpacked
@@ -110,7 +115,7 @@ module neo_tile #(
   /*verilator hier_block*/                   // drop 0.35: with --hierarchical, this module is verilated once as its own library
   // the switchable domain (drop 0.43): its clock (gated by tile_clk_en) and its outputs before the isolation cells
   logic                  clk_t;
-  neo_icg u_icg_tile (.clk(clk), .en(tile_clk_en), .te(1'b0), .gclk(clk_t));
+  neo_icg u_icg_tile (.clk(clk), .en(tile_clk_en), .te(test_en), .gclk(clk_t));
   logic [31:0]           h_rdata_t;
   logic                  err_pin_t, prog_done_t, drain_busy_t, done_t, crc_err_t, array_abft_sticky_t, acc_abft_sticky_t;
   logic                  ctrl_err_sticky_t, seq_err_sticky_t, rq_err_sticky_t, ecc_ce_t, ecc_ue_t, wbuf_ce_t, wbuf_ue_t, rq_tbl_perr_t;
@@ -195,7 +200,7 @@ module neo_tile #(
   endgenerate
 
   noc_router #(.XW(XW), .YW(YW), .DW(DWL), .FW(FWL), .DV_HOOKS(DV_HOOKS)) u_router (
-    .clk(clk), .rst_n(router_rst_n), .my_x(my_x), .my_y(my_y), .prio(rt_prio),
+    .clk(clk), .rst_n(router_rst_n), .test_en(test_en), .my_x(my_x), .my_y(my_y), .prio(rt_prio),
     .in_valid(r_in_valid), .in_flit(r_in_flit), .in_ready(r_in_ready),
     .out_valid(r_out_valid), .out_flit(r_out_flit), .out_ready(r_out_ready),
     .err_clear(rt_err_clear), .parity_err_sticky(parity_err), .stage_en(rt_stage_en),
@@ -271,7 +276,7 @@ module neo_tile #(
                    .err_clear(err_clear), .prog_ce_sticky(prog_ce), .prog_ue_sticky(prog_ue),
                    .dv_fi_flip(dv_prog_flip), .dv_fi_idx(dv_fi_idx[PAW-1:0]), .dv_fi_mask(dv_fi_mask[38:0]));
   tile_dma #(.XW(XW), .YW(YW), .PDEPTH(PDEPTH), .PAW(PAW), .DV_HOOKS(DV_HOOKS)) u_dma (
-    .clk(clk_t), .rst_n(rst_n),
+    .clk(clk_t), .rst_n(rst_n), .test_en(test_en),
     .pc_out(dma_pc), .ins_in(dma_ins), .prog_start(prog_start), .fsm_err(dma_fsm_err),
     .prog_done(prog_done_t), .prog_busy(prog_busy),
     .cmd_valid(cmd_valid), .cmd_op(cmd_op), .cmd_x(cmd_x), .cmd_y(cmd_y), .cmd_addr(cmd_addr), .cmd_len(cmd_len),
@@ -285,7 +290,7 @@ module neo_tile #(
   logic [15:0] d_cmd_base; logic signed [15:0] d_tiles_ready;
   logic        dma_err, dma_err_sticky, cfg_err, cfg_err_sticky, ctrl_path_err, iso_err;
   tile_dma #(.XW(XW), .YW(YW), .PDEPTH(PDEPTH), .PAW(PAW), .DV_HOOKS(DV_HOOKS)) u_dma_dup (
-    .clk(clk_t), .rst_n(rst_n),
+    .clk(clk_t), .rst_n(rst_n), .test_en(test_en),
     .pc_out(dma_pc_d), .ins_in(dma_ins), .prog_start(prog_start), .fsm_err(dma_fsm_err_d),
     .prog_done(d_prog_done), .prog_busy(d_prog_busy),
     .cmd_valid(d_cmd_valid), .cmd_op(d_cmd_op), .cmd_x(d_cmd_x), .cmd_y(d_cmd_y), .cmd_addr(d_cmd_addr), .cmd_len(d_cmd_len),
@@ -310,7 +315,7 @@ module neo_tile #(
   tile_nic #(.XW(XW), .YW(YW), .NX(NX), .NSRC(NX * NY), .BW(BW),
              .ROWS(ROWS), .COLS(COLS), .WCW(WCW), .IDXW(IDXW), .AW(AW), .WAW(WAW), .BAW(BAW), .PW(PW), .NCHK(NCHK),
              .DFD(ACC_ROWS), .FETCH_TIMEOUT(FETCH_TIMEOUT), .DV_HOOKS(DV_HOOKS)) u_nic (
-    .clk(clk_t), .rst_n(rst_n), .my_x(my_x), .my_y(my_y),
+    .clk(clk_t), .rst_n(rst_n), .test_en(test_en), .my_x(my_x), .my_y(my_y),
     .rx_valid(nic_rx_valid), .rx_flit(nic_rx_flit), .rx_ready(nic_rx_ready),
     .tx_valid(nic_tx_valid), .tx_flit(nic_tx_flit), .tx_ready(nic_tx_ready),
     .b_we(b_we), .b_wrow(b_wrow), .b_wmask(b_wmask), .b_wdata(b_wdata), .b_re(b_re), .b_rrow(b_rrow), .b_rdata(b_rdata), .b_rvalid(b_rvalid),
@@ -365,7 +370,7 @@ module neo_tile #(
   assign cfg_sparse = cfg[18][0];
   neo_core #(.ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH),
              .NCHK(NCHK)) u_core (
-    .clk(clk_t), .rst_n(rst_n),
+    .clk(clk_t), .rst_n(rst_n), .test_en(test_en),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(abuf_we2), .abuf_wdata2(abuf_wdata2),
     .wbuf_we(wbuf_we), .wbuf_waddr(wbuf_waddr), .wbuf_wdata(wbuf_wdata), .wcbuf_wdata(wcbuf_wdata),
     .wbuf_we2(wbuf_we2), .wbuf_wdata2(wbuf_wdata2), .wcbuf_wdata2(wcbuf_wdata2),

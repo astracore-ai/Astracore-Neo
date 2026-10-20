@@ -43,6 +43,7 @@ module tile_dma #(
 )(
   input  logic          clk,
   input  logic          rst_n,
+  input  logic          test_en,        // drop 0.44 (review #8): test mode -- the clock gate forced on (neo_icg.te)
   // program memory outside this module (prog_mem, SECDED), read at pc_out
   output logic [PAW-1:0] pc_out,
   input  logic [63:0]   ins_in,
@@ -115,7 +116,7 @@ module tile_dma #(
   // the gated clock (drop 0.43)
   logic gclk;
   assign cg_en = ((state != S_IDLE) && (state != S_END)) || prog_start || !rst_n;
-  neo_icg u_icg (.clk(clk), .en(cg_en), .te(1'b0), .gclk(gclk));
+  neo_icg u_icg (.clk(clk), .en(cg_en), .te(test_en), .gclk(gclk));
 
   generate
     if (DV_HOOKS != 0) begin : g_dv

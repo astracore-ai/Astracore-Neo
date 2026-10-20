@@ -15,7 +15,7 @@ module fpga_top (
     assign in_valid[i] = 1'b0; assign in_flit[i] = '0; assign out_ready[i] = 1'b1;
   end
   neo_tile_axil #(.ROWS(16), .COLS(8), .ACC_ROWS(64), .ABUF_DEPTH(256), .WBUF_DEPTH(512), .BANK_DEPTH(4096)) u_tile (
-    .clk(clk), .rst_n(rst_n),
+    .clk(clk), .rst_n(rst_n), .test_en(1'b0),
     .s_awaddr(s_axi_awaddr), .s_awvalid(s_axi_awvalid), .s_awready(s_axi_awready), .s_wdata(s_axi_wdata), .s_wstrb(s_axi_wstrb),
     .s_wvalid(s_axi_wvalid), .s_wready(s_axi_wready), .s_bresp(s_axi_bresp), .s_bvalid(s_axi_bvalid), .s_bready(s_axi_bready),
     .s_araddr(s_axi_araddr), .s_arvalid(s_axi_arvalid), .s_arready(s_axi_arready), .s_rdata(s_axi_rdata), .s_rresp(s_axi_rresp),

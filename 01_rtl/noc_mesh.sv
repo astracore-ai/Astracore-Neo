@@ -35,7 +35,7 @@ module noc_mesh #(
         localparam int n = y * NX + x;
         logic [4:0] stage_en;                // (the output stages' clock enables: not observed on the bare mesh)
         noc_router #(.XW(XW), .YW(YW), .DW(DW), .FW(FW)) u_r (
-          .clk(clk), .rst_n(rst_n), .my_x(XW'(x)), .my_y(YW'(y)), .prio(prio),
+          .clk(clk), .rst_n(rst_n), .test_en(1'b0), .my_x(XW'(x)), .my_y(YW'(y)), .prio(prio),   // (the bare mesh: no test mode)
           .in_valid(i_valid[n]), .in_flit(i_flit[n]), .in_ready(i_ready[n]),
           .out_valid(o_valid[n]), .out_flit(o_flit[n]), .out_ready(o_ready[n]),
           .err_clear(err_clear), .parity_err_sticky(parity_err[n]), .stage_en(stage_en),

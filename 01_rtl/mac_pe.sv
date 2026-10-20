@@ -24,9 +24,11 @@
 //   one level deeper than the data PE's 8 x 8, the select lines fanned across 14-bit rows), the array's slowest path (the
 //   last data PE's x_out into the check PE: 1,421 ps on the 32 x 32 array in run 180) -- now 1,061 ps, under the data
 //   PE's own 1,095 (synth_report_drop043.md). The data PE (WW = XW) is the always block of drop 0.42 unchanged.
-// fault_inject: adds +1 to this cycle's product (a single-point MAC fault) -- for safety
-// verification of the ABFT checker only; tied to 0 on every PE except the one selected
-// by FAULT_ROW/FAULT_COL in systolic_array. Remove or fuse off before tape-out.
+// fault_inject: adds +1 to this cycle's product (a single-point MAC fault) on the one PE systolic_array selects by
+// FAULT_ROW / FAULT_COL, tied to 0 on every other. It is the checker self-test hook the spec keeps (spec_sheet_v2_1.md
+// section 8: SELFTEST, host_if 0x09, asserts it on a dummy run so the island sees the ABFT causes and the error pin rise,
+// cocotb M8 / T4) and the hook LBIST -- inserted by the implementation team's DFT flow, not in this RTL -- reports
+// through; it stays in the netlist (drop 0.44, review #8: the earlier note said to remove it before tape-out).
 module mac_pe #(
   parameter int XW = 8,                    // activation width (signed)
   parameter int WW = 8,                    // weight width (signed); wider for the ABFT check column

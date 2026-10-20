@@ -64,6 +64,8 @@ module neo_top #(
 )(
   input  logic                    clk,         // the mesh clock
   input  logic                    rst_n,
+  input  logic                    test_en,     // drop 0.44 (review #8): test mode (scan shift, clk domain) -- every clock gate of every tile
+                                               // and of the bridge column's routers forced on, the tiles' generated resets following rst_n
   input  logic                    aclk,        // the AXI clock: the control plane and every bridge's AXI side
   input  logic                    aresetn,
   // control plane: AXI4-Lite slave
@@ -232,7 +234,7 @@ module neo_top #(
           neo_tile #(.XW(XW), .YW(YW), .NX(NC), .NY(NY), .WPF(WPF), .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS),
                      .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT),
                      .BIST_WORDS(BIST_WORDS), .NCHK(NCHK), .DV_HOOKS(0)) u_t (
-            .clk(clk), .rst_n(t_rst_n[n]), .router_rst_n(rst_n), .tile_clk_en(t_clk_en[n]), .iso_en(t_iso_en[n]),
+            .clk(clk), .rst_n(t_rst_n[n]), .router_rst_n(rst_n), .tile_clk_en(t_clk_en[n]), .iso_en(t_iso_en[n]), .test_en(test_en),
             .my_x(XW'(x)), .my_y(YW'(y)),
             .in_valid(t_in_valid), .in_flit(t_in_flit), .in_ready(t_in_ready),
             .out_valid(t_out_valid), .out_flit(t_out_flit), .out_ready(t_out_ready),
@@ -267,7 +269,7 @@ module neo_top #(
           end
           logic [4:0] r_stage_en;            // (the output stages' clock enables: not observed here)
           noc_router #(.XW(XW), .YW(YW), .DW(DWL), .FW(FWL), .DV_HOOKS(0)) u_rt (
-            .clk(clk), .rst_n(rst_n), .my_x(XW'(NX)), .my_y(YW'(y)), .prio(prio_c),
+            .clk(clk), .rst_n(rst_n), .test_en(test_en), .my_x(XW'(NX)), .my_y(YW'(y)), .prio(prio_c),
             .in_valid(r_in_valid), .in_flit(r_in_flit), .in_ready(r_in_ready),
             .out_valid(r_out_valid), .out_flit(r_out_flit), .out_ready(r_out_ready),
             .err_clear(rtr_clear[y]), .parity_err_sticky(rtr_parity[y]), .stage_en(r_stage_en),
@@ -472,7 +474,7 @@ module neo_top #(
     .a_clk(aclk), .a_rst_n(aresetn), .a_req(rqa_req), .a_req_data(rqa_data), .a_busy(rqa_busy), .a_done(rqa_done), .a_rsp_data(rqa_rsp),
     .b_clk(clk), .b_rst_n(rst_n), .b_req(rqb_req), .b_req_data(rqb_data), .b_done(rqb_done), .b_rsp_data(rqb_rsp));
   mesh_ctrl #(.NX(NX), .NY(NY), .NLS(LS_PAIRS)) u_mctrl (
-    .clk(clk), .rst_n(rst_n), .rq_req(rqb_req), .rq_data(rqb_data), .rq_done(rqb_done), .rq_rsp(rqb_rsp),
+    .clk(clk), .rst_n(rst_n), .test_en(test_en), .rq_req(rqb_req), .rq_data(rqb_data), .rq_done(rqb_done), .rq_rsp(rqb_rsp),
     .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata), .rtr_clear(rtr_clear), .rtr_parity(rtr_parity),
     .prog_done(t_prog_done), .drain_busy(t_drain_busy), .err_pin(t_err_pin), .en_req(en_req_c), .en_eff(en_eff),
     .tile_rst_n(t_rst_n), .tile_clk_en(t_clk_en), .tile_iso_en(t_iso_en), .tile_pwr_en(tile_pwr_en), .pwr_state(pwr_st_c),

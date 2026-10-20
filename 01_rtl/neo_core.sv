@@ -56,6 +56,7 @@ module neo_core #(
 )(
   input  logic                  clk,
   input  logic                  rst_n,
+  input  logic                  test_en,      // drop 0.44 (review #8): test mode -- the datapath's and the requantizers' clock gates forced on
   // DMA write ports
   input  logic                  abuf_we,
   input  logic [AW-1:0]         abuf_waddr,
@@ -251,7 +252,7 @@ module neo_core #(
     else        busy_q <= {busy_q[2:0], busy};
   end
   assign dp_en = busy || (busy_q != 4'd0) || abuf_we || abuf_we2 || err_clear || !rst_n;
-  neo_icg u_icg_dp (.clk(clk), .en(dp_en), .te(1'b0), .gclk(clk_dp));
+  neo_icg u_icg_dp (.clk(clk), .en(dp_en), .te(test_en), .gclk(clk_dp));
 
   // the vector unit (drop 0.43): the accumulator's drain port is the sequencer's during its drain and the unit's after it
   // (the two never overlap: the unit starts on the sequencer's done); vec_on, latched at go, says this descriptor runs the
@@ -319,14 +320,14 @@ module neo_core #(
   endgenerate
   logic rq_cg_en, rq_cg_en_d;                // the requantizers' clock enables (whole signals: neosim connects no output to a bit)
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq (
-    .clk(clk), .rst_n(rst_n),
+    .clk(clk), .rst_n(rst_n), .test_en(test_en),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
     .in_valid(rq_in_valid), .in_acc(rq_in_p), .out_valid(rq_valid), .out_q(rq_q),
     .err_clear(err_clear), .tbl_perr_sticky(rq_tbl_perr_sticky), .tbl_fault_inject(rq_tbl_fault_inject), .cg_en(rq_cg_en));
   logic rq_tbl_perr_d;
   requant #(.COLS(COLS), .PW(PW), .MW(16)) u_rq_dup (
-    .clk(clk), .rst_n(rst_n),
+    .clk(clk), .rst_n(rst_n), .test_en(test_en),
     .tbl_we(rq_tbl_we), .tbl_addr(rq_tbl_addr), .tbl_mult(rq_tbl_mult), .tbl_shift(rq_tbl_shift), .tbl_zp(rq_tbl_zp),
     .relu(rq_relu),
     .in_valid(rq_in_valid), .in_acc(rq_in), .out_valid(rq_valid_d), .out_q(rq_q_d),

@@ -48,6 +48,13 @@ two bridge nodes at x = 2: row 0 the memory and the host bridge, row 1 an unused
       of layer 1's INT8 rows read as pair-pixels of 16 channels, on tile 2, INT32 into its bank) as two commands of the
       ring with their register images in the command memory, one doorbell; two completion records in order with their
       tags, entries played and done times from the global timer, an interrupt per completion; both layers bit-exact
+  T9  (drop 0.44, review #12) a lockstep pair enabled by one LS_PAIR write after the two tiles' drain counts differ (tile a
+      ran a layer alone): no spurious LS_ERR -- mesh_ctrl lets the pair's indices settle before its enable takes effect
+  T10 (drop 0.44, review #17) a host-bridge master that ends a write burst early (WLAST on the second of four announced
+      beats): the burst ends there, BRESP is SLVERR, the bridge's ERR shows host, and the next write and read-back are clean
+      (the bridge ignored WLAST before and waited for the missing beats forever)
+  T11 (drop 0.44, review #8) test mode: with a tile powered down (its clock gated, its reset asserted by the sequencer),
+      test_en forces its gated clock on and makes its reset follow rst_n; released, the sequencer's values return
   Since drop 0.43 T3b also measures the memory bridge against a DRAM-like memory (32 aclk to a burst's first R beat, 16 to
   B; the model pipelines reads as a DRAM controller does) -- the drains landing in memory and four 4,092-word fetches at
   once -- and checks the bridge's wait counters (RD_WAIT / WR_WAIT) against the cycles this file counts on the AXI ports.
@@ -55,7 +62,7 @@ two bridge nodes at x = 2: row 0 the memory and the host bridge, row 1 an unused
 import os
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ReadOnly, ClockCycles, Lock
+from cocotb.triggers import RisingEdge, ReadOnly, ClockCycles, Lock, with_timeout
 from cocotb.utils import get_sim_time
 import numpy as np
 from neo_golden import pack_words, direct_conv, ins, sbits, OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR, OP_GO, OP_WAIT_DONE, OP_END
@@ -216,12 +223,13 @@ class AxiHost:
         d.s_axi_wvalid.value = 0
         d.s_axi_wlast.value = 0
 
-    async def write_beats(self, addr, beats, size=None, burst=1, axid=3):
-        """One burst: AW and W driven concurrently (the master must not wait for AWREADY before WVALID); returns (bresp, bid)."""
+    async def write_beats(self, addr, beats, size=None, burst=1, axid=3, awlen_beats=None):
+        """One burst: AW and W driven concurrently (the master must not wait for AWREADY before WVALID); returns (bresp, bid).
+        awlen_beats (drop 0.44, T10): AWLEN + 1 announced to the slave when it differs from the beats sent (a short burst)."""
         d = self.d
         size = (BB.bit_length() - 1) if size is None else size
         async with self.lock:
-            aw = cocotb.start_soon(self._aw(addr, len(beats), size, burst, axid))
+            aw = cocotb.start_soon(self._aw(addr, len(beats) if awlen_beats is None else awlen_beats, size, burst, axid))
             await self._w(beats)
             await aw
             d.s_axi_bready.value = 1
@@ -433,6 +441,7 @@ class Top:
 
     async def reset(self, tile_en=None):
         d = self.d
+        d.test_en.value = 0                               # the test mode off (drop 0.44; T9 raises it)
         d.aresetn.value = 0
         d.rst_n.value = 0
         await ClockCycles(d.aclk, 4)
@@ -1224,3 +1233,114 @@ async def t8_command_queue(dut):
     dut._log.info(f"T8: two commands ({len(img1)} + {len(img2)} image entries) from one doorbell: layer 1 on tiles 0, 1 (K-split, INT8) "
                   f"complete {seen[0]:.0f} ns after it (done at timer {tdone[0] - t_lo0} aclk), layer 2 on tile 2 {seen[1]:.0f} ns (timer "
                   f"{tdone[1] - t_lo0}); records in order with their tags, an interrupt each; both layers bit-exact")
+
+
+@cocotb.test()
+async def t9_lockstep_single_write(dut):
+    """T9 (drop 0.44, review #12): LS_PAIR is one word {enable, a, b} whose bits cross to the mesh clock independently; a
+    single write that configures and enables a pair at once showed the enable with the old indices for a clock, so the
+    comparison started from the wrong tile's drain count. Here tile a has drained once more than tile b (a layer alone)
+    before one write enables the pair: mesh_ctrl now takes the enable three clocks after the indices, so the pair's layer
+    ends with LS_ERR clear -- before the fix a spurious mismatch of the message counts."""
+    from neo_backend import compile_layer, compile_pair
+    top = await setup(dut)
+    a, b = node(0, 0), node(1, 0)
+    x, wgt, ref, act, wts = conv_data()
+    await top.greg_w(G_BR + 0x0, WIN_BASE & 0xFFFFFFFF)
+    await top.greg_w(G_BR + 0x4, WIN_BASE >> 32)
+    WA, WB = 0x2000, 0x3F1
+    top.mem.load(WIN_BASE + 4 * WA, act)
+    top.mem.load(WIN_BASE + 4 * WB, wts)
+    lp0 = compile_layer("t9a", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(BX, 0), act_base=WA, w_bank=(BX, 0), w_base=WB,
+                        owner=(0, 0), shares=1, out_base=R0)
+    t0 = await run_layer(top, lp0)                        # tile a's drain count is 1, tile b's 0
+    await top.greg_w(G_IRQ_MASK, 0x17)
+    await top.greg_w(G_LS_PAIR, (1 << 31) | (b << 8) | a)  # one write: indices and enable together
+    lp = compile_pair("t9", 6, 6, CIN, 7, 3, 1, 1, ROWS, COLS, NX, NY, act_bank=(BX, 0), act_base=WA, w_bank=(BX, 0), w_base=WB,
+                      pair=((0, 0), (1, 0)), out_base=R0)
+    t = await run_layer(top, lp)
+    await ClockCycles(dut.aclk, 12)
+    lse = await top.greg_r(G_LS_ERR)
+    st = await top.greg_r(G_IRQ_STATUS)
+    assert lse == 0 and not st & 0x8 and int(dut.err.value) == 0, f"T9 spurious lockstep error: LS_ERR {lse} IRQ_STATUS 0x{st:x}"
+    for n in (a, b):
+        words, r = await top.host.read_words(n, R0, lp.M * (COLS + 1))
+        assert r == OKAY
+        check(to_image(words, ref), ref, f"T9 tile {n} of the pair")
+    await top.greg_w(G_LS_PAIR, 0)
+    dut._log.info(f"T9: tile {a} alone in {t0:.0f} ns, then the pair enabled by one LS_PAIR write with unequal drain counts: "
+                  f"the pair's layer bit-exact in {t:.0f} ns, LS_ERR 0")
+
+
+@cocotb.test()
+async def t10_host_short_burst(dut):
+    """T10 (drop 0.44, review #17): the host bridge against a master that announces four W beats (AWLEN 3) and sends two,
+    the second with WLAST. The bridge ends the burst at the WLAST beat (its words written, the CRC flit sent), answers
+    SLVERR and sets host in its ERR register; cleared, the next write and read-back through it are clean. Before, WLAST
+    was ignored and the write channel waited for the two missing beats forever (every later transaction behind it)."""
+    top = await setup(dut)
+    n = node(0, 0)
+    words = [0x1000_0000 + i for i in range(2 * WPB)]
+    beats = [(sum((words[k * WPB + lane] & 0xFFFFFFFF) << (32 * lane) for lane in range(WPB)), (1 << BB) - 1) for k in range(2)]
+    resp = await with_timeout(top.host.write_beats(win_addr(n, 0), beats, awlen_beats=4), 20, "us")
+    assert resp == SLVERR, f"T10 short burst: BRESP {resp}, SLVERR expected"
+    await ClockCycles(dut.aclk, 8)
+    be = await top.br_err()
+    assert be == 1 << BR_HOST, f"T10 bridge ERR 0x{be:x}: host expected"
+    await top.greg_w(G_BR + 0xC, 0x1F)
+    await ClockCycles(dut.aclk, 4)
+    assert await top.br_err() == 0
+    got, r = await top.host.read_words(n, 0, 2 * WPB)   # the two beats sent were written
+    assert r == OKAY and got == words, f"T10 the short burst's beats: resp {r}, {sum(g != w for g, w in zip(got, words))} words differ"
+    rng = np.random.default_rng(44)
+    full = [int(v) for v in rng.integers(0, 1 << 32, size=4 * WPB)]
+    resps = await with_timeout(top.host.write_words(n, 64, full), 50, "us")
+    assert all(v == OKAY for v in resps), f"T10 the write after the short burst: {resps}"
+    got, r = await top.host.read_words(n, 64, len(full))
+    assert r == OKAY and got == full, "T10 read-back after the short burst"
+    await top.expect_clean([n])
+    assert await top.br_err() == 0 and int(dut.err.value) == 0
+    dut._log.info("T10: a 2-of-4-beat write burst ended at its WLAST with SLVERR and the bridge's host error; cleared, the next "
+                  "write and read-back clean")
+
+
+@cocotb.test()
+async def t11_test_mode(dut):
+    """T11 (drop 0.44, review #8): test_en, the scan shift's test enable, reaches every clock gate's te and mesh_ctrl's reset
+    bypass. Tile (1,0) is powered down (its clock enable low, its reset asserted by the sequencer): with test_en the tile's
+    gated clock runs and its reset follows rst_n (high); with test_en released the sequencer's values return. Nothing of
+    the tile's function is read here -- the port exists for the DFT flow, which this test shows it can drive."""
+    top = await setup(dut)
+    full = (1 << NT) - 1
+    off = node(1, 0)
+    tile = dut.g_y[0].g_x[1].g_tile.u_t                      # tile (1,0) of the generate
+    await top.greg_w(G_TILE_EN, full & ~(1 << off))
+    await top.wait_eff(full & ~(1 << off))
+    while await top.pwr_state(off) != PWR_OFF:
+        await ClockCycles(dut.aclk, 4)
+
+    async def sample(cycles=8):
+        """(tile_rst_n of the tile, the number of clk cycles in which its gated clock clk_t was high at the rising edge)."""
+        rst, high = None, 0
+        for _ in range(cycles):
+            await RisingEdge(dut.clk)
+            await ReadOnly()
+            rst = (int(dut.u_mctrl.tile_rst_n.value) >> off) & 1
+            high += int(tile.clk_t.value)
+        await RisingEdge(dut.clk)
+        return rst, high
+    rst0, clk0 = await sample()
+    assert rst0 == 0 and clk0 == 0, f"T11 powered down: tile_rst_n {rst0}, gated clock high in {clk0} of 8 cycles (expect 0, 0)"
+    dut.test_en.value = 1
+    await ClockCycles(dut.clk, 3)
+    rst1, clk1 = await sample()
+    assert rst1 == 1 and clk1 == 8, f"T11 test_en: tile_rst_n {rst1} (expect rst_n = 1), gated clock high in {clk1} of 8 cycles (expect 8)"
+    dut.test_en.value = 0
+    await ClockCycles(dut.clk, 3)
+    rst2, clk2 = await sample()
+    assert rst2 == 0 and clk2 == 0, f"T11 released: tile_rst_n {rst2}, gated clock high in {clk2} of 8 (expect 0, 0)"
+    await top.greg_w(G_TILE_EN, full)                       # back on, as T6
+    await top.wait_eff(full)
+    assert await top.treg_r(off, REG_ERR_CAUSE) == 0
+    dut._log.info("T11: test_en forced the powered-down tile's gated clock on and its reset to rst_n; released, the sequencer's "
+                  "clock-off and reset returned")

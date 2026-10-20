@@ -21,7 +21,7 @@ module tb_tile_mesh;
   logic [31:0] dv_obs [NX*NY];                                 // the tiles' observation words (drop 0.43), unobserved here
   logic [15:0] drain_crc_last [NX*NY], drain_msg_cnt [NX*NY];  // the tiles' lockstep pairs (drop 0.43), unobserved here
   tile_mesh #(.NX(NX), .NY(NY), .ROWS(ROWS), .COLS(COLS), .ACC_ROWS(64), .ABUF_DEPTH(256), .WBUF_DEPTH(512), .BANK_DEPTH(4096)) dut (
-    .clk(clk), .rst_n(rst_n), .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata), .err_pin(err_pin),
+    .clk(clk), .rst_n(rst_n), .test_en(1'b0), .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata), .err_pin(err_pin),
     .prog_done(prog_done), .drain_busy(drain_busy), .done(done), .parity_err(parity_err), .crc_err(crc_err),
     .array_abft_sticky(array_abft_sticky), .acc_abft_sticky(acc_abft_sticky), .ctrl_err_sticky(ctrl_err_sticky),
     .seq_err_sticky(seq_err_sticky), .rq_err_sticky(rq_err_sticky), .ecc_ce(ecc_ce), .ecc_ue(ecc_ue),

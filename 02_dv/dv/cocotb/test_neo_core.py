@@ -32,6 +32,7 @@ WCW = 8 + (ROWS - 1).bit_length() + 1                 # check-weight width
 EW = COLS * (8 + (2 if NCHK > 1 else 0)) + NCHK * WCW   # the weight entry (wbuf_mem's EW)
 LANES = (EW + 31) // 32                              # its SECDED lanes
 CIN = 3 * ROWS - 8                                   # 40 at 16 rows, 88 at 32
+ACC_ROWS = int(os.environ.get("NEO_ACC_ROWS", "64"))  # the accumulator's rows (drop 0.44, C15): must match the build's -GACC_ROWS
 CG = ["datapath", "requant", "requant_dup"]           # drop 0.43: the core's clock enables (cg_en bits 0..2)
 
 
@@ -168,7 +169,7 @@ async def run_conv(dut, x, wgt, k=3, s=1, p=1, ctrl_fault=False, seq_fault=False
     M = ho * wo
     for name in ("abuf_we", "wbuf_we", "go", "err_clear", "fault_inject", "ctrl_fault_inject", "rq_tbl_we", "rq_relu", "ext_valid",
                  "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "dv_wbuf_flip", "dv_wbuf_addr", "dv_wbuf_lane", "dv_wbuf_mask",
-                 "cfg_sparse", "vec_we", "rbuf_we", "rbuf_we2", "vec_ctrl_fault_inject", "vec_tbl_fault_inject"):
+                 "cfg_sparse", "vec_we", "rbuf_we", "rbuf_we2", "vec_ctrl_fault_inject", "vec_tbl_fault_inject", "test_en"):
         getattr(dut, name).value = 0
     dut.rst_n.value = 0
     for _ in range(3): await RisingEdge(dut.clk)
@@ -627,3 +628,29 @@ async def c13_vec_fault_hooks(dut):
     dut._log.info("C13: the vector unit's control fault -> vec_err alone, its table fault -> vec_perr alone (rows unchanged): "
                   + "; ".join(f"{h}: {c} cycles, {n} rows" for h, (c, n) in seen.items()))
     fc.report("funcov_neo_core.yml")
+
+
+@cocotb.test()
+async def c15_cfg_m_zero(dut):
+    """C15 (drop 0.44, review #13): cfg_m = 0 means ACC_ROWS rows -- the one meaning the vector unit already gave it. A 1x1
+    convolution of ACC_ROWS output pixels (8 x 8 at 64 rows, 16 x 32 at 512) run with cfg_m = 0 drains exactly ACC_ROWS rows,
+    bit-exact, flags clean. Before, the sequencer compared its drain count with a 32-bit cfg_m - 1 and never ended the
+    drain (the rows wrapped round until the watchdog)."""
+    start_clock(dut, "C15")
+    rng = np.random.default_rng(15)
+    h = 8 if ACC_ROWS <= 64 else 16
+    w = ACC_ROWS // h
+    x = rng.integers(-128, 128, size=(CIN, h, w), dtype=np.int64)
+    wgt = rng.integers(-128, 128, size=(7, CIN, 1, 1), dtype=np.int64)
+    ref = direct_conv(x, wgt, 1, 0)
+    rows, cycles, M, wo = await run_conv(dut, x, wgt, k=1, s=1, p=0, desc={"cfg_m": 0})
+    assert M == ACC_ROWS, f"the test's image gives {M} rows, not ACC_ROWS = {ACC_ROWS}"
+    assert len(rows) == M, f"{len(rows)} rows drained with cfg_m = 0, expected ACC_ROWS = {M}"
+    got = np.zeros_like(ref)
+    for m in range(M):
+        for c in range(7):
+            got[c, m // wo, m % wo] = rows[m][c]
+    assert np.array_equal(got, ref), "C15: mismatch against the golden convolution"
+    f = flags(dut)
+    assert not any(f.values()), f"C15 flags {f}"
+    dut._log.info(f"C15: cfg_m = 0 drained {len(rows)} rows (ACC_ROWS {ACC_ROWS}) bit-exact in {cycles} cycles, flags clean")

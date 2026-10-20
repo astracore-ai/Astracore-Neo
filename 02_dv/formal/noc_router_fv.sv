@@ -78,7 +78,7 @@ module noc_router_fv #(
   endgenerate
   logic [4:0]    stage_en;
   noc_router #(.XW(XW), .YW(YW), .DW(DW), .DV_HOOKS(0), .PRIO_N(PRIO_N)) u_dut (
-    .clk(clk), .rst_n(rst_n), .my_x(my_x), .my_y(my_y), .prio(prio),
+    .clk(clk), .rst_n(rst_n), .test_en(1'b0), .my_x(my_x), .my_y(my_y), .prio(prio),
     .in_valid(in_valid), .in_flit(in_flit), .in_ready(in_ready),
     .out_valid(out_valid), .out_flit(out_flit), .out_ready(out_ready),
     .err_clear(err_clear), .parity_err_sticky(sticky), .stage_en(stage_en),

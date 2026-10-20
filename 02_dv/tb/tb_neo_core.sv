@@ -55,7 +55,7 @@ module tb_neo_core;
 
   neo_core #(.ROWS(ROWS), .COLS(COLS), .XW(XW), .WW(WW), .PW(PW), .ACC_ROWS(ACC_ROWS),
              .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH)) dut (
-    .clk(clk), .rst_n(rst_n),
+    .clk(clk), .rst_n(rst_n), .test_en(1'b0),
     .abuf_we(abuf_we), .abuf_waddr(abuf_waddr), .abuf_wdata(abuf_wdata), .abuf_we2(1'b0), .abuf_wdata2(abuf_wdata),
     .wbuf_we(wbuf_we), .wbuf_waddr(wbuf_waddr), .wbuf_wdata(wbuf_wdata), .wcbuf_wdata(wcbuf_wdata),
     .wbuf_we2(1'b0), .wbuf_wdata2(wbuf_wdata), .wcbuf_wdata2(wcbuf_wdata),     // one entry per cycle here (the pair port is the DMA's, drop 0.32)
