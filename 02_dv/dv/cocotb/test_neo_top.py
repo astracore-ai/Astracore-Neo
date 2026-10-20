@@ -51,14 +51,31 @@ two bridge nodes at x = 2: row 0 the memory and the host bridge, row 1 an unused
   Since drop 0.43 T3b also measures the memory bridge against a DRAM-like memory (32 aclk to a burst's first R beat, 16 to
   B; the model pipelines reads as a DRAM controller does) -- the drains landing in memory and four 4,092-word fetches at
   once -- and checks the bridge's wait counters (RD_WAIT / WR_WAIT) against the cycles this file counts on the AXI ports.
+  T9  the runtime (drop 0.44, stream D3): a two-layer network (conv 20 -> 8 3x3 with bias and SiLU on the vector unit,
+      conv 8 -> 7 1x1 with bias) through the importer, the quantizer and the scheduler (sw/neo_run.py's build_two_layer),
+      driven by the runtime's exact register sequence -- its transaction trace, recorded by the Python runtime and equal
+      to the C runtime's (sw/neo_runtime.c; the comparison is run here when a C compiler is at hand, and in python-regress),
+      replayed on the control plane, the host bridge and the memory: the input filled into a bank through the host bridge
+      with the fence read, the weights in the memory window, each layer a command of the queue (its image written into the
+      command memory, the doorbell, the completion record and its interrupt, CC_HEAD advanced), every tile's telemetry
+      snapshot and causes read per step, the result read back through the host bridge and bit-exact against the
+      integer executor (the vector unit's and the requantizer's models)
+  T10 the YOLOv8-m layer group (the first conv stack b0 / b1 and the C2f block b2 at the published widths 48 / 96, a 12 x 12
+      crop of the 640^2 input, INT8 by the percentile calibration) through the same path: 27 commands of 2 .. 4 tile
+      programs (K-splits where the weight buffer asks for them, the bottlenecks' residuals through the residual buffer,
+      split / concat as placement), every tensor in the memory window; the output bit-exact against the integer executor,
+      the measured cycles and MAC utilization per step from the telemetry written to measured_t10.json (the perf model's
+      calibration, compiler/neo_perf_v3.py --calibrate)
 """
 import os
+import sys
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ReadOnly, ClockCycles, Lock
 from cocotb.utils import get_sim_time
 import numpy as np
 from neo_golden import pack_words, direct_conv, ins, sbits, OP_FETCH_A, OP_FETCH_W, OP_DRAIN_WR, OP_GO, OP_WAIT_DONE, OP_END
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "sw"))   # the runtime (drop 0.44): sw/neo_run.py
 
 NX, NY = int(os.environ.get("NEO_NX", "2")), int(os.environ.get("NEO_NY", "2"))
 ROWS, COLS = int(os.environ.get("NEO_ROWS", "16")), int(os.environ.get("NEO_COLS", "8"))
@@ -1224,3 +1241,158 @@ async def t8_command_queue(dut):
     dut._log.info(f"T8: two commands ({len(img1)} + {len(img2)} image entries) from one doorbell: layer 1 on tiles 0, 1 (K-split, INT8) "
                   f"complete {seen[0]:.0f} ns after it (done at timer {tdone[0] - t_lo0} aclk), layer 2 on tile 2 {seen[1]:.0f} ns (timer "
                   f"{tdone[1] - t_lo0}); records in order with their tags, an interrupt each; both layers bit-exact")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# drop 0.44 (stream D3): the runtime's networks, replayed from the Python runtime's transaction trace
+# ---------------------------------------------------------------------------------------------------------------------
+async def replay_trace(top, dut, lines, checker, limit_us=400):
+    """Replay a runtime trace (sw/neo_run.py's TraceDevice lines) on the chip top: register writes and reads (checked by
+    their tags through TraceReplay), polls, host-bridge loads and read-backs, memory loads and reads. Returns the read-back
+    words by name and the number of transactions."""
+    results, n = {}, 0
+    t_start = get_sim_time("ns")
+    for ln in lines:
+        if ln.startswith("#"):
+            continue
+        f = ln.split()
+        n += 1
+        if f[0] == "W":
+            addr = int(f[1], 16)
+            resp = await top.ctl.write(addr, int(f[2], 16))
+            assert resp == OKAY, f"write 0x{addr:05x}: resp {resp}"
+        elif f[0] == "R":
+            addr = int(f[1], 16)
+            v, resp = await top.ctl.read(addr)
+            assert resp == OKAY, f"read 0x{addr:05x} ({f[2]}): resp {resp}"
+            checker.on_read(addr, f[2], v)
+        elif f[0] == "P":
+            addr, mask, want = int(f[1], 16), int(f[2], 16), int(f[3], 16)
+            t0 = get_sim_time("ns")
+            while True:
+                v, resp = await top.ctl.read(addr)
+                assert resp == OKAY
+                if (v & mask) == want:
+                    break
+                if get_sim_time("ns") - t0 > limit_us * 1000:
+                    diag = [f"tile {k}: STATUS 0x{(await top.ctl.read(k * 1024 + REG_STATUS * 4))[0]:08x} cause 0x{(await top.ctl.read(k * 1024 + REG_ERR_CAUSE * 4))[0]:05x}" for k in range(NT)]
+                    raise AssertionError(f"poll 0x{addr:05x} & 0x{mask:x} == 0x{want:x}: 0x{v:x} after {limit_us} us; CQ_STATUS 0x{await top.greg_r(G_CQ_STATUS):x}; " + "; ".join(diag))
+                await ClockCycles(dut.aclk, 8)
+        elif f[0] == "H":
+            node, word, cnt = int(f[1]), int(f[2]), int(f[3])
+            words = [int(v, 16) for v in f[4:4 + cnt]]
+            assert all(r == OKAY for r in await top.host.write_words(node, word, words)), f"host write to tile {node} at {word}"
+        elif f[0] == "G":
+            node, word, cnt, name = int(f[1]), int(f[2]), int(f[3]), f[4]
+            words, r = await top.host.read_words(node, word, cnt)
+            assert r == OKAY, f"host read of tile {node} at {word} ({name}): RRESP {r}"
+            if name != "fence":
+                results[name] = words
+        elif f[0] == "M":
+            word, cnt = int(f[1]), int(f[2])
+            top.mem.load(WIN_BASE + 4 * word, [int(v, 16) for v in f[3:3 + cnt]])
+        elif f[0] == "N":
+            word, cnt, name = int(f[1]), int(f[2]), f[3]
+            await ClockCycles(dut.aclk, 64)                 # the last drains' AXI writes after the completion (the bridge posts them)
+            results[name] = [top.mem.word(WIN_BASE + 4 * (word + i)) for i in range(cnt)]
+        else:
+            raise AssertionError(f"trace line {ln[:60]}")
+    return results, n, get_sim_time("ns") - t_start
+
+
+def c_runtime_trace(img_path, mode="queue"):
+    """The C runtime's trace of an image file, or None when no C compiler builds it (the python-regress job compares them
+    unconditionally: sim/check_c_runtime.py)."""
+    import shutil
+    import subprocess
+    import tempfile
+    cc = shutil.which("gcc") or shutil.which("cc")
+    if cc is None:
+        return None
+    sw = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "sw")
+    if not os.path.isdir(sw):
+        sw = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "04_software")
+    exe = os.path.join(tempfile.gettempdir(), f"neo_test_runtime_{os.getpid()}")
+    try:
+        subprocess.run([cc, "-std=c99", "-O2", "-o", exe, os.path.join(sw, "neo_host.c"), os.path.join(sw, "neo_runtime.c"),
+                        os.path.join(sw, "test_runtime.c")], check=True, capture_output=True)
+        out = subprocess.run([exe, img_path, mode], check=True, capture_output=True, text=True).stdout
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    finally:
+        if os.path.exists(exe):
+            os.remove(exe)
+    return [ln for ln in out.splitlines() if not ln.startswith("#")]
+
+
+async def run_network(top, dut, img, tag, mode="queue"):
+    """A network image through the runtime: the Python trace (and the C runtime's, equal line for line when a compiler is
+    at hand), the replay on the RTL, every read-back against the integer executor's words."""
+    import neo_run
+    dev = neo_run.TraceDevice()
+    neo_run.Runtime(dev, img, mode=mode).run()
+    py = [ln for ln in dev.lines if not ln.startswith("#")]
+    img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"image_{tag.lower()}.txt")
+    img.write(img_path)
+    c = c_runtime_trace(img_path, mode)
+    c_note = "no C compiler: the C trace is compared in python-regress"
+    if c is not None:
+        assert c == py, f"{tag}: the C runtime's trace differs from the Python runtime's ({len(c)} vs {len(py)} lines)"
+        c_note = f"the C runtime's {len(c)} transactions identical"
+    chk = neo_run.TraceReplay(img, mode)
+    results, n, ns_ = await replay_trace(top, dut, dev.lines, chk)
+    for rd in img.reads:
+        got = [w & 0xFFFFFFFF for w in results[rd.name]]
+        exp = [w & 0xFFFFFFFF for w in rd.words]
+        if got != exp:
+            bad = [k for k in range(len(exp)) if got[k] != exp[k]]
+            raise AssertionError(f"{tag}: read-back '{rd.name}': {len(bad)}/{len(exp)} words differ, first at word {rd.addr + bad[0]}: "
+                                 f"0x{got[bad[0]]:08x} expected 0x{exp[bad[0]]:08x}")
+    await top.expect_clean()
+    return chk, n, ns_, c_note
+
+
+@cocotb.test()
+async def t9_runtime_two_layer(dut):
+    import neo_run
+    top = await setup(dut)
+    img = neo_run.build_two_layer()
+    chk, n, ns_, c_note = await run_network(top, dut, img, "T9")
+    cyc = chk.step_cycles()
+    recs = [chk.records[i] for i in range(len(img.steps))]
+    dut._log.info(f"T9: two layers through the runtime ({len(img.steps)} commands, {n} transactions replayed in {ns_:.0f} ns; {c_note}): "
+                  f"input through the host bridge with the fence, weights in the memory window, completion records "
+                  f"{[(r[0], r[1] >> 16, r[2] | (r[3] << 32)) for r in recs]} (tag, entries, timer), an interrupt each; "
+                  f"output read back through the host bridge bit-exact against the integer executor; telemetry per step "
+                  + ", ".join(f"{nm} {cy} cycles / {av} array-valid rows on {k} tile(s)" for nm, cy, av, k in cyc))
+
+
+@cocotb.test()
+async def t10_runtime_yolov8m_crop(dut):
+    import json
+    import neo_run
+    import neo_quant as nq
+    top = await setup(dut)
+    img = neo_run.build_yolo()
+    chk, n, ns_, c_note = await run_network(top, dut, img, "T10")
+    cyc = chk.step_cycles()
+    qn = img.meta["qn"]
+    rows, lines = nq.accuracy_report(qn, img.meta["calib"] + [{"x": img.meta["x"]}], img.geo.cols)
+    out = [r for r in rows if r[4]][0]
+    per_layer = {}
+    for nm, cy, av, k in cyc:
+        layer = nm.split("#")[0]
+        d = per_layer.setdefault(layer, dict(cycles=0, valid=0, steps=0, tiles=0))
+        d["cycles"] += cy; d["valid"] += av; d["steps"] += 1; d["tiles"] += k
+    total = sum(d["cycles"] for d in per_layer.values())
+    meas = dict(test="T10", build=f"{NX}x{NY} tiles of {ROWS}x{COLS}, WPF {os.environ.get('NEO_WPF', '1')}, clk {CLK_PS} ps, aclk {ACLK_PS} ps",
+                steps=[dict(name=nm, cycles=cy, array_valid=av, tiles=k, tel={str(t.node): chk.tel.get((i, t.node)) for t in img.steps[i].tiles})
+                       for i, (nm, cy, av, k) in enumerate(cyc)],
+                layers=per_layer, total_cycles=total, sim_ns=ns_, transactions=n)
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "measured_t10.json"), "w") as f:
+        json.dump(meas, f, indent=1)
+    dut._log.info(f"T10: the YOLOv8-m group (b0, b1, b2.c2f at a 12x12 crop; {len(img.steps)} commands, {sum(len(s.tiles) for s in img.steps)} tile "
+                  f"programs, {n} transactions in {ns_:.0f} ns; {c_note}): output bit-exact against the integer executor; PTQ INT8 against "
+                  f"FP32 on 5 inputs: output cos {out[1]:.5f}, SQNR {out[2]:.2f} dB, max |err| {out[3]:.2f} LSB; measured per layer (telemetry, "
+                  f"the step's longest tile window) " + ", ".join(f"{k} {d['cycles']} cycles / {d['valid']} rows on {d['steps']} steps"
+                                                                  for k, d in per_layer.items()) + f"; {total} cycles in all -> measured_t10.json")
