@@ -61,7 +61,7 @@ module tb_neo_mac_core;
   logic                  abft_err_sticky;
   logic                  fault_inject;
   // drop 0.44: the row's byte parities (the feeder forms them from the decoded buffer word), here from x_in, with one bit
-  // inverted while par_fault for T8; the array's row-input check (xpar_err_sticky) must stay clear otherwise
+  // inverted while par_fault for T12; the array's row-input check (xpar_err_sticky) must stay clear otherwise
   logic [XB-1:0]         x_par_ok, x_par;
   logic                  par_fault;
   logic                  xpar_err, xpar_err_sticky;
@@ -329,16 +329,16 @@ module tb_neo_mac_core;
     if (!abft_err_sticky) $display("T3 clear     : abft_err_sticky cleared -> PASS");
     else begin $display("T3 clear     : abft_err_sticky still set -> FAIL"); fails++; end
 
-    // ---- T8 (drop 0.44): a byte of a valid row presented with the wrong parity bit -> xpar_err_sticky, nothing on ABFT ----
+    // ---- T12 (drop 0.44): a byte of a valid row presented with the wrong parity bit -> xpar_err_sticky, nothing on ABFT ----
     @(negedge clk);
     x_in = {XB*XW/8{8'h5a}}; valid_in = 1'b1; par_fault = 1'b1;
     @(negedge clk);
     valid_in = 1'b0; par_fault = 1'b0;
     repeat (3) @(negedge clk);
-    if (xpar_err_sticky && !abft_err_sticky) $display("T8 row parity: byte 0 of a valid row with its parity bit inverted -> xpar_err_sticky, ABFT silent -> PASS");
-    else begin $display("T8 row parity: xpar_err_sticky=%0b abft_err_sticky=%0b -> FAIL", xpar_err_sticky, abft_err_sticky); fails++; end
+    if (xpar_err_sticky && !abft_err_sticky) $display("T12 row parity: byte 0 of a valid row with its parity bit inverted -> xpar_err_sticky, ABFT silent -> PASS");
+    else begin $display("T12 row parity: xpar_err_sticky=%0b abft_err_sticky=%0b -> FAIL", xpar_err_sticky, abft_err_sticky); fails++; end
     abft_clear = 1'b1; @(negedge clk); abft_clear = 1'b0; @(negedge clk);
-    if (xpar_err_sticky) begin $display("T8 row parity: the sticky did not clear -> FAIL"); fails++; end
+    if (xpar_err_sticky) begin $display("T12 row parity: the sticky did not clear -> FAIL"); fails++; end
     repeat (LAT + 8) @(negedge clk);          // the row streamed in leaves the array before the next test's scoreboard
     clear_scoreboard();
 

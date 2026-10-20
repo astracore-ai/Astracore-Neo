@@ -314,7 +314,7 @@ cocotb_tiles:
 	-$(call timed,tile32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile32
 	-$(call timed,core32) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core32
 	-$(call timed,tile_sp) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_sp
-# drop 0.44 (S1, review finding 1): the randomised-reset builds -- the core's C17 and the mesh's M1 with every array and
+# drop 0.44 (S1, review finding 1): the randomised-reset builds -- the core's C19 and the mesh's M1 with every array and
 # unreset register random (the ECC flags qualified by a real read; silicon powers up random)
 	-$(call timed,core_xinit) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb core_xinit
 	-$(call timed,tile_xinit) $(MAKE) -j$(MESH8_BUILD_JOBS) -C dv/cocotb tile_xinit

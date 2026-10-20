@@ -19,7 +19,7 @@
 #                               # and host bridge, row 1: an unused position), the AXI4-Lite control plane, clk 1.0 ns and aclk 1.6 ns
 #   make -C dv/cocotb top_sync  # the same build again with aclk == clk (both 1.0 ns, the same edges): the design does not depend on the ratio
 #   make -C dv/cocotb faults_tile / faults_core   # drop 0.43: the fault campaign's drivers (faults/; run by faults/run_faults.py)
-#   make -C dv/cocotb core_xinit / tile_xinit     # drop 0.44: C17 and M1 with every array and unreset register random (XINIT = 1)
+#   make -C dv/cocotb core_xinit / tile_xinit     # drop 0.44: C19 and M1 with every array and unreset register random (XINIT = 1)
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -159,11 +159,11 @@ core:
 	$(MAKE) TARGET=core NCHK=4 SIM_BUILD=sim_build_core COCOTB_RESULTS_FILE=results_core.xml
 core32:
 	$(MAKE) TARGET=core $(SILICON) NCHK=4 SIM_BUILD=sim_build_core32 COCOTB_RESULTS_FILE=results_core32.xml
-# drop 0.44 (S1): the randomised-reset builds -- C17 on the core (the ECC flags after reset with the arrays random, then C1),
+# drop 0.44 (S1): the randomised-reset builds -- C19 on the core (the ECC flags after reset with the arrays random, then C1),
 # M1 on the tile mesh (the program memory's flags and every cause clean through a layer)
 XINIT_TILE_TESTS ?= m1_fetch_compute_writeback
 core_xinit:
-	$(MAKE) TARGET=core NCHK=4 XINIT=1 TESTCASE=c17_reset_flags_x SIM_BUILD=sim_build_core_xinit COCOTB_RESULTS_FILE=results_core_xinit.xml
+	$(MAKE) TARGET=core NCHK=4 XINIT=1 TESTCASE=c19_reset_flags_x SIM_BUILD=sim_build_core_xinit COCOTB_RESULTS_FILE=results_core_xinit.xml
 tile_xinit:
 	$(MAKE) TARGET=tile XINIT=1 TESTCASE=$(XINIT_TILE_TESTS) SIM_BUILD=sim_build_tile_xinit COCOTB_RESULTS_FILE=results_tile_xinit.xml
 tile:

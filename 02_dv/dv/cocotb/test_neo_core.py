@@ -18,10 +18,10 @@ unit's buffer as the DMA's FETCH_A with arg 1 does), bit-exact against the convo
 requantizer's model; C13, the unit's two flags through its fault hooks (the duplicated control, the table parity); C14,
 a layer norm over the row's own lanes (the output tile's COLS channels: both passes on the held row -- RELOAD) clipped
 by CLAMP, the compiler's in-row norm epilogue, bit-exact against the unit's and the requantizer's models.
-Drop 0.44 (S1): C15, the activation buffer's SECDED through its hook (a data bit and a check bit of stored lanes corrected
+Drop 0.44 (S1): C18, the activation buffer's SECDED through its hook (a data bit and a check bit of stored lanes corrected
 on the way to the array, abuf_ce, bit-exact; two bits of one lane abuf_ue); C16, the registers the ABFT cannot see flipped
 in flight through the VPI -- the index / first delay lines (ctrl_err: the lines' parity), the skew chains and the feeder's
-row register and its parity bits (act_perr: the byte parity at the array's row inputs); C17 (the core_xinit build:
+row register and its parity bits (act_perr: the byte parity at the array's row inputs); C19 (the core_xinit build:
 --x-initial unique, +verilator+rand+reset+2): every ECC flag clear after reset with the arrays random and nothing written
 -- the weight buffer's and the activation buffer's flags are qualified by a real read (review finding 1) -- then C1 clean."""
 import os
@@ -654,13 +654,13 @@ async def c13_vec_fault_hooks(dut):
 
 
 @cocotb.test()
-async def c15_abuf_ecc(dut):
-    """C15 (drop 0.44, S1): the activation buffer's SECDED through its hook. One bit of a stored codeword flipped -- a data
+async def c18_abuf_ecc(dut):
+    """C18 (drop 0.44, S1): the activation buffer's SECDED through its hook. One bit of a stored codeword flipped -- a data
     bit of entry 5's lane 0 (channel tile 0, pixel 5), a check bit of entry 40's last lane (tile 1, pixel 4) -- is
     corrected on the way to the array: abuf_ce, the result bit-exact, nothing else (the ABFT silent: it would not have seen
-    the wrong byte). Two bits of one lane (entry 7) are uncorrectable: abuf_ue, the run completes (neosim's C13 pokes the
+    the wrong byte). Two bits of one lane (entry 7) are uncorrectable: abuf_ue, the run completes (neosim's C20 pokes the
     same cells directly)."""
-    start_clock(dut, "C15")
+    start_clock(dut, "C18")
     rng = np.random.default_rng(13)
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
     wgt = rng.integers(-128, 128, size=(7, CIN, 3, 3), dtype=np.int64)
@@ -671,15 +671,15 @@ async def c15_abuf_ecc(dut):
     for m in range(M):
         for c in range(7):
             got[c, m // wo, m % wo] = rows[m][c]
-    assert np.array_equal(got, ref), "C15: single-bit errors in the activation buffer were not corrected"
+    assert np.array_equal(got, ref), "C18: single-bit errors in the activation buffer were not corrected"
     f = flags(dut)
-    assert f["abuf_ce"] == 1 and not any(v for n, v in f.items() if n != "abuf_ce"), f"C15 single-bit flags {f}"
+    assert f["abuf_ce"] == 1 and not any(v for n, v in f.items() if n != "abuf_ce"), f"C18 single-bit flags {f}"
     fc.sample_flag("abuf_ce")
     rows, cycles2, M, wo = await run_conv(dut, x, wgt, abuf_flips=[(7, 0, (1 << 3) | (1 << 9))])
     f = flags(dut)
-    assert f["abuf_ue"] == 1 and len(rows) == M, f"C15 double-bit flags {f}, {len(rows)} rows"
+    assert f["abuf_ue"] == 1 and len(rows) == M, f"C18 double-bit flags {f}, {len(rows)} rows"
     fc.sample_flag("abuf_ue")
-    dut._log.info(f"C15: activation-buffer SECDED: a data bit and a check bit corrected on read (result bit-exact, abuf_ce, {cycles} cycles); "
+    dut._log.info(f"C18: activation-buffer SECDED: a data bit and a check bit corrected on read (result bit-exact, abuf_ce, {cycles} cycles); "
                   f"a double-bit lane error flagged uncorrectable (abuf_ue, run complete, {cycles2} cycles)")
     fc.report("funcov_neo_core.yml")
 
@@ -737,14 +737,14 @@ async def c16_act_path_flips(dut):
 
 
 @cocotb.test()
-async def c17_reset_flags_x(dut):
-    """C17 (drop 0.44, S1; review finding 1): with the model's arrays and unreset registers random (the core_xinit build:
+async def c19_reset_flags_x(dut):
+    """C19 (drop 0.44, S1; review finding 1): with the model's arrays and unreset registers random (the core_xinit build:
     --x-initial unique, +verilator+rand+reset+2 -- what silicon powers up with), every flag is clear after reset with
     nothing written, stays clear for 200 idle cycles, and C1 then runs bit-exact with the flags clean. Before this drop the
     weight buffer's lanes were decoded at the idle address every cycle, so wbuf_ue was set after every reset (a random
     39-bit word is a valid codeword with probability 2^-7); the activation buffer's SECDED and the program memory's flags
     are qualified by a real read the same way. On a build without the randomisation the test passes trivially."""
-    start_clock(dut, "C17")
+    start_clock(dut, "C19")
     for name in ("abuf_we", "wbuf_we", "go", "err_clear", "fault_inject", "ctrl_fault_inject", "rq_tbl_we", "rq_relu", "ext_valid",
                  "seq_fault_inject", "rq_fault_inject", "rq_tbl_fault_inject", "dv_wbuf_flip", "dv_abuf_flip", "cfg_sparse", "vec_we",
                  "rbuf_we", "rbuf_we2", "vec_ctrl_fault_inject", "vec_tbl_fault_inject", "abuf_we2", "wbuf_we2"):
@@ -757,7 +757,7 @@ async def c17_reset_flags_x(dut):
         await RisingEdge(dut.clk)
         await ReadOnly()
         f = flags(dut)
-        assert not any(f.values()), f"C17: a flag set {n} cycles after reset with nothing written: {f}"
+        assert not any(f.values()), f"C19: a flag set {n} cycles after reset with nothing written: {f}"
     await RisingEdge(dut.clk)
     rng = np.random.default_rng(9)
     x = rng.integers(-128, 128, size=(CIN, 6, 6), dtype=np.int64)
@@ -769,6 +769,6 @@ async def c17_reset_flags_x(dut):
         for c in range(7):
             got[c, m // wo, m % wo] = rows[m][c]
     f = flags(dut)
-    assert np.array_equal(got, ref) and not any(f.values()), f"C17: C1 after the random reset: flags {f}, rows {'exact' if np.array_equal(got, ref) else 'wrong'}"
-    dut._log.info(f"C17: every flag clear through 200 idle cycles after reset with the arrays random, then C1 bit-exact in {cycles} cycles, flags clean")
+    assert np.array_equal(got, ref) and not any(f.values()), f"C19: C1 after the random reset: flags {f}, rows {'exact' if np.array_equal(got, ref) else 'wrong'}"
+    dut._log.info(f"C19: every flag clear through 200 idle cycles after reset with the arrays random, then C1 bit-exact in {cycles} cycles, flags clean")
 

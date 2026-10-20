@@ -1497,8 +1497,8 @@ def tile_sig(dut, n, path):
 
 
 @cocotb.test()
-async def m26_packer_beat_parity(dut):
-    """M26 (drop 0.44, S1): the NIC's drain beat corrupted after its parity was formed. A bit of the drain FIFO's output
+async def m29_packer_beat_parity(dut):
+    """M29 (drop 0.44, S1): the NIC's drain beat corrupted after its parity was formed. A bit of the drain FIFO's output
     register (the leaf's rb_data: word 3 bit 7 of the row) is held at 1 through tile (0,0)'s drain of M1's result -- a
     stuck bit of the macro's output register, FMEDA v2's 6 undetected faults of tile_nic.macro. The beat's parity bit comes
     from the parity stored with the row at the push, so the beat the NIC presents has odd parity; the link packer now checks
@@ -1527,25 +1527,25 @@ async def m26_packer_beat_parity(dut):
         if mesh.prog_done(0) and not mesh.drain_busy(0):
             break
         n += 1
-        assert n < 60000, "M26: the program did not finish"
+        assert n < 60000, "M29: the program did not finish"
     await mesh.tick(40)
     c = await mesh.causes()
     pk = int(tile_sig(dut, 0, "pk_perr_t").value)
     assert (c[0] >> CAUSE_PARITY) & 1 == 1 and pk == 1 and mesh.status("parity_err", 0) == 0 and mesh.pins()[0] == 1, \
-        f"M26: parity cause expected from the packer at tile 0: causes {causes_str(c)}, pk_perr {pk}, router parity {mesh.status('parity_err', 0)}"
-    assert all((v >> 1) & 1 == 0 for v in c) and all(c[k] == 0 for k in range(1, mesh.N)), f"M26: unexpected causes {causes_str(c)}"
+        f"M29: parity cause expected from the packer at tile 0: causes {causes_str(c)}, pk_perr {pk}, router parity {mesh.status('parity_err', 0)}"
+    assert all((v >> 1) & 1 == 0 for v in c) and all(c[k] == 0 for k in range(1, mesh.N)), f"M29: unexpected causes {causes_str(c)}"
     got = to_image(await mesh.read_rows(N10, R0, 36), ref, 36)
     wrong = int((got != ref).sum())
     fc.sample_flag("pk_perr")
     fc.sample_flag("parity")
-    dut._log.info(f"M26: a stuck bit of the drain FIFO's output register ({forced} cycles forced): the packer's beat-parity check raised the "
+    dut._log.info(f"M29: a stuck bit of the drain FIFO's output register ({forced} cycles forced): the packer's beat-parity check raised the "
                   f"parity cause and the pin at tile 0 (the router's sticky clear, no CRC cause: the CRC covered the corrupted data); "
                   f"{wrong} of {ref.size} result values wrong in bank (1,0)")
 
 
 @cocotb.test()
-async def m27_drain_fifo_overflow(dut):
-    """M27 (drop 0.44, S1; review finding 3): a program that runs GO, WAIT_DONE, GO, WAIT_DONE with no DRAIN_WR between --
+async def m30_drain_fifo_overflow(dut):
+    """M30 (drop 0.44, S1; review finding 3): a program that runs GO, WAIT_DONE, GO, WAIT_DONE with no DRAIN_WR between --
     72 rows pushed into the drain FIFO of DFD = ACC_ROWS = 64 rows and never sent. The 65th push overwrites the oldest
     unsent row; before this drop silently (the DMA holds DRAIN_WR on drain_busy, not GO). Expected: the drain_ovf cause and
     the pin at tile 0, nothing else, the program complete."""
@@ -1561,9 +1561,9 @@ async def m27_drain_fifo_overflow(dut):
     await mesh.tick(10)
     c = await mesh.causes()
     assert c[0] == (1 << CAUSE_DRAIN_OVF) and mesh.pins()[0] == 1 and all(c[k] == 0 for k in range(1, mesh.N)), \
-        f"M27: drain_ovf alone expected at tile 0: causes {causes_str(c)}, pins {mesh.pins()}"
+        f"M30: drain_ovf alone expected at tile 0: causes {causes_str(c)}, pins {mesh.pins()}"
     fc.sample_flag("drain_ovf")
-    dut._log.info(f"M27: two GOs with no drain between (72 rows into the 64-row drain FIFO): drain_ovf cause and pin at tile 0 in {n} clocks, "
+    dut._log.info(f"M30: two GOs with no drain between (72 rows into the 64-row drain FIFO): drain_ovf cause and pin at tile 0 in {n} clocks, "
                   f"the other causes clean")
 
 

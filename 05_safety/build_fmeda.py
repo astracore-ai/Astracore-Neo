@@ -1121,7 +1121,7 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
         for c, v in enumerate([task, res, mode, tm, what, "; ".join(dict.fromkeys(cited.get(task, [])))], 1):
             fs_.cell(row=i, column=c, value=v).alignment = WRAP
     ev = wb.create_sheet("Evidence")
-    ev["A1"] = "Mechanism evidence: v1's fault-injection tests, and v2's (the campaign, C6)" + ("" if VER == "v2" else ", and v3's (drop 0.44: C15-C17, M26-M28, T8)")
+    ev["A1"] = "Mechanism evidence: v1's fault-injection tests, and v2's (the campaign, C6)" + ("" if VER == "v2" else ", and v3's (drop 0.44: C16, C18, C19, M28-M30, T12)")
     ev.append(["Mechanism", "Fault injected", "Test", "Log", "Drop"])
     for row in EVIDENCE_V1:
         ev.append(list(row))
@@ -1166,16 +1166,16 @@ def write_v2_xlsx(path, rows, faults, meta, run, formal, formal_title, core, chi
 
 EVIDENCE_V3 = [
     ("Activation buffer SECDED (drop 0.44)", "a data bit and a check bit of stored lanes flipped (corrected, abuf_ce); two bits of one lane (abuf_ue)",
-     "C15 (cocotb core), C13 (neosim run_conv_core --late)", "dv/cocotb, sim/", "0.44"),
+     "C18 (cocotb core), C20 (neosim run_conv_core --late)", "dv/cocotb, sim/", "0.44"),
     ("Activation path byte parity (drop 0.44)", "a flip of the feeder's row register, its parity bit, a skew chain stage, its parity chain (act_perr)",
-     "C16 (cocotb core), T8 (tb_neo_mac_core)", "dv/cocotb, tb/", "0.44"),
+     "C16 (cocotb core), T12 (tb_neo_mac_core)", "dv/cocotb, tb/", "0.44"),
     ("Index / first delay-line parity (drop 0.44)", "a flip of the lines' last stage, a stage in flight, the parity line (ctrl_err)", "C16", "dv/cocotb", "0.44"),
     ("Link packer beat-parity check (drop 0.44)", "a bit of the drain FIFO's output register stuck through the drain (the parity cause from the packer, the CRC consistent)",
-     "M26 (cocotb tile)", "dv/cocotb", "0.44"),
-    ("Drain FIFO overflow flag (drop 0.44, review finding 3)", "GO, WAIT_DONE, GO, WAIT_DONE with no drain: 72 rows into the 64-row FIFO (drain_ovf)", "M27", "dv/cocotb", "0.44"),
+     "M29 (cocotb tile)", "dv/cocotb", "0.44"),
+    ("Drain FIFO overflow flag (drop 0.44, review finding 3)", "GO, WAIT_DONE, GO, WAIT_DONE with no drain: 72 rows into the 64-row FIFO (drain_ovf)", "M30", "dv/cocotb", "0.44"),
     ("MBIST one-hot state (drop 0.44)", "a second bit of the idle state set (bist_fail that cycle, the engine back to idle, a clean pass after)", "M28", "dv/cocotb", "0.44"),
     ("ECC flags qualified by a real read (drop 0.44, review finding 1)", "the arrays and unreset registers random at reset (--x-initial unique, +verilator+rand+reset+2): no flag with nothing written",
-     "C17 (core_xinit), M1 (tile_xinit)", "dv/cocotb", "0.44"),
+     "C19 (core_xinit), M1 (tile_xinit)", "dv/cocotb", "0.44"),
 ]
 
 

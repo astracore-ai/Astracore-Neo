@@ -17,7 +17,7 @@ overlapped shadow loads, swap tokens, drain) is the sequencer RTL.
   C7  R10: primary sequencer's drain index corrupted -> lockstep comparator flags, ABFT silent
   C8  R10: primary requant input corrupted (bit 12, i.e. ~4 LSB of INT8) -> duplicated-stage comparator flags
   C9  weight-buffer ECC: flipped bits in stored codewords corrected on read, result bit-exact, ce flagged
-  C13 activation-buffer ECC (drop 0.44): flipped bits in stored lanes corrected on the way to the array, result bit-exact,
+  C20 activation-buffer ECC (drop 0.44): flipped bits in stored lanes corrected on the way to the array, result bit-exact,
       abuf_ce flagged, the ABFT silent; two bits of one lane abuf_ue
   C10 requant table parity: a corrupted multiplier is flagged on use
       (a bit-0 fault is masked by quantization and harmless, which is why the hook uses bit 12)
@@ -630,7 +630,7 @@ def late_tests(rng, fails, mult, shift, zp, x, wgt, ref):
           f"the output comparator stays silent ({core.p['rq_err_sticky'].v}) because a 1-LSB multiplier change is masked by "
           f"quantization, which is why the table needs its own parity; INT32 drain bit-exact -> {'PASS' if ok10 else 'FAIL'}")
     fails += not ok10
-    # C13 (drop 0.44): activation-buffer ECC -- a bit flipped in a stored activation lane is corrected on the way to the array
+    # C20 (drop 0.44): activation-buffer ECC -- a bit flipped in a stored activation lane is corrected on the way to the array
     core = NeoCore(16, 8, acc_rows=64, abuf_depth=256, wbuf_depth=512)
     got, acc_errs, _ = conv_on_core(core, x, wgt, 1, 1)         # loads the buffers
     # the leaf holds a pair of coded entries per word (entry e = pair e // 2, half e % 2), lane l of the half at
@@ -640,22 +640,22 @@ def late_tests(rng, fails, mult, shift, zp, x, wgt, ref):
     core.d.cells["top.u_dp.u_feeder.u_mem.mem[20]"].v ^= 1 << (34 + 39 * (lpe * 0 + 1))   # a check bit of entry 40 (pair 20, lower), lane 1
     core.p["err_clear"].v = 1; core.tick(); core.p["err_clear"].v = 0
     out, errs, _ = core.execute(6, 6, 6, 6, 1, 1, 3, 3, 36, 36)   # re-execute without rewriting the buffers
-    got13 = np.zeros_like(ref)
+    got20 = np.zeros_like(ref)
     for mm in range(36):
         for c in range(7):
-            got13[c, mm // 6, mm % 6] = out[mm, c]
-    ok13 = (np.array_equal(got13, ref) and core.p["abuf_ce_sticky"].v == 1 and core.p["abuf_ue_sticky"].v == 0
+            got20[c, mm // 6, mm % 6] = out[mm, c]
+    ok20 = (np.array_equal(got20, ref) and core.p["abuf_ce_sticky"].v == 1 and core.p["abuf_ue_sticky"].v == 0
             and core.p["array_abft_sticky"].v == 0 and core.p["act_perr_sticky"].v == 0)
-    print(f"  C13: activation-buffer ECC: a data bit and a check bit flipped in stored lanes: result "
-          f"{'bit-exact' if np.array_equal(got13, ref) else 'WRONG'}, abuf ce={core.p['abuf_ce_sticky'].v} ue={core.p['abuf_ue_sticky'].v}, "
-          f"ABFT silent={core.p['array_abft_sticky'].v == 0}, row parity clean={core.p['act_perr_sticky'].v == 0} -> {'PASS' if ok13 else 'FAIL'}")
-    fails += not ok13
+    print(f"  C20: activation-buffer ECC: a data bit and a check bit flipped in stored lanes: result "
+          f"{'bit-exact' if np.array_equal(got20, ref) else 'WRONG'}, abuf ce={core.p['abuf_ce_sticky'].v} ue={core.p['abuf_ue_sticky'].v}, "
+          f"ABFT silent={core.p['array_abft_sticky'].v == 0}, row parity clean={core.p['act_perr_sticky'].v == 0} -> {'PASS' if ok20 else 'FAIL'}")
+    fails += not ok20
     core.d.cells["top.u_dp.u_feeder.u_mem.mem[3]"].v ^= (1 << (3 + 39 * (lpe * 1 + 0))) | (1 << (9 + 39 * (lpe * 1 + 0)))   # entry 7: two bits of lane 0
     core.p["err_clear"].v = 1; core.tick(); core.p["err_clear"].v = 0
     out, errs, _ = core.execute(6, 6, 6, 6, 1, 1, 3, 3, 36, 36)
-    ok13b = core.p["abuf_ue_sticky"].v == 1 and out.shape[0] == 36
-    print(f"  C13b: two bits of one lane of entry 7: abuf_ue={core.p['abuf_ue_sticky'].v} (expect 1), {out.shape[0]}/36 rows drained -> {'PASS' if ok13b else 'FAIL'}")
-    fails += not ok13b
+    ok20b = core.p["abuf_ue_sticky"].v == 1 and out.shape[0] == 36
+    print(f"  C20b: two bits of one lane of entry 7: abuf_ue={core.p['abuf_ue_sticky'].v} (expect 1), {out.shape[0]}/36 rows drained -> {'PASS' if ok20b else 'FAIL'}")
+    fails += not ok20b
 
     print(f"RESULT: {'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
     return 1 if fails else 0
