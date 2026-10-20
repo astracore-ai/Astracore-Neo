@@ -23,7 +23,9 @@
 #                               # tile driven through its AXI-Lite port: registers, MBIST, a convolution from its own bank (A1-A3)
 # SVA (drop 0.44, review #10): SVA=1 (the default) compiles ../sva/neo_sva.sv + bind_all.sv with --assert into every build, so
 # the bound assertions fire during the suites (a failure stops the simulation and fails the test); SVA=0 leaves them out --
-# the fault campaign's builds (an injected flip may break a handshake by design) and the coverage builds (at the memory limit)
+# the fault campaign's builds (an injected flip may break a handshake by design), the coverage builds (at the memory limit) and
+# the two hierarchical mesh8 builds (Verilator's --hierarchical takes no bind into a hier_block: run 228's hdl-mesh8 failed in
+# hier_verilation with the set on; the same RTL is covered by the flat tile build's suite)
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 RTL := $(abspath ../../rtl)
@@ -202,7 +204,7 @@ MESH8_TESTS := m1_fetch_compute_writeback,m2_ksplit_rdy,m3_end_to_end_crc,m5_ban
 MESH8_BUILD_JOBS ?= 4
 MESH8_CFLAGS ?=
 MESH8_HIER ?= --hierarchical       # MESH8_HIER= builds a mesh variant flat (the drop-0.34 probe of where the flat 32x32 model dies)
-MESH8_MAKE := $(MAKE) TARGET=tile $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)" HIER_ARGS="$(MESH8_HIER)"
+MESH8_MAKE := $(MAKE) TARGET=tile SVA=0 $(SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8 COCOTB_RESULTS_FILE=results_mesh8.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)" HIER_ARGS="$(MESH8_HIER)"
 # the '+' marks the recipe as a recursive make, so a parent's -j (the jobserver) reaches the C++ compile (drop 0.35): make
 # does not see $(MAKE) inside the := variable and would run the sub-make with -j1
 mesh8:
@@ -211,7 +213,7 @@ mesh8_build:                       # the model only (sim_build_mesh8/Vtop), so C
 	+$(MESH8_MAKE) sim_build_mesh8/Vtop
 # the small-core 8x8 mesh: 64 tiles of 16x8 cores, silicon depths and links, the mesh tests (the model is ~16x smaller)
 SMALL_SILICON := ROWS=16 COLS=8 ACC_ROWS=512 ABUF_DEPTH=2048 WBUF_DEPTH=1024
-MESH8S_MAKE := $(MAKE) TARGET=tile $(SMALL_SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8s COCOTB_RESULTS_FILE=results_mesh8s.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)" HIER_ARGS="$(MESH8_HIER)"
+MESH8S_MAKE := $(MAKE) TARGET=tile SVA=0 $(SMALL_SILICON) $(LINKS) BANK_DEPTH=524288 FETCH_TIMEOUT=65535 NX=8 NY=8 TESTCASE=$(MESH8_TESTS) SIM_BUILD=sim_build_mesh8s COCOTB_RESULTS_FILE=results_mesh8s.xml BUILD_JOBS_ARG="--build-jobs $(MESH8_BUILD_JOBS) $(MESH8_CFLAGS)" HIER_ARGS="$(MESH8_HIER)"
 mesh8s:
 	+$(MESH8S_MAKE)
 mesh8s_build:

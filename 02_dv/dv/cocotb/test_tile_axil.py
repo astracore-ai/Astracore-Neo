@@ -23,6 +23,20 @@ REG_PRIO = 0x0C
 OKAY = 0
 
 
+async def _taken(d, ready, sample=None, limit=1000):
+    """Hold the driven signals until the edge at which `ready` is high in the read-only phase before it (host_axil's
+    AWREADY / WREADY are combinational on the valids, so the transfer can happen at the very next edge); returns
+    sample() from that phase. The caller changes its signals after the returned edge."""
+    for _ in range(limit):
+        await ReadOnly()
+        ok = ready()
+        v = sample() if (ok and sample) else None
+        await RisingEdge(d.clk)
+        if ok:
+            return v
+    raise AssertionError("AXI-Lite: no handshake within %d clocks" % limit)
+
+
 class AxiLite:
     """The wrapper's AXI4-Lite port: one write (AW and W together, as host_axil takes them) or one read at a time."""
 
@@ -38,22 +52,11 @@ class AxiLite:
         d.s_wdata.value = val & 0xFFFFFFFF
         d.s_wstrb.value = strb
         d.s_wvalid.value = 1
-        while True:
-            await RisingEdge(d.clk)
-            await ReadOnly()
-            if int(d.s_awready.value) and int(d.s_wready.value):
-                break
-        await RisingEdge(d.clk)
+        await _taken(d, lambda: int(d.s_awready.value) and int(d.s_wready.value))
         d.s_awvalid.value = 0
         d.s_wvalid.value = 0
         d.s_bready.value = 1
-        while True:
-            await RisingEdge(d.clk)
-            await ReadOnly()
-            if int(d.s_bvalid.value):
-                resp = int(d.s_bresp.value)
-                break
-        await RisingEdge(d.clk)
+        resp = await _taken(d, lambda: int(d.s_bvalid.value), lambda: int(d.s_bresp.value))
         d.s_bready.value = 0
         return resp
 
@@ -61,21 +64,10 @@ class AxiLite:
         d = self.d
         d.s_araddr.value = reg * 4
         d.s_arvalid.value = 1
-        while True:
-            await RisingEdge(d.clk)
-            await ReadOnly()
-            if int(d.s_arready.value):
-                break
-        await RisingEdge(d.clk)
+        await _taken(d, lambda: int(d.s_arready.value))
         d.s_arvalid.value = 0
         d.s_rready.value = 1
-        while True:
-            await RisingEdge(d.clk)
-            await ReadOnly()
-            if int(d.s_rvalid.value):
-                v, resp = int(d.s_rdata.value), int(d.s_rresp.value)
-                break
-        await RisingEdge(d.clk)
+        v, resp = await _taken(d, lambda: int(d.s_rvalid.value), lambda: (int(d.s_rdata.value), int(d.s_rresp.value)))
         d.s_rready.value = 0
         return v, resp
 
