@@ -1,0 +1,787 @@
+{
+ "sources": {
+  "t10": "make -j1 -C dv/cocotb top TESTCASE=t10_runtime_yolov8m_crop -> dv/cocotb/measured_t10.json",
+  "tile": "make -j1 -C dv/cocotb tile TESTCASE=m21_attention_head,m23_vit_block,m24_llm_layer,m25_telemetry",
+  "bridge": "top T3b: 4 x 4092-word fetches at once, 50.3 bytes per aclk cycle of 64 (drop 0.43)"
+ },
+ "t10": {
+  "build": "2x2 tiles of 16x8, WPF 32, clk 1000 ps, aclk 1600 ps",
+  "steps": [
+   {
+    "name": "b0.conv#0",
+    "cycles": 1712,
+    "window_max": 2335,
+    "valid": 1296,
+    "tiles": 4
+   },
+   {
+    "name": "b0.conv#1",
+    "cycles": 1427,
+    "window_max": 1634,
+    "valid": 648,
+    "tiles": 2
+   },
+   {
+    "name": "b1.conv#0",
+    "cycles": 3143,
+    "window_max": 3767,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b1.conv#1",
+    "cycles": 3144,
+    "window_max": 3767,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b1.conv#2",
+    "cycles": 3143,
+    "window_max": 3767,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b1.conv#3",
+    "cycles": 3144,
+    "window_max": 3767,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b1.conv#4",
+    "cycles": 3143,
+    "window_max": 3767,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b1.conv#5",
+    "cycles": 3144,
+    "window_max": 3767,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.cv1.conv#0",
+    "cycles": 2083,
+    "window_max": 2706,
+    "valid": 432,
+    "tiles": 4
+   },
+   {
+    "name": "b2.cv1.conv#1",
+    "cycles": 2083,
+    "window_max": 2706,
+    "valid": 432,
+    "tiles": 4
+   },
+   {
+    "name": "b2.cv1.conv#2",
+    "cycles": 2083,
+    "window_max": 2706,
+    "valid": 432,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m0.cv1.conv#0",
+    "cycles": 3055,
+    "window_max": 3679,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m0.cv1.conv#1",
+    "cycles": 3056,
+    "window_max": 3679,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m0.cv1.conv#2",
+    "cycles": 3055,
+    "window_max": 3679,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m0.cv2.conv#0",
+    "cycles": 3141,
+    "window_max": 3764,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m0.cv2.conv#1",
+    "cycles": 3143,
+    "window_max": 3767,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m0.cv2.conv#2",
+    "cycles": 3141,
+    "window_max": 3762,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m1.cv1.conv#0",
+    "cycles": 3053,
+    "window_max": 3674,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m1.cv1.conv#1",
+    "cycles": 3055,
+    "window_max": 3679,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m1.cv1.conv#2",
+    "cycles": 3056,
+    "window_max": 3679,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m1.cv2.conv#0",
+    "cycles": 3139,
+    "window_max": 3762,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m1.cv2.conv#1",
+    "cycles": 3141,
+    "window_max": 3762,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.m1.cv2.conv#2",
+    "cycles": 3141,
+    "window_max": 3762,
+    "valid": 972,
+    "tiles": 4
+   },
+   {
+    "name": "b2.cv2.conv#0",
+    "cycles": 3695,
+    "window_max": 4111,
+    "valid": 648,
+    "tiles": 3
+   },
+   {
+    "name": "b2.cv2.conv#1",
+    "cycles": 3698,
+    "window_max": 4111,
+    "valid": 648,
+    "tiles": 3
+   },
+   {
+    "name": "b2.cv2.conv#2",
+    "cycles": 3696,
+    "window_max": 4111,
+    "valid": 648,
+    "tiles": 3
+   },
+   {
+    "name": "b2.cv2.conv#3",
+    "cycles": 3698,
+    "window_max": 4111,
+    "valid": 648,
+    "tiles": 3
+   }
+  ]
+ },
+ "phases": {
+  "M21": [
+   [
+    "projections h0 U",
+    2791
+   ],
+   [
+    "projections h0 L",
+    2651
+   ],
+   [
+    "projections h1 U",
+    2791
+   ],
+   [
+    "projections h1 L",
+    2651
+   ],
+   [
+    "max kt0 U",
+    1321
+   ],
+   [
+    "max kt1-7 U",
+    5077
+   ],
+   [
+    "exp kt0 U",
+    1519
+   ],
+   [
+    "exp kt1-6 U",
+    5639
+   ],
+   [
+    "exp kt7 U",
+    1519
+   ],
+   [
+    "PV U",
+    6402
+   ],
+   [
+    "max kt0 L",
+    1321
+   ],
+   [
+    "max kt1-7 L",
+    5077
+   ],
+   [
+    "exp kt0 L",
+    1519
+   ],
+   [
+    "exp kt1-6 L",
+    5639
+   ],
+   [
+    "exp kt7 L",
+    1519
+   ],
+   [
+    "PV L",
+    6402
+   ]
+  ],
+  "M23": [
+   [
+    "norm1 stats nt0 U",
+    375
+   ],
+   [
+    "norm1 stats nt0 L",
+    375
+   ],
+   [
+    "norm1 stats U",
+    939
+   ],
+   [
+    "norm1 stats L",
+    939
+   ],
+   [
+    "norm1 apply U",
+    1877
+   ],
+   [
+    "norm1 apply L",
+    1877
+   ],
+   [
+    "Q nt0-3 U",
+    2466
+   ],
+   [
+    "Q nt0-3 L",
+    2466
+   ],
+   [
+    "K nt0-2 U",
+    2788
+   ],
+   [
+    "K nt0-2 L",
+    2825
+   ],
+   [
+    "K nt3 U",
+    1220
+   ],
+   [
+    "K nt3 L",
+    1220
+   ],
+   [
+    "V nt0-2 U",
+    2808
+   ],
+   [
+    "V nt0-2 L",
+    2808
+   ],
+   [
+    "V nt3 U",
+    1204
+   ],
+   [
+    "V nt3 L",
+    1204
+   ],
+   [
+    "max kt0 U",
+    948
+   ],
+   [
+    "max kt0 L",
+    948
+   ],
+   [
+    "max rest U",
+    2036
+   ],
+   [
+    "max rest L",
+    2036
+   ],
+   [
+    "exp kt0 U",
+    1050
+   ],
+   [
+    "exp kt0 L",
+    1050
+   ],
+   [
+    "exp rest U",
+    2342
+   ],
+   [
+    "exp rest L",
+    2342
+   ],
+   [
+    "PV nt0-1 U",
+    1768
+   ],
+   [
+    "PV nt0-1 L",
+    1768
+   ],
+   [
+    "PV nt2-3 U",
+    1768
+   ],
+   [
+    "PV nt2-3 L",
+    1768
+   ],
+   [
+    "Wo+x nt0-3 U",
+    2902
+   ],
+   [
+    "Wo+x nt0-3 L",
+    2902
+   ],
+   [
+    "norm2 stats nt0 U",
+    375
+   ],
+   [
+    "norm2 stats nt0 L",
+    375
+   ],
+   [
+    "norm2 stats U",
+    939
+   ],
+   [
+    "norm2 stats L",
+    939
+   ],
+   [
+    "norm2 apply U",
+    1877
+   ],
+   [
+    "norm2 apply L",
+    1877
+   ],
+   [
+    "W1 nt0-3 U",
+    2698
+   ],
+   [
+    "W1 nt0-3 L",
+    2698
+   ],
+   [
+    "W2+h nt0-3 U",
+    2882
+   ],
+   [
+    "W2+h nt0-3 L",
+    2882
+   ]
+  ],
+  "M24": [
+   [
+    "norm1 stats nt0 U",
+    327
+   ],
+   [
+    "norm1 stats nt0 L",
+    327
+   ],
+   [
+    "norm1 stats U",
+    795
+   ],
+   [
+    "norm1 stats L",
+    795
+   ],
+   [
+    "norm1 apply U",
+    1269
+   ],
+   [
+    "norm1 apply L",
+    1269
+   ],
+   [
+    "Q nt0 U",
+    790
+   ],
+   [
+    "Q nt0 L",
+    790
+   ],
+   [
+    "Q nt1 U",
+    790
+   ],
+   [
+    "Q nt1 L",
+    790
+   ],
+   [
+    "Q nt2 U",
+    790
+   ],
+   [
+    "Q nt2 L",
+    790
+   ],
+   [
+    "Q nt3 U",
+    790
+   ],
+   [
+    "Q nt3 L",
+    790
+   ],
+   [
+    "K nt0 U",
+    1092
+   ],
+   [
+    "K nt0 L",
+    1092
+   ],
+   [
+    "K nt1 U",
+    1092
+   ],
+   [
+    "K nt1 L",
+    1092
+   ],
+   [
+    "K nt2 U",
+    1092
+   ],
+   [
+    "K nt2 L",
+    1092
+   ],
+   [
+    "K nt3 U",
+    1092
+   ],
+   [
+    "K nt3 L",
+    1092
+   ],
+   [
+    "V nt0 U",
+    1076
+   ],
+   [
+    "V nt0 L",
+    1076
+   ],
+   [
+    "V nt1 U",
+    1076
+   ],
+   [
+    "V nt1 L",
+    1076
+   ],
+   [
+    "V nt2 U",
+    1076
+   ],
+   [
+    "V nt2 L",
+    1076
+   ],
+   [
+    "V nt3 U",
+    1076
+   ],
+   [
+    "V nt3 L",
+    1076
+   ],
+   [
+    "max kt0 U",
+    1023
+   ],
+   [
+    "max kt0 L",
+    1023
+   ],
+   [
+    "max rest U",
+    824
+   ],
+   [
+    "max rest L",
+    2011
+   ],
+   [
+    "exp kt0 U",
+    1125
+   ],
+   [
+    "exp kt0 L",
+    1125
+   ],
+   [
+    "exp rest U",
+    926
+   ],
+   [
+    "exp rest L",
+    2317
+   ],
+   [
+    "PV nt0-1 U",
+    1099
+   ],
+   [
+    "PV nt0-1 L",
+    1724
+   ],
+   [
+    "PV nt2-3 U",
+    1099
+   ],
+   [
+    "PV nt2-3 L",
+    1724
+   ],
+   [
+    "Wo+x nt0 U",
+    899
+   ],
+   [
+    "Wo+x nt0 L",
+    899
+   ],
+   [
+    "Wo+x nt1 U",
+    899
+   ],
+   [
+    "Wo+x nt1 L",
+    899
+   ],
+   [
+    "Wo+x nt2 U",
+    899
+   ],
+   [
+    "Wo+x nt2 L",
+    899
+   ],
+   [
+    "Wo+x nt3 U",
+    899
+   ],
+   [
+    "Wo+x nt3 L",
+    899
+   ],
+   [
+    "norm2 stats nt0 U",
+    327
+   ],
+   [
+    "norm2 stats nt0 L",
+    327
+   ],
+   [
+    "norm2 stats U",
+    795
+   ],
+   [
+    "norm2 stats L",
+    795
+   ],
+   [
+    "norm2 apply U",
+    1269
+   ],
+   [
+    "norm2 apply L",
+    1269
+   ],
+   [
+    "W1 nt0 U",
+    848
+   ],
+   [
+    "W1 nt0 L",
+    848
+   ],
+   [
+    "W1 nt1 U",
+    848
+   ],
+   [
+    "W1 nt1 L",
+    848
+   ],
+   [
+    "W1 nt2 U",
+    848
+   ],
+   [
+    "W1 nt2 L",
+    848
+   ],
+   [
+    "W1 nt3 U",
+    848
+   ],
+   [
+    "W1 nt3 L",
+    848
+   ],
+   [
+    "W1 nt4 U",
+    848
+   ],
+   [
+    "W1 nt4 L",
+    848
+   ],
+   [
+    "W1 nt5 U",
+    848
+   ],
+   [
+    "W1 nt5 L",
+    848
+   ],
+   [
+    "W1 nt6 U",
+    848
+   ],
+   [
+    "W1 nt6 L",
+    848
+   ],
+   [
+    "W1 nt7 U",
+    848
+   ],
+   [
+    "W1 nt7 L",
+    848
+   ],
+   [
+    "W2+h nt0 U",
+    1594
+   ],
+   [
+    "W2+h nt0 L",
+    1594
+   ],
+   [
+    "W2+h nt1 U",
+    1594
+   ],
+   [
+    "W2+h nt1 L",
+    1594
+   ],
+   [
+    "W2+h nt2 U",
+    1594
+   ],
+   [
+    "W2+h nt2 L",
+    1594
+   ],
+   [
+    "W2+h nt3 U",
+    1594
+   ],
+   [
+    "W2+h nt3 L",
+    1594
+   ]
+  ]
+ },
+ "layers": [
+  {
+   "k": 3,
+   "s": 1,
+   "ct_n": 3,
+   "M": 36,
+   "valid": 972,
+   "cycles": 3866
+  },
+  {
+   "k": 1,
+   "s": 1,
+   "ct_n": 4,
+   "M": 36,
+   "valid": 144,
+   "cycles": 1572
+  },
+  {
+   "k": 3,
+   "s": 2,
+   "ct_n": 2,
+   "M": 9,
+   "valid": 162,
+   "cycles": 2434
+  },
+  {
+   "k": 5,
+   "s": 1,
+   "ct_n": 1,
+   "M": 36,
+   "valid": 900,
+   "cycles": 3270
+  }
+ ]
+}

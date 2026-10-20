@@ -8,7 +8,10 @@ Runs the compiler over a battery of layer shapes and checks, for every case, tha
   2. program emission is consistent: the per-tile descriptors and DMA programs are well-formed (field ranges,
      run ranges tile the layer exactly once, every activation row a chunk needs is fetched, owner/contributor
      protocol complete) and identical between the Python backend and the C host driver;
-  3. the requantization model is bit-exact against the RTL's rounding for random accumulator values.
+  3. the requantization model is bit-exact against the RTL's rounding for random accumulator values;
+  4. (drop 0.44) the ONNX importer's float execution equals onnxruntime's on every operator family and refuses an
+     unsupported operator by node name (TQ7); the quantizer's integer executor stays within the accuracy bars against
+     FP32 on the YOLOv8-m group and the C runtime issues the Python runtime's transactions (TQ8).
 It writes a qualification report (Markdown + JSON) with the test identities, the argument for the tool
 confidence level (TI1/TD1 -> TCL1 when every output is verified bit-exact), and the coverage of the parameter
 space. Usage: python3 compiler/tool_qual.py [--cases 60] [--seed 1]
@@ -21,6 +24,17 @@ from neo_backend import (compile_layer, compile_group, geometry, OP_FETCH_A, OP_
                          OP_NOTIFY, OP_WAIT_RDY, OP_WAIT_REDUCE, MAX_FETCH, PROG_DEPTH, ins)
 
 ROWS, COLS = 32, 32
+
+
+def sim_script(name):
+    """A script of 02_dv/sim: beside the repository's compiler (the real path) or the flat layout's sim/ (a symlinked compiler/
+    resolves '..' to 03_models, so the flat path is tried from the invocation path)."""
+    real = os.path.dirname(os.path.realpath(__file__))
+    for d in (os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "sim")),
+              os.path.normpath(os.path.join(real, "..", "..", "02_dv", "sim"))):
+        if os.path.isfile(os.path.join(d, name)):
+            return os.path.join(d, name)
+    return os.path.join(os.path.dirname(__file__), "..", "sim", name)
 
 
 def rq_model(acc, mult, shift, zp, relu):
@@ -130,7 +144,7 @@ def main():
             ok, detail = False, str(e)
         results.append(dict(id=f"TQ2-{i:03d}", kind="program emission structure", shape=dict(h=h, w=w, cin=cin, cout=cout, k=k, s=s, p=p, mesh=nx, shares=shares, oy0=oy0, oy_n=oy_n), ok=ok, detail=detail))
     # ---- TQ3: C driver == Python backend (the existing word-for-word check) ----
-    r = subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "..", "sim", "check_c_backend.py")], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, sim_script("check_c_backend.py")], capture_output=True, text=True)
     results.append(dict(id="TQ3-000", kind="C driver vs Python backend", shape={}, ok="ALL PASS" in r.stdout, detail=r.stdout.strip()[-120:]))
     # ---- TQ5: the instruction encoder refuses what the hardware cannot take (drop 0.21 field ranges, drop 0.29 empty fetch) ----
     rejected, accepted = [], []
@@ -195,6 +209,56 @@ def main():
     t6.append(("640x640 with tile (3,3) excluded", sum(x["bad"] for x in st2) == 0 and sum(x["too_long"] for x in st2) == 0))
     for i, (name, ok6) in enumerate(t6):
         results.append(dict(id=f"TQ6-{i:03d}", kind="bank allocator: " + name, shape=dict(), ok=ok6, detail="PASS" if ok6 else "FAIL"))
+    # ---- TQ7 (drop 0.44): the ONNX importer -- a seeded batch of every operator family against onnxruntime, the executed
+    #      shapes against onnx.shape_inference, and the unsupported-operator report naming the node ----
+    try:
+        import neo_onnx as no
+        fam = [("conv", lambda r: (no.build_conv_model(r, cin=int(r.integers(1, 9)), cout=int(r.integers(1, 17)), h=int(r.integers(4, 10)), w=int(r.integers(4, 10)),
+                                                       k=int(r.choice([1, 3])), s=int(r.choice([1, 2])), act=r.choice(["silu", "relu", None]), bias_as_add=bool(r.integers(0, 2))), None)),
+               ("layout", lambda r: (no.build_pool_concat_split_resize_model(r, c=int(r.choice([4, 8])), h=8, w=8), None)),
+               ("linear", lambda r: (no.build_linear_model(r, T=int(r.integers(2, 9)), D=int(r.choice([8, 16])), H=int(r.choice([16, 32])), act=r.choice(["gelu", "silu"]), gemm=bool(r.integers(0, 2))), None)),
+               ("attention", lambda r: (no.build_attention_model(r, T=8, D=16, d=16, causal=bool(r.integers(0, 2))), None)),
+               ("norm", lambda r: (no.build_norm_model(r, T=8, D=16, rms=bool(r.integers(0, 2))), None))]
+        for i in range(max(5, a.cases // 5)):
+            name, mk = fam[i % len(fam)]
+            model, _ = mk(rng)
+            g = no.import_model(model)
+            feed = {k: rng.normal(0, 1, s) for k, s in g.inputs.items()}
+            out = no.run_float(g, feed, keep_all=False)
+            ref = no.ort_run(model, feed)
+            err = max(float(np.abs(out[n] - r).max() / max(float(np.abs(r).max()), 1e-9)) for n, r in zip(g.outputs, ref))
+            bad = no.check_against_onnx_shapes(g, model)
+            results.append(dict(id=f"TQ7-{i:03d}", kind="ONNX importer vs onnxruntime", shape=dict(family=name, layers=len(g.layers)),
+                                ok=err < 1e-5 and not bad, detail=f"rel err {err:.1e}" + (f", shapes {bad[:1]}" if bad else "")))
+        from onnx import helper
+        nodes = [helper.make_node("Conv", ["x", "W"], ["c"], name="conv_ok", kernel_shape=[3, 3], pads=[1, 1, 1, 1]),
+                 helper.make_node("Tanh", ["c"], ["y"], name="tanh_unsupported")]
+        model = no._model(nodes, [no._vi("x", (1, 3, 6, 6))], [no._vi("y", (1, 4, 6, 6))], {"W": rng.normal(0, 0.3, (4, 3, 3, 3))}, "unsupported")
+        try:
+            no.import_model(model)
+            ok7, d7 = False, "accepted"
+        except no.NeoOnnxError as e:
+            ok7, d7 = "tanh_unsupported" in str(e) and "Tanh" in str(e), str(e)[:100]
+        results.append(dict(id="TQ7-UNS", kind="ONNX importer refuses an unsupported operator by node name", shape={}, ok=ok7, detail=d7))
+    except ImportError as e:
+        results.append(dict(id="TQ7-000", kind="ONNX importer vs onnxruntime", shape={}, ok=False, detail=f"packages missing: {e}"))
+    # ---- TQ8 (drop 0.44): the quantizer's integer executor against FP32 on the YOLOv8-m group, and the runtime: the C
+    #      runtime's transactions equal to the Python runtime's (sim/check_c_runtime.py, built by make cdriver) ----
+    try:
+        import neo_quant as nq
+        graph, model, calib, r8 = nq.yolo_group_case(seed=a.seed)
+        test = [{"x": r8.normal(0, 1.0, (1, 3, 12, 12))}]
+        for tag, kw, bar in (("INT8 percentile", dict(method="percentile"), 0.999), ("INT8 mse", dict(method="mse"), 0.999),
+                             ("INT4 C2f", dict(method="percentile", int4=[L.name for L in graph.layers if L.kind == "conv" and L.name.startswith("b2.")]), 0.98)):
+            qn = nq.quantize(graph, calib, **kw)
+            rows, _ = nq.accuracy_report(qn, test)
+            o = [r for r in rows if r[4]][0]
+            results.append(dict(id=f"TQ8-{tag.replace(' ', '_')}", kind="PTQ integer executor vs FP32 (output)", shape=dict(crop="12x12", mode=tag),
+                                ok=o[1] > bar, detail=f"cos {o[1]:.5f}, SQNR {o[2]:.2f} dB, max |err| {o[3]:.2f} LSB"))
+    except ImportError as e:
+        results.append(dict(id="TQ8-000", kind="PTQ integer executor vs FP32", shape={}, ok=False, detail=f"packages missing: {e}"))
+    r = subprocess.run([sys.executable, sim_script("check_c_runtime.py")], capture_output=True, text=True)
+    results.append(dict(id="TQ8-RT", kind="C runtime vs Python runtime (transactions)", shape={}, ok="ALL PASS" in r.stdout, detail=r.stdout.strip()[-120:]))
     # ---- TQ4: requantization model vs the RTL arithmetic ----
     bad = 0
     for i in range(20000):
@@ -203,7 +267,8 @@ def main():
             bad += 1
     results.append(dict(id="TQ4-000", kind="requant model vs RTL arithmetic", shape=dict(samples=20000), ok=bad == 0, detail=f"{bad} mismatches"))
     passed = sum(r["ok"] for r in results)
-    report = dict(tool="neo compiler (neo_compile.py, neo_backend.py) and host driver (neo_host.c)", version="drop 0.33",
+    report = dict(tool="neo compiler (neo_compile.py, neo_backend.py, neo_onnx.py, neo_quant.py, neo_sched.py), host driver (neo_host.c) and runtime (neo_runtime.c)",
+                  version="drop 0.44",
                   date=time.strftime("%Y-%m-%d"), cases=len(results), passed=passed, seconds=round(time.time() - t0, 1),
                   tcl_argument="TI1/TD1 -> TCL1: every compiled network is verified bit-exact against the reference model "
                                "(lowering on the cycle-accurate reference, programs on the RTL mesh in the regressions), so a tool "
