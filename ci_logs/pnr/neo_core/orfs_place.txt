@@ -318,3 +318,34 @@ Took 558 seconds: global_placement -density 0.6 -pad_left 0 -pad_right 0 -force_
 estimate_parasitics -placement
 Took 54 seconds: estimate_parasitics -placement
 Report metrics stage 3, global place...
+
+==========================================================================
+global place report_design_area
+--------------------------------------------------------------------------
+Design area 345816 um^2 56% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/3_3_place_gp.odb
+Elapsed time: 18:24.21[h:]min:sec. CPU time: user 1594.08 sys 19.31 (146%). Peak memory: 10993104KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+3_3_place_gp           .odb       1104     1613     1.46    10735 a8ee6760ff
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 3_4_place_resized resize
+Running resize.tcl, stage 3_4_place_resized
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/3_3_place_gp.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+estimate_parasitics -placement
+Took 118 seconds: estimate_parasitics -placement
+Perform buffer insertion and gate resizing...
+repair_design -verbose
