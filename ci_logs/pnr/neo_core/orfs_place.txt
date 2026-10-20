@@ -104,3 +104,121 @@ Iteration | Overflow |     HPWL (um) |  HPWL(%) |   Penalty | Group
       280 |   0.6877 |  2.005941e+07 |  +32.13% |  2.77e-09 |      
       290 |   0.6050 |  2.513507e+07 |  +25.30% |  4.37e-09 |      
       300 |   0.5189 |  2.715593e+07 |   +8.04% |  6.94e-09 |      
+      310 |   0.4735 |  2.663534e+07 |   -1.92% |  1.12e-08 |      
+      320 |   0.4816 |  2.301558e+07 |  -13.59% |  1.83e-08 |      
+      330 |   0.5247 |  1.890199e+07 |  -17.87% |  2.98e-08 |      
+      340 |   0.4004 |  2.981773e+07 |  +57.75% |  4.65e-08 |      
+      350 |   0.2408 |  4.877327e+07 |  +63.57% |  6.58e-08 |      
+      360 |   0.2230 |  3.931791e+07 |  -19.39% |  9.66e-08 |      
+      370 |   0.2015 |  3.764246e+07 |   -4.26% |  1.42e-07 |      
+      380 |   0.2048 |  3.381729e+07 |  -10.16% |  2.09e-07 |      
+      390 |   0.2015 |  2.989328e+07 |  -11.60% |  3.08e-07 |      
+      400 |   0.1960 |  2.667601e+07 |  -10.76% |  4.53e-07 |      
+      410 |   0.1935 |  2.392038e+07 |  -10.33% |  6.67e-07 |      
+      420 |   0.1917 |  2.161048e+07 |   -9.66% |  9.83e-07 |      
+      430 |   0.1882 |  1.967060e+07 |   -8.98% |  1.45e-06 |      
+      440 |   0.1838 |  1.797859e+07 |   -8.60% |  2.13e-06 |      
+      450 |   0.1767 |  1.654866e+07 |   -7.95% |  3.14e-06 |      
+      460 |   0.1695 |  1.523969e+07 |   -7.91% |  4.63e-06 |      
+      470 |   0.1609 |  1.406046e+07 |   -7.74% |  6.82e-06 |      
+      480 |   0.1591 |  1.244643e+07 |  -11.48% |  1.00e-05 |      
+      490 |   0.1356 |  1.542813e+07 |  +23.96% |  1.45e-05 |      
+      500 |   0.1446 |  1.652323e+07 |   +7.10% |  2.12e-05 |      
+      510 |   0.1491 |  1.952701e+07 |  +18.18% |  3.09e-05 |      
+[WARNING GPL-0323] Divergence detected between consecutive iterations
+Divergence occured in 1 regions.
+[WARNING GPL-0998] Divergence detected, reverting to snapshot with min hpwl.
+[WARNING GPL-0999] Revert to iter:  483 overflow: 0.165 HPWL: 11857618340
+[INFO GPL-1014] Final placement area: 278321.32 (+0.00%)
+[INFO GPL-1018] Final HPWL (um): 11489816.45
+Took 434 seconds: global_placement -skip_io -density 0.6 -pad_left 0 -pad_right 0
+Design area 345480 um^2 56% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/3_1_place_gp_skip_io.odb
+Elapsed time: 7:19.82[h:]min:sec. CPU time: user 726.18 sys 2.30 (165%). Peak memory: 6863252KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+3_1_place_gp_skip_io   .odb        439      728     1.66     6702 fd80e23f99
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 3_2_place_iop io_placement
+Running io_placement.tcl, stage 3_2_place_iop
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/3_1_place_gp_skip_io.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+place_pins -hor_layers M4 -ver_layers M5
+Found 38 macro blocks.
+Using 2 tracks default min distance between IO pins.
+[INFO PPL-0001] Number of available slots 32860
+[INFO PPL-0002] Number of I/O             4693
+[INFO PPL-0003] Number of I/O w/sink      4609
+[INFO PPL-0004] Number of I/O w/o sink    84
+[INFO PPL-0005] Slots per section         200
+[INFO PPL-0008] Successfully assigned pins to sections.
+[INFO PPL-0012] I/O nets HPWL: 1428036.12 um.
+Design area 345480 um^2 56% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/3_2_place_iop.odb
+Elapsed time: 0:10.08[h:]min:sec. CPU time: user 8.72 sys 1.07 (97%). Peak memory: 3147772KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+3_2_place_iop          .odb         10       10     0.97     3073 7bb1d86992
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 3_3_place_gp global_place
+Running global_place.tcl, stage 3_3_place_gp
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_1024x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_256x512_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x1056_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x64_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/in/macros/fakeram7_512x936_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/3_2_place_iop.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/neo_core/orfs/results/asap7/neo_core/base/2_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+Perform port buffering...
+[INFO RSZ-0027] Inserted 3253 BUFx2_ASAP7_75t_R input buffers.
+[INFO RSZ-0028] Inserted 1355 BUFx2_ASAP7_75t_R output buffers.
+global_placement -density 0.6 -pad_left 0 -pad_right 0 -force_center_initial_place -min_phi_coef 0.95 -max_phi_coef 1.05
+[INFO GPL-0190] Using 2 of 4 threads for placement: one per core, SMT siblings idle.
+[INFO GPL-0001] ---- Initialize GPL Main Data Structures
+[INFO GPL-0002] DBU: 1000
+[INFO GPL-0003] SiteSize: (  0.054  0.270 ) um
+[INFO GPL-0004] CoreBBox: (  1.026  1.080 ) ( 789.156 788.940 ) um
+[INFO GPL-0016] Core area:                  620936.102 um^2
+[INFO GPL-0036] Movable instances area:     256036.231 um^2
+[INFO GPL-0037] Total instances area:       346144.451 um^2
+[INFO GPL-0035] Pin density area adjust:     22621.016 um^2
+[INFO GPL-0032] ---- Initialize Region: Top-level
+[INFO GPL-0006] Number of instances:           2181245
+[INFO GPL-0007] Movable instances:             2116137
+[INFO GPL-0008] Fixed instances:                 64720
+[INFO GPL-0009] Dummy instances:                   388
+[INFO GPL-0010] Number of nets:                2306366
+[INFO GPL-0011] Number of pins:                7066687
+[INFO GPL-0012] Die BBox:       (  0.000  0.000 ) ( 790.164 790.164 ) um
+[INFO GPL-0013] Placement BBox: (  1.026  1.080 ) ( 789.156 788.940 ) um
+[INFO GPL-0014] Region name: top-level.
+[INFO GPL-0015] Region area:                620936.102 um^2
+[INFO GPL-0017] Fixed instances area:       129929.830 um^2
+[INFO GPL-0018] Movable instances area:     278657.247 um^2
+[INFO GPL-0019] Utilization:                    56.752 %
+[INFO GPL-0020] Standard cells area:        278657.247 um^2
+[INFO GPL-0021] Large instances area:            0.000 um^2
+[INFO GPL-0005] ---- Execute Conjugate Gradient Initial Placement.
+[INFO GPL-0051] Source of initial instance position counters:
+	Odb location = 0	Core center = 2116137	Region center = 0
+[InitialPlace]  Iter: 1 conjugate gradient residual: 0.01046411 HPWL: 15430017033
+[InitialPlace]  Iter: 2 conjugate gradient residual: 0.00075792 HPWL: 8738376470
