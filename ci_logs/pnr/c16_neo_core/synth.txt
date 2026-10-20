@@ -1,0 +1,42 @@
+10:10:53 tools: {'yosys': 'Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)', 'sta': '3.1.0'}
+10:10:53 library asap7 SS, period 1250.0 ps, output /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out; macro model: FakeRAM2.0 7 nm (ORFS asap7/fakeram.cfg): 0.042 um2/bit, 218 ps access, 50 ps setup/hold
+10:10:53 units: ['c16_mac_pe', 'c16_mac_pe_chk', 'c16_systolic_array', 'c16_neo_mac_core', 'c16_act_feeder', 'c16_acc_bank', 'c16_neo_mac_core_v02', 'c16_wbuf_mem', 'c16_requant', 'c16_core_seq', 'c16_vec_unit', 'c16_neo_core']
+10:10:53 c16_mac_pe_chk: yosys (mac_pe {'XW': 8, 'WW': 13, 'PW': 32})
+10:10:53 c16_mac_pe: yosys (mac_pe {'XW': 8, 'WW': 8, 'PW': 32, 'NB': 4})
+10:10:55 c16_mac_pe_chk: yosys done in 2 s: 1,634 cells, 193 um2
+10:10:55 c16_mac_pe: yosys done in 2 s: 1,253 cells, 159 um2
+10:10:55 c16_systolic_array: yosys (systolic_array {'ROWS': 16, 'COLS': 8, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 13, 'NCHK': 4})
+10:10:55 c16_neo_mac_core: yosys (neo_mac_core {'ROWS': 16, 'COLS': 8, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 13, 'NCHK': 4})
+10:10:56 c16_systolic_array: yosys done in 1 s: 6 cells, 0 um2
+10:10:56 c16_act_feeder: yosys (act_feeder {'ROWS': 16, 'XW': 8, 'ABUF_DEPTH': 256, 'AW': 8, 'IDXW': 6, 'NCHK': 4})
+10:10:58 c16_neo_mac_core: yosys done in 3 s: 13,448 cells, 2,619 um2
+10:10:58 c16_acc_bank: yosys (acc_bank {'COLS': 8, 'PW': 32, 'ACC_ROWS': 64, 'IDXW': 6})
+10:11:02 c16_acc_bank: yosys done in 4 s: 5,187 cells, 729 um2
+10:11:02 c16_neo_mac_core_v02: yosys (neo_mac_core_v02 {'ROWS': 16, 'COLS': 8, 'XW': 8, 'WW': 8, 'PW': 32, 'WCW': 13, 'ACC_ROWS': 64, 'ABUF_DEPTH': 256, 'IDXW': 6, 'AW': 8, 'NCHK': 4})
+10:11:02 c16_neo_mac_core_v02: yosys done in 1 s: 560 cells, 127 um2
+10:11:03 c16_wbuf_mem: yosys (wbuf_mem {'COLS': 8, 'WW': 8, 'WCW': 13, 'DEPTH': 512, 'WAW': 9, 'NCHK': 4, 'DV_HOOKS': 0})
+10:11:03 c16_act_feeder: yosys done in 6 s: 6,594 cells, 761 um2
+10:11:04 c16_requant: yosys (requant {'COLS': 8, 'PW': 32, 'MW': 16})
+10:11:07 c16_wbuf_mem: yosys done in 5 s: 2,466 cells, 308 um2
+10:11:08 c16_core_seq: yosys (core_seq {'ROWS': 16, 'COLS': 8, 'IDXW': 6, 'WBUF_DEPTH': 512, 'WAW': 9, 'PE_LAT': 2})
+10:11:12 c16_core_seq: yosys done in 4 s: 2,687 cells, 324 um2
+10:11:13 c16_vec_unit: yosys (vec_unit {'COLS': 8, 'ROWS': 16, 'PW': 32, 'ACC_ROWS': 64, 'IDXW': 6})
+10:11:28 c16_requant: yosys done in 25 s: 27,929 cells, 3,072 um2
+10:11:28 c16_neo_core: yosys (neo_core {'ROWS': 16, 'COLS': 8, 'PW': 32, 'ACC_ROWS': 64, 'ABUF_DEPTH': 256, 'WBUF_DEPTH': 512, 'NCHK': 4, 'DV_HOOKS': 0})
+10:11:29 c16_neo_core: yosys done in 1 s: 270 cells, 39 um2
+10:12:31 c16_vec_unit: yosys done in 78 s: 82,991 cells, 10,021 um2
+10:12:31 macros: ['neo_mem_rf_w288_d64_g1_rb1', 'neo_mem_rf_w256_d128_g2_rb1', 'neo_mem_rf_w390_d256_g2_rb1', 'neo_mem_rf_w33_d256_g1_rb1', 'neo_mem_rf_w256_d32_g2_rb1', 'neo_mem_rf_w64_d64_g2_rb1']
+10:12:33 c16_mac_pe_chk: sta done in 2 s (exit 0; wns 13.601009262122355 ps, min period 922.7220299884659 ps)
+10:12:33 c16_mac_pe: sta done in 2 s (exit 0; wns -9.965694975763745 ps, min period 829.04990880451 ps)
+10:12:35 c16_acc_bank: sta done in 2 s (exit 0; wns 93.91787385351041 ps, min period 1156.0827292801073 ps)
+10:12:36 c16_wbuf_mem: sta done in 2 s (exit 0; wns 140.43732899421167 ps, min period 871.1256685889506 ps)
+10:12:37 c16_act_feeder: sta done in 4 s (exit 0; wns 87.83740436794699 ps, min period 849.285750683675 ps)
+10:12:39 c16_core_seq: sta done in 3 s (exit 0; wns 148.55139400210683 ps, min period 782.3195775474281 ps)
+10:12:44 c16_requant: sta done in 8 s (exit 0; wns 171.2733295371801 ps, min period 880.3359361932513 ps)
+10:12:49 c16_vec_unit: sta done in 9 s (exit 0; wns 132.30394610561083 ps, min period 1117.6930814798257 ps)
+10:12:51 c16_systolic_array: sta done in 2 s (exit 0; wns -9.965667220188019 ps, min period 1121.1642169228528 ps)
+10:12:53 c16_neo_mac_core: sta done in 3 s (exit 0; wns -9.965667220188019 ps, min period 1109.951828090661 ps)
+10:12:55 c16_neo_mac_core_v02: sta done in 2 s (exit 0; wns -71.5102424579644 ps, min period 1321.5102218815662 ps)
+10:12:57 c16_neo_core: sta done in 2 s (exit 0; wns 21.202900631135773 ps, min period 1228.8031457360532 ps)
+10:12:57 done in 124 s: /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/synth_results.json
+10:12:57 GATES: all passed (every unit synthesized, no latch, no multiply-driven net, the hierarchy consistent, the PE counts, DV_HOOKS = 0 clean, every clock gate mapped onto the library's ICG cell as declared, every timing run complete)
