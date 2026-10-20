@@ -15,6 +15,7 @@ module tile_mesh #(
 )(
   input  logic          clk,
   input  logic          rst_n,
+  input  logic          test_en,                // drop 0.44 (review #8): test mode, to every tile's clock gates (tie 0)
   input  logic          h_we    [NX*NY],
   input  logic          h_re    [NX*NY],
   input  logic [7:0]    h_addr  [NX*NY],
@@ -92,7 +93,7 @@ module tile_mesh #(
                    .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH),
                    .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT), .BIST_WORDS(BIST_WORDS),
                    .NCHK(NCHK), .DV_HOOKS(DV_HOOKS)) u_t (
-          .clk(clk), .rst_n(rst_n), .router_rst_n(rst_n), .tile_clk_en(1'b1), .iso_en(1'b0),   // drop 0.43: always on here
+          .clk(clk), .rst_n(rst_n), .router_rst_n(rst_n), .tile_clk_en(1'b1), .iso_en(1'b0), .test_en(test_en),   // drop 0.43: always on here
           .my_x(XW'(x)), .my_y(YW'(y)),
           .in_valid(t_in_valid), .in_flit(t_in_flit), .in_ready(t_in_ready),
           .out_valid(t_out_valid), .out_flit(t_out_flit), .out_ready(t_out_ready),

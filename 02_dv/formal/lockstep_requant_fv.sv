@@ -38,11 +38,11 @@ module lockstep_requant_fv #(
   logic signed [7:0]   a_q [COLS];
   logic signed [7:0]   b_q [COLS];
   requant #(.COLS(COLS), .PW(PW), .MW(MW)) u_a (
-    .clk(clk), .rst_n(rst_n), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
+    .clk(clk), .rst_n(rst_n), .test_en(1'b0), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
     .tbl_zp(tbl_zp), .relu(relu), .in_valid(in_valid), .in_acc(in_acc), .out_valid(a_valid), .out_q(a_q),
     .err_clear(err_clear), .tbl_perr_sticky(a_perr), .tbl_fault_inject(1'b0), .cg_en(a_cg));
   requant #(.COLS(COLS), .PW(PW), .MW(MW)) u_b (
-    .clk(clk), .rst_n(rst_n), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
+    .clk(clk), .rst_n(rst_n), .test_en(1'b0), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
     .tbl_zp(tbl_zp), .relu(relu), .in_valid(in_valid), .in_acc(in_acc), .out_valid(b_valid), .out_q(b_q),
     .err_clear(err_clear), .tbl_perr_sticky(b_perr), .tbl_fault_inject(1'b0), .cg_en(b_cg));
 

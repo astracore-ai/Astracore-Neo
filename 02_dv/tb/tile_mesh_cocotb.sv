@@ -113,7 +113,7 @@ module tile_mesh_cocotb #(
   tile_mesh #(.NX(NX), .NY(NY), .XW(XW), .YW(YW), .WPF(WPF), .ROWS(ROWS), .COLS(COLS), .PW(PW), .ACC_ROWS(ACC_ROWS),
               .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH), .FETCH_TIMEOUT(FETCH_TIMEOUT),
               .BIST_WORDS(BIST_WORDS), .NCHK(NCHK), .DV_HOOKS(1)) u_mesh (
-    .clk(clk), .rst_n(rst_n),
+    .clk(clk), .rst_n(rst_n), .test_en(1'b0),
     .h_we(h_we_a), .h_re(h_re_a), .h_addr(h_addr_a), .h_wdata(h_wdata_a), .h_rdata(h_rdata_a), .err_pin(err_pin_a),
     .prog_done(prog_done_a), .drain_busy(drain_busy_a), .done(done_a), .crc_err(crc_err_a), .parity_err(parity_err_a),
     .array_abft_sticky(array_abft_a), .acc_abft_sticky(acc_abft_a), .ctrl_err_sticky(ctrl_err_a), .seq_err_sticky(seq_err_a),

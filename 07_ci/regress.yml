@@ -111,6 +111,15 @@ jobs:
       - run: pip install numpy
       - name: install simulators
         run: sudo apt-get update && sudo apt-get install -y iverilog verilator time && verilator --version && iverilog -V | head -1   # GNU time: per-build statistics (drop 0.34)
+      # drop 0.44 (review #16): the simulators come unpinned from apt and cocotb from pip; rule 1 names Verilator 5.020,
+      # Icarus 12 and cocotb 1.9.2, so an image or package bump that changes them fails here, loudly, instead of moving the
+      # simulators under the regression silently (a 2.x cocotb would need Verilator >= 5.036; the Makefiles pin 1.9.2 too)
+      - name: tool versions pinned (Verilator 5.020, Icarus 12, cocotb 1.9.2)
+        run: |
+          verilator --version | grep -q "^Verilator 5\.020 " || { echo "::error::Verilator is not 5.020: $(verilator --version)"; exit 1; }
+          iverilog -V 2>&1 | head -1 | grep -q "Icarus Verilog version 12\." || { echo "::error::Icarus is not 12: $(iverilog -V 2>&1 | head -1)"; exit 1; }
+          pip install "cocotb==1.9.2" "cocotb-coverage<2" >/dev/null
+          python3 -c "import cocotb, sys; print('cocotb', cocotb.__version__); sys.exit(cocotb.__version__ != '1.9.2')"
       - name: flat layout
         run: |
           cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
@@ -137,6 +146,10 @@ jobs:
       - name: cocotb chip top (bridges, control plane, two clock domains)
         if: always()
         run: set -o pipefail; make cocotb_top 2>&1 | tee ci_logs/hdl-sim/top.txt
+      # the AXI4-Lite wrapper (drop 0.44, review #17): neo_tile_axil, the datasheet's integration view of one tile, was only linted
+      - name: cocotb AXI4-Lite tile wrapper (neo_tile_axil)
+        if: always()
+        run: set -o pipefail; make cocotb_axil 2>&1 | tee ci_logs/hdl-sim/axil.txt
       - name: publish logs
         if: always()
         run: |
@@ -180,6 +193,12 @@ jobs:
       - run: pip install numpy
       - name: install simulator and GNU time
         run: sudo apt-get update && sudo apt-get install -y verilator time && verilator --version && /usr/bin/time --version
+      # drop 0.44 (review #16): the version gate of hdl-sim -- Verilator 5.020 and cocotb 1.9.2 (no Icarus in this job)
+      - name: tool versions pinned (Verilator 5.020, cocotb 1.9.2)
+        run: |
+          verilator --version | grep -q "^Verilator 5\.020 " || { echo "::error::Verilator is not 5.020: $(verilator --version)"; exit 1; }
+          pip install "cocotb==1.9.2" "cocotb-coverage<2" >/dev/null
+          python3 -c "import cocotb, sys; print('cocotb', cocotb.__version__); sys.exit(cocotb.__version__ != '1.9.2')"
       - name: flat layout
         run: |
           cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim
@@ -420,6 +439,12 @@ jobs:
       - run: pip install numpy
       - name: install the simulator
         run: sudo apt-get update && sudo apt-get install -y verilator && verilator --version
+      # drop 0.44 (review #16): the version gate of hdl-sim -- Verilator 5.020 and cocotb 1.9.2 (no Icarus in this job)
+      - name: tool versions pinned (Verilator 5.020, cocotb 1.9.2)
+        run: |
+          verilator --version | grep -q "^Verilator 5\.020 " || { echo "::error::Verilator is not 5.020: $(verilator --version)"; exit 1; }
+          pip install "cocotb==1.9.2" "cocotb-coverage<2" >/dev/null
+          python3 -c "import cocotb, sys; print('cocotb', cocotb.__version__); sys.exit(cocotb.__version__ != '1.9.2')"
       - name: flat layout
         run: |
           cp -r 01_rtl rtl && cp -r 02_dv/tb tb && cp -r 02_dv/dv dv && cp -r 02_dv/sim sim

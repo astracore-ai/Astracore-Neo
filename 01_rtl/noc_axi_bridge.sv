@@ -5,7 +5,11 @@
 //   the bridge's data path is the only crossing it has; the link_packer / link_unpacker pair and the bridge node's router
 //   are in the mesh clock outside (neo_top.sv).
 //   Beats in (rx_*): {dst_y, dst_x, src_y, src_x, seq[7:0], type[2:0], tag[8:0], hdr[19:0], words[32*16-1:0]} as the NIC sees
-//   them; beats out (tx_*) the same, with src = (my_x, my_y), seq = {4'd0, partition}, tag = 0. A word address on the mesh
+//   them; beats out (tx_*) the same, with src = (my_x, my_y), seq = {4'd0, partition}, tag = 0 -- except the fetch sequence
+//   tag (drop 0.44, review #2; tile_nic.sv): the memory role echoes a request's hdr[11:8] in tag[3:0] of its RDRSP beats and
+//   CRC flit, and the host role's reads carry a 4-bit sequence of their own in the RDREQ's hdr[11:8] and take only the
+//   response beats and CRC flit that echo it (a late response of a read that timed out cannot complete the next read; it
+//   was matched by the source tile alone before). A word address on the mesh
 //   side is a word address, exactly as a tile's bank is addressed by the DMA (20 bits; a fetch or a drain may start inside a
 //   row), so a bridge's window is 2^20 words = 4 MB of AXI space at win_base.
 //
@@ -47,7 +51,10 @@
 //     INCR bursts of full-width beats only (others: SLVERR), a tile index past the mesh: DECERR.
 //   - write: WRHDR (the first written word) + one WRDATA beat per AXI beat (its strobed words: whole words, one run per beat;
 //     a beat with a partial-word strobe or two runs is skipped and the response is SLVERR; a run that does not continue the
-//     previous one starts with a new WRHDR, which the tile's receiver takes in the same message) + the CRC flit; BRESP when
+//     previous one starts with a new WRHDR, which the tile's receiver takes in the same message) + the CRC flit. The burst's
+//     length is AWLEN + 1 beats; WLAST earlier than that (drop 0.44, review #17: it was ignored and the slave waited for the
+//     missing beats forever) ends the burst at that beat -- its words are written, the CRC flit sent, BRESP is SLVERR and
+//     ev_host is set -- while a master that offers more beats than AWLEN + 1 is held on WREADY (its own violation). BRESP when
 //     the CRC flit has entered the mesh (posted: a read through the same bridge to the same tile follows the same XY path
 //     and is served after the write -- the fence a host uses before starting a tile on the data). Each W beat is taken
 //     into a register with its strobes decoded on the way in and sent from there (one beat per cycle).
@@ -189,6 +196,7 @@ module noc_axi_bridge #(
 
   // ------------------------------------------------------------------ RX: the beat at the input
   logic [2:0]      rx_type;
+  logic [8:0]      rx_tag;                   // drop 0.44: [3:0] the fetch sequence tag of an RDRSP / CRC flit
   logic [19:0]     rx_hdr;
   logic [VW-1:0]   rx_words;
   logic [31:0]     rx_word0;
@@ -199,6 +207,7 @@ module noc_axi_bridge #(
   logic [CW-1:0]   rx_nw;                    // words in the beat
   logic            rx_fire;
   assign rx_type    = rx_flit[DWB-1 -: 3];
+  assign rx_tag     = rx_flit[DWB-4 -: 9];
   assign rx_hdr     = rx_flit[DWB-13 -: 20];
   assign rx_words   = rx_flit[VW-1:0];
   assign rx_word0   = rx_words[31:0];
@@ -207,8 +216,8 @@ module noc_axi_bridge #(
   assign rx_src_y   = rx_flit[DWB + 8 + XW +: YW];
   assign rx_is_data = (rx_type == T_RDRSP) || (rx_type == T_WRDATA) || (rx_type == T_PSUM);
   assign rx_nw      = rx_is_data ? CW'(rx_hdr[13:8]) + CW'(1) : CW'(1);
-  logic unused_rx_bits;                      // the destination (this node), the tag, seq[7:4], hdr[19:14]
-  assign unused_rx_bits = ^{rx_flit[FB-1 -: XW + YW], rx_flit[DWB-4 -: 9], rx_seq[7:4], rx_hdr[19:14]};
+  logic unused_rx_bits;                      // the destination (this node), the tag above its sequence field, seq[7:4], hdr[19:14]
+  assign unused_rx_bits = ^{rx_flit[FB-1 -: XW + YW], rx_tag[8:4], rx_seq[7:4], rx_hdr[19:14]};
 
   // per-source receive state (each source in its own block, as tile_nic keeps it): the write pointer of a drain into the
   // memory window, the CRC and the word count of the stream in progress. The beat's source is decoded one-hot from its
@@ -302,6 +311,7 @@ module noc_axi_bridge #(
   logic [YW-1:0]  mt_dy, ht_dy;
   logic [3:0]     mt_part;
   logic [2:0]     mt_type, ht_type;
+  logic [3:0]     mt_tag;                    // drop 0.44: the memory role's response tag (the request's sequence)
   logic [19:0]    mt_hdr, ht_hdr;
   logic [VW-1:0]  mt_words, ht_words;
   logic [CW-1:0]  mt_n, ht_n;
@@ -310,19 +320,20 @@ module noc_axi_bridge #(
   logic [YW-1:0]  t_dy;
   logic [3:0]     t_part;
   logic [2:0]     t_type;
+  logic [3:0]     t_tag;
   logic [19:0]    t_hdr;
   logic [VW-1:0]  t_words;
   logic [CW-1:0]  t_n;
   always_comb begin
-    tx_valid = 1'b0; t_dx = '0; t_dy = '0; t_part = '0; t_type = '0; t_hdr = '0; t_words = '0; t_n = '0;
+    tx_valid = 1'b0; t_dx = '0; t_dy = '0; t_part = '0; t_type = '0; t_tag = '0; t_hdr = '0; t_words = '0; t_n = '0;
     if (own_mem) begin
-      tx_valid = mt_valid; t_dx = mt_dx; t_dy = mt_dy; t_part = mt_part; t_type = mt_type; t_hdr = mt_hdr; t_words = mt_words; t_n = mt_n;
+      tx_valid = mt_valid; t_dx = mt_dx; t_dy = mt_dy; t_part = mt_part; t_type = mt_type; t_tag = mt_tag; t_hdr = mt_hdr; t_words = mt_words; t_n = mt_n;
     end else if (own_host) begin
       tx_valid = ht_valid; t_dx = ht_dx; t_dy = ht_dy; t_part = partition; t_type = ht_type; t_hdr = ht_hdr; t_words = ht_words; t_n = ht_n;
     end
   end
   assign t_data  = (t_type == T_RDRSP) || (t_type == T_WRDATA);
-  assign tx_flit = {t_dy, t_dx, my_y, my_x, 4'd0, t_part, t_type, 9'd0, t_hdr, t_words};
+  assign tx_flit = {t_dy, t_dx, my_y, my_x, 4'd0, t_part, t_type, 5'd0, t_tag, t_hdr, t_words};
   assign tx_fire = tx_valid && tx_ready;
   crc16_beat #(.BW(BW)) u_txcrc (.crc_in(tx_crc), .words(t_words), .n(t_n), .crc_out(tx_crc_next));
   always_ff @(posedge clk or negedge rst_n) begin
@@ -394,6 +405,7 @@ module noc_axi_bridge #(
       logic [19:0]    q_addr  [QD];
       logic [12:0]    q_words [QD];
       logic [SQW-1:0] q_tag   [QD];
+      logic [3:0]     q_seq   [QD];          // drop 0.44: the request's fetch sequence tag (hdr[11:8]), echoed in the response
       logic [QPW:0]   q_wp, q_ip, q_rp;      // one bit above the index: full / empty
       logic [QPW-1:0] qi_w, qi_i, qi_r;
       assign qi_w = q_wp[QPW-1:0];
@@ -409,7 +421,7 @@ module noc_axi_bridge #(
         if (!rst_n) begin
           q_wp <= '0;
           for (int e = 0; e < QD; e++) begin
-            q_x[e] <= '0; q_y[e] <= '0; q_part[e] <= '0; q_addr[e] <= '0; q_words[e] <= '0; q_tag[e] <= '0;
+            q_x[e] <= '0; q_y[e] <= '0; q_part[e] <= '0; q_addr[e] <= '0; q_words[e] <= '0; q_tag[e] <= '0; q_seq[e] <= '0;
           end
         end else if (rq_take) begin                    // the requester's coordinates and partition, the request, its tag
           q_wp          <= q_wp + (QPW + 1)'(1);
@@ -419,6 +431,7 @@ module noc_axi_bridge #(
           q_addr[qi_w]  <= rx_word0[19:0];
           q_words[qi_w] <= 13'(rx_word0[31:20]);
           q_tag[qi_w]   <= w_closed + SQW'(ob_open);  // the open burst is closed because of this request (below)
+          q_seq[qi_w]   <= rx_hdr[11:8];
         end
       end
       // ---- the AR engine ----
@@ -503,6 +516,7 @@ module noc_axi_bridge #(
       assign mt_dy     = q_y[qi_r];
       assign mt_part   = q_part[qi_r];
       assign mt_type   = rs_crc ? T_CRC : T_RDRSP;
+      assign mt_tag    = q_seq[qi_r];
       assign mt_hdr    = rs_crc ? 20'd0 : {6'd0, 6'(r_n - CW'(1)), 8'd0};
       assign mt_words  = rs_crc ? VW'({tx_cnt, tx_crc ^ {16{r_err}}}) : VW'(m_rdata) >> (32 * r_lo);
       assign mt_n      = rs_crc ? CW'(1) : r_n;
@@ -724,6 +738,7 @@ module noc_axi_bridge #(
       localparam logic [2:0] H_IDLE = 3'd0, H_W = 3'd1, H_WCRC = 3'd2, H_B = 3'd3, H_WSKIP = 3'd4, H_RREQ = 3'd5, H_R = 3'd6;
       localparam int SGW = 2 * BW;           // words of the read stage
       logic [2:0]          h_state;
+      logic [3:0]          h_tag;            // drop 0.44: the sequence tag of the read in progress (its RDREQ's hdr[11:8])
       logic [AXI_IDW-1:0]  h_id;
       logic [XW-1:0]       h_x;
       logic [YW-1:0]       h_y;
@@ -804,7 +819,7 @@ module noc_axi_bridge #(
           end
           H_WCRC: if (own_host && h_hdr) begin ht_valid = 1'b1; ht_type = T_CRC; ht_words = VW'({tx_cnt, tx_crc}); end
           H_RREQ: if (own_host) begin
-            ht_valid = 1'b1; ht_type = T_RDREQ; ht_hdr = {12'd0, 4'(my_y), 4'(my_x)};
+            ht_valid = 1'b1; ht_type = T_RDREQ; ht_hdr = {8'd0, h_tag, 4'(my_y), 4'(my_x)};
             ht_words = VW'({12'(h_nwreq), 20'(h_bword)});
           end
           default: ;
@@ -839,16 +854,18 @@ module noc_axi_bridge #(
       assign rx_in       = {VW'(0), rx_masked} << (32 * h_cnt[4:0]);
       assign merged      = rsp_fire ? (h_stage | rx_in) : h_stage;
       assign cnt_m       = rsp_fire ? h_cnt + 6'(rx_nw) : h_cnt;
-      assign rsp_src     = (rx_src_x == h_x) && (rx_src_y == h_y);
+      assign rsp_src     = (rx_src_x == h_x) && (rx_src_y == h_y) && (rx_tag[3:0] == h_tag);   // the read's tile and tag (drop 0.44)
       assign host_rsp    = h_wait && (rx_type == T_RDRSP) && rsp_src;
       assign host_rsp_ok = (h_cnt <= 6'(SGW - BW));
       assign rsp_fire = rx_fire && host_rsp;
       assign crc_fire = rx_fire && h_wait && (rx_type == T_CRC) && rsp_src;
       assign h_ev_timeout = h_wait && (h_timer == HTW'(HOST_TIMEOUT - 1)) && !crc_fire;
-      assign h_ev_host = ((aw_take || ar_take) && !(d_inmesh && d_sup && (!ar_take || d_nw <= 13'd4095))) || (wq_take && wq_bad);
+      logic w_short;                         // drop 0.44 (review #17): WLAST on a beat before the burst's last
+      assign w_short   = w_fire && s_wlast && (((h_state == H_W) && (h_wcap != 9'd1)) || ((h_state == H_WSKIP) && (h_beats != 9'd1)));
+      assign h_ev_host = ((aw_take || ar_take) && !(d_inmesh && d_sup && (!ar_take || d_nw <= 13'd4095))) || (wq_take && wq_bad) || w_short;
       always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-          h_state <= H_IDLE; h_id <= '0; h_x <= '0; h_y <= '0; h_bword <= '0; h_beats <= '0; h_resp <= R_OKAY;
+          h_state <= H_IDLE; h_id <= '0; h_x <= '0; h_y <= '0; h_bword <= '0; h_beats <= '0; h_resp <= R_OKAY; h_tag <= '0;
           h_hdr <= 1'b0; h_hdr_now <= 1'b0; h_next <= '0; h_nwreq <= '0; h_got <= '0; h_wait <= 1'b0; h_final <= 1'b0;
           h_ok <= 1'b0; h_timer <= '0; h_stage <= '0; h_cnt <= '0;
           wq_valid <= 1'b0; wq_data <= '0; wq_addr <= '0; wq_n <= '0; wq_bad <= 1'b0; h_wcap <= '0;
@@ -863,6 +880,7 @@ module noc_axi_bridge #(
               h_hdr   <= 1'b0; h_hdr_now <= 1'b0;
               h_nwreq <= d_nw;
               h_got   <= '0; h_final <= 1'b0; h_ok <= 1'b0; h_wait <= 1'b0; h_timer <= '0;
+              if (ar_take) h_tag <= h_tag + 4'd1;        // every read request a new tag (drop 0.44)
               h_resp  <= !d_inmesh ? R_DECERR : (!d_sup ? R_SLVERR : R_OKAY);
               if (aw_take) h_state <= (d_inmesh && d_sup) ? H_W : H_WSKIP;
               else if (d_inmesh && d_sup && (d_nw <= 13'd4095)) h_state <= H_RREQ;
@@ -883,7 +901,7 @@ module noc_axi_bridge #(
               end
             end
             H_WCRC: if (own_host && (!h_hdr || tx_ready)) h_state <= H_B;
-            H_WSKIP: if (w_fire && (h_beats == 9'd1)) h_state <= H_B; else if (w_fire) h_beats <= h_beats - 9'd1;
+            H_WSKIP: if (w_fire && ((h_beats == 9'd1) || s_wlast)) h_state <= H_B; else if (w_fire) h_beats <= h_beats - 9'd1;
             H_B: if (s_bready) h_state <= H_IDLE;
             H_RREQ: if (own_host && tx_ready) begin h_state <= H_R; h_wait <= 1'b1; h_timer <= '0; end
             H_R: begin
@@ -911,6 +929,9 @@ module noc_axi_bridge #(
             h_bword  <= {h_bword[BAW-1:LWP] + (BAW - LWP)'(1), LWP'(0)};
             wq_n     <= w_any ? CW'(w_lastw) - CW'(w_first) + CW'(1) : '0;
             h_wcap   <= h_wcap - 9'd1;
+            if (s_wlast && (h_wcap != 9'd1)) begin     // WLAST before AWLEN's last beat (drop 0.44): the burst ends here,
+              h_wcap <= 9'd0; h_beats <= 9'd1; h_resp <= R_SLVERR;   // no more W beats taken, this beat's WRDATA then the CRC flit,
+            end                                          // SLVERR, ev_host; a master that sends more beats than AWLEN + 1 waits on WREADY
           end else if (wq_take) begin
             wq_valid <= 1'b0;
           end
@@ -924,8 +945,8 @@ module noc_axi_bridge #(
           if (rsp_fire) h_got <= h_got + 13'(rx_nw);
         end
       end
-      logic unused_host;                     // WLAST (the burst length counts the beats), the address bits below a beat
-      assign unused_host = ^{s_wlast, d_addr[LWP+1:0]};
+      logic unused_host;                     // the address bits below a beat
+      assign unused_host = ^{d_addr[LWP+1:0]};
     end else begin : g_nohost
       assign host_want = 1'b0; assign host_rsp = 1'b0; assign host_rsp_ok = 1'b1;
       assign h_ev_timeout = 1'b0; assign h_ev_host = 1'b0;
@@ -936,7 +957,7 @@ module noc_axi_bridge #(
       assign s_rvalid = 1'b0;
       logic unused_host;
       assign unused_host = ^{s_awid, s_awaddr, s_awlen, s_awsize, s_awburst, s_awvalid, s_wdata, s_wstrb, s_wlast, s_wvalid, s_bready,
-                             s_arid, s_araddr, s_arlen, s_arsize, s_arburst, s_arvalid, s_rready, partition};
+                             s_arid, s_araddr, s_arlen, s_arsize, s_arburst, s_arvalid, s_rready, partition, rx_tag[3:0]};
     end
   endgenerate
 endmodule

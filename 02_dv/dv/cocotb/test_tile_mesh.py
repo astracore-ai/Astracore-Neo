@@ -49,6 +49,12 @@ same "poke between two ticks" the neosim tests do). Each test is independent and
       requantizer's and the unit's per-column tables)
   M25 (drop 0.43, stream B2) the telemetry counters against the testbench's own counts on M2's K-split and single-tile
       convolutions of M18's class, the measured MAC utilization beside the perf model's (m25_telemetry)
+  M27 (drop 0.44, review #17) WD_CTRL with window 0 raises the watchdog cause at once, kicked or not; the clear holds only with
+      the watchdog disabled (m27_watchdog_window_zero); M11 also checks that the error clear drops bist_fail (review #11)
+  M26 (drop 0.44, review #2) a late response after a fetch timeout: the dead server of M9b is released while tile 0's retry
+      from the same bank is outstanding, so the abandoned fetch's response arrives first -- it must not be stored as the
+      retry's nor complete it (the fetch sequence tag in the RDREQ's hdr[11:8], echoed in the RDRSP / CRC flits);
+      the layer that follows is bit-exact and no cause is raised
 Run: make -C dv/cocotb tile   (tile_mesh_cocotb wrapper: 2x2, 16x8 cores, FETCH_TIMEOUT=8192, BIST_WORDS=16)
      make -C dv/cocotb tile_sp (drop 0.42: the same mesh of 16x8 sparse-capable cores, NCHK = 4: M20, and M1 / M6 dense on
                               the five-word weight entries of that core)
@@ -821,7 +827,40 @@ async def m11_mbist_via_registers(dut):
     c = await mesh.reg_read(0, REG_ERR_CAUSE)
     assert (st & 0xE) == 0xE and (st >> 12) == 11 and (c >> CAUSE_BIST) & 1 == 1 and mesh.pins()[0] == 1, f"M11 status 0x{st:08x} cause 0x{c:05x}"   # address at [31:12] (drop 0.22)
     fc.sample_flag("bist_fail")
-    dut._log.info(f"M11: MBIST clean (0x{st_clean:x}); stuck bit found through the ECC at word 11, cause and pin raised")
+    # drop 0.44 (review #11): the error clear (CTRL bit 1) clears bist_fail with the other stickies, so cause 14 and the pin
+    # fall and stay down; the failing address stays readable; before, fail was a level the ESM re-latched every cycle
+    await mesh.clear_errors(0)
+    await mesh.tick(4)
+    st_cl = await mesh.reg_read(0, REG_MBIST)
+    c_cl = await mesh.reg_read(0, REG_ERR_CAUSE)
+    assert (st_cl & 0xE) == 0x2 and (st_cl >> 12) == 11 and c_cl == 0 and mesh.pins()[0] == 0, \
+        f"M11 after the error clear: status 0x{st_cl:08x} (expect done, no fail, address 11) cause 0x{c_cl:05x} pin {mesh.pins()[0]}"
+    dut._log.info(f"M11: MBIST clean (0x{st_clean:x}); stuck bit found through the ECC at word 11, cause and pin raised; the error clear "
+                  f"dropped fail, the cause and the pin (status 0x{st_cl:x})")
+
+
+@cocotb.test()
+async def m27_watchdog_window_zero(dut):
+    """M27 (drop 0.44, review #17): WD_CTRL with a window of 0 -- a window no kick can meet -- raises the watchdog cause
+    within a few clocks of the enable, kicked or not; the clear drops it (every cause clears together) and with the watchdog
+    disabled it stays down. Pins the behaviour so a driver written against it is not surprised."""
+    mesh = await setup(dut)
+    await mesh.reg_write(0, REG_WD_CTRL, (0 << 8) | 1)
+    await mesh.tick(4)
+    c0 = await mesh.reg_read(0, REG_ERR_CAUSE)
+    assert (c0 >> 18) & 1 == 1 and mesh.pins()[0] == 1, f"M27 window 0 enabled: cause 0x{c0:05x} pin {mesh.pins()[0]} (watchdog expected)"
+    await mesh.reg_write(0, REG_WD_KICK, 0)                # a kick restarts the count at 0 == the window: fires again
+    await mesh.clear_errors(0)
+    await mesh.tick(4)
+    c1 = await mesh.reg_read(0, REG_ERR_CAUSE)
+    assert (c1 >> 18) & 1 == 1, f"M27 window 0 kicked then cleared: cause 0x{c1:05x} (the watchdog re-arms at once)"
+    await mesh.reg_write(0, REG_WD_CTRL, 0)                # disabled: the clear holds
+    await mesh.clear_errors(0)
+    await mesh.tick(4)
+    c2 = await mesh.reg_read(0, REG_ERR_CAUSE)
+    assert c2 == 0 and mesh.pins()[0] == 0, f"M27 disabled and cleared: cause 0x{c2:05x} pin {mesh.pins()[0]}"
+    fc.sample_flag("watchdog")
+    dut._log.info("M27: WD_CTRL window 0 raises the watchdog cause at once (kicked or not); disabled, the clear holds")
 
 
 @cocotb.test()
@@ -1347,6 +1386,50 @@ async def m22_self_serve(dut):
     assert seen["self"] == 0, f"M22: {seen['self']} flits of the data tile came back through its router's local port"
     dut._log.info(f"M22: the data tile computing a share while serving the other three, {len(lp.tiles)} tiles, bit-exact in {n} clocks, "
                   f"causes clean; its own fetches stayed off the mesh ({seen['local']} flits from other tiles on its local port, none of its own)")
+
+
+@cocotb.test()
+async def m26_late_response_after_timeout(dut):
+    """M26 (drop 0.44, review #2): a server released after the requester's fetch timeout answers the abandoned fetch while
+    the retry from the same bank is in flight. Tile (1,1)'s transmit engine is held in its serve-read state (M9b's dead
+    server); tile 0 fetches 8 words of the weight region as activations and times out. Then tile 0 runs M1's layer -- its
+    first FETCH_A is the retry from the same bank; the request waits at the held server -- and the hold is released: the
+    server first sends the 8-word response of the abandoned fetch (tag 1), then the retry's (tag 2). Without the sequence
+    tag the stale words were written into the retry's entries and its CRC flit completed the retry early (the DMA went on
+    to the next fetch, whose entries then took the retry's words): the result was wrong with no cause raised. Checked:
+    the layer bit-exact and every cause clean after the retry."""
+    mesh = await setup(dut)
+    x, wgt, ref, act, wts = conv_data()
+    await mesh.load_bank(N11, act, wts)
+    mesh.fault_hold(N11, FI_SERVE_HOLD)                                      # the dead server
+    await mesh.program(0, [ins(OP_FETCH_A, 1, 1, W0, 8, 0), ins(OP_END)])   # 8 words that are not the layer's activations
+    await mesh.start([0])
+    n = 0
+    while True:
+        await RisingEdge(dut.clk)
+        if mesh.prog_done(0):
+            break
+        n += 1
+        assert n < FETCH_TIMEOUT + 500, "M26: the fetch timeout did not fire"
+    c = await mesh.causes()
+    assert (c[0] >> CAUSE_TIMEOUT) & 1 == 1, f"M26 causes after the dead server {causes_str(c)}"
+    await mesh.clear_errors(0)
+    # the retry: M1's layer from the same bank, its first FETCH_A outstanding at the server still held
+    await mesh.descriptor(0, 6, 6, 6, 6, 1, 1, 3, CT_N, 0, CT_N * 9, 0, 36)
+    prog = [ins(OP_FETCH_A, 1, 1, A0 + ct * APT, APT, ct * 36) for ct in range(CT_N)]
+    prog += fetch_weights(1, 1) + [ins(OP_DRAIN_WR, 1, 0, R0, 36), ins(OP_GO), ins(OP_WAIT_DONE), ins(OP_END)]
+    await mesh.program(0, prog)
+    await mesh.start([0])
+    await mesh.tick(60)                                                      # the retry's RDREQ has reached the server
+    assert not mesh.prog_done(0), "M26: the retry completed before the server was released"
+    mesh.fault_release()                                                     # the late response first, then the retry's
+    n = await mesh.wait_prog(0)
+    await mesh.tick(40)
+    got = to_image(await mesh.read_rows(N10, R0, 36), ref, 36)
+    await check_result(mesh, got, ref, "M26 after the late response")
+    await expect_clean(mesh)
+    dut._log.info(f"M26: the abandoned fetch's response (8 words) arrived during the retry and was ignored; the layer bit-exact in "
+                  f"{n} clocks after the release, causes clean")
 
 
 async def tel_snapshot(mesh, node):

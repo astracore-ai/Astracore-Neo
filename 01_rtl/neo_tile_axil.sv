@@ -9,6 +9,7 @@ module neo_tile_axil #(
 )(
   input  logic          clk,
   input  logic          rst_n,
+  input  logic          test_en,       // drop 0.44 (review #8): test mode, to the tile's clock gates (tie 0 in function)
   input  logic [XW-1:0] my_x,          // the tile's mesh coordinates, strapped at integration (drop 0.35)
   input  logic [YW-1:0] my_y,
   // AXI4-Lite host port
@@ -40,7 +41,7 @@ module neo_tile_axil #(
   neo_tile #(.XW(XW), .YW(YW), .NX(NX), .NY(NY), .WPF(WPF), .ROWS(ROWS), .COLS(COLS), .PW(PW),
              .ACC_ROWS(ACC_ROWS), .ABUF_DEPTH(ABUF_DEPTH), .WBUF_DEPTH(WBUF_DEPTH), .BANK_DEPTH(BANK_DEPTH),
              .FETCH_TIMEOUT(FETCH_TIMEOUT), .BIST_WORDS(BIST_WORDS), .DV_HOOKS(DV_HOOKS)) u_tile (
-    .clk(clk), .rst_n(rst_n), .router_rst_n(rst_n), .tile_clk_en(1'b1), .iso_en(1'b0),   // drop 0.43: one tile, always on
+    .clk(clk), .rst_n(rst_n), .router_rst_n(rst_n), .tile_clk_en(1'b1), .iso_en(1'b0), .test_en(test_en),   // drop 0.43: one tile, always on
     .my_x(my_x), .my_y(my_y),
     .in_valid(in_valid), .in_flit(in_flit), .in_ready(in_ready), .out_valid(out_valid), .out_flit(out_flit), .out_ready(out_ready),
     .h_we(h_we), .h_re(h_re), .h_addr(h_addr), .h_wdata(h_wdata), .h_rdata(h_rdata), .err_pin(err_pin),

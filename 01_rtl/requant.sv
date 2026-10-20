@@ -36,6 +36,7 @@ module requant #(
 )(
   input  logic                 clk,
   input  logic                 rst_n,
+  input  logic                 test_en,      // drop 0.44 (review #8): test mode -- the clock gate forced on (neo_icg.te)
   // per-column table write
   input  logic                 tbl_we,
   input  logic [CW-1:0]        tbl_addr,
@@ -73,7 +74,7 @@ module requant #(
   logic               gclk;
   logic               v1, v2;
   assign cg_en = in_valid || v1 || v2 || out_valid || tbl_we || err_clear || !rst_n;
-  neo_icg u_icg (.clk(clk), .en(cg_en), .te(1'b0), .gclk(gclk));
+  neo_icg u_icg (.clk(clk), .en(cg_en), .te(test_en), .gclk(gclk));
 
   always_ff @(posedge gclk) begin
     if (tbl_we) begin

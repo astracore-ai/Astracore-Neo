@@ -20,7 +20,8 @@
 //   -- the down sequence iso on, clock off, power off and the up sequence power on, reset, clock on, iso off that the brief
 //   asks for, with the reset asserted before the power goes and released before the clock comes. The outputs (tile_iso_en,
 //   tile_clk_en, tile_rst_n, tile_pwr_en) are flops loaded from the state, so none of them glitches (tile_rst_n is an
-//   asynchronous reset: it is the AND of rst_n and its flop). A sequence runs to its rest state (ON or OFF) before the
+//   asynchronous reset: it is the AND of rst_n and its flop -- and, in test mode, rst_n alone: test_en bypasses the
+//   sequencer's reset so a scan flow controls every tile's reset from the pin, drop 0.44). A sequence runs to its rest state (ON or OFF) before the
 //   target is looked at again. The sequencer has no reset: while the mesh is in reset it loads the requested rest state on
 //   every clock, so the tiles leave reset in the map written before (a disabled tile powered off, never sequenced).
 //   en_eff[n] = the tile is ON: the fence of neo_top drops what is addressed to a tile that is not (its router, on the
@@ -54,6 +55,7 @@ module mesh_ctrl #(
 )(
   input  logic             clk,
   input  logic             rst_n,
+  input  logic             test_en,          // drop 0.44 (review #8): test mode -- the tiles' resets follow rst_n directly
   // register accesses from the AXI clock (cdc_sync side B)
   input  logic             rq_req,
   input  logic [RQW-1:0]   rq_data,
@@ -202,7 +204,7 @@ module mesh_ctrl #(
       assign en_eff[n]       = (ps == P_ON) && !iso_q;    // the outputs have followed: on and unisolated
       assign tile_iso_en[n]  = iso_q;
       assign tile_clk_en[n]  = clk_q;
-      assign tile_rst_n[n]   = rst_n && rst_q;
+      assign tile_rst_n[n]   = test_en ? rst_n : (rst_n && rst_q);   // test mode bypasses the sequencer's reset (drop 0.44)
       assign tile_pwr_en[n]  = pwr_q;
       assign pwr_state[3 * n +: 3] = ps;
     end
@@ -214,6 +216,17 @@ module mesh_ctrl #(
       logic           en;
       logic [NTW-1:0] ta, tb;
       assign {en, ta, tb} = ls_cfg[k * LSW +: LSW];
+      // drop 0.44 (review #12): the three fields cross from the AXI clock bit by bit (cdc_bits), so a single LS_PAIR write
+      // may show its enable one clock before or after its indices. The enable in effect (en_s) is en delayed three clocks:
+      // the indices have settled within one clock of en, crc_* / cnt_* follow them one clock later, and seen_* take the
+      // settled counts in the clock before the comparison starts -- so one write configures and enables a pair safely
+      logic [2:0]     en_q;
+      logic           en_s;
+      always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) en_q <= '0;
+        else        en_q <= {en_q[1:0], en};
+      end
+      assign en_s = en_q[2];
       // the two tiles' (count, CRC), selected by the pair's indices and registered: the 64:1 selects end at flops, the
       // comparison below works a clock behind the tiles (a message's count and CRC change together, so nothing is lost)
       logic [15:0] crc_a, crc_b, cnt_a, cnt_b;
@@ -228,7 +241,7 @@ module mesh_ctrl #(
       end
       logic        active, new_a, new_b, cur, done_ab;
       logic [15:0] seen_a, seen_b, sig_a, sig_b, na, nb;
-      assign active  = en && (ta != tb) && en_eff[ta] && en_eff[tb];
+      assign active  = en_s && (ta != tb) && en_eff[ta] && en_eff[tb];
       assign new_a   = (cnt_a != seen_a);
       assign new_b   = (cnt_b != seen_b);
       assign cur     = !new_a && !new_b;        // both signatures hold every message counted so far
@@ -238,7 +251,7 @@ module mesh_ctrl #(
           seen_a <= '0; seen_b <= '0; sig_a <= '0; sig_b <= '0; na <= '0; nb <= '0; ls_err[k] <= 1'b0;
         end else if (!active) begin             // the counts so far are the starting point; the error clears with the enable
           seen_a <= cnt_a; seen_b <= cnt_b; sig_a <= '0; sig_b <= '0; na <= '0; nb <= '0;
-          if (!en) ls_err[k] <= 1'b0;
+          if (!en_s) ls_err[k] <= 1'b0;
         end else begin
           if (new_a) begin seen_a <= cnt_a; sig_a <= {sig_a[14:0], sig_a[15]} ^ crc_a; na <= na + 16'd1; end
           if (new_b) begin seen_b <= cnt_b; sig_b <= {sig_b[14:0], sig_b[15]} ^ crc_b; nb <= nb + 16'd1; end

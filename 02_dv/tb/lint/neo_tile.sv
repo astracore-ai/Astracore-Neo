@@ -27,6 +27,7 @@ module neo_tile #(
   input  logic          router_rst_n,
   input  logic          tile_clk_en,
   input  logic          iso_en,
+  input  logic          test_en,
   input  logic [XW-1:0] my_x,
   input  logic [YW-1:0] my_y,
   input  logic [3:0]       in_valid,
@@ -80,6 +81,6 @@ module neo_tile #(
   assign dv_rt_flit4 = '0; assign dv_obs = '0; assign drain_crc_last = '0; assign drain_msg_cnt = '0;
   localparam int UNUSED_PARAMS = NX + NY + ROWS + COLS + PW + WCW + IDXW + AW + WAW + FETCH_TIMEOUT + BIST_WORDS + PAW + NCHK + IW + DV_HOOKS;
   logic unused_stub;
-  assign unused_stub = ^{clk, rst_n, router_rst_n, tile_clk_en, iso_en, my_x, my_y, in_valid, in_flit, out_ready, h_we, h_re, h_addr, h_wdata, dv_bd_we, dv_bd_addr,
+  assign unused_stub = ^{clk, rst_n, router_rst_n, tile_clk_en, iso_en, test_en, my_x, my_y, in_valid, in_flit, out_ready, h_we, h_re, h_addr, h_wdata, dv_bd_we, dv_bd_addr,
                          dv_bd_wdata, dv_fi_en, dv_fi_sel, dv_fi_idx, dv_fi_mask, 32'(UNUSED_PARAMS)};
 endmodule

@@ -43,7 +43,7 @@ module requant_parity_fv #(
   logic                out_valid, perr, cg_en;
   logic signed [7:0]   out_q [COLS];
   requant #(.COLS(COLS), .PW(PW), .MW(MW)) u_dut (
-    .clk(clk), .rst_n(rst_n), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
+    .clk(clk), .rst_n(rst_n), .test_en(1'b0), .tbl_we(tbl_we), .tbl_addr(tbl_addr), .tbl_mult(tbl_mult), .tbl_shift(tbl_shift),
     .tbl_zp(tbl_zp), .relu(relu), .in_valid(in_valid), .in_acc(in_acc), .out_valid(out_valid), .out_q(out_q),
     .err_clear(err_clear), .tbl_perr_sticky(perr), .tbl_fault_inject(fault),   // out_valid / out_q: lockstep_requant's
     .cg_en(cg_en));
