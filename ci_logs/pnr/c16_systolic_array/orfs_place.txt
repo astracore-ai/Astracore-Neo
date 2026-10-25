@@ -814,3 +814,66 @@ Detailed placement improvement.
 [INFO DPL-0303] Running algorithm for independent set matching.
 [INFO DPL-0300] Set matching objective is wirelength.
 [INFO DPL-0301] Pass   1 of matching; objective is 6.891433e+08.
+[INFO DPL-0302] End of matching; objective is 6.873395e+08, improvement is 0.26 percent.
+[INFO DPL-0303] Running algorithm for global swaps.
+[INFO DPL-0306] Pass   1 of global swaps; hpwl is 6.773047e+08.
+[INFO DPL-0306] Pass   2 of global swaps; hpwl is 6.757079e+08.
+[INFO DPL-0307] End of global swaps; objective is 6.757079e+08, improvement is 1.69 percent.
+[INFO DPL-0303] Running algorithm for vertical swaps.
+[INFO DPL-0308] Pass   1 of vertical swaps; hpwl is 6.731949e+08.
+[INFO DPL-0309] End of vertical swaps; objective is 6.731949e+08, improvement is 0.37 percent.
+[INFO DPL-0303] Running algorithm for reordering.
+[INFO DPL-0304] Pass   1 of reordering; objective is 6.710291e+08.
+[INFO DPL-0305] End of reordering; objective is 6.710291e+08, improvement is 0.32 percent.
+[INFO DPL-0303] Running algorithm for random improvement.
+[INFO DPL-0324] Random improver is using random generator.
+[INFO DPL-0325] Random improver is using hpwl objective.
+[INFO DPL-0326] Random improver cost string is (a).
+[INFO DPL-0332] End of pass, Generator random called 5810380 times.
+[INFO DPL-0335] Generator random, Cumulative attempts 5810380, swaps 850538, moves 1440518 since last reset.
+[INFO DPL-0333] End of pass, Objective hpwl, Initial cost 6.705614e+08, Scratch cost 6.640304e+08, Incremental cost 6.640304e+08, Mismatch? N
+[INFO DPL-0338] End of pass, Total cost is 6.640304e+08.
+[INFO DPL-0327] Pass   1 of random improver; improvement in cost is 0.97 percent.
+[INFO DPL-0328] End of random improver; improvement is 0.973962 percent.
+[INFO DPL-0380] Cell flipping.
+[INFO DPL-0382] Changed 0 cell orientations for row compatibility.
+[INFO DPL-0383] Performed 62505 cell flips.
+[INFO DPL-0384] End of flipping; objective is 6.542136e+08, improvement is 1.55 percent.
+[INFO DPL-0313] Found 0 cells in wrong regions.
+[INFO DPL-0315] Found 0 row alignment problems.
+[INFO DPL-0314] Found 0 site alignment problems.
+[INFO DPL-0311] Found 0 overlaps between adjacent cells.
+[INFO DPL-0312] Found 0 edge spacing violations and 0 padding violations.
+Place Optimization Analysis
+---------------------------------
+total attempts          5810380
+relocated cells          162721
+total displacement      69279.8 u
+average displacement        0.4 u
+max displacement            1.6 u
+original HPWL          689043.7 u
+improved HPWL          654176.4 u
+delta HPWL                   -5 %
+
+Took 73 seconds: improve_placement -max_displacement "5 1"
+optimize_mirroring
+[INFO DPL-0020] Mirrored 43382 instances
+[INFO DPL-0021] HPWL before          654176.4 u
+[INFO DPL-0022] HPWL after           652611.2 u
+[INFO DPL-0023] HPWL delta               -0.2 %
+[INFO FLW-0012] Placement violations .
+estimate_parasitics -placement
+Took 13 seconds: estimate_parasitics -placement
+Report metrics stage 3, detailed place...
+
+==========================================================================
+detailed place report_design_area
+--------------------------------------------------------------------------
+Design area 33436 um^2 61% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/3_5_place_dp.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/3_place.sdc
+Elapsed time: 3:02.45[h:]min:sec. CPU time: user 223.03 sys 3.52 (124%). Peak memory: 2179180KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+3_5_place_dp           .odb        182      227     1.24     2128 c1a8c2e679
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/3_5_place_dp.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/3_place.odb
