@@ -1,0 +1,193 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/3_place.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/3_place.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+clock_tree_synthesis -sink_clustering_enable -repair_clock_nets
+[INFO CTS-0050] Root buffer is BUFx4_ASAP7_75t_R.
+[INFO CTS-0051] Sink buffer is BUFx8_ASAP7_75t_R.
+[INFO CTS-0052] The following clock buffers will be used for CTS:
+                    BUFx4_ASAP7_75t_R
+                    BUFx10_ASAP7_75t_R
+[INFO CTS-0049] Characterization buffer is BUFx10_ASAP7_75t_R.
+[INFO CTS-0007] Net "clk" found for clock "clk".
+[INFO CTS-0010]  Clock net "clk" has 137 sinks.
+[INFO CTS-0008] TritonCTS found 1 clock nets.
+[INFO CTS-0097] Characterization used 2 buffer(s) types.
+[INFO CTS-0201] 0 blockages from hard placement blockages and placed macros will be used.
+[INFO CTS-0027] Generating H-Tree topology for net clk.
+[INFO CTS-0028]  Total number of sinks: 137.
+[INFO CTS-0060]  Register sinks will be clustered in groups of up to 32 and based on buffer max cap.
+[INFO CTS-0030]  Number of static layers: 0.
+[INFO CTS-0020]  Wire segment unit: 1350  dbu (1 um).
+[INFO CTS-0023]  Original sink region: [(1228, 1258), (17023, 17458)].
+[INFO CTS-0024]  Normalized sink region: [(0.90963, 0.931852), (12.6096, 12.9319)].
+[INFO CTS-0025]     Width:  11.7000.
+[INFO CTS-0026]     Height: 12.0000.
+ Level 1
+    Direction: Vertical
+    Sinks per sub-region: 69
+    Sub-region size: 11.7000 X 6.0000
+[INFO CTS-0034]     Segment length (rounded): 4.
+ Level 2
+    Direction: Horizontal
+    Sinks per sub-region: 35
+    Sub-region size: 5.8500 X 6.0000
+[INFO CTS-0034]     Segment length (rounded): 2.
+ Level 3
+    Direction: Vertical
+    Sinks per sub-region: 18
+    Sub-region size: 5.8500 X 3.0000
+[INFO CTS-0034]     Segment length (rounded): 1.
+ Level 4
+    Direction: Horizontal
+    Sinks per sub-region: 9
+    Sub-region size: 2.9250 X 3.0000
+[INFO CTS-0034]     Segment length (rounded): 1.
+[INFO CTS-0038]  Stop criterion found. Sink region hpwl is smaller than max wirelength (200.682 um) and max number of sinks is 15.
+[INFO CTS-0035]  Number of sinks covered: 137.
+[INFO CTS-0018]     Created 17 clock buffers.
+[INFO CTS-0012]     Minimum number of buffers in the clock path: 2.
+[INFO CTS-0013]     Maximum number of buffers in the clock path: 2.
+[INFO CTS-0015]     Created 17 clock nets.
+[INFO CTS-0016]     Fanout distribution for the current clock = 4:1, 5:1, 7:2, 8:4, 9:2, 10:4, 12:2..
+[INFO CTS-0017]     Max level of the clock tree: 4.
+[INFO CTS-0098] Clock net "clk"
+[INFO CTS-0099]  Sinks 151
+[INFO CTS-0100]  Leaf buffers 0
+[INFO CTS-0101]  Average sink wire length 27.60 um
+[INFO CTS-0102]  Path depth 2 - 2
+[INFO CTS-0207]  Dummy loads inserted 14
+[INFO CTS-0500] Runtime: 0.34s
+estimate_parasitics -placement
+detailed_placement
+[INFO DPL-0006] Core area: 273.04 um^2
+[INFO DPL-0007] Movable instances area: 181.78 um^2
+[INFO DPL-0008] Fixed instances area within core: 3.56 um^2
+[INFO DPL-0009] Utilization: 67.9%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 1709 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |        168 |        30 |       138
+        1 |         18 |         4 |        14
+        2 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 2.
+[INFO DPL-0500] Runtime: 0.01s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                 612
+total displacement        172.1 u
+average displacement        0.1 u
+max displacement            1.4 u
+original HPWL            2448.0 u
+legalized HPWL           2531.8 u
+delta HPWL                    3 %
+
+estimate_parasitics -placement
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -verbose
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove BufferMove CloneMove SplitLoadMove 
+[INFO RSZ-0094] Found 7 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 7 out of 7 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% |  -91.885 |     -554.5 |      7 | prod_q\[13\]_reg/D
+      10* |       0 |       3 |        2 |      0 |     4 |    +0.1% |  -73.770 |     -440.9 |      7 | prod_q\[13\]_reg/D
+      20* |       0 |       5 |        5 |      0 |     9 |    +0.3% |  -78.015 |     -455.7 |      7 | prod_q\[14\]_reg/D
+      30* |       0 |       7 |        9 |      0 |    14 |    +0.5% |  -76.934 |     -462.3 |      7 | prod_q\[13\]_reg/D
+      40* |       0 |       9 |       14 |      0 |    17 |    +0.7% |  -71.872 |     -471.9 |      7 | prod_q\[13\]_reg/D
+      47* |       0 |      10 |       14 |      0 |    23 |    +0.7% |  -70.089 |     -477.7 |      7 | prod_q\[13\]_reg/D
+      50* |       0 |      10 |       14 |      0 |    25 |    +0.7% |  -70.089 |     -476.1 |      7 | prod_q\[13\]_reg/D
+      54* |       0 |      10 |       14 |      0 |    26 |    +0.7% |  -70.089 |     -475.3 |      7 | prod_q\[13\]_reg/D
+      58* |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      7 | prod_q\[13\]_reg/D
+      60* |       0 |      10 |       14 |      0 |    28 |    +0.7% |  -70.089 |     -475.1 |      7 | prod_q\[13\]_reg/D
+      61* |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      7 | prod_q\[13\]_reg/D
+      64* |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      7 | prod_q\[13\]_reg/D
+      66* |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      7 | prod_q\[13\]_reg/D
+      70* |       0 |      11 |       15 |      0 |    28 |    +0.7% |  -70.477 |     -470.4 |      7 | prod_q\[13\]_reg/D
+      72* |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      7 | prod_q\[13\]_reg/D
+      72* |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      7 | prod_q\[13\]_reg/D
+      73+ |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      8 | prod_q\[13\]_reg/D
+      74+ |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      8 | prod_q\[13\]_reg/D
+      75+ |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      8 | prod_q\[13\]_reg/D
+      76+ |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      8 | prod_q\[13\]_reg/D
+      77+ |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      8 | prod_q\[13\]_reg/D
+      78+ |       0 |      10 |       14 |      0 |    27 |    +0.7% |  -70.089 |     -474.6 |      8 | prod_q\[13\]_reg/D
+      80+ |       0 |      10 |       14 |      0 |    28 |    +0.7% |  -70.089 |     -473.0 |      8 | prod_q\[13\]_reg/D
+      85+ |       0 |      15 |       14 |      0 |    28 |    +0.7% |  -70.089 |     -462.0 |      8 | prod_q\[13\]_reg/D
+      86+ |       0 |      15 |       14 |      0 |    28 |    +0.7% |  -70.089 |     -462.0 |      8 | prod_q\[13\]_reg/D
+    final |       0 |      15 |       14 |      0 |    28 |    +0.7% |  -70.089 |     -462.0 |      8 | prod_q\[13\]_reg/D
+------------------------------------------------------------------------------------------------------------------------------
+[INFO RSZ-0045] Inserted 14 buffers, 1 to split loads.
+[INFO RSZ-0051] Resized 15 instances: 14 up, 1 up match, 0 down, 0 VT
+[INFO RSZ-0043] Swapped pins on 28 instances.
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 0.85s
+[INFO RSZ-0033] No hold violations found.
+[INFO RSZ-0506] Runtime: 0.00s
+Elapsed time: 0:02.31[h:]min:sec. CPU time: user 2.27 sys 0.03 (99%). Peak memory: 29284KB.
+Repair timing output passed lec test
+detailed_placement
+[INFO DPL-0006] Core area: 273.04 um^2
+[INFO DPL-0007] Movable instances area: 183.11 um^2
+[INFO DPL-0008] Fixed instances area within core: 3.56 um^2
+[INFO DPL-0009] Utilization: 68.4%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 1723 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |        119 |        21 |        83
+        1 |         27 |         6 |        21
+        2 |         14 |         2 |        12
+        3 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 3.
+[INFO DPL-0500] Runtime: 0.01s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves                 489
+total displacement         13.7 u
+average displacement        0.0 u
+max displacement            1.9 u
+original HPWL            2539.3 u
+legalized HPWL           2554.3 u
+delta HPWL                    1 %
+
+estimate_parasitics -placement
+Report metrics stage 4, cts final...
+
+==========================================================================
+cts final report_design_area
+--------------------------------------------------------------------------
+Design area 187 um^2 68% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/4_1_cts.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/mac_pe/orfs/results/asap7/mac_pe/base/4_cts.sdc
+Elapsed time: 0:05.71[h:]min:sec. CPU time: user 6.16 sys 0.15 (110%). Peak memory: 234800KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+4_1_cts                .odb          2        2     1.00       28 3515c8c759

@@ -1,0 +1,77 @@
+{
+ "block": "mac_pe",
+ "runner": "docker",
+ "image": "openroad/orfs:26Q4-124-g3451ca1f5",
+ "flow_args": "",
+ "budget_min": 318.0,
+ "start": "2026-10-25 02:27:22 UTC",
+ "stages": [
+  {
+   "stage": "fakeram",
+   "exit": 0,
+   "seconds": 0.0
+  },
+  {
+   "stage": "prep",
+   "exit": 0,
+   "seconds": 0.6
+  },
+  {
+   "stage": "synth_sta",
+   "exit": 0
+  },
+  {
+   "stage": "activity",
+   "exit": 0,
+   "seconds": 5.4,
+   "file": "activity/mac_pe.json.gz"
+  },
+  {
+   "stage": "synth",
+   "exit": 0,
+   "seconds": 3.0,
+   "note": ""
+  },
+  {
+   "stage": "floorplan",
+   "exit": 0,
+   "seconds": 8.2,
+   "note": ""
+  },
+  {
+   "stage": "place",
+   "exit": 0,
+   "seconds": 12.6,
+   "note": ""
+  },
+  {
+   "stage": "cts",
+   "exit": 0,
+   "seconds": 6.6,
+   "note": ""
+  },
+  {
+   "stage": "route",
+   "exit": 0,
+   "seconds": 61.1,
+   "note": ""
+  },
+  {
+   "stage": "do-finish",
+   "exit": 0,
+   "seconds": 7.6,
+   "note": ""
+  },
+  {
+   "stage": "neo_report",
+   "exit": 0,
+   "seconds": 2.3,
+   "db": "6_final.odb",
+   "note": ""
+  }
+ ],
+ "status": "complete",
+ "orfs_stages": "synth,floorplan,place,cts,route,do-finish",
+ "seconds": 108.9,
+ "collected_files": 64
+}
