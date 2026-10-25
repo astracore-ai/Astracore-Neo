@@ -1,0 +1,737 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/1_synth.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/1_synth.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+
+==========================================================================
+Floorplan check_setup
+--------------------------------------------------------------------------
+Warning: There is 1 input port missing set_input_delay.
+number instances in verilog is 405967
+initialize_floorplan -utilization 55 -aspect_ratio 1 -core_space 1.0 -site asap7sc7p5t
+[INFO IFP-0107] Defining die area using utilization: 55.00% and aspect ratio: 1.
+[WARNING IFP-0028] Core area lower left (1.000, 1.000) snapped to (1.026, 1.080).
+[INFO IFP-0001] Added 1248 rows of 6245 site asap7sc7p5t.
+[INFO IFP-0100] Die BBox:  (  0.000  0.000 ) ( 339.299 339.299 ) um
+[INFO IFP-0101] Core BBox: (  1.026  1.080 ) ( 338.256 338.040 ) um
+[INFO IFP-0102] Core area:                       113633.021 um^2
+[INFO IFP-0103] Total instances area:             62573.937 um^2
+[INFO IFP-0104] Effective utilization:                0.551
+[INFO IFP-0105] Number of instances:                 405967
+source /OpenROAD-flow-scripts/flow/platforms/asap7/openRoad/make_tracks.tcl
+source /OpenROAD-flow-scripts/flow/platforms/asap7/fastroute.tcl
+set_dont_use "*x1p*_ASAP7* *xp*_ASAP7* SDF* ICG*"
+repair_tie_fanout -separation 0 asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120/TIELOx1_ASAP7_75t_R/L
+[INFO RSZ-0042] Inserted 721 tie TIELOx1_ASAP7_75t_R instances.
+repair_tie_fanout -separation 0 asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120/TIEHIx1_ASAP7_75t_R/H
+[INFO RSZ-0042] Inserted 38050 tie TIEHIx1_ASAP7_75t_R instances.
+repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -setup -skip_last_gasp -sequence unbuffer,sizeup,swap,vt_swap -verbose
+[WARNING EST-0027] no estimated parasitics. Using wire load models.
+[INFO RSZ-0100] Repair move sequence: UnbufferMove SizeUpMove SwapPinsMove 
+[INFO RSZ-0094] Found 3066 endpoints with setup violations.
+[INFO RSZ-0099] Repairing 3066 out of 3066 (100.00%) violating endpoints...
+   Iter   | Removed | Resized | Inserted | Cloned |  Pin  |   Area   |    WNS   |    TNS     |  Viol  |  Worst
+          | Buffers |  Gates  | Buffers  |  Gates | Swaps |          |          |            | Endpts | Endpoint
+------------------------------------------------------------------------------------------------------------------------------
+       0* |       0 |       0 |        0 |      0 |     0 |    +0.0% | -260.403 |  -178765.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      10* |       0 |       2 |        0 |      0 |     7 |    +0.0% | -242.786 |  -178626.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      20* |       0 |       5 |        0 |      0 |    14 |    +0.0% | -231.538 |  -178605.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[13\]_reg/D
+      25* |       0 |       8 |        0 |      0 |    16 |    +0.0% | -230.711 |  -178559.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      30* |       0 |      10 |        0 |      0 |    18 |    +0.0% | -230.723 |  -178563.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      36* |       0 |       8 |        0 |      0 |    17 |    +0.0% | -230.711 |  -178558.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      39* |       0 |       8 |        0 |      0 |    17 |    +0.0% | -230.711 |  -178558.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      40* |       0 |       8 |        0 |      0 |    17 |    +0.0% | -230.711 |  -178558.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      47* |       0 |       8 |        0 |      0 |    17 |    +0.0% | -230.711 |  -178558.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      49* |       0 |       8 |        0 |      0 |    17 |    +0.0% | -230.711 |  -178558.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      50* |       0 |       8 |        0 |      0 |    17 |    +0.0% | -230.711 |  -178558.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      58* |       0 |       8 |        0 |      0 |    17 |    +0.0% | -230.711 |  -178558.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      60* |       0 |       8 |        0 |      0 |    18 |    +0.0% | -230.711 |  -178557.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      70* |       0 |      16 |        0 |      0 |    20 |    +0.0% | -230.711 |  -178408.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      80* |       0 |      24 |        0 |      0 |    22 |    +0.0% | -230.711 |  -178310.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      90* |       0 |      30 |        0 |      0 |    26 |    +0.0% | -230.711 |  -178271.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+      95* |       0 |      30 |        0 |      0 |    30 |    +0.0% | -230.711 |  -178263.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     100* |       0 |      30 |        0 |      0 |    34 |    +0.0% | -230.711 |  -178261.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     107* |       0 |      30 |        0 |      0 |    40 |    +0.0% | -230.711 |  -178249.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     110* |       0 |      32 |        0 |      0 |    40 |    +0.0% | -230.723 |  -178242.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     114* |       0 |      30 |        0 |      0 |    40 |    +0.0% | -230.711 |  -178249.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     116* |       0 |      30 |        0 |      0 |    40 |    +0.0% | -230.711 |  -178249.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     120* |       0 |      31 |        0 |      0 |    42 |    +0.0% | -230.711 |  -177508.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     130* |       0 |      39 |        0 |      0 |    44 |    +0.0% | -230.711 |  -176086.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     140* |       0 |      44 |        0 |      0 |    49 |    +0.0% | -230.711 |  -175991.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     146* |       0 |      47 |        0 |      0 |    52 |    +0.0% | -230.711 |  -175954.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     148* |       0 |      47 |        0 |      0 |    52 |    +0.0% | -230.711 |  -175954.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     150* |       0 |      47 |        0 |      0 |    53 |    +0.0% | -230.711 |  -175958.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     160* |       0 |      53 |        0 |      0 |    57 |    +0.0% | -230.711 |  -175207.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     170* |       0 |      59 |        0 |      0 |    61 |    +0.0% | -230.711 |  -175189.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     176* |       0 |      62 |        0 |      0 |    64 |    +0.0% | -230.711 |  -175193.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     180* |       0 |      65 |        0 |      0 |    64 |    +0.0% | -230.723 |  -175163.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     183* |       0 |      62 |        0 |      0 |    64 |    +0.0% | -230.711 |  -175193.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     190* |       0 |      62 |        0 |      0 |    70 |    +0.0% | -230.711 |  -175217.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     192* |       0 |      62 |        0 |      0 |    64 |    +0.0% | -230.711 |  -175193.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     200* |       0 |      64 |        0 |      0 |    69 |    +0.0% | -230.711 |  -175075.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     210* |       0 |      68 |        0 |      0 |    75 |    +0.0% | -230.711 |  -175058.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     210* |       0 |      66 |        0 |      0 |    70 |    +0.0% | -230.711 |  -175050.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     220* |       0 |      72 |        0 |      0 |    73 |    +0.0% | -230.711 |  -175043.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     230* |       0 |      79 |        0 |      0 |    76 |    +0.0% | -230.711 |  -174575.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     240* |       0 |      89 |        0 |      0 |    76 |    +0.0% | -230.711 |  -162901.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     244* |       0 |      92 |        0 |      0 |    77 |    +0.0% | -230.711 |  -162844.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     250* |       0 |      95 |        0 |      0 |    79 |    +0.0% | -230.711 |  -162588.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     260* |       0 |     101 |        0 |      0 |    83 |    +0.0% | -230.711 |  -162391.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     266* |       0 |     104 |        0 |      0 |    86 |    +0.0% | -230.711 |  -162364.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     270* |       0 |     106 |        0 |      0 |    87 |    +0.0% | -230.711 |  -162238.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     280* |       0 |     111 |        0 |      0 |    92 |    +0.0% | -230.711 |  -162187.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     290* |       0 |     120 |        0 |      0 |    93 |    +0.0% | -230.711 |  -158773.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     293* |       0 |     123 |        0 |      0 |    93 |    +0.0% | -230.711 |  -158710.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     300* |       0 |     126 |        0 |      0 |    96 |    +0.0% | -230.711 |  -158534.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     310* |       0 |     133 |        0 |      0 |    99 |    +0.0% | -230.711 |  -158470.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     320* |       0 |     142 |        0 |      0 |   100 |    +0.0% | -230.711 |  -156152.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     321* |       0 |     143 |        0 |      0 |   100 |    +0.0% | -230.711 |  -156031.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     330* |       0 |     147 |        0 |      0 |   104 |    +0.0% | -230.711 |  -155346.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     340* |       0 |     155 |        0 |      0 |   106 |    +0.0% | -230.711 |  -155307.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     348* |       0 |     162 |        0 |      0 |   107 |    +0.0% | -230.711 |  -155039.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     350* |       0 |     162 |        0 |      0 |   108 |    +0.0% | -230.711 |  -155061.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     360* |       0 |     167 |        0 |      0 |   113 |    +0.0% | -230.711 |  -154799.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     370* |       0 |     177 |        0 |      0 |   113 |    +0.0% | -230.711 |  -154520.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     375* |       0 |     181 |        0 |      0 |   114 |    +0.0% | -230.711 |  -154455.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     380* |       0 |     184 |        0 |      0 |   115 |    +0.0% | -230.711 |  -154308.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     390* |       0 |     189 |        0 |      0 |   120 |    +0.0% | -230.711 |  -154241.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     400* |       0 |     198 |        0 |      0 |   121 |    +0.0% | -230.711 |  -153386.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     402* |       0 |     200 |        0 |      0 |   121 |    +0.0% | -230.711 |  -153327.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     410* |       0 |     203 |        0 |      0 |   125 |    +0.0% | -230.711 |  -152975.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     420* |       0 |     211 |        0 |      0 |   127 |    +0.0% | -230.711 |  -152835.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     422* |       0 |     212 |        0 |      0 |   128 |    +0.0% | -230.711 |  -152834.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     430* |       0 |     215 |        0 |      0 |   132 |    +0.0% | -230.711 |  -152481.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     440* |       0 |     223 |        0 |      0 |   134 |    +0.0% | -230.711 |  -152344.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     442* |       0 |     224 |        0 |      0 |   135 |    +0.0% | -230.711 |  -152342.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     450* |       0 |     227 |        0 |      0 |   139 |    +0.0% | -230.711 |  -151989.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     460* |       0 |     235 |        0 |      0 |   141 |    +0.0% | -230.711 |  -151850.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     462* |       0 |     236 |        0 |      0 |   142 |    +0.0% | -230.711 |  -151848.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     470* |       0 |     239 |        0 |      0 |   146 |    +0.0% | -230.711 |  -151496.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     480* |       0 |     247 |        0 |      0 |   148 |    +0.0% | -230.711 |  -151358.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     482* |       0 |     248 |        0 |      0 |   149 |    +0.0% | -230.711 |  -151357.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     490* |       0 |     251 |        0 |      0 |   153 |    +0.0% | -230.711 |  -151010.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     500* |       0 |     259 |        0 |      0 |   155 |    +0.0% | -230.711 |  -150881.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     502* |       0 |     260 |        0 |      0 |   156 |    +0.0% | -230.711 |  -150880.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     510* |       0 |     263 |        0 |      0 |   160 |    +0.0% | -230.711 |  -150719.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     520* |       0 |     267 |        0 |      0 |   166 |    +0.0% | -230.711 |  -150732.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     524* |       0 |     270 |        0 |      0 |   167 |    +0.0% | -230.711 |  -150693.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     530* |       0 |     273 |        0 |      0 |   169 |    +0.0% | -230.711 |  -150603.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     540* |       0 |     282 |        0 |      0 |   170 |    +0.0% | -230.711 |  -150434.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     548* |       0 |     282 |        0 |      0 |   178 |    +0.0% | -230.711 |  -150403.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     550* |       0 |     282 |        0 |      0 |   179 |    +0.0% | -230.711 |  -150405.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     560* |       0 |     290 |        0 |      0 |   181 |    +0.0% | -230.711 |  -150208.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     570* |       0 |     294 |        0 |      0 |   187 |    +0.0% | -230.711 |  -150117.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     572* |       0 |     294 |        0 |      0 |   189 |    +0.0% | -230.711 |  -150113.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     580* |       0 |     299 |        0 |      0 |   191 |    +0.0% | -230.711 |  -149964.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     590* |       0 |     306 |        0 |      0 |   194 |    +0.0% | -230.711 |  -149850.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     596* |       0 |     306 |        0 |      0 |   200 |    +0.0% | -230.711 |  -149823.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     600* |       0 |     307 |        0 |      0 |   202 |    +0.0% | -230.711 |  -149819.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     610* |       0 |     316 |        0 |      0 |   203 |    +0.0% | -230.711 |  -149619.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     620* |       0 |     318 |        0 |      0 |   211 |    +0.0% | -230.711 |  -149534.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     620* |       0 |     318 |        0 |      0 |   211 |    +0.0% | -230.711 |  -149534.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     630* |       0 |     324 |        0 |      0 |   214 |    +0.0% | -230.711 |  -149375.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     640* |       0 |     330 |        0 |      0 |   218 |    +0.0% | -230.711 |  -149252.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     644* |       0 |     330 |        0 |      0 |   222 |    +0.0% | -230.711 |  -149244.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     650* |       0 |     333 |        0 |      0 |   224 |    +0.0% | -230.711 |  -149153.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     660* |       0 |     342 |        0 |      0 |   225 |    +0.0% | -230.711 |  -148984.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     668* |       0 |     342 |        0 |      0 |   233 |    +0.0% | -230.711 |  -148954.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     670* |       0 |     342 |        0 |      0 |   234 |    +0.0% | -230.711 |  -148956.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     680* |       0 |     350 |        0 |      0 |   236 |    +0.0% | -230.711 |  -148758.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     690* |       0 |     354 |        0 |      0 |   242 |    +0.0% | -230.711 |  -148667.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     692* |       0 |     354 |        0 |      0 |   244 |    +0.0% | -230.711 |  -148664.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     700* |       0 |     359 |        0 |      0 |   246 |    +0.0% | -230.711 |  -148515.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     710* |       0 |     366 |        0 |      0 |   249 |    +0.0% | -230.711 |  -148401.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     716* |       0 |     366 |        0 |      0 |   255 |    +0.0% | -230.711 |  -148374.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     720* |       0 |     367 |        0 |      0 |   257 |    +0.0% | -230.711 |  -148369.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     730* |       0 |     376 |        0 |      0 |   258 |    +0.0% | -230.711 |  -148169.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     740* |       0 |     378 |        0 |      0 |   266 |    +0.0% | -230.711 |  -148084.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     740* |       0 |     378 |        0 |      0 |   266 |    +0.0% | -230.711 |  -148084.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     750* |       0 |     384 |        0 |      0 |   269 |    +0.0% | -230.711 |  -147925.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     760* |       0 |     390 |        0 |      0 |   273 |    +0.0% | -230.711 |  -147802.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     764* |       0 |     390 |        0 |      0 |   277 |    +0.0% | -230.711 |  -147794.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     770* |       0 |     393 |        0 |      0 |   279 |    +0.0% | -230.711 |  -147703.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     780* |       0 |     402 |        0 |      0 |   280 |    +0.0% | -230.711 |  -147535.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     788* |       0 |     402 |        0 |      0 |   288 |    +0.0% | -230.711 |  -147504.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     790* |       0 |     402 |        0 |      0 |   289 |    +0.0% | -230.711 |  -147506.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     800* |       0 |     410 |        0 |      0 |   291 |    +0.0% | -230.711 |  -147309.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     810* |       0 |     414 |        0 |      0 |   297 |    +0.0% | -230.711 |  -147217.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     812* |       0 |     414 |        0 |      0 |   299 |    +0.0% | -230.711 |  -147214.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     820* |       0 |     419 |        0 |      0 |   301 |    +0.0% | -230.711 |  -147065.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     830* |       0 |     426 |        0 |      0 |   304 |    +0.0% | -230.711 |  -146951.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     836* |       0 |     426 |        0 |      0 |   310 |    +0.0% | -230.711 |  -146924.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     840* |       0 |     427 |        0 |      0 |   312 |    +0.0% | -230.711 |  -146920.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     850* |       0 |     436 |        0 |      0 |   313 |    +0.0% | -230.711 |  -146720.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     860* |       0 |     438 |        0 |      0 |   321 |    +0.0% | -230.711 |  -146634.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     860* |       0 |     438 |        0 |      0 |   321 |    +0.0% | -230.711 |  -146634.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     870* |       0 |     444 |        0 |      0 |   324 |    +0.0% | -230.711 |  -146476.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     880* |       0 |     450 |        0 |      0 |   328 |    +0.0% | -230.711 |  -146353.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     884* |       0 |     450 |        0 |      0 |   332 |    +0.0% | -230.711 |  -146344.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     890* |       0 |     453 |        0 |      0 |   334 |    +0.0% | -230.711 |  -146254.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     900* |       0 |     462 |        0 |      0 |   335 |    +0.0% | -230.711 |  -146085.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     908* |       0 |     462 |        0 |      0 |   343 |    +0.0% | -230.711 |  -146055.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     910* |       0 |     462 |        0 |      0 |   344 |    +0.0% | -230.711 |  -146056.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     920* |       0 |     470 |        0 |      0 |   346 |    +0.0% | -230.711 |  -145859.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     930* |       0 |     474 |        0 |      0 |   352 |    +0.0% | -230.711 |  -145768.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     932* |       0 |     474 |        0 |      0 |   354 |    +0.0% | -230.711 |  -145765.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     940* |       0 |     479 |        0 |      0 |   356 |    +0.0% | -230.711 |  -145615.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     950* |       0 |     486 |        0 |      0 |   359 |    +0.0% | -230.711 |  -145502.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     956* |       0 |     486 |        0 |      0 |   365 |    +0.0% | -230.711 |  -145475.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     960* |       0 |     487 |        0 |      0 |   367 |    +0.0% | -230.711 |  -145470.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     970* |       0 |     496 |        0 |      0 |   368 |    +0.0% | -230.711 |  -145270.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     980* |       0 |     498 |        0 |      0 |   376 |    +0.0% | -230.711 |  -145185.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     980* |       0 |     498 |        0 |      0 |   376 |    +0.0% | -230.711 |  -145185.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+     990* |       0 |     504 |        0 |      0 |   379 |    +0.0% | -230.711 |  -145026.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1000* |       0 |     510 |        0 |      0 |   383 |    +0.0% | -230.711 |  -144903.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1004* |       0 |     510 |        0 |      0 |   387 |    +0.0% | -230.711 |  -144895.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1010* |       0 |     513 |        0 |      0 |   389 |    +0.0% | -230.711 |  -144804.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1020* |       0 |     522 |        0 |      0 |   390 |    +0.0% | -230.711 |  -144636.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1028* |       0 |     522 |        0 |      0 |   398 |    +0.0% | -230.711 |  -144605.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1030* |       0 |     522 |        0 |      0 |   399 |    +0.0% | -230.711 |  -144607.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1040* |       0 |     530 |        0 |      0 |   401 |    +0.0% | -230.711 |  -144409.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1050* |       0 |     534 |        0 |      0 |   407 |    +0.0% | -230.711 |  -144318.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1052* |       0 |     534 |        0 |      0 |   409 |    +0.0% | -230.711 |  -144315.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1060* |       0 |     539 |        0 |      0 |   411 |    +0.0% | -230.711 |  -144166.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1070* |       0 |     546 |        0 |      0 |   414 |    +0.0% | -230.711 |  -144052.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1076* |       0 |     546 |        0 |      0 |   420 |    +0.0% | -230.711 |  -144025.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1080* |       0 |     547 |        0 |      0 |   422 |    +0.0% | -230.711 |  -144021.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1090* |       0 |     556 |        0 |      0 |   423 |    +0.0% | -230.711 |  -143820.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1100* |       0 |     558 |        0 |      0 |   431 |    +0.0% | -230.711 |  -143735.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1100* |       0 |     558 |        0 |      0 |   431 |    +0.0% | -230.711 |  -143735.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1110* |       0 |     564 |        0 |      0 |   434 |    +0.0% | -230.711 |  -143577.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1120* |       0 |     570 |        0 |      0 |   438 |    +0.0% | -230.711 |  -143454.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1124* |       0 |     570 |        0 |      0 |   442 |    +0.0% | -230.711 |  -143445.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1130* |       0 |     573 |        0 |      0 |   444 |    +0.0% | -230.711 |  -143355.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1140* |       0 |     582 |        0 |      0 |   445 |    +0.0% | -230.711 |  -143186.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1148* |       0 |     582 |        0 |      0 |   453 |    +0.0% | -230.711 |  -143155.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1150* |       0 |     582 |        0 |      0 |   454 |    +0.0% | -230.711 |  -143157.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1160* |       0 |     590 |        0 |      0 |   456 |    +0.0% | -230.711 |  -142960.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1170* |       0 |     594 |        0 |      0 |   462 |    +0.0% | -230.711 |  -142869.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1172* |       0 |     594 |        0 |      0 |   464 |    +0.0% | -230.711 |  -142865.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1180* |       0 |     599 |        0 |      0 |   466 |    +0.0% | -230.711 |  -142716.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1190* |       0 |     606 |        0 |      0 |   469 |    +0.0% | -230.711 |  -142602.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1196* |       0 |     606 |        0 |      0 |   475 |    +0.0% | -230.711 |  -142575.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1200* |       0 |     607 |        0 |      0 |   477 |    +0.0% | -230.711 |  -142571.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1210* |       0 |     616 |        0 |      0 |   478 |    +0.0% | -230.711 |  -142371.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1220* |       0 |     618 |        0 |      0 |   486 |    +0.0% | -230.711 |  -142286.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1220* |       0 |     618 |        0 |      0 |   486 |    +0.0% | -230.711 |  -142286.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1230* |       0 |     624 |        0 |      0 |   489 |    +0.0% | -230.711 |  -142127.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1240* |       0 |     630 |        0 |      0 |   493 |    +0.0% | -230.711 |  -142004.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1244* |       0 |     630 |        0 |      0 |   497 |    +0.0% | -230.711 |  -141996.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1250* |       0 |     633 |        0 |      0 |   499 |    +0.0% | -230.711 |  -141905.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1260* |       0 |     642 |        0 |      0 |   500 |    +0.0% | -230.711 |  -141736.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1268* |       0 |     642 |        0 |      0 |   508 |    +0.0% | -230.711 |  -141706.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1270* |       0 |     642 |        0 |      0 |   509 |    +0.0% | -230.711 |  -141708.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1280* |       0 |     650 |        0 |      0 |   511 |    +0.0% | -230.711 |  -141510.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1290* |       0 |     654 |        0 |      0 |   517 |    +0.0% | -230.711 |  -141419.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1292* |       0 |     654 |        0 |      0 |   519 |    +0.0% | -230.711 |  -141416.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1300* |       0 |     659 |        0 |      0 |   521 |    +0.0% | -230.711 |  -141267.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1310* |       0 |     666 |        0 |      0 |   524 |    +0.0% | -230.711 |  -141153.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1316* |       0 |     666 |        0 |      0 |   530 |    +0.0% | -230.711 |  -141126.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1320* |       0 |     667 |        0 |      0 |   532 |    +0.0% | -230.711 |  -141121.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1330* |       0 |     676 |        0 |      0 |   533 |    +0.0% | -230.711 |  -140921.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1340* |       0 |     678 |        0 |      0 |   541 |    +0.0% | -230.711 |  -140836.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1340* |       0 |     678 |        0 |      0 |   541 |    +0.0% | -230.711 |  -140836.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1350* |       0 |     684 |        0 |      0 |   544 |    +0.0% | -230.711 |  -140677.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1360* |       0 |     690 |        0 |      0 |   548 |    +0.0% | -230.711 |  -140554.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1364* |       0 |     690 |        0 |      0 |   552 |    +0.0% | -230.711 |  -140546.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1370* |       0 |     693 |        0 |      0 |   554 |    +0.0% | -230.711 |  -140455.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1380* |       0 |     702 |        0 |      0 |   555 |    +0.0% | -230.711 |  -140287.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1388* |       0 |     702 |        0 |      0 |   563 |    +0.0% | -230.711 |  -140256.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1390* |       0 |     702 |        0 |      0 |   564 |    +0.0% | -230.711 |  -140258.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1400* |       0 |     710 |        0 |      0 |   566 |    +0.0% | -230.711 |  -140061.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1410* |       0 |     714 |        0 |      0 |   572 |    +0.0% | -230.711 |  -139969.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1412* |       0 |     714 |        0 |      0 |   574 |    +0.0% | -230.711 |  -139966.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1420* |       0 |     719 |        0 |      0 |   576 |    +0.0% | -230.711 |  -139817.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1430* |       0 |     726 |        0 |      0 |   579 |    +0.0% | -230.711 |  -139703.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1436* |       0 |     726 |        0 |      0 |   585 |    +0.0% | -230.711 |  -139676.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1440* |       0 |     727 |        0 |      0 |   587 |    +0.0% | -230.711 |  -139672.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1450* |       0 |     736 |        0 |      0 |   588 |    +0.0% | -230.711 |  -139472.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1460* |       0 |     738 |        0 |      0 |   596 |    +0.0% | -230.711 |  -139386.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1460* |       0 |     738 |        0 |      0 |   596 |    +0.0% | -230.711 |  -139386.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1470* |       0 |     744 |        0 |      0 |   599 |    +0.0% | -230.711 |  -139228.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1480* |       0 |     750 |        0 |      0 |   603 |    +0.0% | -230.711 |  -139105.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1484* |       0 |     750 |        0 |      0 |   607 |    +0.0% | -230.711 |  -139096.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1490* |       0 |     753 |        0 |      0 |   609 |    +0.0% | -230.711 |  -139006.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1500* |       0 |     762 |        0 |      0 |   610 |    +0.0% | -230.711 |  -138837.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1508* |       0 |     762 |        0 |      0 |   618 |    +0.0% | -230.711 |  -138807.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1510* |       0 |     762 |        0 |      0 |   619 |    +0.0% | -230.711 |  -138809.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1520* |       0 |     770 |        0 |      0 |   621 |    +0.0% | -230.711 |  -138611.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1530* |       0 |     774 |        0 |      0 |   627 |    +0.0% | -230.711 |  -138520.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1532* |       0 |     774 |        0 |      0 |   629 |    +0.0% | -230.711 |  -138517.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1540* |       0 |     779 |        0 |      0 |   631 |    +0.0% | -230.711 |  -138368.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1550* |       0 |     786 |        0 |      0 |   634 |    +0.0% | -230.711 |  -138254.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1556* |       0 |     786 |        0 |      0 |   640 |    +0.0% | -230.711 |  -138227.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1560* |       0 |     787 |        0 |      0 |   642 |    +0.0% | -230.711 |  -138222.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1570* |       0 |     796 |        0 |      0 |   643 |    +0.0% | -230.711 |  -138022.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1580* |       0 |     798 |        0 |      0 |   651 |    +0.0% | -230.711 |  -137937.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1580* |       0 |     798 |        0 |      0 |   651 |    +0.0% | -230.711 |  -137937.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1590* |       0 |     804 |        0 |      0 |   654 |    +0.0% | -230.711 |  -137778.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1600* |       0 |     810 |        0 |      0 |   658 |    +0.0% | -230.711 |  -137655.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1604* |       0 |     810 |        0 |      0 |   662 |    +0.0% | -230.711 |  -137647.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1610* |       0 |     813 |        0 |      0 |   664 |    +0.0% | -230.711 |  -137556.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1620* |       0 |     822 |        0 |      0 |   665 |    +0.0% | -230.711 |  -137388.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1628* |       0 |     822 |        0 |      0 |   673 |    +0.0% | -230.711 |  -137357.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1630* |       0 |     822 |        0 |      0 |   674 |    +0.0% | -230.711 |  -137359.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1640* |       0 |     830 |        0 |      0 |   676 |    +0.0% | -230.711 |  -137161.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1650* |       0 |     834 |        0 |      0 |   682 |    +0.0% | -230.711 |  -137070.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1652* |       0 |     834 |        0 |      0 |   684 |    +0.0% | -230.711 |  -137067.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1660* |       0 |     839 |        0 |      0 |   686 |    +0.0% | -230.711 |  -136918.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1670* |       0 |     846 |        0 |      0 |   689 |    +0.0% | -230.711 |  -136804.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1676* |       0 |     846 |        0 |      0 |   695 |    +0.0% | -230.711 |  -136777.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1680* |       0 |     847 |        0 |      0 |   697 |    +0.0% | -230.711 |  -136773.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1690* |       0 |     856 |        0 |      0 |   698 |    +0.0% | -230.711 |  -136572.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1700* |       0 |     858 |        0 |      0 |   706 |    +0.0% | -230.711 |  -136487.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1700* |       0 |     858 |        0 |      0 |   706 |    +0.0% | -230.711 |  -136487.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1710* |       0 |     864 |        0 |      0 |   709 |    +0.0% | -230.711 |  -136329.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1720* |       0 |     870 |        0 |      0 |   713 |    +0.0% | -230.711 |  -136206.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1724* |       0 |     870 |        0 |      0 |   717 |    +0.0% | -230.711 |  -136197.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1730* |       0 |     873 |        0 |      0 |   719 |    +0.0% | -230.711 |  -136107.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1740* |       0 |     882 |        0 |      0 |   720 |    +0.0% | -230.711 |  -135938.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1748* |       0 |     882 |        0 |      0 |   728 |    +0.0% | -230.711 |  -135907.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1750* |       0 |     882 |        0 |      0 |   729 |    +0.0% | -230.711 |  -135909.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1760* |       0 |     890 |        0 |      0 |   731 |    +0.0% | -230.711 |  -135712.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1770* |       0 |     894 |        0 |      0 |   737 |    +0.0% | -230.711 |  -135621.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1772* |       0 |     894 |        0 |      0 |   739 |    +0.0% | -230.711 |  -135617.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1780* |       0 |     899 |        0 |      0 |   741 |    +0.0% | -230.711 |  -135468.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1790* |       0 |     906 |        0 |      0 |   744 |    +0.0% | -230.711 |  -135355.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1796* |       0 |     906 |        0 |      0 |   750 |    +0.0% | -230.711 |  -135328.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1800* |       0 |     907 |        0 |      0 |   752 |    +0.0% | -230.711 |  -135323.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1810* |       0 |     916 |        0 |      0 |   753 |    +0.0% | -230.711 |  -135123.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1820* |       0 |     918 |        0 |      0 |   761 |    +0.0% | -230.711 |  -135038.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1820* |       0 |     918 |        0 |      0 |   761 |    +0.0% | -230.711 |  -135038.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1830* |       0 |     924 |        0 |      0 |   764 |    +0.0% | -230.711 |  -134879.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1840* |       0 |     930 |        0 |      0 |   768 |    +0.0% | -230.711 |  -134756.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1844* |       0 |     930 |        0 |      0 |   772 |    +0.0% | -230.711 |  -134748.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1850* |       0 |     933 |        0 |      0 |   774 |    +0.0% | -230.711 |  -134657.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1860* |       0 |     942 |        0 |      0 |   775 |    +0.0% | -230.711 |  -134488.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1868* |       0 |     942 |        0 |      0 |   783 |    +0.0% | -230.711 |  -134458.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1870* |       0 |     942 |        0 |      0 |   784 |    +0.0% | -230.711 |  -134460.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1880* |       0 |     950 |        0 |      0 |   786 |    +0.0% | -230.711 |  -134262.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1890* |       0 |     954 |        0 |      0 |   792 |    +0.0% | -230.711 |  -134171.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1892* |       0 |     954 |        0 |      0 |   794 |    +0.0% | -230.711 |  -134168.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1900* |       0 |     959 |        0 |      0 |   796 |    +0.0% | -230.711 |  -134019.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1910* |       0 |     966 |        0 |      0 |   799 |    +0.0% | -230.711 |  -133905.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1916* |       0 |     966 |        0 |      0 |   805 |    +0.0% | -230.711 |  -133878.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1920* |       0 |     967 |        0 |      0 |   807 |    +0.0% | -230.711 |  -133873.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1930* |       0 |     976 |        0 |      0 |   808 |    +0.0% | -230.711 |  -133673.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1940* |       0 |     978 |        0 |      0 |   816 |    +0.0% | -230.711 |  -133588.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1940* |       0 |     978 |        0 |      0 |   816 |    +0.0% | -230.711 |  -133588.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1950* |       0 |     984 |        0 |      0 |   819 |    +0.0% | -230.711 |  -133430.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1960* |       0 |     990 |        0 |      0 |   823 |    +0.0% | -230.711 |  -133307.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1964* |       0 |     990 |        0 |      0 |   827 |    +0.0% | -230.711 |  -133298.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1970* |       0 |     993 |        0 |      0 |   829 |    +0.0% | -230.711 |  -133207.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1980* |       0 |    1002 |        0 |      0 |   830 |    +0.0% | -230.711 |  -133039.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1988* |       0 |    1002 |        0 |      0 |   838 |    +0.0% | -230.711 |  -133008.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    1990* |       0 |    1002 |        0 |      0 |   839 |    +0.0% | -230.711 |  -133010.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2000* |       0 |    1010 |        0 |      0 |   841 |    +0.0% | -230.711 |  -132813.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2010* |       0 |    1014 |        0 |      0 |   847 |    +0.0% | -230.711 |  -132722.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2012* |       0 |    1014 |        0 |      0 |   849 |    +0.0% | -230.711 |  -132718.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2020* |       0 |    1019 |        0 |      0 |   851 |    +0.0% | -230.711 |  -132569.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2030* |       0 |    1026 |        0 |      0 |   854 |    +0.0% | -230.711 |  -132455.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2036* |       0 |    1026 |        0 |      0 |   860 |    +0.0% | -230.711 |  -132428.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2040* |       0 |    1027 |        0 |      0 |   862 |    +0.0% | -230.711 |  -132424.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2050* |       0 |    1036 |        0 |      0 |   863 |    +0.0% | -230.711 |  -132224.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2060* |       0 |    1038 |        0 |      0 |   871 |    +0.0% | -230.711 |  -132138.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2060* |       0 |    1038 |        0 |      0 |   871 |    +0.0% | -230.711 |  -132138.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2070* |       0 |    1044 |        0 |      0 |   874 |    +0.0% | -230.711 |  -131980.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2080* |       0 |    1050 |        0 |      0 |   878 |    +0.0% | -230.711 |  -131857.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2084* |       0 |    1050 |        0 |      0 |   882 |    +0.0% | -230.711 |  -131849.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2090* |       0 |    1053 |        0 |      0 |   884 |    +0.0% | -230.711 |  -131758.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2100* |       0 |    1062 |        0 |      0 |   885 |    +0.0% | -230.711 |  -131589.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2108* |       0 |    1062 |        0 |      0 |   893 |    +0.0% | -230.711 |  -131559.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2110* |       0 |    1062 |        0 |      0 |   894 |    +0.0% | -230.711 |  -131561.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2120* |       0 |    1070 |        0 |      0 |   896 |    +0.0% | -230.711 |  -131363.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2130* |       0 |    1074 |        0 |      0 |   902 |    +0.0% | -230.711 |  -131272.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2132* |       0 |    1074 |        0 |      0 |   904 |    +0.0% | -230.711 |  -131269.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2140* |       0 |    1079 |        0 |      0 |   906 |    +0.0% | -230.711 |  -131120.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2150* |       0 |    1086 |        0 |      0 |   909 |    +0.0% | -230.711 |  -131006.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2156* |       0 |    1086 |        0 |      0 |   915 |    +0.0% | -230.711 |  -130979.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2160* |       0 |    1087 |        0 |      0 |   917 |    +0.0% | -230.711 |  -130974.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2170* |       0 |    1096 |        0 |      0 |   918 |    +0.0% | -230.711 |  -130774.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2180* |       0 |    1098 |        0 |      0 |   926 |    +0.0% | -230.711 |  -130689.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2180* |       0 |    1098 |        0 |      0 |   926 |    +0.0% | -230.711 |  -130689.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2190* |       0 |    1104 |        0 |      0 |   929 |    +0.0% | -230.711 |  -130530.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2200* |       0 |    1110 |        0 |      0 |   933 |    +0.0% | -230.711 |  -130407.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2204* |       0 |    1110 |        0 |      0 |   937 |    +0.0% | -230.711 |  -130399.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2210* |       0 |    1113 |        0 |      0 |   939 |    +0.0% | -230.711 |  -130308.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2220* |       0 |    1122 |        0 |      0 |   940 |    +0.0% | -230.711 |  -130140.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2228* |       0 |    1122 |        0 |      0 |   948 |    +0.0% | -230.711 |  -130109.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2230* |       0 |    1122 |        0 |      0 |   949 |    +0.0% | -230.711 |  -130111.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2240* |       0 |    1130 |        0 |      0 |   951 |    +0.0% | -230.711 |  -129913.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2250* |       0 |    1134 |        0 |      0 |   957 |    +0.0% | -230.711 |  -129822.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2252* |       0 |    1134 |        0 |      0 |   959 |    +0.0% | -230.711 |  -129819.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2260* |       0 |    1139 |        0 |      0 |   961 |    +0.0% | -230.711 |  -129670.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2270* |       0 |    1146 |        0 |      0 |   964 |    +0.0% | -230.711 |  -129556.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2276* |       0 |    1146 |        0 |      0 |   970 |    +0.0% | -230.711 |  -129529.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2280* |       0 |    1147 |        0 |      0 |   972 |    +0.0% | -230.711 |  -129525.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2290* |       0 |    1156 |        0 |      0 |   973 |    +0.0% | -230.711 |  -129325.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2300* |       0 |    1158 |        0 |      0 |   981 |    +0.0% | -230.711 |  -129239.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2300* |       0 |    1158 |        0 |      0 |   981 |    +0.0% | -230.711 |  -129239.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2310* |       0 |    1164 |        0 |      0 |   984 |    +0.0% | -230.711 |  -129081.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2320* |       0 |    1170 |        0 |      0 |   988 |    +0.0% | -230.711 |  -128958.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2324* |       0 |    1170 |        0 |      0 |   992 |    +0.0% | -230.711 |  -128949.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2330* |       0 |    1173 |        0 |      0 |   994 |    +0.0% | -230.711 |  -128859.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2340* |       0 |    1182 |        0 |      0 |   995 |    +0.0% | -230.711 |  -128690.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2348* |       0 |    1182 |        0 |      0 |  1003 |    +0.0% | -230.711 |  -128659.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2350* |       0 |    1182 |        0 |      0 |  1004 |    +0.0% | -230.711 |  -128661.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2360* |       0 |    1190 |        0 |      0 |  1006 |    +0.0% | -230.711 |  -128464.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2370* |       0 |    1194 |        0 |      0 |  1012 |    +0.0% | -230.711 |  -128373.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2372* |       0 |    1194 |        0 |      0 |  1014 |    +0.0% | -230.711 |  -128370.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2380* |       0 |    1199 |        0 |      0 |  1016 |    +0.0% | -230.711 |  -128220.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2390* |       0 |    1206 |        0 |      0 |  1019 |    +0.0% | -230.711 |  -128107.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2396* |       0 |    1206 |        0 |      0 |  1025 |    +0.0% | -230.711 |  -128080.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2400* |       0 |    1207 |        0 |      0 |  1027 |    +0.0% | -230.711 |  -128075.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2410* |       0 |    1216 |        0 |      0 |  1028 |    +0.0% | -230.711 |  -127875.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2420* |       0 |    1218 |        0 |      0 |  1036 |    +0.0% | -230.711 |  -127790.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2420* |       0 |    1218 |        0 |      0 |  1036 |    +0.0% | -230.711 |  -127790.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2430* |       0 |    1224 |        0 |      0 |  1039 |    +0.0% | -230.711 |  -127631.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2440* |       0 |    1230 |        0 |      0 |  1043 |    +0.0% | -230.711 |  -127508.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2444* |       0 |    1230 |        0 |      0 |  1047 |    +0.0% | -230.711 |  -127500.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2450* |       0 |    1233 |        0 |      0 |  1049 |    +0.0% | -230.711 |  -127409.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2460* |       0 |    1242 |        0 |      0 |  1050 |    +0.0% | -230.711 |  -127241.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2468* |       0 |    1242 |        0 |      0 |  1058 |    +0.0% | -230.711 |  -127210.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2470* |       0 |    1242 |        0 |      0 |  1059 |    +0.0% | -230.711 |  -127212.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2480* |       0 |    1250 |        0 |      0 |  1061 |    +0.0% | -230.711 |  -127014.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2490* |       0 |    1254 |        0 |      0 |  1067 |    +0.0% | -230.711 |  -126923.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2492* |       0 |    1254 |        0 |      0 |  1069 |    +0.0% | -230.711 |  -126920.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2500* |       0 |    1259 |        0 |      0 |  1071 |    +0.0% | -230.711 |  -126771.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2510* |       0 |    1266 |        0 |      0 |  1074 |    +0.0% | -230.711 |  -126657.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2516* |       0 |    1266 |        0 |      0 |  1080 |    +0.0% | -230.711 |  -126630.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2520* |       0 |    1267 |        0 |      0 |  1082 |    +0.0% | -230.711 |  -126626.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2530* |       0 |    1276 |        0 |      0 |  1083 |    +0.0% | -230.711 |  -126425.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2540* |       0 |    1278 |        0 |      0 |  1091 |    +0.0% | -230.711 |  -126340.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2540* |       0 |    1278 |        0 |      0 |  1091 |    +0.0% | -230.711 |  -126340.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2550* |       0 |    1284 |        0 |      0 |  1094 |    +0.0% | -230.711 |  -126182.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2560* |       0 |    1290 |        0 |      0 |  1098 |    +0.0% | -230.711 |  -126059.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2564* |       0 |    1290 |        0 |      0 |  1102 |    +0.0% | -230.711 |  -126050.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2570* |       0 |    1293 |        0 |      0 |  1104 |    +0.0% | -230.711 |  -125960.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2580* |       0 |    1302 |        0 |      0 |  1105 |    +0.0% | -230.711 |  -125791.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2588* |       0 |    1302 |        0 |      0 |  1113 |    +0.0% | -230.711 |  -125760.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2590* |       0 |    1302 |        0 |      0 |  1114 |    +0.0% | -230.711 |  -125762.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2600* |       0 |    1310 |        0 |      0 |  1116 |    +0.0% | -230.711 |  -125565.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2610* |       0 |    1314 |        0 |      0 |  1122 |    +0.0% | -230.711 |  -125474.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2612* |       0 |    1314 |        0 |      0 |  1124 |    +0.0% | -230.711 |  -125470.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2620* |       0 |    1319 |        0 |      0 |  1126 |    +0.0% | -230.711 |  -125321.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2630* |       0 |    1326 |        0 |      0 |  1129 |    +0.0% | -230.711 |  -125207.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2636* |       0 |    1326 |        0 |      0 |  1135 |    +0.0% | -230.711 |  -125180.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2640* |       0 |    1327 |        0 |      0 |  1137 |    +0.0% | -230.711 |  -125176.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2650* |       0 |    1336 |        0 |      0 |  1138 |    +0.0% | -230.711 |  -124976.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2660* |       0 |    1338 |        0 |      0 |  1146 |    +0.0% | -230.711 |  -124891.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2660* |       0 |    1338 |        0 |      0 |  1146 |    +0.0% | -230.711 |  -124891.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2670* |       0 |    1344 |        0 |      0 |  1149 |    +0.0% | -230.711 |  -124732.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2680* |       0 |    1350 |        0 |      0 |  1153 |    +0.0% | -230.711 |  -124609.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2684* |       0 |    1350 |        0 |      0 |  1157 |    +0.0% | -230.711 |  -124601.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2690* |       0 |    1353 |        0 |      0 |  1159 |    +0.0% | -230.711 |  -124510.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2700* |       0 |    1362 |        0 |      0 |  1160 |    +0.0% | -230.711 |  -124341.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2708* |       0 |    1362 |        0 |      0 |  1168 |    +0.0% | -230.711 |  -124311.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2710* |       0 |    1362 |        0 |      0 |  1169 |    +0.0% | -230.711 |  -124313.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2720* |       0 |    1370 |        0 |      0 |  1171 |    +0.0% | -230.711 |  -124115.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2730* |       0 |    1374 |        0 |      0 |  1177 |    +0.0% | -230.711 |  -124024.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2732* |       0 |    1374 |        0 |      0 |  1179 |    +0.0% | -230.711 |  -124021.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2740* |       0 |    1379 |        0 |      0 |  1181 |    +0.0% | -230.711 |  -123872.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2750* |       0 |    1386 |        0 |      0 |  1184 |    +0.0% | -230.711 |  -123758.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2756* |       0 |    1386 |        0 |      0 |  1190 |    +0.0% | -230.711 |  -123731.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2760* |       0 |    1387 |        0 |      0 |  1192 |    +0.0% | -230.711 |  -123726.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2770* |       0 |    1396 |        0 |      0 |  1193 |    +0.0% | -230.711 |  -123526.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2780* |       0 |    1398 |        0 |      0 |  1201 |    +0.0% | -230.711 |  -123441.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2780* |       0 |    1398 |        0 |      0 |  1201 |    +0.0% | -230.711 |  -123441.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2790* |       0 |    1404 |        0 |      0 |  1204 |    +0.0% | -230.711 |  -123282.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2800* |       0 |    1410 |        0 |      0 |  1208 |    +0.0% | -230.711 |  -123159.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2804* |       0 |    1410 |        0 |      0 |  1212 |    +0.0% | -230.711 |  -123151.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2810* |       0 |    1413 |        0 |      0 |  1214 |    +0.0% | -230.711 |  -123060.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2820* |       0 |    1422 |        0 |      0 |  1215 |    +0.0% | -230.711 |  -122892.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2828* |       0 |    1422 |        0 |      0 |  1223 |    +0.0% | -230.711 |  -122861.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2830* |       0 |    1422 |        0 |      0 |  1224 |    +0.0% | -230.711 |  -122863.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2840* |       0 |    1430 |        0 |      0 |  1226 |    +0.0% | -230.711 |  -122666.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2850* |       0 |    1434 |        0 |      0 |  1232 |    +0.0% | -230.711 |  -122574.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2852* |       0 |    1434 |        0 |      0 |  1234 |    +0.0% | -230.711 |  -122571.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2860* |       0 |    1439 |        0 |      0 |  1236 |    +0.0% | -230.711 |  -122422.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2870* |       0 |    1446 |        0 |      0 |  1239 |    +0.0% | -230.711 |  -122308.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2876* |       0 |    1446 |        0 |      0 |  1245 |    +0.0% | -230.711 |  -122281.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2880* |       0 |    1447 |        0 |      0 |  1247 |    +0.0% | -230.711 |  -122277.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2890* |       0 |    1456 |        0 |      0 |  1248 |    +0.0% | -230.711 |  -122077.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2900* |       0 |    1458 |        0 |      0 |  1256 |    +0.0% | -230.711 |  -121991.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2900* |       0 |    1458 |        0 |      0 |  1256 |    +0.0% | -230.711 |  -121991.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2910* |       0 |    1464 |        0 |      0 |  1259 |    +0.0% | -230.711 |  -121833.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2920* |       0 |    1470 |        0 |      0 |  1263 |    +0.0% | -230.711 |  -121710.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2924* |       0 |    1470 |        0 |      0 |  1267 |    +0.0% | -230.711 |  -121701.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2930* |       0 |    1473 |        0 |      0 |  1269 |    +0.0% | -230.711 |  -121611.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2940* |       0 |    1482 |        0 |      0 |  1270 |    +0.0% | -230.711 |  -121442.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2948* |       0 |    1482 |        0 |      0 |  1278 |    +0.0% | -230.711 |  -121412.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2950* |       0 |    1482 |        0 |      0 |  1279 |    +0.0% | -230.711 |  -121413.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2960* |       0 |    1490 |        0 |      0 |  1281 |    +0.0% | -230.711 |  -121216.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2970* |       0 |    1494 |        0 |      0 |  1287 |    +0.0% | -230.711 |  -121125.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2972* |       0 |    1494 |        0 |      0 |  1289 |    +0.0% | -230.711 |  -121122.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2980* |       0 |    1499 |        0 |      0 |  1291 |    +0.0% | -230.711 |  -120972.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2990* |       0 |    1506 |        0 |      0 |  1294 |    +0.0% | -230.711 |  -120859.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    2996* |       0 |    1506 |        0 |      0 |  1300 |    +0.0% | -230.711 |  -120832.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3000* |       0 |    1507 |        0 |      0 |  1302 |    +0.0% | -230.711 |  -120827.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3010* |       0 |    1516 |        0 |      0 |  1303 |    +0.0% | -230.711 |  -120627.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3020* |       0 |    1518 |        0 |      0 |  1311 |    +0.0% | -230.711 |  -120542.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3020* |       0 |    1518 |        0 |      0 |  1311 |    +0.0% | -230.711 |  -120542.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3030* |       0 |    1524 |        0 |      0 |  1314 |    +0.0% | -230.711 |  -120383.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3040* |       0 |    1530 |        0 |      0 |  1318 |    +0.0% | -230.711 |  -120260.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3044* |       0 |    1530 |        0 |      0 |  1322 |    +0.0% | -230.711 |  -120252.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3050* |       0 |    1533 |        0 |      0 |  1324 |    +0.0% | -230.711 |  -120161.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3060* |       0 |    1542 |        0 |      0 |  1325 |    +0.0% | -230.711 |  -119993.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3068* |       0 |    1542 |        0 |      0 |  1333 |    +0.0% | -230.711 |  -119962.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3070* |       0 |    1542 |        0 |      0 |  1334 |    +0.0% | -230.711 |  -119964.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3080* |       0 |    1550 |        0 |      0 |  1336 |    +0.0% | -230.711 |  -119766.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3090* |       0 |    1554 |        0 |      0 |  1342 |    +0.0% | -230.711 |  -119675.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3092* |       0 |    1554 |        0 |      0 |  1344 |    +0.0% | -230.711 |  -119672.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3100* |       0 |    1559 |        0 |      0 |  1346 |    +0.0% | -230.711 |  -119523.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3110* |       0 |    1566 |        0 |      0 |  1349 |    +0.0% | -230.711 |  -119409.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3116* |       0 |    1566 |        0 |      0 |  1355 |    +0.0% | -230.711 |  -119382.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3120* |       0 |    1567 |        0 |      0 |  1357 |    +0.0% | -230.711 |  -119378.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3130* |       0 |    1576 |        0 |      0 |  1358 |    +0.0% | -230.711 |  -119177.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3140* |       0 |    1578 |        0 |      0 |  1366 |    +0.0% | -230.711 |  -119092.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3140* |       0 |    1578 |        0 |      0 |  1366 |    +0.0% | -230.711 |  -119092.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3150* |       0 |    1584 |        0 |      0 |  1369 |    +0.0% | -230.711 |  -118934.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3160* |       0 |    1590 |        0 |      0 |  1373 |    +0.0% | -230.711 |  -118811.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3164* |       0 |    1590 |        0 |      0 |  1377 |    +0.0% | -230.711 |  -118802.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3170* |       0 |    1593 |        0 |      0 |  1379 |    +0.0% | -230.711 |  -118712.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3180* |       0 |    1602 |        0 |      0 |  1380 |    +0.0% | -230.711 |  -118543.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3188* |       0 |    1602 |        0 |      0 |  1388 |    +0.0% | -230.711 |  -118512.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3190* |       0 |    1602 |        0 |      0 |  1389 |    +0.0% | -230.711 |  -118514.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3200* |       0 |    1610 |        0 |      0 |  1391 |    +0.0% | -230.711 |  -118317.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3210* |       0 |    1614 |        0 |      0 |  1397 |    +0.0% | -230.711 |  -118226.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3212* |       0 |    1614 |        0 |      0 |  1399 |    +0.0% | -230.711 |  -118222.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3220* |       0 |    1619 |        0 |      0 |  1401 |    +0.0% | -230.711 |  -118073.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3230* |       0 |    1626 |        0 |      0 |  1404 |    +0.1% | -230.711 |  -117960.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3236* |       0 |    1626 |        0 |      0 |  1410 |    +0.1% | -230.711 |  -117933.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3240* |       0 |    1627 |        0 |      0 |  1412 |    +0.1% | -230.711 |  -117928.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3250* |       0 |    1636 |        0 |      0 |  1413 |    +0.1% | -230.711 |  -117728.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3260* |       0 |    1638 |        0 |      0 |  1421 |    +0.1% | -230.711 |  -117643.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3260* |       0 |    1638 |        0 |      0 |  1421 |    +0.1% | -230.711 |  -117643.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3270* |       0 |    1644 |        0 |      0 |  1424 |    +0.1% | -230.711 |  -117484.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3280* |       0 |    1650 |        0 |      0 |  1428 |    +0.1% | -230.711 |  -117361.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3284* |       0 |    1650 |        0 |      0 |  1432 |    +0.1% | -230.711 |  -117353.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3290* |       0 |    1653 |        0 |      0 |  1434 |    +0.1% | -230.711 |  -117262.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3300* |       0 |    1662 |        0 |      0 |  1435 |    +0.1% | -230.711 |  -117093.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3308* |       0 |    1662 |        0 |      0 |  1443 |    +0.1% | -230.711 |  -117063.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3310* |       0 |    1662 |        0 |      0 |  1444 |    +0.1% | -230.711 |  -117065.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3320* |       0 |    1670 |        0 |      0 |  1446 |    +0.1% | -230.711 |  -116867.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3330* |       0 |    1674 |        0 |      0 |  1452 |    +0.1% | -230.711 |  -116776.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3332* |       0 |    1674 |        0 |      0 |  1454 |    +0.1% | -230.711 |  -116773.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3340* |       0 |    1679 |        0 |      0 |  1456 |    +0.1% | -230.711 |  -116624.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3350* |       0 |    1686 |        0 |      0 |  1459 |    +0.1% | -230.711 |  -116510.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3356* |       0 |    1686 |        0 |      0 |  1465 |    +0.1% | -230.711 |  -116483.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3360* |       0 |    1687 |        0 |      0 |  1467 |    +0.1% | -230.711 |  -116478.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3370* |       0 |    1696 |        0 |      0 |  1468 |    +0.1% | -230.711 |  -116278.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3380* |       0 |    1698 |        0 |      0 |  1476 |    +0.1% | -230.711 |  -116193.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3380* |       0 |    1698 |        0 |      0 |  1476 |    +0.1% | -230.711 |  -116193.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3390* |       0 |    1704 |        0 |      0 |  1479 |    +0.1% | -230.711 |  -116035.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3400* |       0 |    1710 |        0 |      0 |  1483 |    +0.1% | -230.711 |  -115911.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3404* |       0 |    1710 |        0 |      0 |  1487 |    +0.1% | -230.711 |  -115903.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3410* |       0 |    1713 |        0 |      0 |  1489 |    +0.1% | -230.711 |  -115812.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3420* |       0 |    1722 |        0 |      0 |  1490 |    +0.1% | -230.711 |  -115644.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3428* |       0 |    1722 |        0 |      0 |  1498 |    +0.1% | -230.711 |  -115613.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3430* |       0 |    1722 |        0 |      0 |  1499 |    +0.1% | -230.711 |  -115615.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3440* |       0 |    1730 |        0 |      0 |  1501 |    +0.1% | -230.711 |  -115418.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3450* |       0 |    1734 |        0 |      0 |  1507 |    +0.1% | -230.711 |  -115326.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3452* |       0 |    1734 |        0 |      0 |  1509 |    +0.1% | -230.711 |  -115323.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3460* |       0 |    1739 |        0 |      0 |  1511 |    +0.1% | -230.711 |  -115174.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3470* |       0 |    1746 |        0 |      0 |  1514 |    +0.1% | -230.711 |  -115060.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3476* |       0 |    1746 |        0 |      0 |  1520 |    +0.1% | -230.711 |  -115033.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3480* |       0 |    1747 |        0 |      0 |  1522 |    +0.1% | -230.711 |  -115029.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3490* |       0 |    1756 |        0 |      0 |  1523 |    +0.1% | -230.711 |  -114829.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3500* |       0 |    1758 |        0 |      0 |  1531 |    +0.1% | -230.711 |  -114743.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3500* |       0 |    1758 |        0 |      0 |  1531 |    +0.1% | -230.711 |  -114743.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3510* |       0 |    1764 |        0 |      0 |  1534 |    +0.1% | -230.711 |  -114585.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3520* |       0 |    1770 |        0 |      0 |  1538 |    +0.1% | -230.711 |  -114462.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3524* |       0 |    1770 |        0 |      0 |  1542 |    +0.1% | -230.711 |  -114454.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3530* |       0 |    1773 |        0 |      0 |  1544 |    +0.1% | -230.711 |  -114363.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3540* |       0 |    1782 |        0 |      0 |  1545 |    +0.1% | -230.711 |  -114194.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3548* |       0 |    1782 |        0 |      0 |  1553 |    +0.1% | -230.711 |  -114164.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3550* |       0 |    1782 |        0 |      0 |  1554 |    +0.1% | -230.711 |  -114166.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3560* |       0 |    1790 |        0 |      0 |  1556 |    +0.1% | -230.711 |  -113968.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3570* |       0 |    1794 |        0 |      0 |  1562 |    +0.1% | -230.711 |  -113877.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3572* |       0 |    1794 |        0 |      0 |  1564 |    +0.1% | -230.711 |  -113874.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3580* |       0 |    1796 |        0 |      0 |  1569 |    +0.1% | -230.711 |  -113620.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3586* |       0 |    1800 |        0 |      0 |  1571 |    +0.1% | -230.711 |  -117310.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3590* |       0 |    1800 |        0 |      0 |  1574 |    +0.1% | -230.711 |  -117416.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3600* |       0 |    1805 |        0 |      0 |  1579 |    +0.1% | -230.711 |  -117262.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3600* |       0 |    1804 |        0 |      0 |  1578 |    +0.1% | -230.711 |  -117266.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3608* |       0 |    1806 |        0 |      0 |  1583 |    +0.1% | -230.711 |  -117200.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3609* |       0 |    1806 |        0 |      0 |  1583 |    +0.1% | -230.711 |  -117200.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3610* |       0 |    1806 |        0 |      0 |  1583 |    +0.1% | -230.711 |  -117200.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3610* |       0 |    1806 |        0 |      0 |  1583 |    +0.1% | -230.711 |  -117200.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3618* |       0 |    1807 |        0 |      0 |  1589 |    +0.1% | -230.711 |  -117189.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3620* |       0 |    1807 |        0 |      0 |  1590 |    +0.1% | -230.711 |  -117189.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3623* |       0 |    1807 |        0 |      0 |  1590 |    +0.1% | -230.711 |  -117189.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3624* |       0 |    1807 |        0 |      0 |  1590 |    +0.1% | -230.711 |  -117189.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3630* |       0 |    1810 |        0 |      0 |  1592 |    +0.1% | -230.711 |  -117044.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3640* |       0 |    1817 |        0 |      0 |  1595 |    +0.1% | -230.711 |  -116684.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3650* |       0 |    1825 |        0 |      0 |  1597 |    +0.1% | -230.711 |  -116638.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3651* |       0 |    1826 |        0 |      0 |  1597 |    +0.1% | -230.711 |  -116613.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3660* |       0 |    1829 |        0 |      0 |  1602 |    +0.1% | -230.711 |  -116332.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3670* |       0 |    1838 |        0 |      0 |  1603 |    +0.1% | -230.711 |  -116224.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3671* |       0 |    1838 |        0 |      0 |  1603 |    +0.1% | -230.711 |  -116224.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3680* |       0 |    1840 |        0 |      0 |  1609 |    +0.1% | -230.711 |  -116116.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3681* |       0 |    1841 |        0 |      0 |  1609 |    +0.1% | -230.711 |  -116119.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3690* |       0 |    1845 |        0 |      0 |  1613 |    +0.1% | -230.711 |  -116096.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3694* |       0 |    1845 |        0 |      0 |  1612 |    +0.1% | -230.711 |  -116082.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3700* |       0 |    1848 |        0 |      0 |  1614 |    +0.1% | -230.711 |  -116051.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3707* |       0 |    1849 |        0 |      0 |  1615 |    +0.1% | -230.711 |  -116046.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3710* |       0 |    1850 |        0 |      0 |  1616 |    +0.1% | -230.711 |  -116030.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3720* |       0 |    1854 |        0 |      0 |  1622 |    +0.1% | -230.711 |  -116022.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3720* |       0 |    1853 |        0 |      0 |  1618 |    +0.1% | -230.711 |  -116009.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3730* |       0 |    1858 |        0 |      0 |  1622 |    +0.1% | -230.711 |  -115985.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3733* |       0 |    1857 |        0 |      0 |  1621 |    +0.1% | -230.711 |  -115973.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3740* |       0 |    1861 |        0 |      0 |  1623 |    +0.1% | -230.711 |  -115938.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3746* |       0 |    1861 |        0 |      0 |  1624 |    +0.1% | -230.711 |  -115936.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3750* |       0 |    1862 |        0 |      0 |  1626 |    +0.1% | -230.711 |  -115920.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3759* |       0 |    1865 |        0 |      0 |  1627 |    +0.1% | -230.711 |  -115900.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3760* |       0 |    1865 |        0 |      0 |  1627 |    +0.1% | -230.711 |  -115900.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3770* |       0 |    1870 |        0 |      0 |  1632 |    +0.1% | -230.711 |  -115878.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3772* |       0 |    1869 |        0 |      0 |  1630 |    +0.1% | -230.711 |  -115864.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3780* |       0 |    1873 |        0 |      0 |  1633 |    +0.1% | -230.711 |  -115827.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3785* |       0 |    1873 |        0 |      0 |  1633 |    +0.1% | -230.711 |  -115827.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3790* |       0 |    1875 |        0 |      0 |  1635 |    +0.1% | -230.711 |  -115807.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3798* |       0 |    1877 |        0 |      0 |  1636 |    +0.1% | -230.711 |  -115791.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3800* |       0 |    1877 |        0 |      0 |  1637 |    +0.1% | -230.711 |  -115793.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3810* |       0 |    1882 |        0 |      0 |  1642 |    +0.1% | -230.711 |  -115768.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3811* |       0 |    1881 |        0 |      0 |  1639 |    +0.1% | -230.711 |  -115754.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3820* |       0 |    1885 |        0 |      0 |  1643 |    +0.1% | -230.711 |  -115732.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3824* |       0 |    1885 |        0 |      0 |  1642 |    +0.1% | -230.711 |  -115718.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3830* |       0 |    1888 |        0 |      0 |  1644 |    +0.1% | -230.711 |  -115686.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3837* |       0 |    1889 |        0 |      0 |  1645 |    +0.1% | -230.711 |  -115681.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3840* |       0 |    1890 |        0 |      0 |  1646 |    +0.1% | -230.711 |  -115666.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3850* |       0 |    1894 |        0 |      0 |  1652 |    +0.1% | -230.711 |  -115658.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3850* |       0 |    1893 |        0 |      0 |  1648 |    +0.1% | -230.711 |  -115645.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3860* |       0 |    1898 |        0 |      0 |  1652 |    +0.1% | -230.711 |  -115621.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3863* |       0 |    1897 |        0 |      0 |  1651 |    +0.1% | -230.711 |  -115609.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3870* |       0 |    1901 |        0 |      0 |  1653 |    +0.1% | -230.711 |  -115574.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3876* |       0 |    1901 |        0 |      0 |  1654 |    +0.1% | -230.711 |  -115572.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3880* |       0 |    1902 |        0 |      0 |  1656 |    +0.1% | -230.711 |  -115555.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3889* |       0 |    1905 |        0 |      0 |  1657 |    +0.1% | -230.711 |  -115536.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3890* |       0 |    1905 |        0 |      0 |  1657 |    +0.1% | -230.711 |  -115536.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3900* |       0 |    1910 |        0 |      0 |  1662 |    +0.1% | -230.711 |  -115513.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3902* |       0 |    1909 |        0 |      0 |  1660 |    +0.1% | -230.711 |  -115499.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3910* |       0 |    1913 |        0 |      0 |  1663 |    +0.1% | -230.711 |  -115463.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3915* |       0 |    1913 |        0 |      0 |  1663 |    +0.1% | -230.711 |  -115463.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3920* |       0 |    1915 |        0 |      0 |  1665 |    +0.1% | -230.711 |  -115443.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3928* |       0 |    1917 |        0 |      0 |  1666 |    +0.1% | -230.711 |  -115426.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3930* |       0 |    1917 |        0 |      0 |  1667 |    +0.1% | -230.711 |  -115429.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3940* |       0 |    1922 |        0 |      0 |  1672 |    +0.1% | -230.711 |  -115403.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3941* |       0 |    1921 |        0 |      0 |  1669 |    +0.1% | -230.711 |  -115390.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3950* |       0 |    1925 |        0 |      0 |  1673 |    +0.1% | -230.711 |  -115367.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3954* |       0 |    1925 |        0 |      0 |  1672 |    +0.1% | -230.711 |  -115354.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3960* |       0 |    1928 |        0 |      0 |  1674 |    +0.1% | -230.711 |  -115322.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3967* |       0 |    1929 |        0 |      0 |  1675 |    +0.1% | -230.711 |  -115317.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3970* |       0 |    1930 |        0 |      0 |  1676 |    +0.1% | -230.711 |  -115302.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3980* |       0 |    1934 |        0 |      0 |  1682 |    +0.1% | -230.711 |  -115294.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3980* |       0 |    1933 |        0 |      0 |  1678 |    +0.1% | -230.711 |  -115281.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3990* |       0 |    1938 |        0 |      0 |  1682 |    +0.1% | -230.711 |  -115257.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    3993* |       0 |    1937 |        0 |      0 |  1681 |    +0.1% | -230.711 |  -115244.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4000* |       0 |    1941 |        0 |      0 |  1683 |    +0.1% | -230.711 |  -115210.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4006* |       0 |    1941 |        0 |      0 |  1684 |    +0.1% | -230.711 |  -115208.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4010* |       0 |    1942 |        0 |      0 |  1686 |    +0.1% | -230.711 |  -115191.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4019* |       0 |    1945 |        0 |      0 |  1687 |    +0.1% | -230.711 |  -115172.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4020* |       0 |    1945 |        0 |      0 |  1687 |    +0.1% | -230.711 |  -115172.0 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4030* |       0 |    1950 |        0 |      0 |  1692 |    +0.1% | -230.711 |  -115149.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4032* |       0 |    1949 |        0 |      0 |  1690 |    +0.1% | -230.711 |  -115135.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4040* |       0 |    1953 |        0 |      0 |  1693 |    +0.1% | -230.711 |  -115099.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4045* |       0 |    1953 |        0 |      0 |  1693 |    +0.1% | -230.711 |  -115099.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4050* |       0 |    1955 |        0 |      0 |  1695 |    +0.1% | -230.711 |  -115078.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4058* |       0 |    1957 |        0 |      0 |  1696 |    +0.1% | -230.711 |  -115062.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4060* |       0 |    1957 |        0 |      0 |  1697 |    +0.1% | -230.711 |  -115064.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4070* |       0 |    1962 |        0 |      0 |  1702 |    +0.1% | -230.711 |  -115039.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4071* |       0 |    1961 |        0 |      0 |  1699 |    +0.1% | -230.711 |  -115026.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4080* |       0 |    1965 |        0 |      0 |  1703 |    +0.1% | -230.711 |  -115003.6 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4084* |       0 |    1965 |        0 |      0 |  1702 |    +0.1% | -230.711 |  -114989.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4090* |       0 |    1968 |        0 |      0 |  1704 |    +0.1% | -230.711 |  -114958.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4097* |       0 |    1969 |        0 |      0 |  1705 |    +0.1% | -230.711 |  -114953.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4100* |       0 |    1970 |        0 |      0 |  1706 |    +0.1% | -230.711 |  -114937.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4100* |       0 |    1970 |        0 |      0 |  1706 |    +0.1% | -230.711 |  -114937.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4110* |       0 |    1975 |        0 |      0 |  1710 |    +0.1% | -230.711 |  -114913.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4113* |       0 |    1974 |        0 |      0 |  1709 |    +0.1% | -230.711 |  -114901.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4120* |       0 |    1978 |        0 |      0 |  1711 |    +0.1% | -230.711 |  -114866.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4126* |       0 |    1978 |        0 |      0 |  1712 |    +0.1% | -230.711 |  -114864.9 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4130* |       0 |    1979 |        0 |      0 |  1714 |    +0.1% | -230.711 |  -114848.3 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4139* |       0 |    1982 |        0 |      0 |  1715 |    +0.1% | -230.711 |  -114828.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4140* |       0 |    1982 |        0 |      0 |  1715 |    +0.1% | -230.711 |  -114828.5 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4150* |       0 |    1987 |        0 |      0 |  1720 |    +0.1% | -230.711 |  -114806.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4152* |       0 |    1986 |        0 |      0 |  1718 |    +0.1% | -230.711 |  -114792.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4160* |       0 |    1990 |        0 |      0 |  1721 |    +0.1% | -230.711 |  -114755.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4165* |       0 |    1990 |        0 |      0 |  1721 |    +0.1% | -230.711 |  -114755.7 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4170* |       0 |    1992 |        0 |      0 |  1723 |    +0.1% | -230.711 |  -114735.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4178* |       0 |    1994 |        0 |      0 |  1724 |    +0.1% | -230.711 |  -114719.2 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4180* |       0 |    1994 |        0 |      0 |  1725 |    +0.1% | -230.711 |  -114721.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4190* |       0 |    1999 |        0 |      0 |  1730 |    +0.1% | -230.711 |  -114696.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4191* |       0 |    1998 |        0 |      0 |  1727 |    +0.1% | -230.711 |  -114682.8 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4200* |       0 |    2002 |        0 |      0 |  1731 |    +0.1% | -230.711 |  -114660.1 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4200* |       0 |    2002 |        0 |      0 |  1730 |    +0.1% | -230.711 |  -114646.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    4200* |       0 |    2002 |        0 |      0 |  1730 |    +0.1% | -230.711 |  -114646.4 |   3066 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+    final |       0 |    2002 |        0 |      0 |  1730 |    +0.1% | -230.711 |  -114646.4 |   2720 | u_dp/u_core/u_array/g_row\[0\].g_col\[0\].g_data.u_pe/prod_q\[14\]_reg/D
+------------------------------------------------------------------------------------------------------------------------------
+[INFO RSZ-0051] Resized 2002 instances: 2002 up, 0 up match, 0 down, 0 VT
+[INFO RSZ-0043] Swapped pins on 1730 instances.
+[WARNING RSZ-0062] Unable to repair all setup violations.
+[INFO RSZ-0505] Runtime: 256.18s
+Took 256 seconds: repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -setup -skip_last_gasp -sequence unbuffer,sizeup,swap,vt_swap -verbose
+Default units for flow
+ time 1ps
+ capacitance 1fF
+ resistance 1kohm
+ voltage 1v
+ current 1mA
+ power 1pW
+ distance 1um
+   Layer   | Unit Resistance | Unit Capacitance 
+           |       (kohm/um) |          (fF/um)
+------------------------------------------------
+        M1 |        7.04e-02 |         1.00e-10
+        M2 |        2.97e-02 |         1.75e-01
+        M3 |        3.13e-02 |         1.56e-01
+        M4 |        1.80e-02 |         1.78e-01
+        M5 |        1.90e-02 |         1.64e-01
+        M6 |        1.19e-02 |         1.87e-01
+        M7 |        1.25e-02 |         1.63e-01
+        M8 |        8.45e-03 |         1.04e-01
+        M9 |        8.90e-03 |         9.28e-02
+       Pad |        0.00e+00 |         0.00e+00
+------------------------------------------------
+
+   Layer   | Via Resistance 
+           |         (kohm) 
+----------------------------
+        V1 |       1.72e-02 
+        V2 |       1.72e-02 
+        V3 |       1.72e-02 
+        V4 |       1.18e-02 
+        V5 |       1.18e-02 
+        V6 |       8.20e-03 
+        V7 |       8.20e-03 
+        V8 |       6.30e-03 
+        V9 |       6.30e-03 
+----------------------------
+Report metrics stage 2, floorplan final...
+
+==========================================================================
+floorplan final report_design_area
+--------------------------------------------------------------------------
+Design area 64301 um^2 57% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_1_floorplan.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_1_floorplan.sdc
+Elapsed time: 5:46.49[h:]min:sec. CPU time: user 409.28 sys 3.40 (119%). Peak memory: 2002132KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_1_floorplan          .odb        346      413     1.19     1955 c11f928139
+2_1_floorplan          .sdc                                       9ecb30d38c

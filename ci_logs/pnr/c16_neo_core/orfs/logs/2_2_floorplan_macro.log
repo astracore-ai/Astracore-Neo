@@ -1,0 +1,44 @@
+OpenROAD unknown 
+Features included (+) or not (-): -GPU +GUI -Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[INFO ORD-0030] Using 4 thread(s).
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_1_floorplan.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+rtl_macro_placer -max_num_level 2 -min_channel_size "20 20" -pin_aware_channels -min_ar 0.33 -area_weight 0.1 -wirelength_weight 100.0 -outline_weight 100.0 -boundary_weight 50.0 -notch_weight 50.0 -report_directory /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/objects/asap7/c16_neo_core/base/rtlmp -fence_lx 0.0 -fence_ly 0.0 -fence_ux 0.0 -fence_uy 0.0 -target_util 0.6
+Die Area: (0.00, 0.00) (339.30, 339.30),  Floorplan Area: (1.03, 1.08) (338.26, 338.04)
+	Number of std cell instances: 444497
+	Area of std cell instances: 52173.70
+	Number of macros: 14
+	Macros to be placed: 14
+	Area of macros: 12127.47
+	Minimum channel (Width, Height): (20.00, 20.00)
+	Area of macros with halos: 21757.51
+	Area of std cell instances + Area of macros: 64301.17
+	Floorplan area: 113633.02
+	Design Utilization: 0.57
+	Floorplan Utilization: 0.51
+	Manufacturing Grid: 1
+
+[WARNING MPL-0055] Couldn't find a solution for the specified utilization. The utilization was adjusted to 0.84343255.
+[INFO MPL-0500] Runtime: 75.41s
+Took 75 seconds: rtl_macro_placer -max_num_level 2 -min_channel_size "20 20" -pin_aware_channels -min_ar 0.33 -area_weight 0.1 -wirelength_weight 100.0 -outline_weight 100.0 -boundary_weight 50.0 -notch_weight 50.0 -report_directory /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/objects/asap7/c16_neo_core/base/rtlmp -fence_lx 0.0 -fence_ly 0.0 -fence_ux 0.0 -fence_uy 0.0 -target_util 0.6
+Design area 64301 um^2 57% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_2_floorplan_macro.odb
+Elapsed time: 1:18.30[h:]min:sec. CPU time: user 259.22 sys 0.24 (331%). Peak memory: 773464KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_2_floorplan_macro    .odb         78      259     3.31      755 621f84f13a

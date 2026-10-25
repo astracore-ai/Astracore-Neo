@@ -1,0 +1,268 @@
+Startpoint: u_dp/u_feeder/u_mem/u_macro
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[14]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_dp/u_feeder/u_mem/u_macro/clk (fakeram7_128x256_g2_1w1r)
+ 218.0  218.0 ^ u_dp/u_feeder/u_mem/u_macro/rb_data[12] (fakeram7_128x256_g2_1w1r)
+  25.8  243.8 ^ u_dp/u_feeder/_10227_/Y (AND2x2_ASAP7_75t_R)
+  20.9  264.7 ^ u_dp/u_feeder/_10228_/Y (AO21x1_ASAP7_75t_R)
+  31.2  295.9 ^ u_dp/u_feeder/_10229_/Y (AND2x2_ASAP7_75t_R)
+  38.6  334.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1278_/Y (AO22x1_ASAP7_75t_R)
+  28.8  363.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1279_/Y (AOI221x1_ASAP7_75t_R)
+  59.3  422.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1280_/Y (BUFx2_ASAP7_75t_R)
+  42.3  464.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1335_/Y (OA21x2_ASAP7_75t_R)
+  47.7  512.6 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1336_/Y (AO221x1_ASAP7_75t_R)
+  26.3  538.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1339_/Y (AOI21x1_ASAP7_75t_R)
+  62.6  601.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2260_/SN (FAx1_ASAP7_75t_R)
+  27.4  628.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2184_/Y (INVx1_ASAP7_75t_R)
+  61.2  690.1 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2252_/SN (FAx1_ASAP7_75t_R)
+  28.4  718.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2145_/Y (INVx1_ASAP7_75t_R)
+  31.0  749.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/CON (FAx1_ASAP7_75t_R)
+  24.9  774.4 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/SN (FAx1_ASAP7_75t_R)
+  21.9  796.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2222_/Y (INVx1_ASAP7_75t_R)
+  78.6  874.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2325_/SN (HAxp5_ASAP7_75t_R)
+  43.9  918.7 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1617_/Y (AO21x1_ASAP7_75t_R)
+  46.6  965.3 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1620_/Y (AO221x1_ASAP7_75t_R)
+  32.1  997.4 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1631_/Y (AO21x1_ASAP7_75t_R)
+  32.8 1030.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1633_/Y (AND2x2_ASAP7_75t_R)
+  49.8 1080.0 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1668_/Y (OR3x1_ASAP7_75t_R)
+  44.5 1124.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1671_/Y (AND5x1_ASAP7_75t_R)
+  19.3 1143.8 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1678_/Y (NOR3x1_ASAP7_75t_R)
+   0.0 1143.8 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[14]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+       1143.8   data arrival time
+
+1000.0 1000.0   clock clk (rise edge)
+   0.0 1000.0   clock network delay (ideal)
+ -80.0  920.0   clock uncertainty
+   0.0  920.0   clock reconvergence pessimism
+        920.0 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[14]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+ -36.6  883.4   library setup time
+        883.4   data required time
+-------------------------------------------------------
+        883.4   data required time
+       -1143.8   data arrival time
+-------------------------------------------------------
+       -260.4   slack (VIOLATED)
+
+
+Startpoint: u_dp/u_feeder/u_mem/u_macro
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[13]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_dp/u_feeder/u_mem/u_macro/clk (fakeram7_128x256_g2_1w1r)
+ 218.0  218.0 ^ u_dp/u_feeder/u_mem/u_macro/rb_data[12] (fakeram7_128x256_g2_1w1r)
+  25.8  243.8 ^ u_dp/u_feeder/_10227_/Y (AND2x2_ASAP7_75t_R)
+  20.9  264.7 ^ u_dp/u_feeder/_10228_/Y (AO21x1_ASAP7_75t_R)
+  31.2  295.9 ^ u_dp/u_feeder/_10229_/Y (AND2x2_ASAP7_75t_R)
+  38.6  334.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1278_/Y (AO22x1_ASAP7_75t_R)
+  28.8  363.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1279_/Y (AOI221x1_ASAP7_75t_R)
+  59.3  422.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1280_/Y (BUFx2_ASAP7_75t_R)
+  42.3  464.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1335_/Y (OA21x2_ASAP7_75t_R)
+  47.7  512.6 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1336_/Y (AO221x1_ASAP7_75t_R)
+  26.3  538.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1339_/Y (AOI21x1_ASAP7_75t_R)
+  62.6  601.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2260_/SN (FAx1_ASAP7_75t_R)
+  27.4  628.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2184_/Y (INVx1_ASAP7_75t_R)
+  61.2  690.1 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2252_/SN (FAx1_ASAP7_75t_R)
+  28.4  718.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2145_/Y (INVx1_ASAP7_75t_R)
+  31.0  749.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/CON (FAx1_ASAP7_75t_R)
+  24.9  774.4 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/SN (FAx1_ASAP7_75t_R)
+  21.9  796.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2222_/Y (INVx1_ASAP7_75t_R)
+  78.6  874.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2325_/SN (HAxp5_ASAP7_75t_R)
+  49.1  924.0 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1611_/Y (OA21x2_ASAP7_75t_R)
+  51.0  974.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1638_/Y (OA211x2_ASAP7_75t_R)
+  37.9 1012.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1658_/Y (OA21x2_ASAP7_75t_R)
+  41.1 1054.0 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1660_/Y (AO22x1_ASAP7_75t_R)
+  49.7 1103.6 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1661_/Y (XOR2x2_ASAP7_75t_R)
+  26.2 1129.8 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1663_/Y (AO21x1_ASAP7_75t_R)
+   0.0 1129.8 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[13]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+       1129.8   data arrival time
+
+1000.0 1000.0   clock clk (rise edge)
+   0.0 1000.0   clock network delay (ideal)
+ -80.0  920.0   clock uncertainty
+   0.0  920.0   clock reconvergence pessimism
+        920.0 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[13]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+ -34.7  885.3   library setup time
+        885.3   data required time
+-------------------------------------------------------
+        885.3   data required time
+       -1129.8   data arrival time
+-------------------------------------------------------
+       -244.6   slack (VIOLATED)
+
+
+Startpoint: u_dp/u_feeder/u_mem/u_macro
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[12]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_dp/u_feeder/u_mem/u_macro/clk (fakeram7_128x256_g2_1w1r)
+ 218.0  218.0 ^ u_dp/u_feeder/u_mem/u_macro/rb_data[12] (fakeram7_128x256_g2_1w1r)
+  25.8  243.8 ^ u_dp/u_feeder/_10227_/Y (AND2x2_ASAP7_75t_R)
+  20.9  264.7 ^ u_dp/u_feeder/_10228_/Y (AO21x1_ASAP7_75t_R)
+  31.2  295.9 ^ u_dp/u_feeder/_10229_/Y (AND2x2_ASAP7_75t_R)
+  38.6  334.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1278_/Y (AO22x1_ASAP7_75t_R)
+  28.8  363.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1279_/Y (AOI221x1_ASAP7_75t_R)
+  59.3  422.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1280_/Y (BUFx2_ASAP7_75t_R)
+  42.3  464.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1335_/Y (OA21x2_ASAP7_75t_R)
+  47.7  512.6 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1336_/Y (AO221x1_ASAP7_75t_R)
+  26.3  538.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1339_/Y (AOI21x1_ASAP7_75t_R)
+  62.6  601.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2260_/SN (FAx1_ASAP7_75t_R)
+  27.4  628.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2184_/Y (INVx1_ASAP7_75t_R)
+  61.2  690.1 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2252_/SN (FAx1_ASAP7_75t_R)
+  28.4  718.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2145_/Y (INVx1_ASAP7_75t_R)
+  31.0  749.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/CON (FAx1_ASAP7_75t_R)
+  24.9  774.4 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/SN (FAx1_ASAP7_75t_R)
+  21.9  796.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2222_/Y (INVx1_ASAP7_75t_R)
+  78.6  874.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2325_/SN (HAxp5_ASAP7_75t_R)
+  43.9  918.7 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1617_/Y (AO21x1_ASAP7_75t_R)
+  46.6  965.3 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1620_/Y (AO221x1_ASAP7_75t_R)
+  32.1  997.4 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1631_/Y (AO21x1_ASAP7_75t_R)
+  32.8 1030.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1633_/Y (AND2x2_ASAP7_75t_R)
+  36.8 1067.1 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1650_/Y (OA21x2_ASAP7_75t_R)
+  40.0 1107.1 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1651_/Y (XNOR2x2_ASAP7_75t_R)
+  16.9 1123.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1653_/Y (AOI21x1_ASAP7_75t_R)
+   0.0 1123.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[12]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+       1123.9   data arrival time
+
+1000.0 1000.0   clock clk (rise edge)
+   0.0 1000.0   clock network delay (ideal)
+ -80.0  920.0   clock uncertainty
+   0.0  920.0   clock reconvergence pessimism
+        920.0 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[12]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+ -36.6  883.4   library setup time
+        883.4   data required time
+-------------------------------------------------------
+        883.4   data required time
+       -1123.9   data arrival time
+-------------------------------------------------------
+       -240.6   slack (VIOLATED)
+
+
+Startpoint: u_dp/u_feeder/u_mem/u_macro
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[11]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_dp/u_feeder/u_mem/u_macro/clk (fakeram7_128x256_g2_1w1r)
+ 218.0  218.0 ^ u_dp/u_feeder/u_mem/u_macro/rb_data[12] (fakeram7_128x256_g2_1w1r)
+  25.8  243.8 ^ u_dp/u_feeder/_10227_/Y (AND2x2_ASAP7_75t_R)
+  20.9  264.7 ^ u_dp/u_feeder/_10228_/Y (AO21x1_ASAP7_75t_R)
+  31.2  295.9 ^ u_dp/u_feeder/_10229_/Y (AND2x2_ASAP7_75t_R)
+  38.6  334.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1278_/Y (AO22x1_ASAP7_75t_R)
+  28.8  363.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1279_/Y (AOI221x1_ASAP7_75t_R)
+  59.3  422.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1280_/Y (BUFx2_ASAP7_75t_R)
+  42.3  464.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1335_/Y (OA21x2_ASAP7_75t_R)
+  47.7  512.6 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1336_/Y (AO221x1_ASAP7_75t_R)
+  26.3  538.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1339_/Y (AOI21x1_ASAP7_75t_R)
+  62.6  601.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2260_/SN (FAx1_ASAP7_75t_R)
+  27.4  628.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2184_/Y (INVx1_ASAP7_75t_R)
+  61.2  690.1 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2252_/SN (FAx1_ASAP7_75t_R)
+  28.4  718.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2145_/Y (INVx1_ASAP7_75t_R)
+  31.0  749.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/CON (FAx1_ASAP7_75t_R)
+  24.9  774.4 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/SN (FAx1_ASAP7_75t_R)
+  21.9  796.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2222_/Y (INVx1_ASAP7_75t_R)
+  78.6  874.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2325_/SN (HAxp5_ASAP7_75t_R)
+  49.1  924.0 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1611_/Y (OA21x2_ASAP7_75t_R)
+  51.0  974.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1638_/Y (OA211x2_ASAP7_75t_R)
+  44.5 1019.4 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1640_/Y (OR3x1_ASAP7_75t_R)
+  27.3 1046.7 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1642_/Y (AND3x1_ASAP7_75t_R)
+  47.8 1094.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1644_/Y (XOR2x2_ASAP7_75t_R)
+  29.5 1124.0 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1646_/Y (OA21x2_ASAP7_75t_R)
+   0.0 1124.0 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[11]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+       1124.0   data arrival time
+
+1000.0 1000.0   clock clk (rise edge)
+   0.0 1000.0   clock network delay (ideal)
+ -80.0  920.0   clock uncertainty
+   0.0  920.0   clock reconvergence pessimism
+        920.0 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[11]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+ -34.1  885.9   library setup time
+        885.9   data required time
+-------------------------------------------------------
+        885.9   data required time
+       -1124.0   data arrival time
+-------------------------------------------------------
+       -238.1   slack (VIOLATED)
+
+
+Startpoint: u_dp/u_feeder/u_mem/u_macro
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[10]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+ Delay   Time   Description
+-------------------------------------------------------
+   0.0    0.0   clock clk (rise edge)
+   0.0    0.0   clock network delay (ideal)
+   0.0    0.0 ^ u_dp/u_feeder/u_mem/u_macro/clk (fakeram7_128x256_g2_1w1r)
+ 218.0  218.0 ^ u_dp/u_feeder/u_mem/u_macro/rb_data[12] (fakeram7_128x256_g2_1w1r)
+  25.8  243.8 ^ u_dp/u_feeder/_10227_/Y (AND2x2_ASAP7_75t_R)
+  20.9  264.7 ^ u_dp/u_feeder/_10228_/Y (AO21x1_ASAP7_75t_R)
+  31.2  295.9 ^ u_dp/u_feeder/_10229_/Y (AND2x2_ASAP7_75t_R)
+  38.6  334.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1278_/Y (AO22x1_ASAP7_75t_R)
+  28.8  363.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1279_/Y (AOI221x1_ASAP7_75t_R)
+  59.3  422.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1280_/Y (BUFx2_ASAP7_75t_R)
+  42.3  464.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1335_/Y (OA21x2_ASAP7_75t_R)
+  47.7  512.6 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1336_/Y (AO221x1_ASAP7_75t_R)
+  26.3  538.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1339_/Y (AOI21x1_ASAP7_75t_R)
+  62.6  601.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2260_/SN (FAx1_ASAP7_75t_R)
+  27.4  628.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2184_/Y (INVx1_ASAP7_75t_R)
+  61.2  690.1 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2252_/SN (FAx1_ASAP7_75t_R)
+  28.4  718.5 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2145_/Y (INVx1_ASAP7_75t_R)
+  31.0  749.5 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/CON (FAx1_ASAP7_75t_R)
+  24.9  774.4 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2243_/SN (FAx1_ASAP7_75t_R)
+  21.9  796.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2222_/Y (INVx1_ASAP7_75t_R)
+  78.6  874.9 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2325_/SN (HAxp5_ASAP7_75t_R)
+  43.9  918.7 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1617_/Y (AO21x1_ASAP7_75t_R)
+  46.6  965.3 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1620_/Y (AO221x1_ASAP7_75t_R)
+  32.1  997.4 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1631_/Y (AO21x1_ASAP7_75t_R)
+  32.8 1030.2 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1633_/Y (AND2x2_ASAP7_75t_R)
+  40.8 1071.0 v u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1634_/Y (XNOR2x2_ASAP7_75t_R)
+  15.6 1086.6 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1635_/Y (NAND2x1_ASAP7_75t_R)
+  33.2 1119.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1636_/Y (OA21x2_ASAP7_75t_R)
+   0.0 1119.9 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[10]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+       1119.9   data arrival time
+
+1000.0 1000.0   clock clk (rise edge)
+   0.0 1000.0   clock network delay (ideal)
+ -80.0  920.0   clock uncertainty
+   0.0  920.0   clock reconvergence pessimism
+        920.0 ^ u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/prod_q[10]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+ -34.2  885.8   library setup time
+        885.8   data required time
+-------------------------------------------------------
+        885.8   data required time
+       -1119.9   data arrival time
+-------------------------------------------------------
+       -234.1   slack (VIOLATED)
+
+
