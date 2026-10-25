@@ -1,0 +1,93 @@
+{
+ "unit": "c16_systolic_array",
+ "units": [
+  "c16_mac_pe",
+  "c16_mac_pe_chk",
+  "c16_systolic_array"
+ ],
+ "period_ps": 1000.0,
+ "synth_period_ps": 1000.0,
+ "pdk": "asap7",
+ "corner": "SS",
+ "tools": {
+  "yosys": "Yosys 0.69+274 (git sha1 7513f8df8, Release, Clang /usr/bin/clang++ 21.1.8)",
+  "sta": "3.1.0"
+ },
+ "macros": [],
+ "macro_pins_checked": 0,
+ "yosys_stat": {
+  "design": {
+   "num_cells": 244167,
+   "area_um2": 30543.365,
+   "macros": {},
+   "macro_area_um2": 0,
+   "stdcells": 244167,
+   "stdcell_area_um2": 30543.365
+  },
+  "modules": {
+   "c16_systolic_array": {
+    "cells": 244167,
+    "area_um2": 30543.365,
+    "own_cells": 7
+   },
+   "c16_mac_pe_chk": {
+    "cells": 1449,
+    "area_um2": 173.181,
+    "own_cells": 1449
+   },
+   "c16_mac_pe": {
+    "cells": 1183,
+    "area_um2": 152.026,
+    "own_cells": 1183
+   }
+  }
+ },
+ "synth": {
+  "c16_mac_pe": {
+   "instances": 128,
+   "own_cells": 1253,
+   "own_area_um2": 159.30108,
+   "cells": 1253,
+   "cell_area_um2": 159.30108,
+   "macro_area_um2": 0.0,
+   "wns_ps": -189.9657105882751,
+   "tns_ps": -1305.981106259186,
+   "min_period_ps": 809.048397275125,
+   "worst_start": "x_in[12]",
+   "worst_end": "prod_q[14]_reg",
+   "worst_arrival_ps": 1073.3,
+   "worst_slack_ps": -190.0
+  },
+  "c16_mac_pe_chk": {
+   "instances": 64,
+   "own_cells": 1634,
+   "own_area_um2": 192.58722,
+   "cells": 1634,
+   "cell_area_um2": 192.58722,
+   "macro_area_um2": 0.0,
+   "wns_ps": -166.3991173726919,
+   "tns_ps": -1237.8831342810417,
+   "min_period_ps": 1036.076172320189,
+   "worst_start": "x_in[7]",
+   "worst_end": "prod_q[12]_reg",
+   "worst_arrival_ps": 1051.7,
+   "worst_slack_ps": -166.4
+  },
+  "c16_systolic_array": {
+   "instances": 1,
+   "own_cells": 6,
+   "own_area_um2": 0.4374,
+   "cells": 264966,
+   "cell_area_um2": 32716.55772,
+   "macro_area_um2": 0.0,
+   "wns_ps": -189.96569671048724,
+   "tns_ps": -303642.90758737695,
+   "min_period_ps": 1101.1639302743,
+   "worst_start": "x_in[492]",
+   "worst_end": "g_row[0].g_col[0].g_data.u_pe",
+   "worst_arrival_ps": 200.0,
+   "worst_slack_ps": -190.0
+  }
+ },
+ "seconds": 1.1
+}
