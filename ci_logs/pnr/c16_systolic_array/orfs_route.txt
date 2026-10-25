@@ -2549,3 +2549,37 @@ Up-via summary (total 2398588):
 [INFO DRT-0267] cpu time = 05:13:06, elapsed time = 01:53:50, memory = 7974.95 (MB), peak = 15151.61 (MB)
 
 [INFO DRT-0180] Post processing.
+[INFO DRT-0501] Runtime: 8048.72s
+Took 8049 seconds: detailed_route -output_drc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/reports/asap7/c16_systolic_array/base/5_route_drc.rpt -output_maze /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/maze.log -droute_end_iter 64 -verbose 1 -drc_report_iter_step 5
+[WARNING GRT-0246] No diode with LEF class CORE ANTENNACELL found.
+[INFO ANT-0002] Found 0 net violations.
+[INFO ANT-0001] Found 0 pin violations.
+[INFO ANT-0002] Found 0 net violations.
+[INFO ANT-0001] Found 0 pin violations.
+Design area 34575 um^2 63% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_2_route.odb
+Elapsed time: 2:16:29.50[h:]min:sec. CPU time: user 23831.51 sys 201.10 (293%). Peak memory: 15515252KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+5_2_route              .odb       8189    24033     2.93    15151 5f79033e68
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 5_3_fillcell fillcell
+Running fillcell.tcl, stage 5_3_fillcell
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_2_route.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_1_grt.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+filler_placement "FILLERxp5_ASAP7_75t_R FILLER_ASAP7_75t_R DECAPx1_ASAP7_75t_R DECAPx2_ASAP7_75t_R DECAPx4_ASAP7_75t_R DECAPx6_ASAP7_75t_R DECAPx10_ASAP7_75t_R"
+[INFO DPL-0001] Placed 299024 filler instances.
+Design area 34575 um^2 63% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_3_fillcell.odb
+Elapsed time: 0:07.29[h:]min:sec. CPU time: user 6.83 sys 0.45 (99%). Peak memory: 1544564KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+5_3_fillcell           .odb          7        7     1.00     1508 8c7ab3ec06
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_3_fillcell.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_route.odb
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_1_grt.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/5_route.sdc
