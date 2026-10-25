@@ -780,3 +780,85 @@ Die Area: (0.00, 0.00) (339.30, 339.30),  Floorplan Area: (1.03, 1.08) (338.26, 
 	Floorplan Utilization: 0.51
 	Manufacturing Grid: 1
 
+[WARNING MPL-0055] Couldn't find a solution for the specified utilization. The utilization was adjusted to 0.84343255.
+[INFO MPL-0500] Runtime: 75.41s
+Took 75 seconds: rtl_macro_placer -max_num_level 2 -min_channel_size "20 20" -pin_aware_channels -min_ar 0.33 -area_weight 0.1 -wirelength_weight 100.0 -outline_weight 100.0 -boundary_weight 50.0 -notch_weight 50.0 -report_directory /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/objects/asap7/c16_neo_core/base/rtlmp -fence_lx 0.0 -fence_ly 0.0 -fence_ux 0.0 -fence_uy 0.0 -target_util 0.6
+Design area 64301 um^2 57% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_2_floorplan_macro.odb
+Elapsed time: 1:18.30[h:]min:sec. CPU time: user 259.22 sys 0.24 (331%). Peak memory: 773464KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_2_floorplan_macro    .odb         78      259     3.31      755 621f84f13a
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_3_floorplan_tapcell tapcell
+Running tapcell.tcl, stage 2_3_floorplan_tapcell
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_2_floorplan_macro.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+Tap and End Cap cell insertion
+  TAP Cell          : TAPCELL_ASAP7_75t_R
+  ENDCAP Cell       : TAPCELL_ASAP7_75t_R
+  Halo Around Macro : 2 2
+  TAP Cell Distance : 25
+[INFO ODB-0303] The initial 1248 rows (7793760 sites) were cut with 14 shapes for a total of 4322 rows (6691258 sites).
+[INFO TAP-0004] Inserted 7086 endcaps.
+[INFO TAP-0005] Inserted 6431 tapcells.
+Design area 64741 um^2 57% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_3_floorplan_tapcell.odb
+Elapsed time: 0:02.50[h:]min:sec. CPU time: user 2.29 sys 0.21 (99%). Peak memory: 705184KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_3_floorplan_tapcell  .odb          2        2     1.00      688 8e74756bef
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 2_4_floorplan_pdn pdn
+Running pdn.tcl, stage 2_4_floorplan_pdn
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_3_floorplan_tapcell.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_1_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+[WARNING PDN-1051] No instances found for grid (CORE_macro_grid_2).
+[INFO PDN-0001] Inserting grid: top
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_dp/u_feeder/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[0\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[1\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[2\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[3\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[4\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[5\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[6\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/g_lut\[7\].u_lutv/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_luts/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_wbuf/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_rbuf/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_dp/u_acc/u_mem/u_macro
+[INFO PDN-0001] Inserting grid: CORE_macro_grid_1 - u_vec/u_rs/u_macro
+[INFO PDN-0500] Runtime: 2.28s
+Design area 64741 um^2 57% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_4_floorplan_pdn.odb
+Elapsed time: 0:16.81[h:]min:sec. CPU time: user 16.54 sys 0.26 (99%). Peak memory: 825780KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+2_4_floorplan_pdn      .odb         16       17     1.00      806 515d3f5202
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_4_floorplan_pdn.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_floorplan.odb
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_1_floorplan.sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_floorplan.sdc
