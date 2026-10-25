@@ -1220,3 +1220,143 @@ Iteration |   Area    | Resized | Buffers | Nets repaired | Remaining
 Took 53 seconds: repair_design -verbose
 Floating nets: 
 Report metrics stage 3, resizer...
+
+==========================================================================
+resizer report_design_area
+--------------------------------------------------------------------------
+Design area 67819 um^2 60% utilization.
+Instance count before 490277, after 492465
+Pin count before 1512369, after 1516745
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/3_4_place_resized.odb
+Elapsed time: 3:40.28[h:]min:sec. CPU time: user 301.71 sys 6.91 (140%). Peak memory: 2549700KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+3_4_place_resized      .odb        220      309     1.40     2489 d7475558c9
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 3_5_place_dp detail_place
+Running detail_place.tcl, stage 3_5_place_dp
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/3_4_place_resized.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+detailed_placement
+[INFO DPL-0006] Core area: 113633.02 um^2
+[INFO DPL-0007] Movable instances area: 55252.21 um^2
+[INFO DPL-0008] Fixed instances area within core: 12567.06 um^2
+[INFO DPL-0009] Utilization: 59.7%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (6 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 492451 cells
+[INFO DPL-0393]   height 78 row(s): 1 cells
+[INFO DPL-0393]   height 99 row(s): 1 cells
+[INFO DPL-0393]   height 109 row(s): 1 cells
+[INFO DPL-0393]   height 156 row(s): 1 cells
+[INFO DPL-0393]   height 312 row(s): 10 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |     127985 |     33743 |     94143
+        1 |       1928 |       356 |      1572
+        2 |        350 |        58 |       292
+        3 |        157 |        23 |       134
+        4 |         62 |         6 |        56
+        5 |         82 |         8 |        74
+        6 |         17 |         3 |        14
+        7 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 7.
+[INFO DPL-0500] Runtime: 13.96s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves              495783
+total displacement     132233.3 u
+average displacement        0.3 u
+max displacement           18.9 u
+original HPWL         1787275.9 u
+legalized HPWL        1868626.9 u
+delta HPWL                    5 %
+
+Took 14 seconds: detailed_placement
+improve_placement -max_displacement "5 1"
+Detailed placement improvement.
+[INFO DPL-0401] Setting random seed to 1.
+[INFO DPL-0402] Setting maximum displacement 5 1 to 1350 270 units.
+[INFO DPL-0320] Collected 20208 fixed cells.
+[INFO DPL-0318] Collected 477376 single height cells.
+[INFO DPL-0321] Collected 0 wide cells.
+[INFO DPL-0322] Image (1026, 1080) - (338256, 338040)
+[INFO DPL-0310] Assigned 477376 cells into segments.  Movement in X-direction is 0.000000, movement in Y-direction is 0.000000.
+[INFO DPL-0313] Found 0 cells in wrong regions.
+[INFO DPL-0315] Found 0 row alignment problems.
+[INFO DPL-0314] Found 0 site alignment problems.
+[INFO DPL-0311] Found 0 overlaps between adjacent cells.
+[INFO DPL-0312] Found 0 edge spacing violations and 0 padding violations.
+[INFO DPL-0303] Running algorithm for independent set matching.
+[INFO DPL-0300] Set matching objective is wirelength.
+[INFO DPL-0301] Pass   1 of matching; objective is 1.803710e+09.
+[INFO DPL-0302] End of matching; objective is 1.799242e+09, improvement is 0.25 percent.
+[INFO DPL-0303] Running algorithm for global swaps.
+[INFO DPL-0306] Pass   1 of global swaps; hpwl is 1.781275e+09.
+[INFO DPL-0307] End of global swaps; objective is 1.781275e+09, improvement is 1.00 percent.
+[INFO DPL-0303] Running algorithm for vertical swaps.
+[INFO DPL-0308] Pass   1 of vertical swaps; hpwl is 1.776352e+09.
+[INFO DPL-0309] End of vertical swaps; objective is 1.776352e+09, improvement is 0.28 percent.
+[INFO DPL-0303] Running algorithm for reordering.
+[INFO DPL-0304] Pass   1 of reordering; objective is 1.772379e+09.
+[INFO DPL-0305] End of reordering; objective is 1.772379e+09, improvement is 0.22 percent.
+[INFO DPL-0303] Running algorithm for random improvement.
+[INFO DPL-0324] Random improver is using random generator.
+[INFO DPL-0325] Random improver is using hpwl objective.
+[INFO DPL-0326] Random improver cost string is (a).
+[INFO DPL-0332] End of pass, Generator random called 9547520 times.
+[INFO DPL-0335] Generator random, Cumulative attempts 9547520, swaps 1345241, moves 2445557 since last reset.
+[INFO DPL-0333] End of pass, Objective hpwl, Initial cost 1.770289e+09, Scratch cost 1.757333e+09, Incremental cost 1.757333e+09, Mismatch? N
+[INFO DPL-0338] End of pass, Total cost is 1.757333e+09.
+[INFO DPL-0327] Pass   1 of random improver; improvement in cost is 0.73 percent.
+[INFO DPL-0328] End of random improver; improvement is 0.731866 percent.
+[INFO DPL-0380] Cell flipping.
+[INFO DPL-0382] Changed 0 cell orientations for row compatibility.
+[INFO DPL-0383] Performed 146723 cell flips.
+[INFO DPL-0384] End of flipping; objective is 1.730486e+09, improvement is 1.64 percent.
+[INFO DPL-0313] Found 0 cells in wrong regions.
+[INFO DPL-0315] Found 0 row alignment problems.
+[INFO DPL-0314] Found 0 site alignment problems.
+[INFO DPL-0311] Found 0 overlaps between adjacent cells.
+[INFO DPL-0312] Found 0 edge spacing violations and 0 padding violations.
+Place Optimization Analysis
+---------------------------------
+total attempts          9547520
+relocated cells          265581
+total displacement     121152.8 u
+average displacement        0.5 u
+max displacement            1.6 u
+original HPWL         1868626.9 u
+improved HPWL         1794053.4 u
+delta HPWL                   -4 %
+
+Took 135 seconds: improve_placement -max_displacement "5 1"
+optimize_mirroring
+[INFO DPL-0020] Mirrored 70067 instances
+[INFO DPL-0021] HPWL before          1794053.4 u
+[INFO DPL-0022] HPWL after           1791239.2 u
+[INFO DPL-0023] HPWL delta               -0.2 %
+Took 8 seconds: optimize_mirroring
+[INFO FLW-0012] Placement violations .
+estimate_parasitics -placement
+Took 21 seconds: estimate_parasitics -placement
+Report metrics stage 3, detailed place...
