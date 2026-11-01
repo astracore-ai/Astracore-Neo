@@ -1,0 +1,35 @@
+# c16_neo_core: synth.py's netlists of the subtree (c16_acc_bank, c16_mac_pe, c16_mac_pe_chk, c16_systolic_array, c16_neo_mac_core, c16_act_feeder, c16_neo_mac_core_v02, c16_requant, c16_core_seq, c16_vec_unit, c16_wbuf_mem, c16_neo_core) for ORFS (07_ci/pnr/prep.py)
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib
+read_liberty -lib /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty -lib /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty -lib /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty -lib /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty -lib /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty -lib /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty -lib /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/wrappers.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_acc_bank/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_mac_pe/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_mac_pe_chk/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_systolic_array/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_neo_mac_core/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_act_feeder/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_neo_mac_core_v02/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_requant/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_core_seq/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_vec_unit/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_wbuf_mem/netlist.v
+read_verilog /home/runner/work/Astracore-Neo/Astracore-Neo/synth_out/c16_neo_core/netlist.v
+hierarchy -check -top c16_neo_core
+splitnets
+opt_clean -purge
+hilomap -singleton -hicell TIEHIx1_ASAP7_75t_R H -locell TIELOx1_ASAP7_75t_R L
+insbuf -buf BUFx2_ASAP7_75t_R A Y
+tee -q -o check.txt check
+tee -q -o stat.txt stat -hierarchy -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+tee -q -o stat.json stat -json -hierarchy -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib -liberty /home/runner/neo-synth/pdk/lib/asap7/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib -liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+check -assert -mapped
+write_verilog -noattr -noexpr -nohex -nodec 1_netlist.v
