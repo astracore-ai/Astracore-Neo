@@ -1,0 +1,5 @@
+id,config,workload,node,block,flop,bit,type,cycle,outcome,causes,first_cause,latency,diff,run_cycles,wall_ms
+3,tile,m1,0,noc_router,u_mesh.g_y[0].g_x[0].u_t.u_router.g_out[4].of,39,sa1,1894,masked,,,,0,3904,3213
+7,tile,m1,0,wbuf_mem.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_wbuf.u_mem.mem[187],99,flip,1515,masked,,,,0,3904,2892
+11,tile,m1,1,tile_nic,u_mesh.g_y[0].g_x[1].u_t.u_nic.tx_crc,6,flip,1483,masked,,,,0,3904,2911
+15,tile,m1,2,host_if,u_mesh.g_y[1].g_x[0].u_t.u_host.cfg[8],10,flip,3178,detected,ctrl_path_err@2,ctrl_path_err@2,3,0,3904,2850
