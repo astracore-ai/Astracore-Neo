@@ -1,0 +1,37 @@
+python3 -c "import cocotb" 2>/dev/null || pip install "cocotb>=1.9,<2" "cocotb-coverage<2"
+Collecting cocotb<2,>=1.9
+  Downloading cocotb-1.9.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.9 kB)
+Collecting cocotb-coverage<2
+  Downloading cocotb_coverage-1.2.0-py3-none-any.whl.metadata (4.1 kB)
+Collecting find-libpython (from cocotb<2,>=1.9)
+  Downloading find_libpython-0.5.1-py3-none-any.whl.metadata (2.8 kB)
+Collecting python-constraint (from cocotb-coverage<2)
+  Downloading python-constraint-1.4.0.tar.bz2 (18 kB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting pyyaml (from cocotb-coverage<2)
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Downloading cocotb-1.9.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (4.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.2/4.2 MB 51.5 MB/s  0:00:00
+Downloading cocotb_coverage-1.2.0-py3-none-any.whl (21 kB)
+Downloading find_libpython-0.5.1-py3-none-any.whl (9.2 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 175.1 MB/s  0:00:00
+Building wheels for collected packages: python-constraint
+  Building wheel for python-constraint (pyproject.toml): started
+  Building wheel for python-constraint (pyproject.toml): finished with status 'done'
+  Created wheel for python-constraint: filename=python_constraint-1.4.0-py2.py3-none-any.whl size=24107 sha256=7f1a2244f8754b6a6508b3ea2c3cf5ea1dc0c75ee23e98cc84e5c78f3c76d9c9
+  Stored in directory: /home/runner/.cache/pip/wheels/c1/d2/3d/082849b61a9c6de02d4a7c8a402c224640f08d8a971307b92b
+Successfully built python-constraint
+Installing collected packages: python-constraint, pyyaml, find-libpython, cocotb, cocotb-coverage
+
+Successfully installed cocotb-1.9.2 cocotb-coverage-1.2.0 find-libpython-0.5.1 python-constraint-1.4.0 pyyaml-6.0.3
+
+[notice] A new release of pip is available: 26.2.2 -> 26.3
+[notice] To update, run: pip install --upgrade pip
+python3 dv/cocotb/faults/run_faults.py all --n-tile 20000 --n-core 20000 --seed 267 \
+  --workers 4 --budget-min 300 --out ci_logs/faults
