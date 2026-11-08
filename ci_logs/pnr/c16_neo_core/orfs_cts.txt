@@ -563,3 +563,25 @@ Iteration | Resized | Buffers | Cloned Gates |   Area   |   WNS   |   TNS   | En
 [INFO RSZ-0032] Inserted 17 hold buffers.
 [INFO RSZ-0506] Runtime: 2.49s
 Took 67 seconds: repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+Elapsed time: 0:34.36[h:]min:sec. CPU time: user 36.52 sys 1.02 (109%). Peak memory: 1754660KB.
+child process exited abnormally
+    while executing
+"exec {*}$run_cmd --log $::env(LOG_DIR)/${step}_${kind}.log --  {*}$::env(KEPLER_FORMAL_EXE) --config $::env(OBJECTS_DIR)/${step}_${kind}_test.yml  2>@..."
+    (procedure "run_kepler_formal" line 9)
+    invoked from within
+"run_kepler_formal $step lec"
+    (procedure "run_lec_test" line 4)
+    invoked from within
+"run_lec_test 4_rsz 4_before_rsz_lec.v 4_after_rsz_lec.v"
+    invoked from within
+"if { !$::env(SKIP_CTS_REPAIR_TIMING) } {
+  set lec_enabled [lec_check_enabled]
+  if { $lec_enabled } {
+    write_lec_verilog 4_before_rsz_lec.v
+  }
+
+ ..."
+    (file "/OpenROAD-flow-scripts/flow/scripts/cts.tcl" line 61)
+Elapsed time: 2:56.35[h:]min:sec. CPU time: user 278.90 sys 17.82 (168%). Peak memory: 3851384KB.
+make[1]: *** [/OpenROAD-flow-scripts/flow/Makefile:571: do-4_1_cts] Error 1
+make: *** [/OpenROAD-flow-scripts/flow/Makefile:571: /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/4_1_cts.odb] Error 2

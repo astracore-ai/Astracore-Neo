@@ -1,0 +1,1140 @@
+
+==========================================================================
+detailed place report_tns
+--------------------------------------------------------------------------
+tns max -658305.94
+
+==========================================================================
+detailed place report_wns
+--------------------------------------------------------------------------
+wns max -395.84
+
+==========================================================================
+detailed place report_worst_slack
+--------------------------------------------------------------------------
+worst slack max -395.84
+
+==========================================================================
+detailed place report_clock_min_period
+--------------------------------------------------------------------------
+clk period_min = 1395.84 fmax = 716.41
+
+==========================================================================
+detailed place report_checks -path_delay min
+--------------------------------------------------------------------------
+Startpoint: u_vec/rsst_q[15]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_vec/u_rs/u_macro (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ u_vec/rsst_q[15]_reg/CLK (DFFHQx4_ASAP7_75t_R)
+     4   14.85   50.80  106.89  106.89 v u_vec/rsst_q[15]_reg/Q (DFFHQx4_ASAP7_75t_R)
+                                         u_vec/rsst_q[15] (net)
+                 40.74    7.14  114.03 v u_vec/u_rs/u_macro/wdata[15] (fakeram7_64x64_g2_1w1r)
+                                114.03   data arrival time
+
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                          0.00    0.00   clock reconvergence pessimism
+                                  0.00 ^ u_vec/u_rs/u_macro/clk (fakeram7_64x64_g2_1w1r)
+                         50.00   50.00   library hold time
+                                 50.00   data required time
+-----------------------------------------------------------------------------
+                                 50.00   data required time
+                               -114.03   data arrival time
+-----------------------------------------------------------------------------
+                                 64.03   slack (MET)
+
+
+
+==========================================================================
+detailed place report_checks -path_delay max
+--------------------------------------------------------------------------
+Startpoint: vec_on_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq/ra1[25]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ vec_on_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     3    4.58   80.03  113.76  113.76 v vec_on_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         _0001_ (net)
+                 80.08    1.09  114.84 v place172423/A (BUFx6f_ASAP7_75t_R)
+     5   21.82   53.40   54.05  168.90 v place172423/Y (BUFx6f_ASAP7_75t_R)
+                                         net172422 (net)
+                101.97   28.82  197.71 v _0785_/A (INVx5_ASAP7_75t_R)
+    11   39.83  144.99   85.64  283.36 ^ _0785_/Y (INVx5_ASAP7_75t_R)
+                                         _0020_ (net)
+                147.39   10.55  293.90 ^ place172395/A (BUFx6f_ASAP7_75t_R)
+    16   18.32   56.22   69.64  363.55 ^ place172395/Y (BUFx6f_ASAP7_75t_R)
+                                         net172394 (net)
+                 56.26    0.95  364.50 ^ place172391/A (BUFx2_ASAP7_75t_R)
+    13   13.22  108.13   75.78  440.28 ^ place172391/Y (BUFx2_ASAP7_75t_R)
+                                         net172390 (net)
+                110.35    8.59  448.87 ^ _1344_/A1 (AO21x2_ASAP7_75t_R)
+     4    6.39   56.73   67.30  516.17 ^ _1344_/Y (AO21x2_ASAP7_75t_R)
+                                         rq_in[22] (net)
+                 57.12    2.63  518.80 ^ place146726/A (BUFx6f_ASAP7_75t_R)
+    10    8.76   28.87   43.64  562.44 ^ place146726/Y (BUFx6f_ASAP7_75t_R)
+                                         net146725 (net)
+                 29.07    1.31  563.75 ^ u_rq/place146725/A (BUFx6f_ASAP7_75t_R)
+     9    7.02   23.82   33.87  597.62 ^ u_rq/place146725/Y (BUFx6f_ASAP7_75t_R)
+                                         u_rq/net146724 (net)
+                 23.89    0.69  598.31 ^ u_rq/_33586_/B (AND2x2_ASAP7_75t_R)
+     1    1.44   19.63   34.06  632.37 ^ u_rq/_33586_/Y (AND2x2_ASAP7_75t_R)
+                                         u_rq/row[2132] (net)
+                 19.63    0.05  632.42 ^ u_rq/_40536_/CI (FAx1_ASAP7_75t_R)
+     1    0.74   42.33   60.70  693.12 v u_rq/_40536_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_10452_[0] (net)
+                 42.33    0.03  693.15 v u_rq/_19924_/A (INVx1_ASAP7_75t_R)
+     1    1.46   31.96   27.46  720.61 ^ u_rq/_19924_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[1397] (net)
+                 31.96    0.05  720.66 ^ u_rq/_40926_/CI (FAx1_ASAP7_75t_R)
+     1    1.63   83.26   91.30  811.97 v u_rq/_40926_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_11234_[0] (net)
+                 83.26    0.22  812.18 v u_rq/place135340/A (BUFx3_ASAP7_75t_R)
+     1    0.78   13.82   46.51  858.69 v u_rq/place135340/Y (BUFx3_ASAP7_75t_R)
+                                         u_rq/net135339 (net)
+                 13.82    0.04  858.73 v u_rq/_19926_/A (INVx1_ASAP7_75t_R)
+     1    1.83   30.94   20.28  879.02 ^ u_rq/_19926_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[858] (net)
+                 30.94    0.09  879.11 ^ u_rq/_41006_/A (FAx1_ASAP7_75t_R)
+     1    0.85   47.51   68.93  948.03 v u_rq/_41006_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_11395_[0] (net)
+                 47.51    0.05  948.08 v u_rq/_19928_/A (INVx1_ASAP7_75t_R)
+     1    2.09   41.98   33.34  981.43 ^ u_rq/_19928_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[564] (net)
+                 41.98    0.17  981.60 ^ u_rq/_42810_/A (FAx1_ASAP7_75t_R)
+     1    0.66   38.79   65.73 1047.33 v u_rq/_42810_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_15010_[0] (net)
+                 38.79    0.02 1047.36 v u_rq/_19935_/A (INVx1_ASAP7_75t_R)
+     1    1.50   31.50   26.78 1074.14 ^ u_rq/_19935_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[368] (net)
+                 31.51    0.06 1074.20 ^ u_rq/_43369_/CI (FAx1_ASAP7_75t_R)
+     1    0.71   41.02   63.04 1137.24 v u_rq/_43369_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_16128_[0] (net)
+                 41.02    0.03 1137.27 v u_rq/place129599/A (BUFx3_ASAP7_75t_R)
+     1    0.85   11.34   35.93 1173.20 v u_rq/place129599/Y (BUFx3_ASAP7_75t_R)
+                                         u_rq/net129598 (net)
+                 11.34    0.05 1173.25 v u_rq/_19937_/A (INVx1_ASAP7_75t_R)
+     1    1.91   31.81   19.91 1193.16 ^ u_rq/_19937_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[172] (net)
+                 31.81    0.07 1193.23 ^ u_rq/_42042_/B (FAx1_ASAP7_75t_R)
+     1    0.75   43.34   65.31 1258.54 v u_rq/_42042_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_13474_[0] (net)
+                 43.34    0.04 1258.58 v u_rq/_18554_/A (INVx1_ASAP7_75t_R)
+     1    0.68   23.07   20.33 1278.90 ^ u_rq/_18554_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[74] (net)
+                 23.07    0.03 1278.93 ^ u_rq/ra1[25]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                               1278.93   data arrival time
+
+                  0.00 1000.00 1000.00   clock clk (rise edge)
+                          0.00 1000.00   clock network delay (ideal)
+                        -80.00  920.00   clock uncertainty
+                          0.00  920.00   clock reconvergence pessimism
+                                920.00 ^ u_rq/ra1[25]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                        -36.91  883.09   library setup time
+                                883.09   data required time
+-----------------------------------------------------------------------------
+                                883.09   data required time
+                               -1278.93   data arrival time
+-----------------------------------------------------------------------------
+                               -395.84   slack (VIOLATED)
+
+
+
+==========================================================================
+detailed place report_checks -unconstrained
+--------------------------------------------------------------------------
+Startpoint: vec_on_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq/ra1[25]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ vec_on_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     3    4.58   80.03  113.76  113.76 v vec_on_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         _0001_ (net)
+                 80.08    1.09  114.84 v place172423/A (BUFx6f_ASAP7_75t_R)
+     5   21.82   53.40   54.05  168.90 v place172423/Y (BUFx6f_ASAP7_75t_R)
+                                         net172422 (net)
+                101.97   28.82  197.71 v _0785_/A (INVx5_ASAP7_75t_R)
+    11   39.83  144.99   85.64  283.36 ^ _0785_/Y (INVx5_ASAP7_75t_R)
+                                         _0020_ (net)
+                147.39   10.55  293.90 ^ place172395/A (BUFx6f_ASAP7_75t_R)
+    16   18.32   56.22   69.64  363.55 ^ place172395/Y (BUFx6f_ASAP7_75t_R)
+                                         net172394 (net)
+                 56.26    0.95  364.50 ^ place172391/A (BUFx2_ASAP7_75t_R)
+    13   13.22  108.13   75.78  440.28 ^ place172391/Y (BUFx2_ASAP7_75t_R)
+                                         net172390 (net)
+                110.35    8.59  448.87 ^ _1344_/A1 (AO21x2_ASAP7_75t_R)
+     4    6.39   56.73   67.30  516.17 ^ _1344_/Y (AO21x2_ASAP7_75t_R)
+                                         rq_in[22] (net)
+                 57.12    2.63  518.80 ^ place146726/A (BUFx6f_ASAP7_75t_R)
+    10    8.76   28.87   43.64  562.44 ^ place146726/Y (BUFx6f_ASAP7_75t_R)
+                                         net146725 (net)
+                 29.07    1.31  563.75 ^ u_rq/place146725/A (BUFx6f_ASAP7_75t_R)
+     9    7.02   23.82   33.87  597.62 ^ u_rq/place146725/Y (BUFx6f_ASAP7_75t_R)
+                                         u_rq/net146724 (net)
+                 23.89    0.69  598.31 ^ u_rq/_33586_/B (AND2x2_ASAP7_75t_R)
+     1    1.44   19.63   34.06  632.37 ^ u_rq/_33586_/Y (AND2x2_ASAP7_75t_R)
+                                         u_rq/row[2132] (net)
+                 19.63    0.05  632.42 ^ u_rq/_40536_/CI (FAx1_ASAP7_75t_R)
+     1    0.74   42.33   60.70  693.12 v u_rq/_40536_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_10452_[0] (net)
+                 42.33    0.03  693.15 v u_rq/_19924_/A (INVx1_ASAP7_75t_R)
+     1    1.46   31.96   27.46  720.61 ^ u_rq/_19924_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[1397] (net)
+                 31.96    0.05  720.66 ^ u_rq/_40926_/CI (FAx1_ASAP7_75t_R)
+     1    1.63   83.26   91.30  811.97 v u_rq/_40926_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_11234_[0] (net)
+                 83.26    0.22  812.18 v u_rq/place135340/A (BUFx3_ASAP7_75t_R)
+     1    0.78   13.82   46.51  858.69 v u_rq/place135340/Y (BUFx3_ASAP7_75t_R)
+                                         u_rq/net135339 (net)
+                 13.82    0.04  858.73 v u_rq/_19926_/A (INVx1_ASAP7_75t_R)
+     1    1.83   30.94   20.28  879.02 ^ u_rq/_19926_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[858] (net)
+                 30.94    0.09  879.11 ^ u_rq/_41006_/A (FAx1_ASAP7_75t_R)
+     1    0.85   47.51   68.93  948.03 v u_rq/_41006_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_11395_[0] (net)
+                 47.51    0.05  948.08 v u_rq/_19928_/A (INVx1_ASAP7_75t_R)
+     1    2.09   41.98   33.34  981.43 ^ u_rq/_19928_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[564] (net)
+                 41.98    0.17  981.60 ^ u_rq/_42810_/A (FAx1_ASAP7_75t_R)
+     1    0.66   38.79   65.73 1047.33 v u_rq/_42810_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_15010_[0] (net)
+                 38.79    0.02 1047.36 v u_rq/_19935_/A (INVx1_ASAP7_75t_R)
+     1    1.50   31.50   26.78 1074.14 ^ u_rq/_19935_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[368] (net)
+                 31.51    0.06 1074.20 ^ u_rq/_43369_/CI (FAx1_ASAP7_75t_R)
+     1    0.71   41.02   63.04 1137.24 v u_rq/_43369_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_16128_[0] (net)
+                 41.02    0.03 1137.27 v u_rq/place129599/A (BUFx3_ASAP7_75t_R)
+     1    0.85   11.34   35.93 1173.20 v u_rq/place129599/Y (BUFx3_ASAP7_75t_R)
+                                         u_rq/net129598 (net)
+                 11.34    0.05 1173.25 v u_rq/_19937_/A (INVx1_ASAP7_75t_R)
+     1    1.91   31.81   19.91 1193.16 ^ u_rq/_19937_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[172] (net)
+                 31.81    0.07 1193.23 ^ u_rq/_42042_/B (FAx1_ASAP7_75t_R)
+     1    0.75   43.34   65.31 1258.54 v u_rq/_42042_/SN (FAx1_ASAP7_75t_R)
+                                         u_rq/_13474_[0] (net)
+                 43.34    0.04 1258.58 v u_rq/_18554_/A (INVx1_ASAP7_75t_R)
+     1    0.68   23.07   20.33 1278.90 ^ u_rq/_18554_/Y (INVx1_ASAP7_75t_R)
+                                         u_rq/row[74] (net)
+                 23.07    0.03 1278.93 ^ u_rq/ra1[25]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                               1278.93   data arrival time
+
+                  0.00 1000.00 1000.00   clock clk (rise edge)
+                          0.00 1000.00   clock network delay (ideal)
+                        -80.00  920.00   clock uncertainty
+                          0.00  920.00   clock reconvergence pessimism
+                                920.00 ^ u_rq/ra1[25]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                        -36.91  883.09   library setup time
+                                883.09   data required time
+-----------------------------------------------------------------------------
+                                883.09   data required time
+                               -1278.93   data arrival time
+-----------------------------------------------------------------------------
+                               -395.84   slack (VIOLATED)
+
+
+
+==========================================================================
+detailed place report_check_types -max_slew -max_cap -max_fanout -violators
+--------------------------------------------------------------------------
+max slew
+
+Pin                                    Limit    Slew   Slack
+------------------------------------------------------------
+rd_data[255]                          160.00  303.58 -143.58 (VIOLATED)
+rd_data[199]                          160.00  243.55  -83.55 (VIOLATED)
+rd_data[212]                          160.00  228.37  -68.37 (VIOLATED)
+rd_data[219]                          160.00  221.47  -61.47 (VIOLATED)
+rd_data[240]                          160.00  193.31  -33.31 (VIOLATED)
+u_vec/_126920_/C                      160.00  170.84  -10.84 (VIOLATED)
+u_vec/_139750_/SN                     160.00  170.81  -10.81 (VIOLATED)
+u_vec/place148156/A                   160.00  170.81  -10.81 (VIOLATED)
+rd_data[211]                          160.00  170.12  -10.12 (VIOLATED)
+rd_data[218]                          160.00  169.27   -9.27 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[0].g_data.u_pe/_1927_/A  160.00  168.79   -8.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[0].g_data.u_pe/_1937_/A  160.00  168.79   -8.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[0].g_data.u_pe/_1621_/C  160.00  168.79   -8.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[0].g_data.u_pe/_1754_/A2  160.00  168.79   -8.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[0].g_data.u_pe/_1776_/B  160.00  168.79   -8.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[0].g_data.u_pe/_2272_/SN  160.00  168.79   -8.79 (VIOLATED)
+output40448/Y                         160.00  168.78   -8.78 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[4].g_data.u_pe/_1443_/D  160.00  166.91   -6.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[4].g_data.u_pe/_1827_/B  160.00  166.91   -6.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[4].g_data.u_pe/_1813_/A  160.00  166.91   -6.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[4].g_data.u_pe/_1818_/B  160.00  166.91   -6.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[4].g_data.u_pe/_1421_/A1  160.00  166.91   -6.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[4].g_data.u_pe/_1829_/A2  160.00  166.91   -6.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[4].g_data.u_pe/_2344_/SN  160.00  166.91   -6.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[4].g_data.u_pe/_1421_/A1  160.00  166.62   -6.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[4].g_data.u_pe/_1443_/D  160.00  166.62   -6.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[4].g_data.u_pe/_1813_/A  160.00  166.62   -6.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[4].g_data.u_pe/_1818_/B  160.00  166.62   -6.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[4].g_data.u_pe/_1827_/B  160.00  166.62   -6.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[4].g_data.u_pe/_1829_/A2  160.00  166.62   -6.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[4].g_data.u_pe/_2344_/SN  160.00  166.62   -6.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[2].g_data.u_pe/_1837_/B  160.00  166.31   -6.31 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[2].g_data.u_pe/_1799_/A  160.00  166.31   -6.31 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[2].g_data.u_pe/_1588_/B  160.00  166.31   -6.31 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[2].g_data.u_pe/_1477_/A1  160.00  166.30   -6.30 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[2].g_data.u_pe/_1808_/A  160.00  166.30   -6.30 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[2].g_data.u_pe/_2360_/SN  160.00  166.30   -6.30 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[7].g_data.u_pe/_1813_/A  160.00  164.89   -4.89 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[7].g_data.u_pe/_1827_/B  160.00  164.89   -4.89 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[7].g_data.u_pe/_1818_/B  160.00  164.89   -4.89 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[7].g_data.u_pe/_1829_/A2  160.00  164.89   -4.89 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[7].g_data.u_pe/_1421_/A1  160.00  164.89   -4.89 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[7].g_data.u_pe/_1443_/D  160.00  164.89   -4.89 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[7].g_data.u_pe/_2344_/SN  160.00  164.89   -4.89 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[1].g_data.u_pe/_1874_/A  160.00  164.41   -4.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[1].g_data.u_pe/_1880_/A  160.00  164.41   -4.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[1].g_data.u_pe/_1665_/B  160.00  164.41   -4.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[1].g_data.u_pe/_1882_/A1  160.00  164.41   -4.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[1].g_data.u_pe/_1895_/A1  160.00  164.41   -4.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[1].g_data.u_pe/_1907_/A2  160.00  164.41   -4.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[1].g_data.u_pe/_2361_/SN  160.00  164.41   -4.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[5].g_data.u_pe/_1799_/A  160.00  163.96   -3.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[5].g_data.u_pe/_1808_/A  160.00  163.96   -3.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[5].g_data.u_pe/_1477_/A1  160.00  163.96   -3.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[5].g_data.u_pe/_1588_/B  160.00  163.96   -3.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[5].g_data.u_pe/_1837_/B  160.00  163.96   -3.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[5].g_data.u_pe/_2360_/SN  160.00  163.96   -3.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1927_/A  160.00  163.94   -3.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1937_/A  160.00  163.94   -3.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1621_/C  160.00  163.94   -3.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1754_/A2  160.00  163.94   -3.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1776_/B  160.00  163.94   -3.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_2272_/SN  160.00  163.94   -3.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[4].g_data.u_pe/_1874_/A  160.00  163.92   -3.92 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[4].g_data.u_pe/_1665_/B  160.00  163.92   -3.92 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[4].g_data.u_pe/_1880_/A  160.00  163.92   -3.92 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[4].g_data.u_pe/_1882_/A1  160.00  163.91   -3.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[4].g_data.u_pe/_1907_/A2  160.00  163.91   -3.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[4].g_data.u_pe/_1895_/A1  160.00  163.91   -3.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[4].g_data.u_pe/_2361_/SN  160.00  163.91   -3.91 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[4].g_data.u_pe/_1813_/A  160.00  163.87   -3.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[4].g_data.u_pe/_1818_/B  160.00  163.87   -3.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[4].g_data.u_pe/_1421_/A1  160.00  163.87   -3.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[4].g_data.u_pe/_1443_/D  160.00  163.87   -3.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[4].g_data.u_pe/_1827_/B  160.00  163.87   -3.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[4].g_data.u_pe/_1829_/A2  160.00  163.87   -3.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[4].g_data.u_pe/_2344_/SN  160.00  163.87   -3.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[7].g_data.u_pe/_1813_/A  160.00  163.85   -3.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[7].g_data.u_pe/_1818_/B  160.00  163.85   -3.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[7].g_data.u_pe/_1827_/B  160.00  163.85   -3.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[7].g_data.u_pe/_1421_/A1  160.00  163.85   -3.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[7].g_data.u_pe/_1443_/D  160.00  163.85   -3.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[7].g_data.u_pe/_1829_/A2  160.00  163.85   -3.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[7].g_data.u_pe/_2344_/SN  160.00  163.85   -3.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[0].g_data.u_pe/_1927_/A  160.00  163.79   -3.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[0].g_data.u_pe/_1937_/A  160.00  163.79   -3.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[0].g_data.u_pe/_1621_/C  160.00  163.79   -3.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[0].g_data.u_pe/_1776_/B  160.00  163.79   -3.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[0].g_data.u_pe/_1754_/A2  160.00  163.79   -3.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[0].g_data.u_pe/_2272_/SN  160.00  163.78   -3.78 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[3].g_data.u_pe/_1813_/A  160.00  163.69   -3.69 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[3].g_data.u_pe/_1443_/D  160.00  163.69   -3.69 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[3].g_data.u_pe/_1827_/B  160.00  163.69   -3.69 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[3].g_data.u_pe/_1421_/A1  160.00  163.69   -3.69 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[3].g_data.u_pe/_1829_/A2  160.00  163.69   -3.69 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[3].g_data.u_pe/_1818_/B  160.00  163.69   -3.69 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[3].g_data.u_pe/_2344_/SN  160.00  163.69   -3.69 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1927_/A  160.00  163.62   -3.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1621_/C  160.00  163.62   -3.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1754_/A2  160.00  163.62   -3.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1776_/B  160.00  163.62   -3.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1937_/A  160.00  163.62   -3.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_2272_/SN  160.00  163.62   -3.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1874_/A  160.00  163.61   -3.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1880_/A  160.00  163.61   -3.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1882_/A1  160.00  163.61   -3.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1665_/B  160.00  163.61   -3.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1895_/A1  160.00  163.61   -3.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_1907_/A2  160.00  163.61   -3.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[3].g_data.u_pe/_2361_/SN  160.00  163.61   -3.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[0].g_data.u_pe/_1804_/A  160.00  163.40   -3.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[0].g_data.u_pe/_1808_/B  160.00  163.40   -3.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[0].g_data.u_pe/_1817_/B  160.00  163.40   -3.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[0].g_data.u_pe/_1812_/A2  160.00  163.40   -3.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[0].g_data.u_pe/_1443_/C  160.00  163.40   -3.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[0].g_data.u_pe/_1828_/A2  160.00  163.40   -3.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[0].g_data.u_pe/_2271_/SN  160.00  163.40   -3.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1874_/A  160.00  163.21   -3.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1665_/B  160.00  163.21   -3.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1880_/A  160.00  163.21   -3.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1882_/A1  160.00  163.21   -3.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1895_/A1  160.00  163.21   -3.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_1907_/A2  160.00  163.21   -3.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[0].g_data.u_pe/_2361_/SN  160.00  163.21   -3.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[10].g_check.u_pe/_2710_/B  160.00  162.99   -2.99 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[10].g_check.u_pe/place135626/A  160.00  162.98   -2.98 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[10].g_check.u_pe/_3293_/CON  160.00  162.97   -2.97 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[0].g_data.u_pe/_1827_/B  160.00  162.96   -2.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[0].g_data.u_pe/_1421_/A1  160.00  162.96   -2.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[0].g_data.u_pe/_1443_/D  160.00  162.96   -2.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[0].g_data.u_pe/_1813_/A  160.00  162.96   -2.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[0].g_data.u_pe/_1818_/B  160.00  162.96   -2.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[0].g_data.u_pe/_1829_/A2  160.00  162.96   -2.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[0].g_data.u_pe/_2344_/SN  160.00  162.96   -2.96 (VIOLATED)
+u_vec/_123616_/A                      160.00  162.93   -2.93 (VIOLATED)
+u_vec/_123621_/A                      160.00  162.93   -2.93 (VIOLATED)
+u_vec/_123618_/A1                     160.00  162.93   -2.93 (VIOLATED)
+u_vec/_123622_/A1                     160.00  162.93   -2.93 (VIOLATED)
+u_vec/_123627_/A1                     160.00  162.93   -2.93 (VIOLATED)
+u_vec/_123629_/A                      160.00  162.93   -2.93 (VIOLATED)
+u_vec/_137134_/SN                     160.00  162.93   -2.93 (VIOLATED)
+u_seq/_3850_/A                        160.00  162.93   -2.93 (VIOLATED)
+u_seq/_3767_/B                        160.00  162.93   -2.93 (VIOLATED)
+u_seq/_3768_/B                        160.00  162.93   -2.93 (VIOLATED)
+u_seq/_4173_/A1                       160.00  162.93   -2.93 (VIOLATED)
+u_seq/_4681_/A                        160.00  162.93   -2.93 (VIOLATED)
+u_seq/_4692_/A1                       160.00  162.93   -2.93 (VIOLATED)
+u_seq/_5482_/SN                       160.00  162.93   -2.93 (VIOLATED)
+u_vec/_126768_/A                      160.00  162.92   -2.92 (VIOLATED)
+u_vec/_126779_/D                      160.00  162.92   -2.92 (VIOLATED)
+u_vec/_126775_/B                      160.00  162.92   -2.92 (VIOLATED)
+u_vec/_126773_/A1                     160.00  162.92   -2.92 (VIOLATED)
+u_vec/_126771_/A1                     160.00  162.92   -2.92 (VIOLATED)
+u_vec/_126781_/B                      160.00  162.92   -2.92 (VIOLATED)
+u_vec/_138134_/SN                     160.00  162.92   -2.92 (VIOLATED)
+u_vec/_125872_/A                      160.00  162.88   -2.88 (VIOLATED)
+u_vec/_125838_/B                      160.00  162.88   -2.88 (VIOLATED)
+u_vec/_125843_/B                      160.00  162.88   -2.88 (VIOLATED)
+u_vec/_125837_/A                      160.00  162.88   -2.88 (VIOLATED)
+u_vec/_125846_/B                      160.00  162.88   -2.88 (VIOLATED)
+u_vec/_125868_/A1                     160.00  162.88   -2.88 (VIOLATED)
+u_vec/_144721_/SN                     160.00  162.88   -2.88 (VIOLATED)
+u_rq/_28604_/A                        160.00  162.86   -2.86 (VIOLATED)
+u_rq/_23452_/B                        160.00  162.86   -2.86 (VIOLATED)
+u_rq/_25437_/A1                       160.00  162.86   -2.86 (VIOLATED)
+u_rq/_23496_/A1                       160.00  162.86   -2.86 (VIOLATED)
+u_rq/_24515_/A1                       160.00  162.86   -2.86 (VIOLATED)
+u_rq/_31095_/A                        160.00  162.86   -2.86 (VIOLATED)
+u_rq/_43462_/SN                       160.00  162.86   -2.86 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[7].g_data.u_pe/_1477_/A1  160.00  162.71   -2.71 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[7].g_data.u_pe/_1588_/B  160.00  162.71   -2.71 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[7].g_data.u_pe/_1799_/A  160.00  162.71   -2.71 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[7].g_data.u_pe/_1808_/A  160.00  162.71   -2.71 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[7].g_data.u_pe/_1837_/B  160.00  162.71   -2.71 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[7].g_data.u_pe/_2360_/SN  160.00  162.71   -2.71 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[6].g_data.u_pe/_1443_/C  160.00  162.67   -2.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[6].g_data.u_pe/_1804_/A  160.00  162.67   -2.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[6].g_data.u_pe/_1808_/B  160.00  162.67   -2.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[6].g_data.u_pe/_1812_/A2  160.00  162.67   -2.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[6].g_data.u_pe/_1817_/B  160.00  162.67   -2.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[6].g_data.u_pe/_1828_/A2  160.00  162.67   -2.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[12].g_col[6].g_data.u_pe/_2271_/SN  160.00  162.67   -2.67 (VIOLATED)
+u_rq/_39262_/A                        160.00  162.65   -2.65 (VIOLATED)
+u_rq/_39273_/A                        160.00  162.65   -2.65 (VIOLATED)
+u_rq/_25271_/A1                       160.00  162.65   -2.65 (VIOLATED)
+u_rq/_39257_/A1                       160.00  162.65   -2.65 (VIOLATED)
+u_rq/_39252_/A                        160.00  162.65   -2.65 (VIOLATED)
+u_rq/_39253_/A1                       160.00  162.65   -2.65 (VIOLATED)
+u_rq/_43787_/SN                       160.00  162.65   -2.65 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[11].g_check.u_pe/p_out[30]_reg/RESETN  160.00  162.61   -2.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[11].g_check.u_pe/p_out[31]_reg/RESETN  160.00  162.60   -2.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[11].g_check.u_pe/p_in_q[27]_reg/RESETN  160.00  162.57   -2.57 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[6].g_data.u_pe/_1588_/B  160.00  162.54   -2.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[6].g_data.u_pe/_1477_/A1  160.00  162.54   -2.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[6].g_data.u_pe/_1799_/A  160.00  162.54   -2.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[6].g_data.u_pe/_1808_/A  160.00  162.54   -2.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[6].g_data.u_pe/_1837_/B  160.00  162.54   -2.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[6].g_data.u_pe/_2360_/SN  160.00  162.54   -2.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[11].g_check.u_pe/p_in_q[26]_reg/RESETN  160.00  162.47   -2.47 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[11].g_check.u_pe/inj_q_reg/RESETN  160.00  162.43   -2.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[4].g_data.u_pe/_1477_/A1  160.00  162.43   -2.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[4].g_data.u_pe/_1588_/B  160.00  162.43   -2.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[4].g_data.u_pe/_1799_/A  160.00  162.43   -2.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[4].g_data.u_pe/_1808_/A  160.00  162.43   -2.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[4].g_data.u_pe/_1837_/B  160.00  162.43   -2.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[4].g_data.u_pe/_2360_/SN  160.00  162.43   -2.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[11].g_check.u_pe/p_out[26]_reg/RESETN  160.00  162.42   -2.42 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[11].g_check.u_pe/prod_q[0]_reg/RESETN  160.00  162.40   -2.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[11].g_check.u_pe/prod_q[13]_reg/RESETN  160.00  162.36   -2.36 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[6].g_data.u_pe/_1874_/A  160.00  162.27   -2.27 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[6].g_data.u_pe/_1665_/B  160.00  162.27   -2.27 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[6].g_data.u_pe/_1880_/A  160.00  162.27   -2.27 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[6].g_data.u_pe/_1882_/A1  160.00  162.27   -2.27 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[6].g_data.u_pe/_1895_/A1  160.00  162.27   -2.27 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[6].g_data.u_pe/_1907_/A2  160.00  162.27   -2.27 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[6].g_data.u_pe/_2361_/SN  160.00  162.27   -2.27 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[8].g_check.u_pe/p_out[3]_reg/RESETN  160.00  162.24   -2.24 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[10].g_check.u_pe/p_in_q[24]_reg/RESETN  160.00  162.22   -2.22 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[11].g_check.u_pe/p_in_q[28]_reg/RESETN  160.00  162.18   -2.18 (VIOLATED)
+u_rq/_39447_/C                        160.00  162.16   -2.16 (VIOLATED)
+u_rq/_39438_/C                        160.00  162.16   -2.16 (VIOLATED)
+u_rq/_39437_/A                        160.00  162.16   -2.16 (VIOLATED)
+u_rq/_39441_/C                        160.00  162.16   -2.16 (VIOLATED)
+u_rq/_39442_/A1                       160.00  162.16   -2.16 (VIOLATED)
+u_rq/_39449_/A1                       160.00  162.16   -2.16 (VIOLATED)
+u_rq/_43572_/SN                       160.00  162.16   -2.16 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[8].g_check.u_pe/w_out[3]_reg/RESETN  160.00  162.16   -2.16 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[8].g_check.u_pe/_2615_/A  160.00  162.12   -2.12 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[8].g_check.u_pe/_2588_/D  160.00  162.12   -2.12 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[8].g_check.u_pe/_2643_/B  160.00  162.12   -2.12 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[8].g_check.u_pe/_2627_/A1  160.00  162.12   -2.12 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[8].g_check.u_pe/_2644_/D  160.00  162.12   -2.12 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[8].g_check.u_pe/_2665_/A1  160.00  162.12   -2.12 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[8].g_check.u_pe/_3090_/SN  160.00  162.12   -2.12 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[11].g_check.u_pe/p_out[29]_reg/RESETN  160.00  162.08   -2.08 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[11].g_check.u_pe/p_out[28]_reg/RESETN  160.00  162.08   -2.08 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/g_half.w_lo[5]_reg/RESETN  160.00  162.05   -2.05 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[8].g_check.u_pe/w_out[5]_reg/RESETN  160.00  162.04   -2.04 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/w_out[0]_reg/RESETN  160.00  162.03   -2.03 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/g_half.w_hi[1]_reg/RESETN  160.00  162.03   -2.03 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/g_half.w_hi[3]_reg/RESETN  160.00  162.03   -2.03 (VIOLATED)
+u_dp/u_core/u_array/g_row[3].g_col[11].g_check.u_pe/g_half.w_hi[3]_reg/RESETN  160.00  162.02   -2.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/w_out[1]_reg/RESETN  160.00  162.01   -2.01 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/g_half.w_hi[2]_reg/RESETN  160.00  161.98   -1.98 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[11].g_check.u_pe/prod_q[8]_reg/RESETN  160.00  161.97   -1.97 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/w_out[11]_reg/RESETN  160.00  161.96   -1.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[5].g_data.u_pe/_1443_/C  160.00  161.94   -1.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[5].g_data.u_pe/_1804_/A  160.00  161.94   -1.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[5].g_data.u_pe/_1808_/B  160.00  161.94   -1.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[5].g_data.u_pe/_1812_/A2  160.00  161.94   -1.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[5].g_data.u_pe/_1817_/B  160.00  161.94   -1.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[5].g_data.u_pe/_1828_/A2  160.00  161.94   -1.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[5].g_data.u_pe/_2271_/SN  160.00  161.94   -1.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[1].g_data.u_pe/_1421_/A1  160.00  161.93   -1.93 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[1].g_data.u_pe/_1443_/D  160.00  161.93   -1.93 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[1].g_data.u_pe/_1813_/A  160.00  161.93   -1.93 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[1].g_data.u_pe/_1818_/B  160.00  161.93   -1.93 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[1].g_data.u_pe/_1827_/B  160.00  161.93   -1.93 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[1].g_data.u_pe/_1829_/A2  160.00  161.93   -1.93 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[1].g_data.u_pe/_2344_/SN  160.00  161.93   -1.93 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[8].g_check.u_pe/w_out[4]_reg/RESETN  160.00  161.92   -1.92 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[0].g_data.u_pe/_1443_/C  160.00  161.90   -1.90 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[0].g_data.u_pe/_1804_/A  160.00  161.90   -1.90 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[0].g_data.u_pe/_1808_/B  160.00  161.90   -1.90 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[0].g_data.u_pe/_1812_/A2  160.00  161.90   -1.90 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[0].g_data.u_pe/_1817_/B  160.00  161.90   -1.90 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[0].g_data.u_pe/_1828_/A2  160.00  161.90   -1.90 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[0].g_data.u_pe/_2271_/SN  160.00  161.90   -1.90 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[8].g_check.u_pe/w_out[0]_reg/RESETN  160.00  161.88   -1.88 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/w_out[12]_reg/RESETN  160.00  161.85   -1.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[2].g_data.u_pe/_1421_/A1  160.00  161.85   -1.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[2].g_data.u_pe/_1443_/D  160.00  161.85   -1.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[2].g_data.u_pe/_1813_/A  160.00  161.85   -1.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[2].g_data.u_pe/_1818_/B  160.00  161.85   -1.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[2].g_data.u_pe/_1827_/B  160.00  161.85   -1.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[2].g_data.u_pe/_1829_/A2  160.00  161.85   -1.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[2].g_data.u_pe/_2344_/SN  160.00  161.85   -1.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/w_out[7]_reg/RESETN  160.00  161.84   -1.84 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/w_out[6]_reg/RESETN  160.00  161.84   -1.84 (VIOLATED)
+u_dp/u_core/u_array/place175355/Y     160.00  161.83   -1.83 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[2].g_data.u_pe/_1324_/A2  160.00  161.81   -1.81 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[2].g_data.u_pe/place140479/A  160.00  161.81   -1.81 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/p_in_q[16]_reg/RESETN  160.00  161.81   -1.81 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[2].g_data.u_pe/place140480/A  160.00  161.80   -1.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[6].g_data.u_pe/_1817_/B  160.00  161.80   -1.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[6].g_data.u_pe/_1443_/C  160.00  161.80   -1.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[6].g_data.u_pe/_1804_/A  160.00  161.80   -1.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[6].g_data.u_pe/_1808_/B  160.00  161.80   -1.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[6].g_data.u_pe/_1812_/A2  160.00  161.80   -1.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[6].g_data.u_pe/_1828_/A2  160.00  161.80   -1.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[6].g_data.u_pe/_2271_/SN  160.00  161.80   -1.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[2].g_data.u_pe/_1379_/C  160.00  161.79   -1.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[2].g_data.u_pe/_1389_/C  160.00  161.79   -1.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[2].g_data.u_pe/place140481/A  160.00  161.79   -1.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[2].g_data.u_pe/_1380_/B1  160.00  161.79   -1.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[2].g_data.u_pe/_1268_/Y  160.00  161.78   -1.78 (VIOLATED)
+u_dp/u_core/u_array/place175637/A     160.00  161.76   -1.76 (VIOLATED)
+u_rq_dup/_23263_/A                    160.00  161.73   -1.73 (VIOLATED)
+u_rq_dup/_24349_/B                    160.00  161.73   -1.73 (VIOLATED)
+u_rq_dup/_28471_/B                    160.00  161.73   -1.73 (VIOLATED)
+u_rq_dup/_39577_/A                    160.00  161.73   -1.73 (VIOLATED)
+u_rq_dup/_39581_/A1                   160.00  161.73   -1.73 (VIOLATED)
+u_rq_dup/_43717_/SN                   160.00  161.73   -1.73 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[2].g_data.u_pe/_1665_/B  160.00  161.72   -1.72 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[2].g_data.u_pe/_1874_/A  160.00  161.72   -1.72 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[2].g_data.u_pe/_1880_/A  160.00  161.72   -1.72 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[2].g_data.u_pe/_1882_/A1  160.00  161.72   -1.72 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[2].g_data.u_pe/_1895_/A1  160.00  161.72   -1.72 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[2].g_data.u_pe/_1907_/A2  160.00  161.72   -1.72 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[2].g_data.u_pe/_2361_/SN  160.00  161.72   -1.72 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/prod_q[11]_reg/RESETN  160.00  161.71   -1.71 (VIOLATED)
+u_dp/u_core/u_array/g_row[3].g_col[11].g_check.u_pe/p_out[14]_reg/RESETN  160.00  161.71   -1.71 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/p_in_q[14]_reg/RESETN  160.00  161.70   -1.70 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[5].g_data.u_pe/_1813_/A  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[5].g_data.u_pe/_1818_/B  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[5].g_data.u_pe/_1443_/D  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/x_out[0]_reg/RESETN  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[5].g_data.u_pe/_1421_/A1  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[5].g_data.u_pe/_1827_/B  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[5].g_data.u_pe/_1829_/A2  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[5].g_data.u_pe/_2344_/SN  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[4].g_data.u_pe/x_out[4]_reg/RESETN  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/g_half.w_hi[4]_reg/RESETN  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[5].g_data.u_pe/w_out[5]_reg/RESETN  160.00  161.60   -1.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/x_out[1]_reg/RESETN  160.00  161.59   -1.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[4].g_data.u_pe/x_out[25]_reg/RESETN  160.00  161.59   -1.59 (VIOLATED)
+u_dp/u_core/u_array/place175367/A     160.00  161.57   -1.57 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/g_half.w_lo[2]_reg/RESETN  160.00  161.56   -1.56 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/g_half.w_hi[0]_reg/RESETN  160.00  161.56   -1.56 (VIOLATED)
+u_dp/u_core/u_array/g_row[3].g_col[5].g_data.u_pe/x_out[6]_reg/RESETN  160.00  161.56   -1.56 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/w_out[9]_reg/RESETN  160.00  161.56   -1.56 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/g_half.ph_q[3]_reg/RESETN  160.00  161.55   -1.55 (VIOLATED)
+u_vec/_123762_/B                      160.00  161.55   -1.55 (VIOLATED)
+u_vec/_123755_/A                      160.00  161.54   -1.54 (VIOLATED)
+u_vec/_123765_/A1                     160.00  161.54   -1.54 (VIOLATED)
+u_vec/_123767_/A1                     160.00  161.54   -1.54 (VIOLATED)
+u_vec/_123774_/A                      160.00  161.54   -1.54 (VIOLATED)
+u_vec/_138739_/SN                     160.00  161.54   -1.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/g_half.w_hi[1]_reg/RESETN  160.00  161.54   -1.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[4].g_data.u_pe/p_in_q[30]_reg/RESETN  160.00  161.54   -1.54 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/prod_q[12]_reg/RESETN  160.00  161.53   -1.53 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[3].g_data.u_pe/_1804_/A  160.00  161.51   -1.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[3].g_data.u_pe/_1443_/C  160.00  161.51   -1.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[3].g_data.u_pe/_1808_/B  160.00  161.51   -1.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[3].g_data.u_pe/_1812_/A2  160.00  161.51   -1.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[3].g_data.u_pe/_1817_/B  160.00  161.51   -1.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[3].g_data.u_pe/_1828_/A2  160.00  161.51   -1.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[3].g_data.u_pe/_2271_/SN  160.00  161.51   -1.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[4].g_data.u_pe/x_out[15]_reg/RESETN  160.00  161.49   -1.49 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/w_out[5]_reg/RESETN  160.00  161.43   -1.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[1].g_data.u_pe/_1960_/A  160.00  161.43   -1.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[1].g_data.u_pe/_1996_/B  160.00  161.43   -1.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[1].g_data.u_pe/_1975_/B  160.00  161.43   -1.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[1].g_data.u_pe/_1654_/A  160.00  161.43   -1.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[1].g_data.u_pe/_1821_/B  160.00  161.43   -1.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[1].g_data.u_pe/_1992_/A1  160.00  161.43   -1.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[1].g_data.u_pe/_2359_/SN  160.00  161.43   -1.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[4].g_data.u_pe/x_out[5]_reg/RESETN  160.00  161.41   -1.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/p_in_q[0]_reg/RESETN  160.00  161.40   -1.40 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/g_idx.sel_q[3]_reg/RESETN  160.00  161.37   -1.37 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[4].g_data.u_pe/x_out[25]_reg/RESETN  160.00  161.34   -1.34 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[2].g_data.u_pe/_1421_/A1  160.00  161.33   -1.33 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[2].g_data.u_pe/_1443_/D  160.00  161.33   -1.33 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[2].g_data.u_pe/_1813_/A  160.00  161.33   -1.33 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[2].g_data.u_pe/_1818_/B  160.00  161.33   -1.33 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[2].g_data.u_pe/_1827_/B  160.00  161.33   -1.33 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[2].g_data.u_pe/_1829_/A2  160.00  161.33   -1.33 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[2].g_data.u_pe/_2344_/SN  160.00  161.33   -1.33 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/w_q[4]_reg/RESETN  160.00  161.31   -1.31 (VIOLATED)
+u_dp/u_core/u_array/g_row[3].g_col[5].g_data.u_pe/x_out[25]_reg/RESETN  160.00  161.31   -1.31 (VIOLATED)
+u_dp/u_feeder/_06873_/C               160.00  161.25   -1.25 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[9].g_check.u_pe/_2615_/A  160.00  161.24   -1.24 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[9].g_check.u_pe/_2643_/B  160.00  161.24   -1.24 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[9].g_check.u_pe/_2588_/D  160.00  161.24   -1.24 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[9].g_check.u_pe/_2627_/A1  160.00  161.24   -1.24 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[9].g_check.u_pe/_2644_/D  160.00  161.24   -1.24 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[9].g_check.u_pe/_2665_/A1  160.00  161.24   -1.24 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[9].g_check.u_pe/_3090_/SN  160.00  161.24   -1.24 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/g_idx.sel_q[2]_reg/RESETN  160.00  161.21   -1.21 (VIOLATED)
+u_vec/_125226_/A                      160.00  161.20   -1.20 (VIOLATED)
+u_vec/_125235_/A1                     160.00  161.20   -1.20 (VIOLATED)
+u_vec/_125233_/A1                     160.00  161.20   -1.20 (VIOLATED)
+u_vec/_125243_/A                      160.00  161.20   -1.20 (VIOLATED)
+u_vec/_125246_/A                      160.00  161.20   -1.20 (VIOLATED)
+u_vec/_125260_/A2                     160.00  161.20   -1.20 (VIOLATED)
+u_vec/_140628_/SN                     160.00  161.20   -1.20 (VIOLATED)
+u_dp/u_feeder/_08665_/A2              160.00  161.20   -1.20 (VIOLATED)
+u_dp/u_feeder/_08679_/A2              160.00  161.19   -1.19 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/w_out[8]_reg/RESETN  160.00  161.19   -1.19 (VIOLATED)
+u_dp/u_feeder/_08671_/C               160.00  161.19   -1.19 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_in_q[0]_reg/RESETN  160.00  161.18   -1.18 (VIOLATED)
+u_dp/u_feeder/_08657_/A1              160.00  161.18   -1.18 (VIOLATED)
+u_dp/u_feeder/_08650_/A1              160.00  161.17   -1.17 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_in_q[1]_reg/RESETN  160.00  161.17   -1.17 (VIOLATED)
+u_dp/u_feeder/_08642_/A1              160.00  161.17   -1.17 (VIOLATED)
+u_dp/u_feeder/_08686_/C               160.00  161.17   -1.17 (VIOLATED)
+u_dp/u_feeder/_08574_/B               160.00  161.17   -1.17 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_in_q[29]_reg/RESETN  160.00  161.17   -1.17 (VIOLATED)
+u_dp/u_feeder/_08631_/A1              160.00  161.16   -1.16 (VIOLATED)
+u_dp/u_feeder/_08617_/A1              160.00  161.16   -1.16 (VIOLATED)
+u_dp/u_feeder/_08600_/A1              160.00  161.16   -1.16 (VIOLATED)
+u_dp/u_feeder/_08624_/A1              160.00  161.15   -1.15 (VIOLATED)
+u_vec/lc_sa[113]_reg/RESETN           160.00  161.15   -1.15 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_out[31]_reg/RESETN  160.00  161.15   -1.15 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[2].g_data.u_pe/_1880_/A  160.00  161.14   -1.14 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[2].g_data.u_pe/_1874_/A  160.00  161.14   -1.14 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[2].g_data.u_pe/_1665_/B  160.00  161.14   -1.14 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[2].g_data.u_pe/_1882_/A1  160.00  161.14   -1.14 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_out[23]_reg/RESETN  160.00  161.14   -1.14 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[2].g_data.u_pe/_1895_/A1  160.00  161.14   -1.14 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[2].g_data.u_pe/_1907_/A2  160.00  161.14   -1.14 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[2].g_data.u_pe/_2361_/SN  160.00  161.14   -1.14 (VIOLATED)
+u_vec/lc_sa[104]_reg/RESETN           160.00  161.14   -1.14 (VIOLATED)
+u_dp/u_feeder/_08583_/B               160.00  161.13   -1.13 (VIOLATED)
+u_dp/u_feeder/_08609_/A1              160.00  161.13   -1.13 (VIOLATED)
+u_dp/u_feeder/_08577_/A2              160.00  161.13   -1.13 (VIOLATED)
+u_dp/u_feeder/_07166_/D               160.00  161.13   -1.13 (VIOLATED)
+u_dp/u_core/u_array/g_row[3].g_col[10].g_check.u_pe/g_half.ph_q[3]_reg/RESETN  160.00  161.13   -1.13 (VIOLATED)
+u_dp/u_feeder/_08589_/A1              160.00  161.13   -1.13 (VIOLATED)
+u_dp/u_core/u_array/g_row[3].g_col[10].g_check.u_pe/g_half.ph_q[5]_reg/RESETN  160.00  161.13   -1.13 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[11].g_check.u_pe/p_in_q[13]_reg/RESETN  160.00  161.12   -1.12 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/w_out[12]_reg/RESETN  160.00  161.12   -1.12 (VIOLATED)
+u_dp/u_feeder/_06871_/Y               160.00  161.12   -1.12 (VIOLATED)
+u_vec/kreg[116]_reg/RESETN            160.00  161.11   -1.11 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[8].g_check.u_pe/p_out[8]_reg/RESETN  160.00  161.10   -1.10 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/prod_q[13]_reg/RESETN  160.00  161.10   -1.10 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[11].g_check.u_pe/p_in_q[9]_reg/RESETN  160.00  161.10   -1.10 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[11].g_check.u_pe/p_in_q[7]_reg/RESETN  160.00  161.10   -1.10 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[10].g_check.u_pe/prod_q[9]_reg/RESETN  160.00  161.09   -1.09 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[10].g_check.u_pe/g_half.ph_q[1]_reg/RESETN  160.00  161.09   -1.09 (VIOLATED)
+place176276/A                         160.00  161.09   -1.09 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/g_idx.sel_q[0]_reg/SETN  160.00  161.09   -1.09 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_out[19]_reg/RESETN  160.00  161.09   -1.09 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[10].g_check.u_pe/g_half.ph_q[0]_reg/RESETN  160.00  161.09   -1.09 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[8].g_check.u_pe/_2643_/B  160.00  161.07   -1.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[8].g_check.u_pe/_2588_/D  160.00  161.07   -1.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[8].g_check.u_pe/_2615_/A  160.00  161.07   -1.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[8].g_check.u_pe/_2644_/D  160.00  161.07   -1.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[8].g_check.u_pe/_2627_/A1  160.00  161.07   -1.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[8].g_check.u_pe/_2665_/A1  160.00  161.07   -1.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[11].g_col[8].g_check.u_pe/_3090_/SN  160.00  161.07   -1.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_out[8]_reg/RESETN  160.00  161.07   -1.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[3].g_col[10].g_check.u_pe/prod_q[10]_reg/RESETN  160.00  161.06   -1.06 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_out[9]_reg/RESETN  160.00  161.04   -1.04 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[1].g_data.u_pe/_1443_/C  160.00  161.02   -1.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[1].g_data.u_pe/_1804_/A  160.00  161.02   -1.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[1].g_data.u_pe/_1808_/B  160.00  161.02   -1.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[1].g_data.u_pe/_1812_/A2  160.00  161.02   -1.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[1].g_data.u_pe/_1817_/B  160.00  161.02   -1.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[1].g_data.u_pe/_1828_/A2  160.00  161.02   -1.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[1].g_data.u_pe/_2271_/SN  160.00  161.02   -1.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/inj_q_reg/RESETN  160.00  161.02   -1.02 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[3].g_data.u_pe/_1874_/A  160.00  161.01   -1.01 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[3].g_data.u_pe/_1880_/A  160.00  161.01   -1.01 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[3].g_data.u_pe/_1882_/A1  160.00  161.01   -1.01 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[3].g_data.u_pe/_1665_/B  160.00  161.01   -1.01 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[3].g_data.u_pe/_1907_/A2  160.00  161.01   -1.01 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[3].g_data.u_pe/_1895_/A1  160.00  161.01   -1.01 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[3].g_data.u_pe/_2361_/SN  160.00  161.01   -1.01 (VIOLATED)
+u_dp/u_core/u_array/g_row[9].g_col[11].g_check.u_pe/p_out[3]_reg/RESETN  160.00  160.99   -0.99 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/w_out[7]_reg/RESETN  160.00  160.99   -0.99 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/w_q[1]_reg/RESETN  160.00  160.98   -0.98 (VIOLATED)
+u_dp/u_core/u_array/g_row[10].g_col[11].g_check.u_pe/p_in_q[2]_reg/RESETN  160.00  160.98   -0.98 (VIOLATED)
+u_vec/lc_sh[34]_reg/RESETN            160.00  160.98   -0.98 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/g_idx.sel_q[1]_reg/RESETN  160.00  160.97   -0.97 (VIOLATED)
+u_dp/u_acc/_6259_/A                   160.00  160.96   -0.96 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/w_out[1]_reg/RESETN  160.00  160.96   -0.96 (VIOLATED)
+place176277/Y                         160.00  160.96   -0.96 (VIOLATED)
+u_dp/u_acc/_7980_/SN                  160.00  160.94   -0.94 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[1].g_data.u_pe/_1960_/A  160.00  160.87   -0.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[1].g_data.u_pe/_1996_/B  160.00  160.87   -0.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[1].g_data.u_pe/_1975_/B  160.00  160.87   -0.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[1].g_data.u_pe/_1654_/A  160.00  160.87   -0.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[1].g_data.u_pe/_1821_/B  160.00  160.87   -0.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[1].g_data.u_pe/_1992_/A1  160.00  160.87   -0.87 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[1].g_data.u_pe/_2359_/SN  160.00  160.87   -0.87 (VIOLATED)
+u_rq/_39514_/A1                       160.00  160.85   -0.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/x_out[2]_reg/RESETN  160.00  160.85   -0.85 (VIOLATED)
+u_rq/_22985_/A1                       160.00  160.85   -0.85 (VIOLATED)
+u_rq/_22996_/B                        160.00  160.85   -0.85 (VIOLATED)
+u_rq/_24016_/A2                       160.00  160.85   -0.85 (VIOLATED)
+u_rq/_39509_/A                        160.00  160.85   -0.85 (VIOLATED)
+u_rq/_39512_/A1                       160.00  160.85   -0.85 (VIOLATED)
+u_rq/_43722_/SN                       160.00  160.85   -0.85 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/x_out[5]_reg/RESETN  160.00  160.82   -0.82 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[6].g_data.u_pe/x_out[23]_reg/RESETN  160.00  160.81   -0.81 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[6].g_data.u_pe/x_out[15]_reg/RESETN  160.00  160.81   -0.81 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[11].g_check.u_pe/g_half.ph_q[14]_reg/RESETN  160.00  160.81   -0.81 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[11].g_check.u_pe/p_out[25]_reg/RESETN  160.00  160.81   -0.81 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/prod_q[0]_reg/RESETN  160.00  160.80   -0.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[4].g_data.u_pe/prod_q[3]_reg/RESETN  160.00  160.80   -0.80 (VIOLATED)
+u_rq_dup/_39509_/A                    160.00  160.80   -0.80 (VIOLATED)
+u_rq_dup/_39514_/A1                   160.00  160.80   -0.80 (VIOLATED)
+u_rq_dup/_24016_/A2                   160.00  160.80   -0.80 (VIOLATED)
+u_rq_dup/_22985_/A1                   160.00  160.80   -0.80 (VIOLATED)
+u_rq_dup/_22996_/B                    160.00  160.80   -0.80 (VIOLATED)
+u_rq_dup/_39512_/A1                   160.00  160.80   -0.80 (VIOLATED)
+u_rq_dup/_43722_/SN                   160.00  160.80   -0.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[4].g_data.u_pe/prod_q[1]_reg/RESETN  160.00  160.80   -0.80 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[6].g_data.u_pe/x_out[31]_reg/RESETN  160.00  160.79   -0.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/p_out[13]_reg/RESETN  160.00  160.79   -0.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/g_half.w_lo[5]_reg/RESETN  160.00  160.79   -0.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[11].g_check.u_pe/g_half.ph_q[7]_reg/RESETN  160.00  160.79   -0.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/p_out[15]_reg/RESETN  160.00  160.79   -0.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[7].g_data.u_pe/x_out[13]_reg/RESETN  160.00  160.79   -0.79 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/g_half.w_lo[3]_reg/RESETN  160.00  160.78   -0.78 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[11].g_check.u_pe/g_half.ph_q[10]_reg/RESETN  160.00  160.78   -0.78 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[11].g_check.u_pe/p_in_q[13]_reg/RESETN  160.00  160.78   -0.78 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[11].g_check.u_pe/p_out[26]_reg/RESETN  160.00  160.78   -0.78 (VIOLATED)
+u_dp/u_core/u_array/g_row[5].g_col[11].g_check.u_pe/prod_q[4]_reg/RESETN  160.00  160.78   -0.78 (VIOLATED)
+u_dp/u_core/u_array/place175638/Y     160.00  160.78   -0.78 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[6].g_data.u_pe/x_out[30]_reg/RESETN  160.00  160.76   -0.76 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[9].g_check.u_pe/_2865_/A1  160.00  160.76   -0.76 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[9].g_check.u_pe/_2704_/A1  160.00  160.76   -0.76 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[9].g_check.u_pe/_2799_/A  160.00  160.76   -0.76 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[9].g_check.u_pe/_2682_/A  160.00  160.76   -0.76 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[9].g_check.u_pe/_2686_/A  160.00  160.76   -0.76 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[9].g_check.u_pe/_3141_/SN  160.00  160.76   -0.76 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[6].g_data.u_pe/x_out[14]_reg/RESETN  160.00  160.76   -0.76 (VIOLATED)
+u_rq_dup/_38216_/A                    160.00  160.76   -0.76 (VIOLATED)
+u_rq_dup/_38233_/A1                   160.00  160.76   -0.76 (VIOLATED)
+u_rq_dup/_38218_/A1                   160.00  160.76   -0.76 (VIOLATED)
+u_rq_dup/_24637_/A1                   160.00  160.75   -0.75 (VIOLATED)
+u_rq_dup/_43875_/SN                   160.00  160.75   -0.75 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[6].g_data.u_pe/x_out[26]_reg/RESETN  160.00  160.75   -0.75 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[4].g_data.u_pe/prod_q[2]_reg/RESETN  160.00  160.68   -0.68 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[7].g_data.u_pe/x_out[3]_reg/RESETN  160.00  160.68   -0.68 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[6].g_data.u_pe/x_out[12]_reg/RESETN  160.00  160.67   -0.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[12]_reg/RESETN  160.00  160.67   -0.67 (VIOLATED)
+place175580/A                         160.00  160.67   -0.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/prod_q[0]_reg/RESETN  160.00  160.67   -0.67 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[13]_reg/RESETN  160.00  160.66   -0.66 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[7].g_data.u_pe/x_out[15]_reg/RESETN  160.00  160.65   -0.65 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[4].g_data.u_pe/prod_q[0]_reg/RESETN  160.00  160.65   -0.65 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[8]_reg/RESETN  160.00  160.65   -0.65 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[7]_reg/RESETN  160.00  160.63   -0.63 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[5]_reg/RESETN  160.00  160.63   -0.63 (VIOLATED)
+u_dp/u_core/u_array/place175715/A     160.00  160.62   -0.62 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[4]_reg/RESETN  160.00  160.62   -0.62 (VIOLATED)
+u_vec/_071293_/A                      160.00  160.62   -0.62 (VIOLATED)
+u_vec/_071295_/A1                     160.00  160.62   -0.62 (VIOLATED)
+u_vec/_102254_/A                      160.00  160.62   -0.62 (VIOLATED)
+u_vec/_071297_/A1                     160.00  160.62   -0.62 (VIOLATED)
+u_vec/_071312_/A1                     160.00  160.62   -0.62 (VIOLATED)
+u_vec/_102086_/A1                     160.00  160.61   -0.61 (VIOLATED)
+u_vec/_137170_/SN                     160.00  160.61   -0.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[1]_reg/RESETN  160.00  160.61   -0.61 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/prod_q[13]_reg/RESETN  160.00  160.61   -0.61 (VIOLATED)
+u_rq_dup/_23185_/A1                   160.00  160.60   -0.60 (VIOLATED)
+u_rq_dup/_23993_/A                    160.00  160.60   -0.60 (VIOLATED)
+u_rq_dup/_24082_/B                    160.00  160.60   -0.60 (VIOLATED)
+u_rq_dup/_39531_/A                    160.00  160.60   -0.60 (VIOLATED)
+u_rq_dup/_39534_/B                    160.00  160.60   -0.60 (VIOLATED)
+u_rq_dup/_43720_/SN                   160.00  160.60   -0.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[3]_reg/RESETN  160.00  160.60   -0.60 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[1].g_data.u_pe/_1874_/A  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[1].g_data.u_pe/_1665_/B  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[1].g_data.u_pe/_1880_/A  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[1].g_data.u_pe/_1882_/A1  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[1].g_data.u_pe/_1907_/A2  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[1].g_data.u_pe/_1895_/A1  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[8].g_col[1].g_data.u_pe/_2361_/SN  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/prod_q[14]_reg/RESETN  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[0].g_data.u_pe/_1443_/C  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[0].g_data.u_pe/_1804_/A  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[0].g_data.u_pe/_1808_/B  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[0].g_data.u_pe/_1812_/A2  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[0].g_data.u_pe/_1817_/B  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[0].g_data.u_pe/_1828_/A2  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[0].g_data.u_pe/_2271_/SN  160.00  160.59   -0.59 (VIOLATED)
+u_dp/u_core/u_array/g_row[3].g_col[5].g_data.u_pe/x_out[22]_reg/RESETN  160.00  160.53   -0.53 (VIOLATED)
+u_dp/u_core/u_array/g_row[2].g_col[5].g_data.u_pe/prod_q[9]_reg/RESETN  160.00  160.53   -0.53 (VIOLATED)
+u_dp/u_core/u_array/place175368/Y     160.00  160.53   -0.53 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[7].g_data.u_pe/_1443_/C  160.00  160.52   -0.52 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[7].g_data.u_pe/_1804_/A  160.00  160.52   -0.52 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[7].g_data.u_pe/_1808_/B  160.00  160.52   -0.52 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[7].g_data.u_pe/_1812_/A2  160.00  160.52   -0.52 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[7].g_data.u_pe/_1817_/B  160.00  160.52   -0.52 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[7].g_data.u_pe/_1828_/A2  160.00  160.52   -0.52 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[7].g_data.u_pe/_2271_/SN  160.00  160.52   -0.52 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/prod_q[9]_reg/RESETN  160.00  160.51   -0.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/prod_q[12]_reg/RESETN  160.00  160.51   -0.51 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[4].g_data.u_pe/prod_q[6]_reg/RESETN  160.00  160.49   -0.49 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1880_/A  160.00  160.49   -0.49 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1665_/B  160.00  160.49   -0.49 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1882_/A1  160.00  160.49   -0.49 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1874_/A  160.00  160.49   -0.49 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1895_/A1  160.00  160.49   -0.49 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_1907_/A2  160.00  160.49   -0.49 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[4].g_data.u_pe/_2361_/SN  160.00  160.49   -0.49 (VIOLATED)
+u_wbuf/_3727_/Y                       160.00  160.48   -0.48 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/prod_q[13]_reg/RESETN  160.00  160.47   -0.47 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/p_in_q[3]_reg/RESETN  160.00  160.46   -0.46 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/v_out_reg/RESETN  160.00  160.46   -0.46 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/prod_q[11]_reg/RESETN  160.00  160.45   -0.45 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/prod_q[10]_reg/RESETN  160.00  160.44   -0.44 (VIOLATED)
+u_dp/u_core/u_array/place175711/A     160.00  160.43   -0.43 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[7].g_data.u_pe/x_out[3]_reg/RESETN  160.00  160.42   -0.42 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[9]_reg/RESETN  160.00  160.42   -0.42 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[9].g_check.u_pe/g_half.ph_q[11]_reg/RESETN  160.00  160.41   -0.41 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[7].g_data.u_pe/p_in_q[0]_reg/RESETN  160.00  160.40   -0.40 (VIOLATED)
+u_dp/u_core/u_array/place175707/A     160.00  160.37   -0.37 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[7].g_data.u_pe/x_out[6]_reg/RESETN  160.00  160.37   -0.37 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[7].g_data.u_pe/x_out[1]_reg/RESETN  160.00  160.37   -0.37 (VIOLATED)
+u_dp/u_core/u_array/g_row[7].g_col[7].g_data.u_pe/x_out[4]_reg/RESETN  160.00  160.36   -0.36 (VIOLATED)
+u_dp/u_core/u_array/g_row[6].g_col[7].g_data.u_pe/x_out[4]_reg/RESETN  160.00  160.35   -0.35 (VIOLATED)
+u_rq_dup/_38088_/A                    160.00  160.32   -0.32 (VIOLATED)
+u_rq_dup/_38096_/A                    160.00  160.32   -0.32 (VIOLATED)
+u_rq_dup/_38110_/A                    160.00  160.32   -0.32 (VIOLATED)
+u_rq_dup/_38090_/A1                   160.00  160.32   -0.32 (VIOLATED)
+u_rq_dup/_38103_/A1                   160.00  160.32   -0.32 (VIOLATED)
+u_rq_dup/_38093_/A1                   160.00  160.32   -0.32 (VIOLATED)
+u_rq_dup/_43619_/SN                   160.00  160.32   -0.32 (VIOLATED)
+place175581/Y                         160.00  160.31   -0.31 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[2].g_data.u_pe/_1421_/A1  160.00  160.30   -0.30 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[2].g_data.u_pe/_1829_/A2  160.00  160.30   -0.30 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[2].g_data.u_pe/_1443_/D  160.00  160.30   -0.30 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[2].g_data.u_pe/_1827_/B  160.00  160.30   -0.30 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[2].g_data.u_pe/_1813_/A  160.00  160.29   -0.29 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[2].g_data.u_pe/_1818_/B  160.00  160.29   -0.29 (VIOLATED)
+u_dp/u_core/u_array/g_row[14].g_col[2].g_data.u_pe/_2344_/SN  160.00  160.29   -0.29 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/_2653_/A  160.00  160.28   -0.28 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/_2658_/B  160.00  160.28   -0.28 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/_2659_/A2  160.00  160.28   -0.28 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/_2669_/B  160.00  160.28   -0.28 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/_2754_/B  160.00  160.28   -0.28 (VIOLATED)
+u_dp/u_core/u_array/g_row[4].g_col[11].g_check.u_pe/_3098_/SN  160.00  160.28   -0.28 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[5].g_data.u_pe/_1443_/C  160.00  160.21   -0.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[5].g_data.u_pe/_1804_/A  160.00  160.21   -0.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[5].g_data.u_pe/_1808_/B  160.00  160.21   -0.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[5].g_data.u_pe/_1812_/A2  160.00  160.21   -0.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[5].g_data.u_pe/_1817_/B  160.00  160.21   -0.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[5].g_data.u_pe/_1828_/A2  160.00  160.21   -0.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[13].g_col[5].g_data.u_pe/_2271_/SN  160.00  160.21   -0.21 (VIOLATED)
+u_rq_dup/_38263_/A                    160.00  160.21   -0.21 (VIOLATED)
+u_rq_dup/_24816_/A                    160.00  160.21   -0.21 (VIOLATED)
+u_rq_dup/_38265_/A1                   160.00  160.21   -0.21 (VIOLATED)
+u_rq_dup/_24849_/A1                   160.00  160.21   -0.21 (VIOLATED)
+u_rq_dup/_38270_/A                    160.00  160.21   -0.21 (VIOLATED)
+u_rq_dup/_38274_/A1                   160.00  160.21   -0.21 (VIOLATED)
+u_rq_dup/_43864_/SN                   160.00  160.21   -0.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[7].g_data.u_pe/x_out[21]_reg/RESETN  160.00  160.21   -0.21 (VIOLATED)
+u_dp/u_core/u_array/g_row[1].g_col[2].g_data.u_pe/place154954/A  160.00  160.20   -0.20 (VIOLATED)
+u_vec/_125853_/A                      160.00  160.16   -0.16 (VIOLATED)
+u_vec/_125855_/B                      160.00  160.16   -0.16 (VIOLATED)
+u_vec/_125858_/B                      160.00  160.16   -0.16 (VIOLATED)
+u_vec/_125860_/A1                     160.00  160.16   -0.16 (VIOLATED)
+u_vec/_125866_/A1                     160.00  160.16   -0.16 (VIOLATED)
+u_vec/_125870_/A                      160.00  160.16   -0.16 (VIOLATED)
+u_vec/_142400_/SN                     160.00  160.16   -0.16 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[6].g_data.u_pe/_1443_/C  160.00  160.11   -0.11 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[6].g_data.u_pe/_1804_/A  160.00  160.11   -0.11 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[6].g_data.u_pe/_1808_/B  160.00  160.11   -0.11 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[6].g_data.u_pe/_1812_/A2  160.00  160.11   -0.11 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[6].g_data.u_pe/_1817_/B  160.00  160.11   -0.11 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[6].g_data.u_pe/_1828_/A2  160.00  160.11   -0.11 (VIOLATED)
+u_dp/u_core/u_array/g_row[15].g_col[6].g_data.u_pe/_2271_/SN  160.00  160.11   -0.11 (VIOLATED)
+u_vec/_123967_/A                      160.00  160.08   -0.08 (VIOLATED)
+u_vec/_123993_/B                      160.00  160.08   -0.08 (VIOLATED)
+u_vec/_123972_/A1                     160.00  160.08   -0.08 (VIOLATED)
+u_vec/_123969_/B                      160.00  160.08   -0.08 (VIOLATED)
+u_vec/_123978_/B                      160.00  160.08   -0.08 (VIOLATED)
+u_vec/_123992_/B                      160.00  160.08   -0.08 (VIOLATED)
+u_vec/_138638_/SN                     160.00  160.08   -0.08 (VIOLATED)
+u_seq/ct_free_idx[11]_reg/RESETN      160.00  160.07   -0.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[4].g_data.u_pe/x_out[7]_reg/RESETN  160.00  160.07   -0.07 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[4].g_data.u_pe/x_out[1]_reg/RESETN  160.00  160.07   -0.07 (VIOLATED)
+u_seq/ct_free_idx[12]_reg/RESETN      160.00  160.07   -0.07 (VIOLATED)
+u_seq/_3768_/C                        160.00  160.06   -0.06 (VIOLATED)
+u_seq/_3848_/A1                       160.00  160.06   -0.06 (VIOLATED)
+u_seq/_4137_/A                        160.00  160.06   -0.06 (VIOLATED)
+u_seq/_4172_/A1                       160.00  160.06   -0.06 (VIOLATED)
+u_seq/_4681_/B                        160.00  160.06   -0.06 (VIOLATED)
+u_seq/_5161_/SN                       160.00  160.06   -0.06 (VIOLATED)
+u_seq/ct_free_idx[14]_reg/RESETN      160.00  160.04   -0.04 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[7].g_data.u_pe/prod_q[0]_reg/RESETN  160.00  160.04   -0.04 (VIOLATED)
+u_dp/u_core/u_array/g_row[0].g_col[7].g_data.u_pe/x_out[11]_reg/RESETN  160.00  160.04   -0.04 (VIOLATED)
+u_dp/u_core/u_array/place175716/Y     160.00  160.03   -0.03 (VIOLATED)
+u_seq/ct_free_idx[10]_reg/RESETN      160.00  160.02   -0.02 (VIOLATED)
+
+
+==========================================================================
+detailed place max_slew_check_slack
+--------------------------------------------------------------------------
+-143.58038330078125
+
+==========================================================================
+detailed place max_slew_check_limit
+--------------------------------------------------------------------------
+160.0
+
+==========================================================================
+detailed place max_slew_check_slack_limit
+--------------------------------------------------------------------------
+-0.8974
+
+==========================================================================
+detailed place max_fanout_check_slack
+--------------------------------------------------------------------------
+0.0
+
+==========================================================================
+detailed place max_fanout_check_limit
+--------------------------------------------------------------------------
+32.0
+
+==========================================================================
+detailed place max_fanout_check_slack_limit
+--------------------------------------------------------------------------
+0.0000
+
+==========================================================================
+detailed place max_capacitance_check_slack
+--------------------------------------------------------------------------
+14.153101921081543
+
+==========================================================================
+detailed place max_capacitance_check_limit
+--------------------------------------------------------------------------
+23.040000915527344
+
+==========================================================================
+detailed place max_capacitance_check_slack_limit
+--------------------------------------------------------------------------
+0.6143
+
+==========================================================================
+detailed place max_slew_violation_count
+--------------------------------------------------------------------------
+max slew violation count 679
+
+==========================================================================
+detailed place max_fanout_violation_count
+--------------------------------------------------------------------------
+max fanout violation count 0
+
+==========================================================================
+detailed place max_cap_violation_count
+--------------------------------------------------------------------------
+max cap violation count 0
+
+==========================================================================
+detailed place setup_violation_count
+--------------------------------------------------------------------------
+setup violation count 4779
+
+==========================================================================
+detailed place hold_violation_count
+--------------------------------------------------------------------------
+hold violation count 0
+
+==========================================================================
+detailed place report_checks -path_delay max reg to reg
+--------------------------------------------------------------------------
+Startpoint: vec_on_reg (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_rq/ra1[25]_reg (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ vec_on_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+ 113.76  113.76 v vec_on_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+  55.14  168.90 v place172423/Y (BUFx6f_ASAP7_75t_R)
+ 114.46  283.36 ^ _0785_/Y (INVx5_ASAP7_75t_R)
+  80.19  363.55 ^ place172395/Y (BUFx6f_ASAP7_75t_R)
+  76.73  440.28 ^ place172391/Y (BUFx2_ASAP7_75t_R)
+  75.90  516.17 ^ _1344_/Y (AO21x2_ASAP7_75t_R)
+  46.27  562.44 ^ place146726/Y (BUFx6f_ASAP7_75t_R)
+  35.18  597.62 ^ u_rq/place146725/Y (BUFx6f_ASAP7_75t_R)
+  34.75  632.37 ^ u_rq/_33586_/Y (AND2x2_ASAP7_75t_R)
+  60.75  693.12 v u_rq/_40536_/SN (FAx1_ASAP7_75t_R)
+  27.49  720.61 ^ u_rq/_19924_/Y (INVx1_ASAP7_75t_R)
+  91.36  811.97 v u_rq/_40926_/SN (FAx1_ASAP7_75t_R)
+  46.73  858.69 v u_rq/place135340/Y (BUFx3_ASAP7_75t_R)
+  20.32  879.02 ^ u_rq/_19926_/Y (INVx1_ASAP7_75t_R)
+  69.02  948.03 v u_rq/_41006_/SN (FAx1_ASAP7_75t_R)
+  33.39  981.43 ^ u_rq/_19928_/Y (INVx1_ASAP7_75t_R)
+  65.91 1047.33 v u_rq/_42810_/SN (FAx1_ASAP7_75t_R)
+  26.80 1074.14 ^ u_rq/_19935_/Y (INVx1_ASAP7_75t_R)
+  63.10 1137.24 v u_rq/_43369_/SN (FAx1_ASAP7_75t_R)
+  35.96 1173.20 v u_rq/place129599/Y (BUFx3_ASAP7_75t_R)
+  19.96 1193.16 ^ u_rq/_19937_/Y (INVx1_ASAP7_75t_R)
+  65.38 1258.54 v u_rq/_42042_/SN (FAx1_ASAP7_75t_R)
+  20.36 1278.90 ^ u_rq/_18554_/Y (INVx1_ASAP7_75t_R)
+   0.03 1278.93 ^ u_rq/ra1[25]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+        1278.93   data arrival time
+
+1000.00 1000.00   clock clk (rise edge)
+   0.00 1000.00   clock network delay (ideal)
+ -80.00  920.00   clock uncertainty
+   0.00  920.00   clock reconvergence pessimism
+         920.00 ^ u_rq/ra1[25]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+ -36.91  883.09   library setup time
+         883.09   data required time
+---------------------------------------------------------
+         883.09   data required time
+        -1278.93   data arrival time
+---------------------------------------------------------
+        -395.84   slack (VIOLATED)
+
+
+
+==========================================================================
+detailed place report_checks -path_delay min reg to reg
+--------------------------------------------------------------------------
+Startpoint: u_vec/rsst_q[15]_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: u_vec/u_rs/u_macro (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+  Delay    Time   Description
+---------------------------------------------------------
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00 ^ u_vec/rsst_q[15]_reg/CLK (DFFHQx4_ASAP7_75t_R)
+ 106.89  106.89 v u_vec/rsst_q[15]_reg/Q (DFFHQx4_ASAP7_75t_R)
+   7.14  114.03 v u_vec/u_rs/u_macro/wdata[15] (fakeram7_64x64_g2_1w1r)
+         114.03   data arrival time
+
+   0.00    0.00   clock clk (rise edge)
+   0.00    0.00   clock network delay (ideal)
+   0.00    0.00   clock reconvergence pessimism
+           0.00 ^ u_vec/u_rs/u_macro/clk (fakeram7_64x64_g2_1w1r)
+  50.00   50.00   library hold time
+          50.00   data required time
+---------------------------------------------------------
+          50.00   data required time
+        -114.03   data arrival time
+---------------------------------------------------------
+          64.03   slack (MET)
+
+
+
+==========================================================================
+detailed place critical path target clock latency max path
+--------------------------------------------------------------------------
+0.0000
+
+==========================================================================
+detailed place critical path target clock latency min path
+--------------------------------------------------------------------------
+0
+
+==========================================================================
+detailed place critical path source clock latency min path
+--------------------------------------------------------------------------
+0
+
+==========================================================================
+detailed place critical path delay
+--------------------------------------------------------------------------
+1278.9349
+
+==========================================================================
+detailed place critical path slack
+--------------------------------------------------------------------------
+-395.8436
+
+==========================================================================
+detailed place slack div critical path delay
+--------------------------------------------------------------------------
+-30.951036
+
+==========================================================================
+detailed place report_power
+--------------------------------------------------------------------------
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power (Watts)
+----------------------------------------------------------------
+Sequential             1.70e-02   2.92e-03   1.14e-04   2.01e-02  11.3%
+Combinational          5.18e-02   7.10e-02   5.68e-04   1.23e-01  69.4%
+Clock                  1.19e-06   7.11e-05   1.02e-08   7.23e-05   0.0%
+Macro                  3.23e-02   0.00e+00   1.80e-03   3.41e-02  19.2%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  1.01e-01   7.41e-02   2.49e-03   1.78e-01 100.0%
+                          56.9%      41.7%       1.4%
