@@ -128,3 +128,50 @@ Number of nets:           315444
 [INFO DRT-0082]   Complete 80000 groups.
 [INFO DRT-0082]   Complete 90000 groups.
 [INFO DRT-0082]   Complete 100000 groups.
+[INFO DRT-0084]   Complete 181410 groups.
+#scanned instances     = 299879
+#unique  instances     = 253
+#stdCellGenAp          = 7298
+#stdCellValidPlanarAp  = 66
+#stdCellValidViaAp     = 6030
+#stdCellPinNoAp        = 0
+#stdCellPinCnt         = 910825
+#instTermValidViaApCnt = 0
+#macroGenAp            = 0
+#macroValidPlanarAp    = 0
+#macroValidViaAp       = 0
+#macroNoAp             = 0
+[INFO DRT-0166] Complete pin access.
+[INFO DRT-0267] cpu time = 00:51:18, elapsed time = 00:12:54, memory = 1498.18 (MB), peak = 1646.81 (MB)
+Took 778 seconds: pin_access
+global_route -congestion_report_file /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/reports/asap7/c16_systolic_array/base/congestion.rpt -congestion_iterations 30 -congestion_report_iter_step 5 -verbose -resistance_aware
+[INFO GRT-0020] Min routing layer: M2
+[INFO GRT-0021] Max routing layer: M7
+[INFO GRT-0022] Global adjustment: 0%
+[INFO GRT-0023] Grid origin: (0, 0)
+[INFO GRT-0088] Layer M1      Track-Pitch = 0.0360  line-2-Via Pitch: 0.0360
+[INFO GRT-0088] Layer M2      Track-Pitch = 0.0390  line-2-Via Pitch: 0.0360
+[INFO GRT-0088] Layer M3      Track-Pitch = 0.0360  line-2-Via Pitch: 0.0360
+[INFO GRT-0088] Layer M4      Track-Pitch = 0.0480  line-2-Via Pitch: 0.0480
+[INFO GRT-0088] Layer M5      Track-Pitch = 0.0480  line-2-Via Pitch: 0.0480
+[INFO GRT-0088] Layer M6      Track-Pitch = 0.0640  line-2-Via Pitch: 0.0640
+[INFO GRT-0088] Layer M7      Track-Pitch = 0.0640  line-2-Via Pitch: 0.0640
+[INFO GRT-0003] Macros: 0
+[INFO GRT-0004] Blockages: 152064
+[INFO GRT-0019] Found 1592 clock nets.
+[INFO GRT-0001] Minimum degree: 2
+[INFO GRT-0002] Maximum degree: 33
+
+[INFO GRT-0053] Routing resources analysis:
+          Routing      Original      Derated      Resource
+Layer     Direction    Resources     Resources    Reduction (%)
+---------------------------------------------------------------
+M1         Vertical            0             0          0.00%
+M2         Horizontal    2167821       1548073          28.59%
+M3         Vertical      2611336       1941794          25.64%
+M4         Horizontal    2006118       1492346          25.61%
+M5         Vertical      1934425       1435454          25.79%
+M6         Horizontal    1342314        910409          32.18%
+M7         Vertical      1525209       1027544          32.63%
+---------------------------------------------------------------
+
