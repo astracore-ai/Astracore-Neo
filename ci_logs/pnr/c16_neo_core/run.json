@@ -1,0 +1,39 @@
+{
+ "block": "c16_neo_core",
+ "runner": "docker",
+ "image": "openroad/orfs:26Q4-124-g3451ca1f5",
+ "flow_args": "",
+ "budget_min": 313.0,
+ "start": "2026-11-15 09:01:21 UTC",
+ "stages": [
+  {
+   "stage": "fakeram",
+   "exit": 0,
+   "seconds": 0.1
+  },
+  {
+   "stage": "prep",
+   "exit": 0,
+   "seconds": 16.0
+  },
+  {
+   "stage": "synth_sta",
+   "exit": 0
+  },
+  {
+   "stage": "activity",
+   "exit": 0,
+   "seconds": 7.1,
+   "file": "activity/c16_neo_core.json.gz"
+  },
+  {
+   "stage": "synth",
+   "exit": 0,
+   "seconds": 10.6,
+   "note": ""
+  }
+ ],
+ "status": "started",
+ "orfs_stages": "synth,floorplan,place,cts,route,do-finish",
+ "seconds": 59.1
+}
