@@ -826,3 +826,52 @@ repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -ve
 [INFO RSZ-0033] No hold violations found.
 [INFO RSZ-0506] Runtime: 0.36s
 Took 73 seconds: repair_timing -setup_margin 0 -hold_margin 0 -repair_tns 100 -skip_last_gasp -verbose
+Elapsed time: 0:52.77[h:]min:sec. CPU time: user 57.96 sys 0.92 (111%). Peak memory: 1570044KB.
+Repair timing output passed lec test
+detailed_placement
+[INFO DPL-0006] Core area: 54848.69 um^2
+[INFO DPL-0007] Movable instances area: 34255.77 um^2
+[INFO DPL-0008] Fixed instances area within core: 164.58 um^2
+[INFO DPL-0009] Utilization: 62.8%
+[INFO DPL-0005] Diamond search max displacement: +/- 500 sites horizontally, +/- 100 rows vertically.
+[INFO DPL-1102] Legalizing using negotiation legalizer.
+[INFO DPL-1103] Negotiation base search window: +/-20 sites horizontally, +/-5 rows vertically 
+	Automatic search window extension enabled.
+	Search window extendable up to the max displacement cap of +/-500 sites, +/-100 rows near walls.
+[INFO DPL-1104] NegotiationLegalizer DRC penalty: 5.
+[INFO DPL-0392] Negotiation cell height distribution (1 unique row-count(s)):
+[INFO DPL-0393]   height 1 row(s): 299879 cells
+          |      Total |  Illegal |  Illegal
+Iteration | Violations |    Cells |    Sites
+---------------------------------------------
+        0 |       4082 |       924 |      3134
+        1 |        146 |        43 |       103
+        2 |         34 |         8 |        26
+        3 |          0 |         0 |         0
+Negotiation phase 1 converged at iteration 3.
+[INFO DPL-0500] Runtime: 2.97s
+Detailed Placement Analysis
+---------------------------------
+legalizer            negotiation
+total moves               27030
+total displacement        590.9 u
+average displacement        0.0 u
+max displacement            1.5 u
+original HPWL          691481.5 u
+legalized HPWL         691983.7 u
+delta HPWL                    0 %
+
+estimate_parasitics -placement
+Report metrics stage 4, cts final...
+
+==========================================================================
+cts final report_design_area
+--------------------------------------------------------------------------
+Design area 34420 um^2 63% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/4_1_cts.odb
+write_sdc -no_timestamp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/4_cts.sdc
+Elapsed time: 4:06.47[h:]min:sec. CPU time: user 356.52 sys 14.13 (150%). Peak memory: 2515712KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+4_1_cts                .odb         52       59     1.12     1533 3218218c59
+cp /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/4_1_cts.odb /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_systolic_array/orfs/results/asap7/c16_systolic_array/base/4_cts.odb
