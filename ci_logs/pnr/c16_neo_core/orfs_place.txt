@@ -594,3 +594,97 @@ Iteration | Overflow |     HPWL (um) |  HPWL(%) |   Penalty | Group
 Iteration | Overflow |     HPWL (um) |  HPWL(%) |   Penalty | Group
 ---------------------------------------------------------------
      1110 |   0.2919 |  2.094192e+06 |   -0.43% |  2.16e-06 |      
+     1120 |   0.2602 |  2.049712e+06 |   -2.12% |  3.18e-06 |      
+     1130 |   0.2342 |  1.991721e+06 |   -2.83% |  4.68e-06 |      
+     1140 |   0.2077 |  1.949282e+06 |   -2.13% |  6.89e-06 |      
+[INFO GPL-0100] Timing-driven iteration 2/2, virtual: false.
+[INFO GPL-0101]    Iter: 1147, overflow: 0.194, keep resizer changes at: 1, HPWL: 1928094895
+Iteration |   Area    | Resized | Buffers | Nets repaired | Remaining
+---------------------------------------------------------------------
+        0 |     +0.0% |       0 |       0 |             0 |    518889
+    final |     +1.7% |    1408 |    6913 |          4122 |         0
+---------------------------------------------------------------------
+[INFO RSZ-0034] Found 4124 slew violations.
+[INFO RSZ-0036] Found 8 capacitance violations.
+[INFO RSZ-0037] Found 70 long wires.
+[INFO RSZ-0039] Resized 1408 instances.
+[INFO RSZ-0038] Inserted 6913 buffers in 4122 nets.
+   Iter   |    Area   | Removed | Inserted |   Pins
+          |           | Buffers | Buffers  | Remaining
+-------------------------------------------------------
+        0 |     +0.0% |       0 |        0 |    430451
+    43000 |     -0.1% |    5808 |     5213 |    387451
+    86000 |     -0.2% |    7777 |     6564 |    344451
+   129000 |     -0.3% |    9733 |     7998 |    301451
+   172000 |     -0.3% |   11418 |     9158 |    258451
+   215000 |     -0.4% |   12669 |    10078 |    215451
+   258000 |     -0.4% |   14225 |    11464 |    172451
+   301000 |     -0.5% |   20779 |    17375 |    129451
+   344000 |     -0.5% |   26666 |    23547 |     86451
+   387000 |     -0.7% |   40252 |    36555 |     43451
+   430000 |     -1.3% |   54788 |    49444 |       451
+    final |     -1.3% |   54866 |    49519 |         0
+-------------------------------------------------------
+[INFO GPL-0106] Timing-driven: worst slack -4.8199605e-10
+[INFO GPL-0107] Timing-driven: repair_design delta area: 47.857 um^2 (+0.08%)
+[INFO GPL-0108] Timing-driven: repair_design, gpl delta gcells: 1566 (+0.33%)
+[INFO GPL-0109] Timing-driven: repair_design, gcells created: 56432, deleted: 54866
+[INFO GPL-0110] Timing-driven: new target density: 0.6796659
+Iteration | Overflow |     HPWL (um) |  HPWL(%) |   Penalty | Group
+---------------------------------------------------------------
+     1150 |   0.1796 |  1.910439e+06 |   -1.99% |  1.01e-05 |      
+     1160 |   0.1583 |  1.852483e+06 |   -3.03% |  1.49e-05 |      
+     1170 |   0.1377 |  1.817060e+06 |   -1.91% |  2.20e-05 |      
+     1180 |   0.1188 |  1.795359e+06 |   -1.19% |  3.24e-05 |      
+     1190 |   0.1029 |  1.780038e+06 |   -0.85% |  4.77e-05 |      
+     1192 |   0.0997 |  1.777580e+06 |          |  5.36e-05 |      
+---------------------------------------------------------------
+[INFO GPL-1001] Global placement finished at iteration 1192
+[INFO GPL-1017] Routability mode iteration count: 801
+[INFO GPL-1005] Routability final weighted congestion: 0.8337
+[INFO GPL-1002] Placed Cell Area            61239.3653
+[INFO GPL-1003] Available Free Area         90102.1547
+[INFO GPL-1004] Minimum Feasible Density        0.6200 (cell_area / free_area)
+[INFO GPL-1006]   Suggested Target Densities:
+[INFO GPL-1007]     - For 90% usage of free space: 0.7552
+[INFO GPL-1008]     - For 80% usage of free space: 0.8496
+[INFO GPL-1011] Original area (um^2): 55072.94
+[INFO GPL-1012] Total routability artificial inflation: 2122.43 (+3.85%)
+[INFO GPL-1013] Total timing-driven delta area: 4043.99 (+7.34%)
+[INFO GPL-1014] Final placement area: 61239.37 (+11.20%)
+[INFO GPL-1018] Final HPWL (um): 1782662.01
+Took 1362 seconds: global_placement -density 0.6 -pad_left 0 -pad_right 0 -routability_driven -timing_driven -force_center_initial_place -min_phi_coef 0.95 -max_phi_coef 1.05
+estimate_parasitics -placement
+Took 9 seconds: estimate_parasitics -placement
+Report metrics stage 3, global place...
+
+==========================================================================
+global place report_design_area
+--------------------------------------------------------------------------
+Design area 67589 um^2 59% utilization.
+write_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/3_3_place_gp.odb
+Elapsed time: 24:32.03[h:]min:sec. CPU time: user 1863.85 sys 46.36 (129%). Peak memory: 4648476KB.
+Log                    Ext     Elapsed      CPU     CPU/ Peak Mem sha1sum
+                                     s        s  Elapsed       MB [0:10)
+3_3_place_gp           .odb       1472     1910     1.30     4539 3374039223
+/OpenROAD-flow-scripts/flow/scripts/flow.sh 3_4_place_resized resize
+Running resize.tcl, stage 3_4_place_resized
+source /OpenROAD-flow-scripts/flow/platforms/asap7/liberty_suppressions.tcl
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_AO_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_INVBUF_RVT_SS_nldm_220122.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_OA_RVT_SS_nldm_211120.lib.gz
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SEQ_RVT_SS_nldm_220123.lib
+read_liberty /OpenROAD-flow-scripts/flow/platforms/asap7/lib/NLDM/asap7sc7p5t_SIMPLE_RVT_SS_nldm_211120.lib.gz
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_128x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x33_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_256x390_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_32x256_g2_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x288_g1_1w1r.lib
+read_liberty /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/in/macros/fakeram7_64x64_g2_1w1r.lib
+read_db /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/3_3_place_gp.odb
+read_sdc /home/runner/work/Astracore-Neo/Astracore-Neo/pnr_out/c16_neo_core/orfs/results/asap7/c16_neo_core/base/2_floorplan.sdc
+source /OpenROAD-flow-scripts/flow/platforms/asap7/setRC.tcl
+estimate_parasitics -placement
+Took 20 seconds: estimate_parasitics -placement
+Perform buffer insertion and gate resizing...
+repair_design -verbose
