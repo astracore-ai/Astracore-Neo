@@ -1,0 +1,17 @@
+id,config,workload,node,block,flop,bit,type,cycle,outcome,causes,first_cause,latency,diff,run_cycles,wall_ms
+3,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[7].g_col[0].g_data.u_pe.w_sh,6,sa1,3185,detected,array_abft@0+acc_abft@0,array_abft@0,70,36,3904,2803
+7,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_deskew.g_col[0].g_dl.u_dl.pipe[3],10,sa0,3641,masked,,,,0,3904,2738
+11,tile,m1,0,neo_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.xm[4],12,flip,1560,masked,,,,0,3904,2634
+15,tile,m1,0,neo_core.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.g_lut[4].u_lutv.mem[211],26,flip,2109,masked,,,,0,3904,2671
+19,tile,m1,2,sram_bank.sram,u_mesh.g_y[1].g_x[0].u_t.u_bank.u_bank.u_mem.mem[13],340,sa1,1434,masked,,,,0,3904,3127
+23,tile,m1,0,requant,u_mesh.g_y[0].g_x[0].u_t.u_core.u_rq.ra1[5],39,sa0,1739,detected,rq_err@0,rq_err@0,1800,0,3904,3028
+27,tile,m1,0,tile_nic.sram,u_mesh.g_y[0].g_x[0].u_t.u_nic.u_dfifo.mem[4],143,flip,2480,masked,,,,0,3904,2776
+31,tile,m1,2,noc_router,u_mesh.g_y[1].g_x[0].u_t.u_router.g_out[1].of,61,flip,3440,masked,,,,0,3904,2708
+35,tile,m1,0,neo_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.bsq[3],11,flip,3609,masked,,,,0,3904,2754
+39,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[6].g_col[4].g_data.u_pe.p_out,29,flip,2019,masked,,,,0,3904,2737
+43,tile,m1,0,neo_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.bsq[0],26,sa1,2508,masked,,,,0,3904,3148
+47,tile,m1,0,act_feeder.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[4],228,flip,818,dangerous,,,,72,3904,2667
+51,tile,m1,0,requant,u_mesh.g_y[0].g_x[0].u_t.u_core.u_rq.sh2[4],2,flip,3107,masked,,,,0,3904,2747
+55,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[15].g_col[4].g_data.u_pe.x_out,2,sa1,1367,detected,array_abft@0+acc_abft@0,array_abft@0,568,108,3904,3169
+59,tile,m1,0,tile_nic,u_mesh.g_y[0].g_x[0].u_t.u_nic.txc_words,58,sa1,2874,detected,crc_err@1,crc_err@1,996,0,3904,2917
+63,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[10].g_col[7].g_data.u_pe.v_out,0,sa1,273,masked,,,,0,3904,3431

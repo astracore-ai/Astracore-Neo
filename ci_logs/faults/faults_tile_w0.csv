@@ -1,0 +1,17 @@
+id,config,workload,node,block,flop,bit,type,cycle,outcome,causes,first_cause,latency,diff,run_cycles,wall_ms
+0,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[15].g_col[6].g_data.u_pe.p_in_q,27,sa1,49,detected,array_abft@0+acc_abft@0,array_abft@0,1886,36,3904,3779
+4,tile,m1,3,tile_nic,u_mesh.g_y[1].g_x[1].u_t.u_nic.serve_row,218,flip,3335,masked,,,,0,3904,2844
+8,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[9].g_col[2].g_data.u_pe.p_out,13,flip,2584,detected,array_abft@0+acc_abft@0,array_abft@0,23,1,3904,2764
+12,tile,m1,3,tile_nic,u_mesh.g_y[1].g_x[1].u_t.u_nic.serve_row,99,sa1,418,detected,crc_err@0+array_abft@0+acc_abft@0,crc_err@0,84,108,3904,3280
+16,tile,m1,3,tile_nic,u_mesh.g_y[1].g_x[1].u_t.u_nic.st_md1[5],2,sa0,2098,masked,,,,0,3904,2984
+20,tile,m1,0,tile_nic,u_mesh.g_y[0].g_x[0].u_t.u_nic.lb_flit,488,flip,3295,masked,,,,0,3904,2753
+24,tile,m1,0,neo_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.g_lane[2].u_mul.rb,32,sa0,1740,masked,,,,0,3904,3080
+28,tile,m1,3,tile_nic,u_mesh.g_y[1].g_x[1].u_t.u_nic.txc_words,435,flip,2919,masked,,,,0,3904,2711
+32,tile,m1,0,neo_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.mbq[0],0,flip,482,masked,,,,0,3904,2665
+36,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_skew.g_dense.g_row[12].g_rn.u_dl.pipe[0],0,flip,2300,masked,,,,0,3904,2704
+40,tile,m1,1,tile_dma,u_mesh.g_y[0].g_x[1].u_t.u_dma_dup.ready_q,10,flip,2889,detected,ctrl_path_err@1,ctrl_path_err@1,3,0,3904,2787
+44,tile,m1,0,wbuf_mem.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_wbuf.u_mem.mem[127],224,sa0,3700,masked,,,,0,3904,2787
+48,tile,m1,3,noc_router,u_mesh.g_y[1].g_x[1].u_t.u_router.g_out[4].of,54,flip,1172,masked,,,,0,3904,2683
+52,tile,m1,0,core_seq,u_mesh.g_y[0].g_x[0].u_t.u_core.u_seq.tcnt,3,flip,1303,masked,,,,0,3904,2687
+56,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[14].g_col[0].g_data.u_pe.w_sh,3,sa0,40,detected,array_abft@0+acc_abft@0,array_abft@0,1902,36,3904,3325
+60,tile,m1,0,act_feeder.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[1],21,flip,1093,dangerous,,,,48,3904,2722

@@ -1,0 +1,17 @@
+id,config,workload,node,block,flop,bit,type,cycle,outcome,causes,first_cause,latency,diff,run_cycles,wall_ms
+1,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[4].g_col[5].g_data.u_pe.prod_q,28,sa1,2043,detected,array_abft@0+acc_abft@0,array_abft@0,31,32,3904,3459
+5,tile,m1,0,act_feeder.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_feeder.u_mem.mem[70],15,flip,2324,masked,,,,0,3904,2791
+9,tile,m1,0,tile_nic,u_mesh.g_y[0].g_x[0].u_t.u_nic.lb_flit,543,sa1,1620,masked,,,,0,3904,3121
+13,tile,m1,0,acc_bank.macro,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_acc.u_mem.rb_addr_q,2,sa0,1088,detected,seq_err@0,seq_err@0,850,128,3904,3186
+17,tile,m1,0,neo_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.prog[14],13,sa1,1594,masked,,,,0,3904,3069
+21,tile,m1,0,wbuf_mem.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_wbuf.u_mem.mem[224],80,sa1,2418,masked,,,,0,3904,2950
+25,tile,m1,0,host_if,u_mesh.g_y[0].g_x[0].u_t.u_host.cfg_dup[18],13,flip,3839,detected,ctrl_path_err@0,ctrl_path_err@0,3,0,3904,2850
+29,tile,m1,1,sram_bank.macro,u_mesh.g_y[0].g_x[1].u_t.u_bank.u_bank.u_mem.rdata,171,flip,3194,masked,,,,0,3904,2766
+33,tile,m1,2,sram_bank.sram,u_mesh.g_y[1].g_x[0].u_t.u_bank.u_bank.u_mem.mem[183],316,flip,2516,masked,,,,0,3904,2751
+37,tile,m1,1,sram_bank.macro,u_mesh.g_y[0].g_x[1].u_t.u_bank.u_bank.u_mem.rdata,423,sa0,2944,masked,,,,0,3904,2965
+41,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[14].g_col[2].g_data.u_pe.x_out,4,flip,2971,detected,array_abft@0+acc_abft@0,array_abft@0,14,5,3904,2703
+45,tile,m1,0,acc_bank.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_acc.u_mem.mem[34],60,flip,2950,detected,acc_abft@0,acc_abft@0,622,1,3904,2687
+49,tile,m1,2,tile_nic,u_mesh.g_y[1].g_x[0].u_t.u_nic.q_flit,488,flip,1021,masked,,,,0,3904,2752
+53,tile,m1,2,tile_nic,u_mesh.g_y[1].g_x[0].u_t.u_nic.lb_flit,388,flip,897,masked,,,,0,3904,2775
+57,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[5].g_col[1].g_data.u_pe.prod_q,1,flip,2155,detected,array_abft@0+acc_abft@0,array_abft@0,33,1,3904,2858
+61,tile,m1,3,neo_tile,u_mesh.g_y[1].g_x[1].u_t.u_telem.shot[4],26,flip,287,masked,,,,0,3904,2731

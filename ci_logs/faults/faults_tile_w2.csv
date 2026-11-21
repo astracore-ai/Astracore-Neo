@@ -1,0 +1,16 @@
+id,config,workload,node,block,flop,bit,type,cycle,outcome,causes,first_cause,latency,diff,run_cycles,wall_ms
+2,tile,m1,2,tile_nic,u_mesh.g_y[1].g_x[0].u_t.u_nic.lb_flit,147,flip,355,masked,,,,0,3904,3114
+6,tile,m1,2,sram_bank.sram,u_mesh.g_y[1].g_x[0].u_t.u_bank.u_bank.u_mem.mem[136],112,flip,614,masked,,,,0,3904,2724
+10,tile,m1,3,noc_router,u_mesh.g_y[1].g_x[1].u_t.u_router.g_out[3].of,44,sa1,3612,masked,,,,0,3904,2799
+14,tile,m1,1,tile_nic,u_mesh.g_y[0].g_x[1].u_t.u_nic.lb_flit,17,sa0,2998,masked,,,,0,3904,2824
+18,tile,m1,2,mbist,u_mesh.g_y[1].g_x[0].u_t.u_bank.u_bist.fail_addr,0,sa0,2821,masked,,,,0,3904,2949
+22,tile,m1,0,neo_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.bi[6],14,sa1,1740,masked,,,,0,3904,3118
+26,tile,m1,3,host_if,u_mesh.g_y[1].g_x[1].u_t.u_host.cfg[3],5,sa0,642,masked,,,,0,3904,3270
+30,tile,m1,0,neo_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_vec.prog[9],19,sa1,2891,masked,,,,0,3904,2844
+34,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[4].g_col[6].g_data.u_pe.prod_q,23,sa1,114,detected,array_abft@0+acc_abft@0,array_abft@0,1821,36,3904,3383
+38,tile,m1,0,tile_nic,u_mesh.g_y[0].g_x[0].u_t.u_nic.lb_flit,43,sa1,1744,masked,,,,0,3904,3064
+42,tile,m1,3,host_if,u_mesh.g_y[1].g_x[1].u_t.u_host.cfg_dup[10],12,flip,2076,detected,ctrl_path_err@3,ctrl_path_err@3,3,0,3904,2670
+46,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[2].g_col[6].g_data.u_pe.p_in_q,26,sa0,717,detected,array_abft@0+acc_abft@0,array_abft@0,1225,36,3904,3268
+50,tile,m1,2,sram_bank.sram,u_mesh.g_y[1].g_x[0].u_t.u_bank.u_bank.u_mem.mem[160],310,flip,3108,masked,,,,0,3904,2719
+54,tile,m1,0,neo_mac_core,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_core.u_array.g_row[14].g_col[2].g_data.u_pe.prod_q,1,sa1,457,detected,array_abft@0+acc_abft@0,array_abft@0,1478,36,3904,3341
+58,tile,m1,0,acc_bank.sram,u_mesh.g_y[0].g_x[0].u_t.u_core.u_dp.u_acc.u_mem.mem[54],182,sa1,1197,masked,,,,0,3904,3156
