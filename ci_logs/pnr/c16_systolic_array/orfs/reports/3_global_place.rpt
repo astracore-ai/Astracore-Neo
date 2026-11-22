@@ -1,0 +1,266 @@
+
+==========================================================================
+global place report_tns
+--------------------------------------------------------------------------
+tns max -118224.65
+
+==========================================================================
+global place report_wns
+--------------------------------------------------------------------------
+wns max -298.55
+
+==========================================================================
+global place report_worst_slack
+--------------------------------------------------------------------------
+worst slack max -298.55
+
+==========================================================================
+global place report_clock_min_period
+--------------------------------------------------------------------------
+clk period_min = 1298.55 fmax = 770.09
+
+==========================================================================
+global place report_checks -path_delay min
+--------------------------------------------------------------------------
+Startpoint: g_row[14].g_col[0].g_data.u_pe/s_out_reg
+            (rising edge-triggered flip-flop clocked by clk)
+Endpoint: g_row[14].g_col[1].g_data.u_pe/s_out_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: min
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                  0.00    0.00    0.00 ^ g_row[14].g_col[0].g_data.u_pe/s_out_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+     1    0.93   32.65   75.89   75.89 ^ g_row[14].g_col[0].g_data.u_pe/s_out_reg/QN (DFFASRHQNx1_ASAP7_75t_R)
+                                         g_row[14].g_col[0].g_data.u_pe/_0002_ (net)
+                 32.65    0.04   75.93 ^ g_row[14].g_col[0].g_data.u_pe/_2239_/A (INVx2_ASAP7_75t_R)
+     7    6.96   42.04   31.00  106.93 v g_row[14].g_col[0].g_data.u_pe/_2239_/Y (INVx2_ASAP7_75t_R)
+                                         g_row[14].g_col[1].g_data.s_src (net)
+                 42.23    1.61  108.55 v g_row[14].g_col[1].g_data.u_pe/s_out_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                                108.55   data arrival time
+
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                          0.00    0.00   clock reconvergence pessimism
+                                  0.00 ^ g_row[14].g_col[1].g_data.u_pe/s_out_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                         12.22   12.22   library hold time
+                                 12.22   data required time
+-----------------------------------------------------------------------------
+                                 12.22   data required time
+                               -108.55   data arrival time
+-----------------------------------------------------------------------------
+                                 96.33   slack (MET)
+
+
+
+==========================================================================
+global place report_checks -path_delay max
+--------------------------------------------------------------------------
+Startpoint: x_in[298] (input port clocked by clk)
+Endpoint: g_row[6].g_col[0].g_data.u_pe/prod_q[14]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                        200.00  200.00 v input external delay
+     1    0.89    0.00    0.00  200.00 v x_in[298] (in)
+                                         x_in[298] (net)
+                  0.14    0.04  200.04 v input26306/A (BUFx2_ASAP7_75t_R)
+     2    1.11   13.12   25.02  225.06 v input26306/Y (BUFx2_ASAP7_75t_R)
+                                         net26305 (net)
+                 13.13    0.03  225.09 v g_row[6].g_col[0].g_data.u_pe/_1267_/A1 (AO22x1_ASAP7_75t_R)
+     2    1.39   24.67   44.70  269.80 v g_row[6].g_col[0].g_data.u_pe/_1267_/Y (AO22x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0782_ (net)
+                 24.67    0.04  269.84 v g_row[6].g_col[0].g_data.u_pe/_1326_/C (AO221x1_ASAP7_75t_R)
+     2    1.51   27.56   54.94  324.78 v g_row[6].g_col[0].g_data.u_pe/_1326_/Y (AO221x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0825_ (net)
+                 27.57    0.09  324.88 v g_row[6].g_col[0].g_data.u_pe/_1381_/C (AND3x1_ASAP7_75t_R)
+     1    0.62   11.87   29.43  354.31 v g_row[6].g_col[0].g_data.u_pe/_1381_/Y (AND3x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0864_ (net)
+                 11.87    0.02  354.33 v g_row[6].g_col[0].g_data.u_pe/_1383_/A1 (OA21x2_ASAP7_75t_R)
+     1    0.75   14.12   35.47  389.80 v g_row[6].g_col[0].g_data.u_pe/_1383_/Y (OA21x2_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0271_ (net)
+                 14.12    0.04  389.84 v g_row[6].g_col[0].g_data.u_pe/_1384_/C (AO221x1_ASAP7_75t_R)
+     1    2.23   34.77   57.08  446.92 v g_row[6].g_col[0].g_data.u_pe/_1384_/Y (AO221x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0963_[0] (net)
+                 34.78    0.18  447.10 v g_row[6].g_col[0].g_data.u_pe/_2260_/B (FAx1_ASAP7_75t_R)
+     1    1.40   72.55   86.13  533.23 v g_row[6].g_col[0].g_data.u_pe/_2260_/SN (FAx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0967_[0] (net)
+                 72.55    0.16  533.39 v g_row[6].g_col[0].g_data.u_pe/_2184_/A (INVx1_ASAP7_75t_R)
+     1    1.83   46.15   37.81  571.20 ^ g_row[6].g_col[0].g_data.u_pe/_2184_/Y (INVx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0925_[0] (net)
+                 46.15    0.16  571.35 ^ g_row[6].g_col[0].g_data.u_pe/_2252_/CI (FAx1_ASAP7_75t_R)
+     1    1.14   60.98   80.42  651.78 v g_row[6].g_col[0].g_data.u_pe/_2252_/SN (FAx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0929_[0] (net)
+                 60.98    0.10  651.88 v g_row[6].g_col[0].g_data.u_pe/_2145_/A (INVx1_ASAP7_75t_R)
+     1    1.80   42.17   34.57  686.44 ^ g_row[6].g_col[0].g_data.u_pe/_2145_/Y (INVx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0870_[0] (net)
+                 42.17    0.15  686.59 ^ g_row[6].g_col[0].g_data.u_pe/_2243_/CI (FAx1_ASAP7_75t_R)
+     1    0.84   65.25   65.13  751.72 ^ g_row[6].g_col[0].g_data.u_pe/_2243_/SN (FAx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0873_[0] (net)
+                 65.25    0.05  751.77 ^ g_row[6].g_col[0].g_data.u_pe/place90561/A (BUFx3_ASAP7_75t_R)
+     1    0.78   12.95   38.20  789.97 ^ g_row[6].g_col[0].g_data.u_pe/place90561/Y (BUFx3_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/net90560 (net)
+                 12.95    0.04  790.01 ^ g_row[6].g_col[0].g_data.u_pe/_2222_/A (INVx1_ASAP7_75t_R)
+     1    1.33   17.04   13.99  804.00 v g_row[6].g_col[0].g_data.u_pe/_2222_/Y (INVx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0875_[0] (net)
+                 17.04    0.11  804.11 v g_row[6].g_col[0].g_data.u_pe/_2325_/B (HAxp5_ASAP7_75t_R)
+     3    2.44  101.81   89.48  893.59 v g_row[6].g_col[0].g_data.u_pe/_2325_/SN (HAxp5_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_1152_[0] (net)
+                101.82    0.12  893.71 v g_row[6].g_col[0].g_data.u_pe/_1617_/A2 (AO21x1_ASAP7_75t_R)
+     2    1.42   24.36   54.02  947.72 v g_row[6].g_col[0].g_data.u_pe/_1617_/Y (AO21x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0385_ (net)
+                 24.37    0.07  947.80 v g_row[6].g_col[0].g_data.u_pe/_1620_/B1 (AO221x1_ASAP7_75t_R)
+     2    1.40   27.85   51.07  998.86 v g_row[6].g_col[0].g_data.u_pe/_1620_/Y (AO221x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0388_ (net)
+                 27.85    0.04  998.90 v g_row[6].g_col[0].g_data.u_pe/_1631_/A2 (AO21x1_ASAP7_75t_R)
+     1    0.93   17.14   36.26 1035.16 v g_row[6].g_col[0].g_data.u_pe/_1631_/Y (AO21x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0394_ (net)
+                 17.14    0.07 1035.23 v g_row[6].g_col[0].g_data.u_pe/_1633_/B (AND2x2_ASAP7_75t_R)
+     3    2.17   19.14   35.04 1070.27 v g_row[6].g_col[0].g_data.u_pe/_1633_/Y (AND2x2_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0395_ (net)
+                 19.15    0.09 1070.37 v g_row[6].g_col[0].g_data.u_pe/_1668_/C (OR3x1_ASAP7_75t_R)
+     2    1.63   28.18   52.81 1123.18 v g_row[6].g_col[0].g_data.u_pe/_1668_/Y (OR3x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0419_ (net)
+                 28.18    0.08 1123.25 v g_row[6].g_col[0].g_data.u_pe/_1671_/A (AND5x1_ASAP7_75t_R)
+     1    1.41   22.51   39.72 1162.97 v g_row[6].g_col[0].g_data.u_pe/_1671_/Y (AND5x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0422_ (net)
+                 22.51    0.07 1163.04 v g_row[6].g_col[0].g_data.u_pe/_1678_/A (NOR3x1_ASAP7_75t_R)
+     1    0.74   24.45   18.17 1181.21 ^ g_row[6].g_col[0].g_data.u_pe/_1678_/Y (NOR3x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0217_ (net)
+                 24.46    0.04 1181.25 ^ g_row[6].g_col[0].g_data.u_pe/prod_q[14]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                               1181.25   data arrival time
+
+                  0.00 1000.00 1000.00   clock clk (rise edge)
+                          0.00 1000.00   clock network delay (ideal)
+                        -80.00  920.00   clock uncertainty
+                          0.00  920.00   clock reconvergence pessimism
+                                920.00 ^ g_row[6].g_col[0].g_data.u_pe/prod_q[14]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                        -37.30  882.70   library setup time
+                                882.70   data required time
+-----------------------------------------------------------------------------
+                                882.70   data required time
+                               -1181.25   data arrival time
+-----------------------------------------------------------------------------
+                               -298.55   slack (VIOLATED)
+
+
+
+==========================================================================
+global place report_checks -unconstrained
+--------------------------------------------------------------------------
+Startpoint: x_in[298] (input port clocked by clk)
+Endpoint: g_row[6].g_col[0].g_data.u_pe/prod_q[14]_reg
+          (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+Fanout     Cap    Slew   Delay    Time   Description
+-----------------------------------------------------------------------------
+                  0.00    0.00    0.00   clock clk (rise edge)
+                          0.00    0.00   clock network delay (ideal)
+                        200.00  200.00 v input external delay
+     1    0.89    0.00    0.00  200.00 v x_in[298] (in)
+                                         x_in[298] (net)
+                  0.14    0.04  200.04 v input26306/A (BUFx2_ASAP7_75t_R)
+     2    1.11   13.12   25.02  225.06 v input26306/Y (BUFx2_ASAP7_75t_R)
+                                         net26305 (net)
+                 13.13    0.03  225.09 v g_row[6].g_col[0].g_data.u_pe/_1267_/A1 (AO22x1_ASAP7_75t_R)
+     2    1.39   24.67   44.70  269.80 v g_row[6].g_col[0].g_data.u_pe/_1267_/Y (AO22x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0782_ (net)
+                 24.67    0.04  269.84 v g_row[6].g_col[0].g_data.u_pe/_1326_/C (AO221x1_ASAP7_75t_R)
+     2    1.51   27.56   54.94  324.78 v g_row[6].g_col[0].g_data.u_pe/_1326_/Y (AO221x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0825_ (net)
+                 27.57    0.09  324.88 v g_row[6].g_col[0].g_data.u_pe/_1381_/C (AND3x1_ASAP7_75t_R)
+     1    0.62   11.87   29.43  354.31 v g_row[6].g_col[0].g_data.u_pe/_1381_/Y (AND3x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0864_ (net)
+                 11.87    0.02  354.33 v g_row[6].g_col[0].g_data.u_pe/_1383_/A1 (OA21x2_ASAP7_75t_R)
+     1    0.75   14.12   35.47  389.80 v g_row[6].g_col[0].g_data.u_pe/_1383_/Y (OA21x2_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0271_ (net)
+                 14.12    0.04  389.84 v g_row[6].g_col[0].g_data.u_pe/_1384_/C (AO221x1_ASAP7_75t_R)
+     1    2.23   34.77   57.08  446.92 v g_row[6].g_col[0].g_data.u_pe/_1384_/Y (AO221x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0963_[0] (net)
+                 34.78    0.18  447.10 v g_row[6].g_col[0].g_data.u_pe/_2260_/B (FAx1_ASAP7_75t_R)
+     1    1.40   72.55   86.13  533.23 v g_row[6].g_col[0].g_data.u_pe/_2260_/SN (FAx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0967_[0] (net)
+                 72.55    0.16  533.39 v g_row[6].g_col[0].g_data.u_pe/_2184_/A (INVx1_ASAP7_75t_R)
+     1    1.83   46.15   37.81  571.20 ^ g_row[6].g_col[0].g_data.u_pe/_2184_/Y (INVx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0925_[0] (net)
+                 46.15    0.16  571.35 ^ g_row[6].g_col[0].g_data.u_pe/_2252_/CI (FAx1_ASAP7_75t_R)
+     1    1.14   60.98   80.42  651.78 v g_row[6].g_col[0].g_data.u_pe/_2252_/SN (FAx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0929_[0] (net)
+                 60.98    0.10  651.88 v g_row[6].g_col[0].g_data.u_pe/_2145_/A (INVx1_ASAP7_75t_R)
+     1    1.80   42.17   34.57  686.44 ^ g_row[6].g_col[0].g_data.u_pe/_2145_/Y (INVx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0870_[0] (net)
+                 42.17    0.15  686.59 ^ g_row[6].g_col[0].g_data.u_pe/_2243_/CI (FAx1_ASAP7_75t_R)
+     1    0.84   65.25   65.13  751.72 ^ g_row[6].g_col[0].g_data.u_pe/_2243_/SN (FAx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0873_[0] (net)
+                 65.25    0.05  751.77 ^ g_row[6].g_col[0].g_data.u_pe/place90561/A (BUFx3_ASAP7_75t_R)
+     1    0.78   12.95   38.20  789.97 ^ g_row[6].g_col[0].g_data.u_pe/place90561/Y (BUFx3_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/net90560 (net)
+                 12.95    0.04  790.01 ^ g_row[6].g_col[0].g_data.u_pe/_2222_/A (INVx1_ASAP7_75t_R)
+     1    1.33   17.04   13.99  804.00 v g_row[6].g_col[0].g_data.u_pe/_2222_/Y (INVx1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0875_[0] (net)
+                 17.04    0.11  804.11 v g_row[6].g_col[0].g_data.u_pe/_2325_/B (HAxp5_ASAP7_75t_R)
+     3    2.44  101.81   89.48  893.59 v g_row[6].g_col[0].g_data.u_pe/_2325_/SN (HAxp5_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_1152_[0] (net)
+                101.82    0.12  893.71 v g_row[6].g_col[0].g_data.u_pe/_1617_/A2 (AO21x1_ASAP7_75t_R)
+     2    1.42   24.36   54.02  947.72 v g_row[6].g_col[0].g_data.u_pe/_1617_/Y (AO21x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0385_ (net)
+                 24.37    0.07  947.80 v g_row[6].g_col[0].g_data.u_pe/_1620_/B1 (AO221x1_ASAP7_75t_R)
+     2    1.40   27.85   51.07  998.86 v g_row[6].g_col[0].g_data.u_pe/_1620_/Y (AO221x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0388_ (net)
+                 27.85    0.04  998.90 v g_row[6].g_col[0].g_data.u_pe/_1631_/A2 (AO21x1_ASAP7_75t_R)
+     1    0.93   17.14   36.26 1035.16 v g_row[6].g_col[0].g_data.u_pe/_1631_/Y (AO21x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0394_ (net)
+                 17.14    0.07 1035.23 v g_row[6].g_col[0].g_data.u_pe/_1633_/B (AND2x2_ASAP7_75t_R)
+     3    2.17   19.14   35.04 1070.27 v g_row[6].g_col[0].g_data.u_pe/_1633_/Y (AND2x2_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0395_ (net)
+                 19.15    0.09 1070.37 v g_row[6].g_col[0].g_data.u_pe/_1668_/C (OR3x1_ASAP7_75t_R)
+     2    1.63   28.18   52.81 1123.18 v g_row[6].g_col[0].g_data.u_pe/_1668_/Y (OR3x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0419_ (net)
+                 28.18    0.08 1123.25 v g_row[6].g_col[0].g_data.u_pe/_1671_/A (AND5x1_ASAP7_75t_R)
+     1    1.41   22.51   39.72 1162.97 v g_row[6].g_col[0].g_data.u_pe/_1671_/Y (AND5x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0422_ (net)
+                 22.51    0.07 1163.04 v g_row[6].g_col[0].g_data.u_pe/_1678_/A (NOR3x1_ASAP7_75t_R)
+     1    0.74   24.45   18.17 1181.21 ^ g_row[6].g_col[0].g_data.u_pe/_1678_/Y (NOR3x1_ASAP7_75t_R)
+                                         g_row[6].g_col[0].g_data.u_pe/_0217_ (net)
+                 24.46    0.04 1181.25 ^ g_row[6].g_col[0].g_data.u_pe/prod_q[14]_reg/D (DFFASRHQNx1_ASAP7_75t_R)
+                               1181.25   data arrival time
+
+                  0.00 1000.00 1000.00   clock clk (rise edge)
+                          0.00 1000.00   clock network delay (ideal)
+                        -80.00  920.00   clock uncertainty
+                          0.00  920.00   clock reconvergence pessimism
+                                920.00 ^ g_row[6].g_col[0].g_data.u_pe/prod_q[14]_reg/CLK (DFFASRHQNx1_ASAP7_75t_R)
+                        -37.30  882.70   library setup time
+                                882.70   data required time
+-----------------------------------------------------------------------------
+                                882.70   data required time
+                               -1181.25   data arrival time
+-----------------------------------------------------------------------------
+                               -298.55   slack (VIOLATED)
+
+
+
+==========================================================================
+global place report_power
+--------------------------------------------------------------------------
+Group                  Internal  Switching    Leakage      Total
+                          Power      Power      Power      Power (Watts)
+----------------------------------------------------------------
+Sequential             3.67e-02   4.95e-03   6.61e-05   4.17e-02  14.3%
+Combinational          1.36e-01   1.14e-01   2.36e-04   2.50e-01  85.7%
+Clock                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Macro                  0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+Pad                    0.00e+00   0.00e+00   0.00e+00   0.00e+00   0.0%
+----------------------------------------------------------------
+Total                  1.72e-01   1.19e-01   3.02e-04   2.91e-01 100.0%
+                          59.2%      40.7%       0.1%
